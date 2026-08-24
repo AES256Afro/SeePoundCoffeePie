@@ -3,6 +3,7 @@ import { request as httpsRequest } from 'node:https'
 
 const canonical = 'https://seepoundcoffeepie.com/'
 const expectedTitle = '<title>SeePoundCoffeePie | Learn code. Run the ship.</title>'
+const socialImageUrl = 'https://seepoundcoffeepie.com/social-card.jpg'
 
 async function requestWithFreshDns(input, init = {}) {
   try {
@@ -60,6 +61,28 @@ if (!body.includes(expectedTitle) || !body.includes('<div id="root"></div>')) {
   throw new Error('The canonical domain did not return the SeePoundCoffeePie application shell')
 }
 
+for (const metadata of [
+  `<meta property="og:image" content="${socialImageUrl}" />`,
+  '<meta property="og:image:width" content="1200" />',
+  '<meta property="og:image:height" content="630" />',
+  '<meta name="twitter:card" content="summary_large_image" />',
+  `<meta name="twitter:image" content="${socialImageUrl}" />`,
+]) {
+  if (!body.includes(metadata)) {
+    throw new Error(`The live site is missing social preview metadata: ${metadata}`)
+  }
+}
+
+const socialImageResponse = await requestWithFreshDns(socialImageUrl, { redirect: 'manual' })
+const socialImageBytes = await socialImageResponse.arrayBuffer()
+if (
+  socialImageResponse.status !== 200
+  || !(socialImageResponse.headers.get('content-type') ?? '').includes('image/jpeg')
+  || socialImageBytes.byteLength < 100_000
+) {
+  throw new Error('The live social preview image is missing, invalid, or incomplete')
+}
+
 const requiredHeaders = {
   'content-security-policy': "frame-ancestors 'none'",
   'strict-transport-security': 'max-age=',
@@ -93,4 +116,4 @@ for (const route of ['/academy/python', '/practice/java', '/codebook/csharp', '/
   }
 }
 
-console.log('Live verification passed for apex, www redirect, headers, and all bookmarkable SPA routes.')
+console.log('Live verification passed for social previews, apex, www redirect, headers, and all bookmarkable SPA routes.')

@@ -89,6 +89,7 @@ npm run check:runner:image
 
 The production bundle is written to `dist/`.
 `npm run check:bundle` enforces raw and gzip budgets for the emitted JavaScript, CSS, and HTML so curriculum growth cannot silently create an oversized first load.
+`npm run check:social-preview` verifies the Open Graph and large-card metadata plus the exact 1200 by 630 share image used by Discord and other social platforms.
 
 ## Production hosting
 
@@ -99,6 +100,7 @@ The production site is deployed as a Cloudflare Worker with Static Assets:
 - unknown navigation paths return the React application shell;
 - hashed assets receive immutable caching;
 - HTML is revalidated and served with browser security headers.
+- shared links use a branded 1200 by 630 Open Graph image and large-card metadata.
 
 Run a configuration-only deployment check with:
 
@@ -112,7 +114,7 @@ Deploy the current checkout with:
 npm run deploy
 ```
 
-Verify the live apex domain, `www` redirect, security headers, and SPA fallback with:
+Verify the live social preview, apex domain, `www` redirect, security headers, and SPA fallback with:
 
 ```bash
 npm run check:live
