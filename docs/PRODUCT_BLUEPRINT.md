@@ -44,6 +44,8 @@ The mission map determines the next recommended lesson. A true beginner should n
 
 Wrong answers do not consume hearts, lives, energy, or paid currency. A mistake produces a specific explanation, another attempt, and an earlier review date. The system rewards returning and learning, not avoiding risk.
 
+Before the current missions award completion, each exercise missed during that run returns in a short memory-repair round. The answer is reset so the learner retrieves it again, all teaching material remains available, and the repaired answer strengthens memory without awarding the exercise XP twice.
+
 ### Helpful hints without answer dumping
 
 PIE-314 is the academy guide. In the current build it supplies authored hints and analogies. A future conversational guide should know the current lesson, the learner’s code, prior attempts, and the concept being taught. It should ask diagnostic questions and reveal one step at a time. It must not silently replace the learner’s code with the solution.
@@ -161,7 +163,6 @@ Every authored lesson must:
 
 - Author missions 2 through 6 for all four tracks.
 - Add output prediction, ordering, and bug-fix exercise components.
-- Add immediate end-of-mission mistake review before the completion ceremony.
 - Add concept-level Codebook search and examples unlocked by completed lessons.
 - Add accessible keyboard shortcuts inside the editor.
 - Add unit, interaction, and curriculum-schema tests.

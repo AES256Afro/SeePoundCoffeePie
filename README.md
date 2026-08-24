@@ -21,13 +21,14 @@ The current vertical slice includes:
 - plain-language explanations and shipboard analogies;
 - multiple-choice orientation and editable code exercises;
 - immediate, specific feedback and optional hints;
+- an end-of-mission memory-repair round that repeats missed concepts without duplicate XP;
 - a local training simulator for deterministic beginner challenges;
 - XP, daily goal, streak, star-shard, mission-completion, and accuracy tracking;
 - a spaced-review scheduler that weighs correct and incorrect attempts;
 - a Practice Bay, Codebook reference foundation, and Cadet Record;
 - local browser persistence with a visible reset control;
 - responsive layouts for desktop, tablet, and mobile;
-- keyboard focus states and reduced-motion support.
+- keyboard focus states and reduced-motion support;
 - optional GitHub identity verification with a secure, server-side OAuth flow.
 
 Planned missions are visible but intentionally locked. This makes the scope of the academy understandable without pretending unfinished curriculum is available.

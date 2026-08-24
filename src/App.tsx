@@ -46,6 +46,7 @@ import {
   recordAttempt,
   saveProgress,
 } from './lib/progress'
+import { buildReviewQueue, resetReviewAnswers } from './lib/review'
 import type {
   AuthUser,
   EvaluationResult,
@@ -640,13 +641,22 @@ function LessonPlayer({ mission, progress, onProgress, onExit }: LessonPlayerPro
   const [hintOpen, setHintOpen] = useState(false)
   const [finished, setFinished] = useState(false)
   const [mistakes, setMistakes] = useState<string[]>([])
-  const exercise = mission.exercises[step]
-  const answer = answers[exercise?.id] ?? exercise?.starterCode ?? ''
+  const [reviewQueue, setReviewQueue] = useState<string[]>([])
+  const [reviewIndex, setReviewIndex] = useState(0)
+  const reviewing = reviewQueue.length > 0
+  const exercise = reviewing
+    ? mission.exercises.find((item) => item.id === reviewQueue[reviewIndex])
+    : mission.exercises[step]
   const totalXp = mission.exercises.reduce((sum, item) => sum + item.xp, 0)
   const earnedXp = mission.exercises.filter((item) => credited.includes(item.id)).reduce((sum, item) => sum + item.xp, 0)
-  const blankCount = exercise?.starterCode?.match(/_____/gu)?.length ?? 0
+  const progressPercent = reviewing
+    ? ((reviewIndex + 1) / reviewQueue.length) * 100
+    : ((step + 1) / mission.exercises.length) * 100
 
   if (!exercise) return null
+
+  const answer = answers[exercise.id] ?? exercise.starterCode ?? ''
+  const blankCount = exercise.starterCode?.match(/_____/gu)?.length ?? 0
 
   const setAnswer = (value: string) => {
     setAnswers((current) => ({ ...current, [exercise.id]: value }))
@@ -657,21 +667,44 @@ function LessonPlayer({ mission, progress, onProgress, onExit }: LessonPlayerPro
     const result = evaluateExercise(exercise, answer)
     setFeedback(result)
     if (!result.correct) {
-      if (!mistakes.includes(exercise.id)) {
+      if (!reviewing && !mistakes.includes(exercise.id)) {
         setMistakes((current) => [...current, exercise.id])
         onProgress(recordAttempt(progress, exercise.conceptId, false, 0))
       }
       return
     }
 
-    if (!credited.includes(exercise.id)) {
+    if (reviewing) {
+      onProgress(recordAttempt(progress, exercise.conceptId, true, 0))
+    } else if (!credited.includes(exercise.id)) {
       setCredited((current) => [...current, exercise.id])
       onProgress(recordAttempt(progress, exercise.conceptId, true, exercise.xp))
     }
   }
 
   const continueLesson = () => {
+    if (reviewing) {
+      if (reviewIndex === reviewQueue.length - 1) {
+        onProgress(completeMission(progress, mission.id))
+        setFinished(true)
+        return
+      }
+      setReviewIndex((current) => current + 1)
+      setFeedback(null)
+      setHintOpen(false)
+      return
+    }
+
     if (step === mission.exercises.length - 1) {
+      const queue = buildReviewQueue(mistakes, mission.exercises.map((item) => item.id))
+      if (queue.length > 0) {
+        setAnswers((current) => resetReviewAnswers(current, queue))
+        setReviewQueue(queue)
+        setReviewIndex(0)
+        setFeedback(null)
+        setHintOpen(false)
+        return
+      }
       onProgress(completeMission(progress, mission.id))
       setFinished(true)
       return
@@ -692,7 +725,7 @@ function LessonPlayer({ mission, progress, onProgress, onExit }: LessonPlayerPro
           <div className="completion-stats">
             <div><Zap /><b>{earnedXp || totalXp}</b><span>XP earned</span></div>
             <div><Gem /><b>25</b><span>star shards</span></div>
-            <div><RotateCcw /><b>{mistakes.length}</b><span>review items</span></div>
+            <div><RotateCcw /><b>{reviewQueue.length}</b><span>concepts revisited</span></div>
           </div>
           <div className="what-learned"><h2>Systems now familiar</h2><div>{[...new Set(mission.exercises.map((item) => item.conceptId.split('-').slice(1).join(' ')))].map((concept) => <span key={concept}><Check size={14} /> {concept}</span>)}</div></div>
           <button className="primary-action primary-action--wide" onClick={onExit}>Return to mission path <ArrowRight size={18} /></button>
@@ -705,12 +738,23 @@ function LessonPlayer({ mission, progress, onProgress, onExit }: LessonPlayerPro
     <div className="lesson-overlay">
       <header className="lesson-header">
         <button onClick={onExit} className="icon-button" aria-label="Exit lesson"><X /></button>
-        <div className="lesson-progress"><i style={{ width: `${((step + 1) / mission.exercises.length) * 100}%` }} /></div>
-        <div className="lesson-step"><b>{step + 1}</b><span>/ {mission.exercises.length}</span></div>
+        <div className="lesson-progress"><i style={{ width: `${progressPercent}%` }} /></div>
+        <div className="lesson-step"><b>{reviewing ? reviewIndex + 1 : step + 1}</b><span>/ {reviewing ? reviewQueue.length : mission.exercises.length}</span></div>
         <div className="lesson-xp"><Zap size={17} /> {earnedXp} XP</div>
       </header>
 
       <main className="lesson-layout">
+        {reviewing && (
+          <section className="memory-repair" aria-label="Memory repair round">
+            <RotateCcw size={22} />
+            <div>
+              <small>MEMORY REPAIR · {reviewIndex + 1} OF {reviewQueue.length}</small>
+              <h2>This one is coming back so it can stick.</h2>
+              <p>You already corrected it once. Now try it again from a clean starting point. Reread the explanation and use the hint whenever you want.</p>
+            </div>
+            <span>NO XP LOST</span>
+          </section>
+        )}
         <section className="lesson-briefing">
           <p className="kicker">{exercise.eyebrow}</p>
           <h1>{exercise.title}</h1>
@@ -724,8 +768,8 @@ function LessonPlayer({ mission, progress, onProgress, onExit }: LessonPlayerPro
 
         <section className="exercise-panel">
           <div className="exercise-panel__head">
-            <div><small>{exercise.type === 'choice' ? 'GUIDED CHECK' : 'YOUR TASK'}</small><h2>{exercise.prompt}</h2></div>
-            <span><Trophy size={14} /> {exercise.xp} XP</span>
+            <div><small>{reviewing ? 'TRY IT ONCE MORE' : exercise.type === 'choice' ? 'GUIDED CHECK' : 'YOUR TASK'}</small><h2>{exercise.prompt}</h2></div>
+            <span>{reviewing ? <><RotateCcw size={14} /> REVIEW</> : <><Trophy size={14} /> {exercise.xp} XP</>}</span>
           </div>
 
           {exercise.type === 'choice' ? (
@@ -808,9 +852,15 @@ function LessonPlayer({ mission, progress, onProgress, onExit }: LessonPlayerPro
           )}
 
           <div className="exercise-actions">
-            {step > 0 && !feedback?.correct && <button className="secondary-action" onClick={() => { setStep((current) => current - 1); setFeedback(null) }}><ArrowLeft size={17} /> Back</button>}
+            {!reviewing && step > 0 && !feedback?.correct && <button className="secondary-action" onClick={() => { setStep((current) => current - 1); setFeedback(null) }}><ArrowLeft size={17} /> Back</button>}
             <button className="primary-action" onClick={feedback?.correct ? continueLesson : checkAnswer}>
-              {feedback?.correct ? (step === mission.exercises.length - 1 ? 'Finish mission' : 'Continue') : exercise.type === 'choice' ? 'Check answer' : 'Run check'}
+              {feedback?.correct
+                ? reviewing
+                  ? reviewIndex === reviewQueue.length - 1 ? 'Complete memory repair' : 'Next review'
+                  : step === mission.exercises.length - 1
+                    ? mistakes.length > 0 ? 'Repair missed concepts' : 'Finish mission'
+                    : 'Continue'
+                : exercise.type === 'choice' ? 'Check answer' : 'Run check'}
               {feedback?.correct ? <ArrowRight size={18} /> : <Play size={16} fill="currentColor" />}
             </button>
           </div>

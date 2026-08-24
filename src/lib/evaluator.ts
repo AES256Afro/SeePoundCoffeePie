@@ -7,11 +7,12 @@ export function evaluateExercise(exercise: Exercise, answer: string): Evaluation
     }
 
     const correct = answer === exercise.correctChoice
+    const selectedChoice = exercise.choices?.find((choice) => choice.id === answer)
     return {
       correct,
       message: correct
         ? exercise.recap
-        : 'That answer does not match the console’s job. Read the explanation once more and try again.',
+        : `${selectedChoice?.detail ?? 'That answer does not match the concept being taught.'} Reread the explanation above and try once more.`,
     }
   }
 

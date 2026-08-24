@@ -1905,6 +1905,54 @@ p {
   padding: clamp(3rem, 7vh, 6rem) clamp(2rem, 5vw, 5rem);
 }
 
+.memory-repair {
+  display: grid;
+  grid-column: 1 / -1;
+  grid-template-columns: auto 1fr auto;
+  gap: 1rem;
+  align-items: center;
+  padding: 1rem 1.15rem;
+  color: #a9955f;
+  border: 1px solid rgba(242, 193, 78, 0.24);
+  border-radius: 13px;
+  background: linear-gradient(90deg, rgba(242, 193, 78, 0.07), rgba(13, 31, 26, 0.82));
+}
+
+.memory-repair > svg {
+  color: var(--gold);
+}
+
+.memory-repair small {
+  color: var(--gold);
+  font-size: 0.53rem;
+  font-weight: 900;
+  letter-spacing: 0.12em;
+}
+
+.memory-repair h2 {
+  margin: 0.22rem 0 0;
+  color: #e3d5ae;
+  font-size: 1rem;
+}
+
+.memory-repair p {
+  margin: 0.28rem 0 0;
+  color: #8d856c;
+  font-size: 0.68rem;
+  line-height: 1.5;
+}
+
+.memory-repair > span {
+  padding: 0.35rem 0.5rem;
+  color: #bca35c;
+  border: 1px solid rgba(242, 193, 78, 0.2);
+  border-radius: 6px;
+  font-size: 0.52rem;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  white-space: nowrap;
+}
+
 .lesson-briefing {
   align-self: start;
   padding-top: 1rem;
@@ -2865,6 +2913,15 @@ p {
 
   .lesson-layout {
     padding: 2rem 1rem 4rem;
+  }
+
+  .memory-repair {
+    grid-template-columns: auto 1fr;
+  }
+
+  .memory-repair > span {
+    grid-column: 1 / -1;
+    justify-self: start;
   }
 
   .lesson-briefing h1 {

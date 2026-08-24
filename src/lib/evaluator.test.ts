@@ -20,6 +20,15 @@ describe('evaluateExercise', () => {
     })
   })
 
+  it('explains the selected misconception instead of naming the wrong lesson', () => {
+    const result = evaluateExercise(exercise('java-jvm'), 'b')
+    expect(result).toEqual({
+      correct: false,
+      message: 'A critical duty, but Java can do quite a bit more. Reread the explanation above and try once more.',
+    })
+    expect(result.message).not.toContain('console’s job')
+  })
+
   it('accepts a valid Python print instruction', () => {
     expect(evaluateExercise(exercise('py-print'), 'print("Signal online")')).toMatchObject({
       correct: true,

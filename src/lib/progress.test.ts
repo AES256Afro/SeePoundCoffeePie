@@ -51,6 +51,22 @@ describe('progress helpers', () => {
     expect(updated.dailyXpDate).toBe('2026-08-20')
   })
 
+  it('strengthens a repaired concept without awarding its exercise XP twice', () => {
+    const now = new Date(2026, 7, 20)
+    const missed = recordAttempt(initialProgress(), 'java-runtime', false, 0, now)
+    const corrected = recordAttempt(missed, 'java-runtime', true, 8, now)
+    const retrievedAgain = recordAttempt(corrected, 'java-runtime', true, 0, now)
+
+    expect(retrievedAgain.xp).toBe(8)
+    expect(retrievedAgain.dailyXp).toBe(8)
+    expect(retrievedAgain.conceptProgress['java-runtime']).toMatchObject({
+      strength: 2,
+      correct: 2,
+      incorrect: 1,
+      dueAt: '2026-08-23',
+    })
+  })
+
   it('awards mission shards only on first completion', () => {
     const now = new Date(2026, 7, 20)
     const first = completeMission(initialProgress(), 'py-first-spark', now)
