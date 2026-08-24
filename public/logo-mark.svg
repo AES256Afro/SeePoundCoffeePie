@@ -14,7 +14,6 @@
     <circle r="7" fill="#70d5ee" fill-opacity="0.38" stroke-width="1.8"/>
     <circle r="3.4" fill="#071310" stroke-width="1.2"/>
     <circle cx="2.2" cy="-2.2" r="1.2" fill="#f2f8e9" stroke="none"/>
-    <path d="M-13-14v5M-15.5-11.5h5M13-14v5M10.5-11.5h5" stroke="#f2c14e" stroke-width="1.4"/>
   </g>
 
   <!-- Pound cake and C# -->

@@ -12,12 +12,11 @@
   <circle cx="32" cy="32" r="30" fill="#06110e"/>
   <circle cx="32" cy="32" r="28.5" fill="url(#space)" stroke="#75c99b" stroke-width="1.5"/>
 
-  <!-- See and C++: a literal eye with iris, pupil, highlight, and two plus stars. -->
+  <!-- See and C++: a literal eye with iris, pupil, and highlight. -->
   <path d="M6.5 32c6.5-10 15-15 25.5-15s19 5 25.5 15C51 42 42.5 47 32 47S13 42 6.5 32Z" fill="#0a1c18" stroke="#70d5ee" stroke-width="2"/>
   <circle cx="32" cy="32" r="10" fill="#70d5ee" fill-opacity="0.42" stroke="#70d5ee" stroke-width="1.2"/>
   <circle cx="32" cy="32" r="5" fill="#06110e" stroke="#a9efff" stroke-width="1"/>
   <circle cx="35" cy="29" r="1.8" fill="#f2f8e9"/>
-  <path d="M19 9v6M16 12h6M45 9v6M42 12h6" stroke="#f2c14e" stroke-width="1.8" stroke-linecap="round"/>
 
   <!-- Pound cake sits across the lower-left of the eye. -->
   <path d="M8.5 34 12 24h13l3 14-19.5-4Z" fill="#d49a58" stroke="#f2c14e" stroke-width="1.5" stroke-linejoin="round"/>
