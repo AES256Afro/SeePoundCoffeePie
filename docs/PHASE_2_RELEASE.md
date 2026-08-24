@@ -123,6 +123,7 @@ The platform script verifies all four languages, network denial, CPU, memory, wr
 - `npm run check:live` passed the apex domain, `www` redirect, production security headers, and SPA fallback.
 - A production browser first submitted invalid Python and received a line-specific beginner explanation plus a sanitized raw `mission.py` diagnostic. The corrected program returned its real output, passed its visible and hidden checks, confirmed destruction of the fresh sandbox, and produced no browser console errors.
 - `npm run check:runner:smoke` then passed a separate production grant, queue, execution, output, and assignment-check probe. The scheduled GitHub monitor runs this probe every six hours.
+- GitHub Actions run `32761075273` executed the published monitor from commit `a52d2516f95ba486b51424a98ee18ad3ef0a5352` and passed its remote production smoke-test job in 10 seconds.
 
 The deployment above contains the immutable application tree from source commit `2c47f0d1e6334d67cf8c5bed429f66db17a1e3b1`. The release-evidence and monitor documentation commit does not change the deployed Worker bundle.
 
@@ -136,7 +137,7 @@ $workers.scriptName = "see-pound-coffee-pie" AND regex($metadata.message, "runne
 
 The query matches the coordinator's system-error and stale-interruption events plus any failed sandbox cleanup without containing learner source. A separate search for `runner.rejected` shows queue, pending, and rate-limit rejections for abuse and capacity investigation.
 
-The account's Cloudflare Notifications catalog was reviewed at release time. It did not offer the documented Workers Observability notification type. Its only scheduled-query notification belonged to Log Explorer, and this account had no Log Explorer dataset. Phase 2 did not accept new Cloudflare pricing terms or activate a separate paid logging product to work around that account limitation. Ongoing alerting therefore uses the repository's `Production runner monitor` workflow, while Cloudflare remains the source for detailed privacy-preserving operational events. GitHub Actions notification delivery is controlled in the repository owner's GitHub notification settings.
+The account's Cloudflare Notifications catalog was reviewed at release time. It did not offer the documented Workers Observability notification type. Its only scheduled-query notification belonged to Log Explorer, and this account had no Log Explorer dataset. Phase 2 did not accept new Cloudflare pricing terms or activate a separate paid logging product to work around that account limitation. Ongoing alerting therefore uses the repository's `Production runner monitor` workflow, while Cloudflare remains the source for detailed privacy-preserving operational events. The repository owner's existing GitHub Actions setting was verified to send both GitHub and email notifications for failed workflows only, so a scheduled production failure reaches the operator without another subscription change.
 
 ## Kill switch and recovery
 
