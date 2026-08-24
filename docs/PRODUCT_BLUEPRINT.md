@@ -161,8 +161,8 @@ Every authored lesson must:
 
 ### Phase 1: Learning foundation
 
-- Author missions 2 through 6 for all four tracks.
-- Add output prediction, ordering, and bug-fix exercise components.
+- Author missions 3 through 6 for all four tracks. Mission 2 is playable in every track.
+- Extend the current output-prediction, ordering, and bug-fix components as later lessons need more complex interactions.
 - Add concept-level Codebook search and examples unlocked by completed lessons.
 - Add accessible keyboard shortcuts inside the editor.
 - Add unit, interaction, and curriculum-schema tests.

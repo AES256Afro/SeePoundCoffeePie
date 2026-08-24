@@ -129,4 +129,31 @@ describe('evaluateExercise', () => {
     expect(evaluateExercise(bugfix, 'if power = 5:').correct).toBe(false)
     expect(evaluateExercise(bugfix, 'if power == 5:').correct).toBe(true)
   })
+
+  it.each([
+    ['py2-fix-comparison', 'clearance = 7\nif clearance == 7:\n    print("Docking approved")'],
+    ['cpp2-fix-comparison', 'int hullIntegrity = 40; if (hullIntegrity == 40) { std::cout << "Breach located"; }'],
+    ['cs2-fix-comparison', 'int alertLevel = 3; if (alertLevel == 3) { Console.WriteLine("Battle stations"); }'],
+    ['java2-fix-comparison', 'int deckNumber = 4; if (deckNumber == 4) { System.out.println("Galley deck"); }'],
+  ])('accepts the authored %s comparison repair', (id, answer) => {
+    expect(evaluateExercise(exercise(id), answer).correct).toBe(true)
+  })
+
+  it.each([
+    ['py2-signal-decision', 'signal_strength = 72\nif signal_strength >= 60:\n    print("Signal accepted")'],
+    ['cpp2-hull-decision', 'int hullIntegrity = 35; if (hullIntegrity < 50) { std::cout << "Patch outer hull"; }'],
+    ['cs2-shield-decision', 'int shieldPower = 84; if (shieldPower >= 80) { Console.WriteLine("Hold formation"); }'],
+    ['java2-pod-decision', 'int podCount = 4; if (podCount < 6) { System.out.println("Restock reserve"); }'],
+  ])('accepts the authored %s final condition', (id, answer) => {
+    expect(evaluateExercise(exercise(id), answer).correct).toBe(true)
+  })
+
+  it.each([
+    ['py2-order-route', 'if|accept|else|scan'],
+    ['cpp2-order-repair', 'if|low|else|safe|end'],
+    ['cs2-order-command', 'if|hold|else|divert|end'],
+    ['java2-order-route', 'if|reserve|else|ready|end'],
+  ])('accepts the authored %s code order', (id, answer) => {
+    expect(evaluateExercise(exercise(id), answer).correct).toBe(true)
+  })
 })

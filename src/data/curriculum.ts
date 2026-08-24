@@ -562,6 +562,508 @@ const javaExercises: Exercise[] = [
   },
 ]
 
+const pythonSignalProtocolExercises: Exercise[] = [
+  {
+    id: 'py2-retrieve-output',
+    conceptId: 'python-output-and-variables',
+    eyebrow: 'Memory ping 1 of 5',
+    title: 'Read an old signal',
+    explanation:
+      'Before learning a new tool, retrieve one familiar pattern. Python stores Wayfarer under ship_name, then print reads that stored value.',
+    analogy:
+      'The bridge does not repaint the ship’s name on every console. It reads the current name from the labeled registry.',
+    type: 'prediction',
+    prompt: 'What line will this familiar code display?',
+    displayCode: 'ship_name = "Wayfarer"\nprint("Ship:", ship_name)',
+    choices: [
+      { id: 'a', label: 'Ship: Wayfarer', detail: 'The fixed label and stored value appear together.' },
+      { id: 'b', label: 'Ship: ship_name', detail: 'Without quotes, Python retrieves the value instead of printing the variable label.' },
+      { id: 'c', label: 'Nothing', detail: 'The print instruction sends a line to the console.' },
+    ],
+    correctChoice: 'a',
+    output: 'Ship: Wayfarer',
+    hint: 'Read the assignment first. What value is stored under ship_name?',
+    recap: 'Python reads the stored value Wayfarer when print uses ship_name without quotation marks.',
+    xp: 8,
+  },
+  {
+    id: 'py2-boolean',
+    conceptId: 'python-booleans',
+    eyebrow: 'Decision school 2 of 5',
+    title: 'Meet a true-or-false question',
+    explanation:
+      'A Boolean is a value with only two possibilities: True or False. A condition is a question the program can answer with one of those Boolean values.',
+    analogy:
+      'A sensor question such as “Is the signal stronger than 50?” has only two useful answers: yes or no.',
+    type: 'choice',
+    prompt: 'What kind of answer does a condition produce?',
+    choices: [
+      { id: 'a', label: 'True or False', detail: 'That two-way answer is a Boolean.' },
+      { id: 'b', label: 'Every number at once', detail: 'A condition can compare numbers, but its answer is still True or False.' },
+      { id: 'c', label: 'A random instruction', detail: 'The program evaluates the exact question you write.' },
+    ],
+    correctChoice: 'a',
+    hint: 'Think of a question that can be answered yes or no.',
+    recap: 'A condition evaluates to a Boolean value: True or False.',
+    xp: 10,
+  },
+  {
+    id: 'py2-order-route',
+    conceptId: 'python-conditions',
+    eyebrow: 'Route planner 3 of 5',
+    title: 'Put both signal routes in order',
+    explanation:
+      'Python uses if to open the route taken when a condition is True. else opens the other route. Indented lines belong to the route directly above them.',
+    analogy:
+      'The comm officer checks one sensor reading, then sends the signal through either the strong-signal hatch or the keep-scanning hatch.',
+    type: 'ordering',
+    prompt: 'Arrange the pieces so Python chooses one clear signal response.',
+    orderItems: [
+      { id: 'scan', code: '    print("Keep scanning")' },
+      { id: 'if', code: 'if signal_strength > 50:' },
+      { id: 'else', code: 'else:' },
+      { id: 'accept', code: '    print("Signal accepted")' },
+    ],
+    correctOrder: ['if', 'accept', 'else', 'scan'],
+    incorrectMessage: 'Start with the if question. Its indented instruction comes next, followed by else and the other indented instruction.',
+    output: 'Signal accepted',
+    hint: 'The if line asks first. Each indented print belongs beneath the route that should trigger it.',
+    recap: 'Python reads the if route first and the else route second. Indentation shows which instruction belongs to each route.',
+    xp: 14,
+  },
+  {
+    id: 'py2-fix-comparison',
+    conceptId: 'python-comparisons',
+    eyebrow: 'Diagnostic 4 of 5',
+    title: 'Repair the docking question',
+    explanation:
+      'One equals sign stores a value. Two equals signs ask whether two values match. This program needs a question, so its condition must use ==.',
+    analogy:
+      'A cargo officer can either replace the clearance badge with = or inspect whether it matches with ==. Docking needs the inspection.',
+    type: 'bugfix',
+    prompt: 'Change the faulty condition so it compares clearance with 7.',
+    starterCode: 'clearance = 7\n\nif clearance = 7:\n    print("Docking approved")',
+    focus: 'Find the single = inside the if line and change it to ==. Leave the assignment on line 1 alone.',
+    codeGuide: [
+      { code: 'clearance = 7', plain: 'This is an assignment. One equals sign stores the number 7 under the variable name clearance.' },
+      { code: 'clearance == 7', plain: 'This is a comparison. Two equals signs ask whether the stored value and 7 match.' },
+      { code: 'if ...:', plain: 'if checks the Boolean answer. The colon opens the indented route used when that answer is True.' },
+    ],
+    checks: [
+      { pattern: 'if\\s+clearance\\s*==\\s*7\\s*:', message: 'Use == in the if line so Python compares instead of assigning.' },
+    ],
+    output: 'Docking approved',
+    hint: 'The repaired line is if clearance == 7:',
+    recap: 'Use = to store a value and == to ask whether two values are equal.',
+    xp: 16,
+  },
+  {
+    id: 'py2-signal-decision',
+    conceptId: 'python-conditions',
+    eyebrow: 'Signal protocol 5 of 5',
+    title: 'Route the mysterious transmission',
+    explanation:
+      'A comparison can ask whether one number is greater than or equal to another. The >= operator means “at least.” The if statement uses that True-or-False answer to choose a route.',
+    analogy:
+      'The receiver needs at least 60 units of strength. A reading of 60 or more opens the secure channel.',
+    type: 'code',
+    prompt: 'Replace the blank with a condition that accepts strength values of 60 or more.',
+    starterCode: 'signal_strength = 72\n\nif _____:\n    print("Signal accepted")\nelse:\n    print("Keep scanning")',
+    focus: 'Replace the one _____ blank with signal_strength >= 60. The colon and both routes are supplied.',
+    codeGuide: [
+      { code: 'signal_strength = 72', plain: 'This familiar assignment stores the sensor’s whole-number reading in a clearly named variable.' },
+      { code: '>=', plain: 'This comparison means “greater than or equal to.” It includes the boundary value 60.' },
+      { code: 'if condition:', plain: 'Python evaluates the condition. When it is True, the first indented print runs.' },
+      { code: 'else:', plain: 'else provides the fallback route used when the condition is False.' },
+    ],
+    checks: [
+      { pattern: 'if\\s+signal_strength\\s*>=\\s*60\\s*:', message: 'Use signal_strength >= 60 between if and the supplied colon.' },
+    ],
+    output: 'Signal accepted',
+    hint: 'Write signal_strength >= 60 in the blank. Read >= as “at least.”',
+    recap: 'An if statement chooses a route from a Boolean condition. >= includes values above and exactly on the boundary.',
+    xp: 22,
+  },
+]
+
+const cppHullLogicExercises: Exercise[] = [
+  {
+    id: 'cpp2-retrieve-output',
+    conceptId: 'cpp-output-and-variables',
+    eyebrow: 'Memory ping 1 of 5',
+    title: 'Read the reactor display',
+    explanation:
+      'Retrieve a familiar C++ pattern first. The variable stores 80, and std::cout routes the label and stored number to the console from left to right.',
+    analogy:
+      'The bridge display combines a fixed gauge label with the reactor’s current stored reading.',
+    type: 'prediction',
+    prompt: 'What will this familiar code display?',
+    displayCode: 'int charge = 80;\nstd::cout << "Charge: " << charge;',
+    choices: [
+      { id: 'a', label: 'Charge: 80', detail: 'The output chain includes both the fixed text and stored number.' },
+      { id: 'b', label: 'Charge: charge', detail: 'Without quotation marks, charge retrieves its numeric value.' },
+      { id: 'c', label: '80Charge:', detail: 'std::cout follows the chain from left to right.' },
+    ],
+    correctChoice: 'a',
+    output: 'Charge: 80',
+    hint: 'Follow each << from left to right.',
+    recap: 'C++ sends each chained value to std::cout from left to right.',
+    xp: 8,
+  },
+  {
+    id: 'cpp2-boolean',
+    conceptId: 'cpp-booleans',
+    eyebrow: 'Damage control 2 of 5',
+    title: 'Ask a two-way question',
+    explanation:
+      'A C++ condition produces a Boolean answer: true or false. The program can use that answer to decide which instructions should run.',
+    analogy:
+      'The hull sensor answers one operational question: is integrity below the safe threshold, yes or no?',
+    type: 'choice',
+    prompt: 'What are the two possible Boolean values in C++?',
+    choices: [
+      { id: 'a', label: 'true and false', detail: 'C++ writes these Boolean values in lowercase.' },
+      { id: 'b', label: 'open and close only', detail: 'Those could be meanings in a story, but the language values are true and false.' },
+      { id: 'c', label: 'Every integer', detail: 'A comparison may inspect integers, but its result is Boolean.' },
+    ],
+    correctChoice: 'a',
+    hint: 'The two values mean yes and no, written as C++ keywords.',
+    recap: 'C++ Boolean values are true and false.',
+    xp: 10,
+  },
+  {
+    id: 'cpp2-order-repair',
+    conceptId: 'cpp-conditions',
+    eyebrow: 'Repair routes 3 of 5',
+    title: 'Assemble the hull decision',
+    explanation:
+      'C++ places a condition inside parentheses after if. Braces group the instructions for the true route and the else route.',
+    analogy:
+      'Damage control reads the gauge, opens one sealed procedure, or moves to the alternate procedure.',
+    type: 'ordering',
+    prompt: 'Arrange the pieces into a complete two-route hull decision.',
+    orderItems: [
+      { id: 'low', code: '    std::cout << "Patch outer hull";' },
+      { id: 'if', code: 'if (hullIntegrity < 50) {' },
+      { id: 'else', code: '} else {' },
+      { id: 'safe', code: '    std::cout << "Hull stable";' },
+      { id: 'end', code: '}' },
+    ],
+    correctOrder: ['if', 'low', 'else', 'safe', 'end'],
+    incorrectMessage: 'Open the if block first, place its output inside, open the else block, place its output inside, then close the final brace.',
+    output: 'Patch outer hull',
+    hint: 'The first piece begins with if. The last piece is the final closing brace.',
+    recap: 'C++ uses parentheses around a condition and braces around each route’s instructions.',
+    xp: 14,
+  },
+  {
+    id: 'cpp2-fix-comparison',
+    conceptId: 'cpp-comparisons',
+    eyebrow: 'Diagnostic 4 of 5',
+    title: 'Repair the integrity check',
+    explanation:
+      'In C++, one equals sign assigns a value. Two equals signs compare values. An if condition needs the comparison == when it asks whether values match.',
+    analogy:
+      'Damage control must inspect the gauge, not overwrite the gauge while asking the question.',
+    type: 'bugfix',
+    prompt: 'Repair the if condition so it compares hullIntegrity with 40.',
+    starterCode: '#include <iostream>\n\nint main() {\n    int hullIntegrity = 40;\n\n    if (hullIntegrity = 40) {\n        std::cout << "Breach located";\n    }\n    return 0;\n}',
+    focus: 'Change the single = inside the if parentheses to ==. Leave the earlier assignment unchanged.',
+    codeGuide: [
+      ...cppProgramFrame,
+      { code: 'int hullIntegrity = 40;', plain: 'This assignment stores 40 in a whole-number variable. One equals sign is correct here.' },
+      { code: 'hullIntegrity == 40', plain: 'Two equals signs compare the stored reading with 40 and produce true or false.' },
+      { code: 'if (...) { ... }', plain: 'Parentheses hold the condition. Braces group the instruction that runs when the condition is true.' },
+    ],
+    checks: [
+      { pattern: 'if\\s*\\(\\s*hullIntegrity\\s*==\\s*40\\s*\\)', message: 'Use == inside the if parentheses to compare the two values.' },
+    ],
+    output: 'Breach located',
+    hint: 'The repaired condition is if (hullIntegrity == 40) {',
+    recap: 'In C++, = assigns and == compares.',
+    xp: 16,
+  },
+  {
+    id: 'cpp2-hull-decision',
+    conceptId: 'cpp-conditions',
+    eyebrow: 'Hull logic 5 of 5',
+    title: 'Choose the repair route',
+    explanation:
+      'The < operator asks whether the value on the left is less than the value on the right. The if and else blocks use that Boolean answer to choose one repair report.',
+    analogy:
+      'Below 50 means the hull needs a patch. A reading of 50 or more stays on the stable route.',
+    type: 'code',
+    prompt: 'Replace the blank with a condition that detects integrity below 50.',
+    starterCode: '#include <iostream>\n\nint main() {\n    int hullIntegrity = 35;\n\n    if (_____) {\n        std::cout << "Patch outer hull";\n    } else {\n        std::cout << "Hull stable";\n    }\n    return 0;\n}',
+    focus: 'Replace the one _____ blank with hullIntegrity < 50. The parentheses and both brace groups are supplied.',
+    codeGuide: [
+      ...cppProgramFrame,
+      { code: 'hullIntegrity < 50', plain: 'The < symbol asks whether the current reading is less than 50. Its answer is true for 35.' },
+      { code: 'if (...) {', plain: 'if evaluates the condition in parentheses. The opening brace begins the true route.' },
+      { code: '} else {', plain: 'else opens the alternate route used when the condition is false.' },
+    ],
+    checks: [
+      { pattern: 'if\\s*\\(\\s*hullIntegrity\\s*<\\s*50\\s*\\)', message: 'Put hullIntegrity < 50 inside the supplied if parentheses.' },
+    ],
+    output: 'Patch outer hull',
+    hint: 'Write hullIntegrity < 50 in the blank. Read < as “is less than.”',
+    recap: 'A C++ if statement runs one brace group when its condition is true and the else group when it is false.',
+    xp: 22,
+  },
+]
+
+const csharpCommandLogicExercises: Exercise[] = [
+  {
+    id: 'cs2-retrieve-output',
+    conceptId: 'csharp-output-and-variables',
+    eyebrow: 'Memory ping 1 of 5',
+    title: 'Read the shield report',
+    explanation:
+      'Retrieve a familiar C# pattern. The $ makes a text template, and {strength} inserts the current stored number into that text.',
+    analogy:
+      'The tactical display keeps its label fixed while a live shield gauge fills the marked slot.',
+    type: 'prediction',
+    prompt: 'What will this familiar code display?',
+    displayCode: 'int strength = 100;\nConsole.WriteLine($"Strength: {strength}");',
+    choices: [
+      { id: 'a', label: 'Strength: 100', detail: 'The braces insert the value stored under strength.' },
+      { id: 'b', label: 'Strength: {strength}', detail: 'The leading $ tells C# to replace the braced name with its value.' },
+      { id: 'c', label: 'strength = 100', detail: 'The assignment stores data, while Console.WriteLine controls the displayed message.' },
+    ],
+    correctChoice: 'a',
+    output: 'Strength: 100',
+    hint: 'The $ and braces make this a live text template.',
+    recap: 'C# string interpolation replaces {strength} with the stored value 100.',
+    xp: 8,
+  },
+  {
+    id: 'cs2-boolean',
+    conceptId: 'csharp-booleans',
+    eyebrow: 'Command school 2 of 5',
+    title: 'Ask a command question',
+    explanation:
+      'A C# Boolean has one of two values: true or false. Conditions create Boolean answers that an if statement can use to make a decision.',
+    analogy:
+      'The captain asks whether shield power is at least the combat threshold. The tactical system answers yes or no.',
+    type: 'choice',
+    prompt: 'Which pair contains the C# Boolean values?',
+    choices: [
+      { id: 'a', label: 'true and false', detail: 'C# writes both Boolean keywords in lowercase.' },
+      { id: 'b', label: 'yes and no', detail: 'Those are the plain-language meanings, but the C# keywords are true and false.' },
+      { id: 'c', label: '1 through 100', detail: 'A condition can inspect numbers, but its answer is Boolean.' },
+    ],
+    correctChoice: 'a',
+    hint: 'The language keywords are the lowercase forms of true and false.',
+    recap: 'C# Boolean values are true and false.',
+    xp: 10,
+  },
+  {
+    id: 'cs2-order-command',
+    conceptId: 'csharp-conditions',
+    eyebrow: 'Tactical routes 3 of 5',
+    title: 'Assemble the shield decision',
+    explanation:
+      'C# places a condition in parentheses after if. Braces group the true route, and else opens the route used when the answer is false.',
+    analogy:
+      'One shield reading sends the crew either to hold formation or divert power.',
+    type: 'ordering',
+    prompt: 'Arrange the pieces into a complete two-route shield command.',
+    orderItems: [
+      { id: 'divert', code: '    Console.WriteLine("Divert power");' },
+      { id: 'if', code: 'if (shieldPower >= 80) {' },
+      { id: 'else', code: '} else {' },
+      { id: 'hold', code: '    Console.WriteLine("Hold formation");' },
+      { id: 'end', code: '}' },
+    ],
+    correctOrder: ['if', 'hold', 'else', 'divert', 'end'],
+    incorrectMessage: 'Begin with if, place its command inside the first braces, open else, place the alternate command inside, then close the final brace.',
+    output: 'Hold formation',
+    hint: 'The if line comes first. The final closing brace comes last.',
+    recap: 'C# uses parentheses for the condition and braces for the two instruction routes.',
+    xp: 14,
+  },
+  {
+    id: 'cs2-fix-comparison',
+    conceptId: 'csharp-comparisons',
+    eyebrow: 'Diagnostic 4 of 5',
+    title: 'Repair the alert check',
+    explanation:
+      'One equals sign assigns a value in C#. Two equals signs compare two values and produce true or false. The if condition needs ==.',
+    analogy:
+      'The tactical officer must compare the alert level, not replace it while checking it.',
+    type: 'bugfix',
+    prompt: 'Repair the condition so it compares alertLevel with 3.',
+    starterCode: 'int alertLevel = 3;\n\nif (alertLevel = 3) {\n    Console.WriteLine("Battle stations");\n}',
+    focus: 'Change the single = inside the if parentheses to ==. Leave the assignment on line 1 unchanged.',
+    codeGuide: [
+      { code: 'int alertLevel = 3;', plain: 'This assignment stores the whole number 3. One equals sign is correct in a storage instruction.' },
+      { code: 'alertLevel == 3', plain: 'Two equals signs compare the stored value with 3 and produce a Boolean answer.' },
+      { code: 'if (...) { ... }', plain: 'Parentheses hold the question. Braces group the command used when the answer is true.' },
+    ],
+    checks: [
+      { pattern: 'if\\s*\\(\\s*alertLevel\\s*==\\s*3\\s*\\)', message: 'Use == inside the if parentheses to compare alertLevel with 3.' },
+    ],
+    output: 'Battle stations',
+    hint: 'The repaired condition is if (alertLevel == 3) {',
+    recap: 'In C#, = assigns and == compares.',
+    xp: 16,
+  },
+  {
+    id: 'cs2-shield-decision',
+    conceptId: 'csharp-conditions',
+    eyebrow: 'Command logic 5 of 5',
+    title: 'Choose under pressure',
+    explanation:
+      'The >= operator means “greater than or equal to.” It lets the boundary value count. An if statement uses that Boolean result to choose exactly one command route.',
+    analogy:
+      'Shield power of 80 or higher can hold formation. Anything lower diverts reserve power.',
+    type: 'code',
+    prompt: 'Replace the blank with a condition that accepts shield power of 80 or more.',
+    starterCode: 'int shieldPower = 84;\n\nif (_____) {\n    Console.WriteLine("Hold formation");\n} else {\n    Console.WriteLine("Divert power");\n}',
+    focus: 'Replace the one _____ blank with shieldPower >= 80. The parentheses and both brace groups are supplied.',
+    codeGuide: [
+      { code: 'int shieldPower = 84;', plain: 'This familiar declaration stores a whole-number shield reading in a descriptive variable.' },
+      { code: '>=', plain: 'This comparison means “greater than or equal to.” It includes 80 as well as higher readings.' },
+      { code: 'if (...) {', plain: 'if evaluates the question inside the parentheses and opens the true route with a brace.' },
+      { code: '} else {', plain: 'else opens the alternate route used when the condition is false.' },
+    ],
+    checks: [
+      { pattern: 'if\\s*\\(\\s*shieldPower\\s*>=\\s*80\\s*\\)', message: 'Put shieldPower >= 80 inside the supplied if parentheses.' },
+    ],
+    output: 'Hold formation',
+    hint: 'Write shieldPower >= 80 in the blank. Read >= as “at least.”',
+    recap: 'A C# if statement selects one brace group from a Boolean condition.',
+    xp: 22,
+  },
+]
+
+const javaRoutingOrdersExercises: Exercise[] = [
+  {
+    id: 'java2-retrieve-output',
+    conceptId: 'java-output-and-variables',
+    eyebrow: 'Memory ping 1 of 5',
+    title: 'Read the galley count',
+    explanation:
+      'Retrieve a familiar Java pattern. The + operator joins the fixed label with the number stored under podCount.',
+    analogy:
+      'The galley display couples a label car to a live inventory car and shows them as one report.',
+    type: 'prediction',
+    prompt: 'What will this familiar code display?',
+    displayCode: 'int podCount = 12;\nSystem.out.println("Pods: " + podCount);',
+    choices: [
+      { id: 'a', label: 'Pods: 12', detail: 'Java joins the text with the stored numeric value.' },
+      { id: 'b', label: 'Pods: podCount', detail: 'Without quotes, podCount retrieves its stored value.' },
+      { id: 'c', label: '24', detail: 'Here + joins text and a value instead of performing number addition.' },
+    ],
+    correctChoice: 'a',
+    output: 'Pods: 12',
+    hint: 'Read the assignment, then follow the pieces joined by +.',
+    recap: 'Java joins the label and stored pod count into Pods: 12.',
+    xp: 8,
+  },
+  {
+    id: 'java2-boolean',
+    conceptId: 'java-booleans',
+    eyebrow: 'Routing school 2 of 5',
+    title: 'Ask a routing question',
+    explanation:
+      'A Java Boolean has one of two values: true or false. A condition produces that two-way answer so the program can choose what happens next.',
+    analogy:
+      'The supply lift asks whether the pod count is below the reserve threshold. The answer is yes or no.',
+    type: 'choice',
+    prompt: 'Which pair contains Java’s Boolean values?',
+    choices: [
+      { id: 'a', label: 'true and false', detail: 'Java writes these two Boolean keywords in lowercase.' },
+      { id: 'b', label: 'up and down', detail: 'Those can describe lift directions, but the language values are true and false.' },
+      { id: 'c', label: 'Any two strings', detail: 'Text can be compared, but a condition’s result is Boolean.' },
+    ],
+    correctChoice: 'a',
+    hint: 'The two Java keywords mean yes and no.',
+    recap: 'Java Boolean values are true and false.',
+    xp: 10,
+  },
+  {
+    id: 'java2-order-route',
+    conceptId: 'java-conditions',
+    eyebrow: 'Supply routes 3 of 5',
+    title: 'Assemble the pod routing order',
+    explanation:
+      'Java puts a condition inside parentheses after if. Braces group the instructions for the true route, and else opens the alternate route.',
+    analogy:
+      'The lift reads inventory once, then travels either to the reserve deck or the ready rack.',
+    type: 'ordering',
+    prompt: 'Arrange the pieces into a complete two-route supply decision.',
+    orderItems: [
+      { id: 'ready', code: '    System.out.println("Send to ready rack");' },
+      { id: 'if', code: 'if (podCount < 6) {' },
+      { id: 'else', code: '} else {' },
+      { id: 'reserve', code: '    System.out.println("Restock reserve");' },
+      { id: 'end', code: '}' },
+    ],
+    correctOrder: ['if', 'reserve', 'else', 'ready', 'end'],
+    incorrectMessage: 'Begin with if, place its route inside the first braces, open else, place the alternate route inside, then close the final brace.',
+    output: 'Restock reserve',
+    hint: 'The if line comes first. The final closing brace comes last.',
+    recap: 'Java uses parentheses for the Boolean condition and braces to group both routes.',
+    xp: 14,
+  },
+  {
+    id: 'java2-fix-comparison',
+    conceptId: 'java-comparisons',
+    eyebrow: 'Diagnostic 4 of 5',
+    title: 'Repair the deck check',
+    explanation:
+      'In Java, one equals sign assigns a value. Two equals signs compare primitive values such as integers. The if condition needs the comparison ==.',
+    analogy:
+      'The routing computer must inspect the deck number, not overwrite it while deciding where to stop.',
+    type: 'bugfix',
+    prompt: 'Repair the condition so it compares deckNumber with 4.',
+    starterCode: 'public class Main {\n    public static void main(String[] args) {\n        int deckNumber = 4;\n\n        if (deckNumber = 4) {\n            System.out.println("Galley deck");\n        }\n    }\n}',
+    focus: 'Change the single = inside the if parentheses to ==. Leave the earlier assignment unchanged.',
+    codeGuide: [
+      ...javaProgramFrame,
+      { code: 'int deckNumber = 4;', plain: 'This assignment stores the whole number 4. One equals sign is correct in this instruction.' },
+      { code: 'deckNumber == 4', plain: 'Two equals signs compare the stored integer with 4 and produce true or false.' },
+      { code: 'if (...) { ... }', plain: 'Parentheses hold the condition. Braces group the instruction that runs when it is true.' },
+    ],
+    checks: [
+      { pattern: 'if\\s*\\(\\s*deckNumber\\s*==\\s*4\\s*\\)', message: 'Use == inside the if parentheses to compare deckNumber with 4.' },
+    ],
+    output: 'Galley deck',
+    hint: 'The repaired condition is if (deckNumber == 4) {',
+    recap: 'In Java, = assigns and == compares primitive values such as integers.',
+    xp: 16,
+  },
+  {
+    id: 'java2-pod-decision',
+    conceptId: 'java-conditions',
+    eyebrow: 'Routing orders 5 of 5',
+    title: 'Send pods to the right deck',
+    explanation:
+      'The < operator asks whether the value on the left is less than the value on the right. Java’s if and else blocks use that Boolean answer to choose one route.',
+    analogy:
+      'Fewer than six pods triggers a reserve restock. Six or more pods can move to the ready rack.',
+    type: 'code',
+    prompt: 'Replace the blank with a condition that detects fewer than 6 pods.',
+    starterCode: 'public class Main {\n    public static void main(String[] args) {\n        int podCount = 4;\n\n        if (_____) {\n            System.out.println("Restock reserve");\n        } else {\n            System.out.println("Send to ready rack");\n        }\n    }\n}',
+    focus: 'Replace the one _____ blank with podCount < 6. The parentheses and Java program frame are supplied.',
+    codeGuide: [
+      ...javaProgramFrame,
+      { code: 'int podCount = 4;', plain: 'This familiar declaration stores a whole-number inventory reading.' },
+      { code: 'podCount < 6', plain: 'The < symbol asks whether the stored count is less than 6. The answer is true for 4.' },
+      { code: 'if (...) {', plain: 'if evaluates the question inside the parentheses and opens the true route.' },
+      { code: '} else {', plain: 'else opens the alternate route used when the condition is false.' },
+    ],
+    checks: [
+      { pattern: 'if\\s*\\(\\s*podCount\\s*<\\s*6\\s*\\)', message: 'Put podCount < 6 inside the supplied if parentheses.' },
+    ],
+    output: 'Restock reserve',
+    hint: 'Write podCount < 6 in the blank. Read < as “is less than.”',
+    recap: 'A Java if statement selects one brace group from a Boolean condition.',
+    xp: 22,
+  },
+]
+
 const mission = (
   id: string,
   language: LanguageId,
@@ -596,7 +1098,7 @@ export const tracks: LanguageTrack[] = [
     accentSoft: '#332c19',
     missions: [
       mission('py-first-spark', 'python', 1, 'First Spark', 'Wake the Wayfarer', 'Console output, text, numbers, and your first variables.', 'signal', 'available', pythonExercises),
-      mission('py-signal-protocol', 'python', 2, 'Signal Protocol', 'Make decisions', 'Booleans and if statements route a mysterious transmission.', 'satellite', 'locked'),
+      mission('py-signal-protocol', 'python', 2, 'Signal Protocol', 'Make decisions', 'Booleans and if statements route a mysterious transmission.', 'satellite', 'locked', pythonSignalProtocolExercises),
       mission('py-cargo-logic', 'python', 3, 'Cargo Logic', 'Organize the hold', 'Lists keep a nearly unlimited cargo manifest under control.', 'package', 'locked'),
       mission('py-looping-orbit', 'python', 4, 'Looping Orbit', 'Repeat with purpose', 'Loops scan moons without repeating every command by hand.', 'terminal', 'locked'),
       mission('py-function-foundry', 'python', 5, 'Function Foundry', 'Build reusable tools', 'Functions turn a working idea into a dependable ship system.', 'shield', 'locked'),
@@ -613,7 +1115,7 @@ export const tracks: LanguageTrack[] = [
     accentSoft: '#15303a',
     missions: [
       mission('cpp-reactor', 'cpp', 1, 'Reactor Wake', 'Light the rune core', 'Compilers, output, types, and variables from an engine room in the dark.', 'signal', 'available', cppExercises),
-      mission('cpp-hull-logic', 'cpp', 2, 'Hull Logic', 'Choose a repair route', 'Conditions help the damage-control system choose what happens next.', 'shield', 'locked'),
+      mission('cpp-hull-logic', 'cpp', 2, 'Hull Logic', 'Choose a repair route', 'Conditions help the damage-control system choose what happens next.', 'shield', 'locked', cppHullLogicExercises),
       mission('cpp-cargo-array', 'cpp', 3, 'Cargo Array', 'Count every crate', 'Arrays and loops process a full expedition manifest.', 'package', 'locked'),
       mission('cpp-command-functions', 'cpp', 4, 'Command Functions', 'Make tools reusable', 'Break a complicated repair procedure into clear operations.', 'terminal', 'locked'),
       mission('cpp-fleet-model', 'cpp', 5, 'Fleet Model', 'Design ship objects', 'Classes describe ships, shuttles, and eccentric maintenance drones.', 'satellite', 'locked'),
@@ -630,7 +1132,7 @@ export const tracks: LanguageTrack[] = [
     accentSoft: '#2d1d39',
     missions: [
       mission('cs-shield', 'csharp', 1, 'Shield Handshake', 'Bring the Aegis online', '.NET, console output, types, variables, and a tactical report.', 'signal', 'available', csharpExercises),
-      mission('cs-command-logic', 'csharp', 2, 'Command Logic', 'Choose under pressure', 'Conditions let your ship respond to changing situations.', 'shield', 'locked'),
+      mission('cs-command-logic', 'csharp', 2, 'Command Logic', 'Choose under pressure', 'Conditions let your ship respond to changing situations.', 'shield', 'locked', csharpCommandLogicExercises),
       mission('cs-crew-roster', 'csharp', 3, 'Crew Roster', 'Manage the manifest', 'Collections organize specialists, familiars, and one suspicious goat.', 'package', 'locked'),
       mission('cs-patrol-loop', 'csharp', 4, 'Patrol Loop', 'Scan the frontier', 'Loops repeat sensor work without exhausting the ensigns.', 'satellite', 'locked'),
       mission('cs-object-fleet', 'csharp', 5, 'Object Fleet', 'Model a living ship', 'Classes and objects organize a growing command system.', 'terminal', 'locked'),
@@ -647,7 +1149,7 @@ export const tracks: LanguageTrack[] = [
     accentSoft: '#3a2118',
     missions: [
       mission('java-coffee-protocol', 'java', 1, 'Coffee Protocol', 'Wake the morning watch', 'The JVM, console output, types, variables, and an essential galley report.', 'signal', 'available', javaExercises),
-      mission('java-routing-orders', 'java', 2, 'Routing Orders', 'Choose the right deck', 'Conditions send supplies to the places that need them.', 'satellite', 'locked'),
+      mission('java-routing-orders', 'java', 2, 'Routing Orders', 'Choose the right deck', 'Conditions send supplies to the places that need them.', 'satellite', 'locked', javaRoutingOrdersExercises),
       mission('java-crew-array', 'java', 3, 'Crew Array', 'Organize the watch', 'Arrays and lists keep a growing crew manifest in order.', 'package', 'locked'),
       mission('java-repeat-brew', 'java', 4, 'Repeat Brew', 'Automate the routine', 'Loops repeat safe procedures without copying instructions.', 'terminal', 'locked'),
       mission('java-droid-blueprint', 'java', 5, 'Droid Blueprint', 'Model a helper', 'Classes and objects describe the ship’s tiny service droids.', 'shield', 'locked'),

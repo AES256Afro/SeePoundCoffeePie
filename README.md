@@ -17,9 +17,9 @@ The current vertical slice includes:
 
 - a complete cadet intake flow with language and daily-goal selection;
 - four language stations: Python, C++, C#, and Java;
-- one fully playable five-step beginner mission for each language;
+- two fully playable five-step beginner missions for each language;
 - plain-language explanations and shipboard analogies;
-- multiple-choice orientation and editable code exercises;
+- guided choices, output prediction, code ordering, bug repair, and editable code exercises;
 - immediate, specific feedback and optional hints;
 - an end-of-mission memory-repair round that repeats missed concepts without duplicate XP;
 - a local training simulator for deterministic beginner challenges;
@@ -32,6 +32,8 @@ The current vertical slice includes:
 - optional GitHub identity verification with a secure, server-side OAuth flow.
 
 Planned missions are visible but intentionally locked. This makes the scope of the academy understandable without pretending unfinished curriculum is available.
+
+Mission 2 unlocks only after Mission 1 is complete in the same language. It retrieves earlier output and variable skills before introducing Booleans, comparisons, `if`, and `else`. Missions without authored exercises remain visibly marked as coming soon.
 
 ## Run locally
 
