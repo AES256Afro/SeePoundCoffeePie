@@ -102,11 +102,16 @@ p {
 }
 
 .brand__mark {
+  width: 116px;
+  height: 40px;
+  flex: 0 0 116px;
+  filter: drop-shadow(0 8px 12px rgba(0, 0, 0, 0.32));
+}
+
+.brand__mark--compact {
   width: 46px;
   height: 46px;
-  flex: 0 0 46px;
-  filter: drop-shadow(0 8px 12px rgba(0, 0, 0, 0.32));
-  transform: rotate(-3deg);
+  flex-basis: 46px;
 }
 
 .brand__name {

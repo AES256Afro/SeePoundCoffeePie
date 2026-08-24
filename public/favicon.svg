@@ -1,32 +1,38 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-labelledby="title description">
   <title id="title">SeePoundCoffeePie</title>
-  <desc id="description">An eye, pound cake, coffee cup, and pie arranged as a four-part code academy emblem.</desc>
+  <desc id="description">A cosmic café emblem combining an eye-shaped orbit, pound cake, coffee, and pie.</desc>
   <defs>
-    <linearGradient id="panel" x1="8" y1="5" x2="56" y2="59" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#17332b"/>
-      <stop offset="1" stop-color="#091512"/>
-    </linearGradient>
+    <radialGradient id="space" cx="50%" cy="42%" r="65%">
+      <stop stop-color="#17382f"/>
+      <stop offset="1" stop-color="#071310"/>
+    </radialGradient>
   </defs>
-  <rect x="2" y="2" width="60" height="60" rx="17" fill="#071310"/>
-  <rect x="4" y="4" width="56" height="56" rx="15" fill="url(#panel)" stroke="#6fb991" stroke-width="1.5"/>
-  <path d="M32 7v50M7 32h50" stroke="#315047" stroke-width="1.25"/>
 
-  <!-- See: an eye with two C++ sparkles. -->
-  <path d="M8 19c3-5 7-7 11-7s8 2 11 7c-3 5-7 7-11 7s-8-2-11-7Z" fill="none" stroke="#70d5ee" stroke-width="2"/>
-  <circle cx="19" cy="19" r="3.5" fill="#70d5ee"/>
-  <path d="M10 10v4M8 12h4M27 9v4M25 11h4" stroke="#f2c14e" stroke-width="1.4" stroke-linecap="round"/>
+  <!-- One circular badge and one continuous café scene, with no quadrant grid. -->
+  <circle cx="32" cy="32" r="30" fill="#06110e"/>
+  <circle cx="32" cy="32" r="28.5" fill="url(#space)" stroke="#75c99b" stroke-width="1.5"/>
 
-  <!-- Pound cake: a golden slice with a hash scored into the icing. -->
-  <path d="M38 13h16l-2 13H40l-2-13Z" fill="#d59a55" stroke="#f2c14e" stroke-width="1.5" stroke-linejoin="round"/>
-  <path d="M38 13c3-3 13-3 16 0" fill="none" stroke="#fff0b0" stroke-width="2.5" stroke-linecap="round"/>
-  <path d="M44 16l-1 7M49 16l-1 7M41 18h11M41 21h10" fill="none" stroke="#6f426d" stroke-width="1.25" stroke-linecap="round"/>
+  <!-- See and C++: an eye-shaped orbital saucer with two plus stars. -->
+  <path d="M6.5 32c6.5-10 15-15 25.5-15s19 5 25.5 15C51 42 42.5 47 32 47S13 42 6.5 32Z" fill="#0a1c18" stroke="#70d5ee" stroke-width="2"/>
+  <path d="M9 32c7 5 14.5 7.5 23 7.5S48 37 55 32" fill="none" stroke="#315047" stroke-width="1"/>
+  <path d="M19 9v6M16 12h6M45 9v6M42 12h6" stroke="#f2c14e" stroke-width="1.8" stroke-linecap="round"/>
 
-  <!-- Coffee: the Java cup. -->
-  <path d="M11 42h14v5a7 7 0 0 1-14 0v-5Zm14 2h2.5a3 3 0 0 1 0 6H25" fill="none" stroke="#ff936b" stroke-width="2" stroke-linejoin="round"/>
-  <path d="M15 39c-2-2 2-3 0-5M21 39c-2-2 2-3 0-5" fill="none" stroke="#f2c14e" stroke-width="1.5" stroke-linecap="round"/>
+  <!-- Pound cake forms the left wing of the café saucer. -->
+  <path d="M8.5 34 12 24h13l3 14-19.5-4Z" fill="#d49a58" stroke="#f2c14e" stroke-width="1.5" stroke-linejoin="round"/>
+  <path d="M12 24c3-2 9-2 13 0" fill="none" stroke="#fff0b0" stroke-width="2.6" stroke-linecap="round"/>
+  <path d="M16 27l-1 7M21 27l-1 8M13 29h11M13 32h12" fill="none" stroke="#6f426d" stroke-width="1.2" stroke-linecap="round"/>
 
-  <!-- Pie: a mint wedge with a pi-shaped crust vent. -->
-  <path d="M37 52 42 37c6 1 11 5 14 10L37 52Z" fill="#9ce4b5" stroke="#d9ffe6" stroke-width="1.5" stroke-linejoin="round"/>
-  <path d="M42 37c6 1 11 5 14 10" fill="none" stroke="#f2c14e" stroke-width="3" stroke-linecap="round"/>
-  <path d="M43 44h8M45 44v5M49 44v5" fill="none" stroke="#315047" stroke-width="1.6" stroke-linecap="round"/>
+  <!-- Coffee is the central cockpit and focal point. -->
+  <path d="M25 26h15v9a7.5 7.5 0 0 1-15 0v-9Z" fill="#ff936b" stroke="#ffd09a" stroke-width="1.5" stroke-linejoin="round"/>
+  <path d="M40 28h2a4 4 0 0 1 0 8h-2" fill="none" stroke="#ff936b" stroke-width="2"/>
+  <path d="M29 23c-3-3 3-4 0-7M35 23c-3-3 3-4 0-7" fill="none" stroke="#f2c14e" stroke-width="1.7" stroke-linecap="round"/>
+  <path d="M23 42h22" stroke="#75c99b" stroke-width="1.4" stroke-linecap="round"/>
+
+  <!-- Pie forms the right wing, with a pi-shaped vent. -->
+  <path d="M40 38 43 23c6 2 10 6 13 11l-16 4Z" fill="#9ce4b5" stroke="#d9ffe6" stroke-width="1.5" stroke-linejoin="round"/>
+  <path d="M43 23c6 2 10 6 13 11" fill="none" stroke="#f2c14e" stroke-width="2.8" stroke-linecap="round"/>
+  <path d="M45 29h7M47 29v5M51 29v5" fill="none" stroke="#315047" stroke-width="1.5" stroke-linecap="round"/>
+
+  <!-- A small exhaust glow makes the combined food tray read as a ship. -->
+  <path d="M27 47 30 54 32 47 34 54 37 47" fill="#f2c14e" opacity="0.85"/>
 </svg>

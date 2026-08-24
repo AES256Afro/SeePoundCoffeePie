@@ -143,7 +143,12 @@ function AppLink({ children, onClick, target, to, ...props }: AppLinkProps) {
 function BrandMark({ compact = false }: { compact?: boolean }) {
   return (
     <AppLink className={`brand ${compact ? 'brand--compact' : ''}`} aria-label="SeePoundCoffeePie home" to="/">
-      <img className="brand__mark" src="/favicon.svg" alt="" aria-hidden="true" />
+      <img
+        className={`brand__mark ${compact ? 'brand__mark--compact' : ''}`}
+        src={compact ? '/favicon.svg' : '/logo-mark.svg'}
+        alt=""
+        aria-hidden="true"
+      />
       {!compact && (
         <span className="brand__name">
           <b>SeePoundCoffeePie</b>
