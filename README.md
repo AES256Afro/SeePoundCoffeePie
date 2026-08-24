@@ -58,6 +58,12 @@ npm run lint
 npm run build
 ```
 
+Or run the same complete local release gate with one command:
+
+```bash
+npm run check:release
+```
+
 The production bundle is written to `dist/`.
 
 ## Production hosting
@@ -131,6 +137,7 @@ The learning loop draws on broad, well-supported product patterns:
 SeePoundCoffeePie keeps its own interface, narrative, mentor, terminology, missions, rewards, and course content. It does not copy another product’s branding or lesson material.
 
 Read the full [product and curriculum blueprint](docs/PRODUCT_BLUEPRINT.md).
+The verified Phase 1 scope and handoff are recorded in the [Phase 1 learning foundation release](docs/PHASE_1_RELEASE.md).
 
 ## Research references
 
