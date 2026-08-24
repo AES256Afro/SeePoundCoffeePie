@@ -1893,6 +1893,112 @@ p {
   font-size: 0.63rem;
 }
 
+.station-records {
+  margin-top: 2rem;
+}
+
+.station-records__heading {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 2rem;
+  margin-bottom: 1rem;
+}
+
+.station-records__heading small {
+  color: #628079;
+  font-size: 0.55rem;
+  font-weight: 900;
+  letter-spacing: 0.14em;
+}
+
+.station-records__heading h2 {
+  margin: 0.25rem 0 0;
+  font-size: 1.1rem;
+}
+
+.station-records__heading p {
+  max-width: 440px;
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.7rem;
+  line-height: 1.5;
+  text-align: right;
+}
+
+.station-records__grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.85rem;
+}
+
+.station-records__grid article {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0.9rem 1.2rem;
+  align-items: center;
+  padding: 1rem;
+  border: 1px solid var(--border);
+  border-radius: 13px;
+  background: rgba(11, 29, 24, 0.7);
+}
+
+.station-records__name,
+.station-records__name span,
+.station-records__count {
+  display: flex;
+}
+
+.station-records__name {
+  align-items: center;
+  gap: 0.65rem;
+}
+
+.station-records__name > svg {
+  color: var(--station-accent);
+}
+
+.station-records__name span,
+.station-records__count {
+  flex-direction: column;
+}
+
+.station-records__name small,
+.station-records__count small {
+  margin-top: 0.15rem;
+  color: var(--muted);
+  font-size: 0.58rem;
+}
+
+.station-records__count {
+  align-items: flex-end;
+}
+
+.station-records__count b {
+  font-size: 0.85rem;
+}
+
+.station-records__bar {
+  grid-column: 1 / -1;
+  overflow: hidden;
+  height: 5px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.station-records__bar span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--station-accent);
+}
+
+.station-records__grid .secondary-action {
+  grid-column: 1 / -1;
+  justify-content: space-between;
+  width: 100%;
+}
+
 .settings-panel {
   display: flex;
   align-items: center;
@@ -3275,8 +3381,19 @@ p {
   .dashboard-rail,
   .glossary-grid,
   .record-grid,
+  .station-records__grid,
   .explain-grid {
     grid-template-columns: 1fr;
+  }
+
+  .station-records__heading {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .station-records__heading p {
+    text-align: left;
   }
 
   .practice-hero {

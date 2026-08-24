@@ -545,13 +545,14 @@ interface CadetRecordProps {
   authUser: AuthUser | null
   onLogout: () => void
   onDownloadBackup: () => string
+  onOpenTrack: (language: LanguageId) => void
   onReset: () => void
   onRestoreBackup: (text: string) => string
   onSignIn: () => void
   progress: LearnerProgress
 }
 
-function CadetRecord({ authBusy, authUser, onDownloadBackup, onLogout, onReset, onRestoreBackup, onSignIn, progress }: CadetRecordProps) {
+function CadetRecord({ authBusy, authUser, onDownloadBackup, onLogout, onOpenTrack, onReset, onRestoreBackup, onSignIn, progress }: CadetRecordProps) {
   const concepts = Object.values(progress.conceptProgress)
   const answers = concepts.reduce((sum, item) => sum + item.correct + item.incorrect, 0)
   const accuracy = answers ? Math.round((concepts.reduce((sum, item) => sum + item.correct, 0) / answers) * 100) : 0
@@ -579,6 +580,29 @@ function CadetRecord({ authBusy, authUser, onDownloadBackup, onLogout, onReset, 
         <article><Trophy /><span><b>{progress.completedMissions.length}</b><small>Missions</small></span></article>
         <article><CheckCircle2 /><span><b>{accuracy}%</b><small>Accuracy</small></span></article>
       </div>
+      <section className="station-records" aria-labelledby="station-records-title">
+        <div className="station-records__heading">
+          <div><small>FOUR LEARNING ROUTES</small><h2 id="station-records-title">Station records</h2></div>
+          <p>Each language keeps its own ordered mission path. Open any station without erasing progress in the others.</p>
+        </div>
+        <div className="station-records__grid">
+          {tracks.map((track) => {
+            const completed = track.missions.filter((mission) => progress.completedMissions.includes(mission.id)).length
+            const percent = Math.round((completed / track.missions.length) * 100)
+            const active = progress.activeLanguage === track.id
+            return (
+              <article key={track.id} style={{ '--station-accent': track.accent } as React.CSSProperties}>
+                <div className="station-records__name"><Code2 size={18} /><span><b>{track.shortName}</b><small>{track.role}</small></span></div>
+                <div className="station-records__count"><b>{completed} / {track.missions.length}</b><small>missions complete</small></div>
+                <div className="station-records__bar" aria-label={`${track.shortName} ${percent}% complete`}><span style={{ width: `${percent}%` }} /></div>
+                <button className="secondary-action" onClick={() => onOpenTrack(track.id)}>
+                  {active ? 'View active mission path' : `Open ${track.shortName} mission path`} <ArrowRight size={15} />
+                </button>
+              </article>
+            )
+          })}
+        </div>
+      </section>
       <section className="account-panel">
         <span className="account-panel__icon"><Github size={24} /></span>
         <div>
@@ -1141,6 +1165,10 @@ function App() {
             authUser={authUser}
             onDownloadBackup={downloadProgressBackup}
             onLogout={logout}
+            onOpenTrack={(language) => {
+              setProgress((current) => ({ ...current, activeLanguage: language }))
+              setView('path')
+            }}
             onReset={reset}
             onRestoreBackup={restoreProgressBackup}
             onSignIn={signIn}

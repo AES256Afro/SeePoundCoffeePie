@@ -163,4 +163,28 @@ describe('beginner lesson interactions', () => {
       expect(JSON.parse(window.localStorage.getItem(progressKey) ?? '{}')).toMatchObject(restored)
     })
   })
+
+  it('shows separate station records and opens another language without erasing progress', async () => {
+    window.localStorage.setItem(progressKey, JSON.stringify({
+      ...initialProgress('python'),
+      callsign: 'Route Cadet',
+      completedMissions: ['py-first-spark', 'java-coffee-protocol'],
+      onboardingComplete: true,
+    }))
+
+    render(<App />)
+    fireEvent.click(screen.getByRole('button', { name: 'Cadet record' }))
+
+    expect(screen.getByRole('heading', { name: 'Station records' })).toBeTruthy()
+    expect(screen.getByLabelText('Python 17% complete')).toBeTruthy()
+    expect(screen.getByLabelText('Java 17% complete')).toBeTruthy()
+    fireEvent.click(screen.getByRole('button', { name: 'Open C++ mission path' }))
+
+    expect(await screen.findByRole('heading', { name: 'C++ Engineering Corps' })).toBeTruthy()
+    await waitFor(() => {
+      const stored = JSON.parse(window.localStorage.getItem(progressKey) ?? '{}')
+      expect(stored.activeLanguage).toBe('cpp')
+      expect(stored.completedMissions).toEqual(['py-first-spark', 'java-coffee-protocol'])
+    })
+  })
 })
