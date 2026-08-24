@@ -92,6 +92,8 @@ The in-process program cannot be trusted to measure or stop itself. A host-side 
 - Separate beginner explanations from raw diagnostics. Preserve the original compiler message under a disclosure, but strip host paths and infrastructure details first.
 - Alert on isolation failures, cleanup failures, rising timeout rates, unusual output volume, queue saturation, and repeated rejected command fields.
 
+Cloudflare Workers Observability retains the structured runner events used for detailed investigation. The production failure query selects only the `see-pound-coffee-pie` service and matches `runner.system_error`, `runner.interrupted`, or a failed cleanup marker. Capacity and abuse investigation uses the separate `runner.rejected` event. The repository's scheduled `Production runner monitor` performs a real grant, queue, Python sandbox, output, and assignment-check probe every six hours. A failure is a failed GitHub Actions workflow run, which is visible in the repository and eligible for the repository owner's configured Actions notifications. The probe uses fixed synthetic source committed with the monitor, not learner source.
+
 ## Result contract
 
 Every result uses one explicit outcome:
@@ -119,4 +121,4 @@ Real execution is enabled only after these controls are demonstrated in an isola
 9. A human browser test shows compile errors in beginner language while preserving sanitized raw diagnostics.
 10. Production has a tested kill switch that disables new runs without taking the static academy offline.
 
-The repeatable local image matrix is `./scripts/check-runner-image.sh`. The platform gate is `node scripts/check-runner-staging.mjs <staging-origin>`. Passing unit tests for the TypeScript contract proves only request validation. It does not prove process isolation, sandbox cleanup, platform behavior, or production readiness.
+The repeatable local image matrix is `./scripts/check-runner-image.sh`. The platform gate is `node scripts/check-runner-staging.mjs <staging-origin>`. The ongoing production probe is `node scripts/check-runner-smoke.mjs https://seepoundcoffeepie.com`. Passing unit tests for the TypeScript contract proves only request validation. It does not prove process isolation, sandbox cleanup, platform behavior, or production readiness.

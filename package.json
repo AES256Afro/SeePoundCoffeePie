@@ -10,6 +10,7 @@
     "check:runner:image": "./scripts/check-runner-image.sh",
     "check:runner:staging": "node scripts/check-runner-staging.mjs https://see-pound-coffee-pie-phase2-staging.chris-c39.workers.dev",
     "check:runner:production": "node scripts/check-runner-staging.mjs https://seepoundcoffeepie.com",
+    "check:runner:smoke": "node scripts/check-runner-smoke.mjs https://seepoundcoffeepie.com",
     "deploy": "npm run build && wrangler deploy",
     "deploy:staging": "npm run build && wrangler deploy -c wrangler.staging.jsonc",
     "deploy:dry-run": "npm run build && wrangler deploy --dry-run",
