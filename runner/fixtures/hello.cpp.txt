@@ -1,0 +1,9 @@
+#include <iostream>
+#include <string>
+
+int main() {
+    std::string core_name = "Ember";
+    int charge = 80;
+    std::cout << "Core: " << core_name << " | Charge: " << charge;
+    return 0;
+}

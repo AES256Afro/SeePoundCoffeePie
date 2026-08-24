@@ -1,0 +1,3 @@
+string shieldName = "Aegis";
+int strength = 100;
+Console.WriteLine($"Shield: {shieldName} | Strength: {strength}");

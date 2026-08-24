@@ -57,6 +57,8 @@ import {
   saveProgress,
 } from './lib/progress'
 import { buildReviewQueue, resetReviewAnswers } from './lib/review'
+import { runExercise, type RunnerClientStatus } from './lib/runner-client'
+import type { RunnerResult } from './lib/runner-contract'
 import type {
   AuthUser,
   EvaluationResult,
@@ -710,6 +712,9 @@ function LessonPlayer({ mission, practiceConceptIds, progress, onProgress, onExi
   const [step, setStep] = useState(0)
   const [answers, setAnswers] = useState<Record<string, string>>({})
   const [feedback, setFeedback] = useState<EvaluationResult | null>(null)
+  const [runnerBusy, setRunnerBusy] = useState(false)
+  const [runnerStatus, setRunnerStatus] = useState<RunnerClientStatus | null>(null)
+  const [runnerResult, setRunnerResult] = useState<RunnerResult | null>(null)
   const [credited, setCredited] = useState<string[]>([])
   const [hintOpen, setHintOpen] = useState(false)
   const [finished, setFinished] = useState(false)
@@ -761,6 +766,8 @@ function LessonPlayer({ mission, practiceConceptIds, progress, onProgress, onExi
   const setAnswer = (value: string) => {
     setAnswers((current) => ({ ...current, [exercise.id]: value }))
     if (feedback && !feedback.correct) setFeedback(null)
+    setRunnerResult(null)
+    setRunnerStatus(null)
   }
 
   const moveOrderItem = (index: number, direction: -1 | 1) => {
@@ -771,11 +778,10 @@ function LessonPlayer({ mission, practiceConceptIds, progress, onProgress, onExi
     setAnswer(reordered.join('|'))
   }
 
-  const checkAnswer = () => {
-    const result = evaluateExercise(exercise, answer)
+  const recordEvaluation = (result: EvaluationResult, countFailure = true) => {
     setFeedback(result)
     if (!result.correct) {
-      if (!reviewing && !mistakes.includes(exercise.id)) {
+      if (countFailure && !reviewing && !mistakes.includes(exercise.id)) {
         setMistakes((current) => [...current, exercise.id])
         onProgress(recordAttempt(progress, exercise.conceptId, false, 0))
       }
@@ -787,6 +793,44 @@ function LessonPlayer({ mission, practiceConceptIds, progress, onProgress, onExi
     } else if (!credited.includes(exercise.id)) {
       setCredited((current) => [...current, exercise.id])
       onProgress(recordAttempt(progress, exercise.conceptId, true, exercise.xp))
+    }
+  }
+
+  const checkAnswer = async () => {
+    if (!editableExercise) {
+      recordEvaluation(evaluateExercise(exercise, answer))
+      return
+    }
+
+    const localCheck = evaluateExercise(exercise, answer)
+    if (!answer.trim() || answer.includes('_____')) {
+      recordEvaluation(localCheck)
+      return
+    }
+
+    setRunnerBusy(true)
+    setRunnerResult(null)
+    try {
+      const result = await runExercise(exercise.id, mission.language, answer, setRunnerStatus)
+      setRunnerResult(result)
+      const correct = result.outcome === 'completed'
+        && result.tests.length > 0
+        && result.tests.every((test) => test.passed)
+      recordEvaluation({
+        correct,
+        message: correct
+          ? exercise.recap
+          : `${result.diagnostic.explanation} ${result.diagnostic.suggestion}`,
+        output: result.stdout,
+      }, result.outcome !== 'system_error')
+    } catch (error) {
+      const message = error instanceof Error
+        ? error.message
+        : 'The isolated runner could not be reached. Your code was not marked wrong.'
+      setFeedback({ correct: false, message })
+    } finally {
+      setRunnerBusy(false)
+      setRunnerStatus(null)
     }
   }
 
@@ -803,6 +847,8 @@ function LessonPlayer({ mission, practiceConceptIds, progress, onProgress, onExi
       }
       setReviewIndex((current) => current + 1)
       setFeedback(null)
+      setRunnerResult(null)
+      setRunnerStatus(null)
       setHintOpen(false)
       return
     }
@@ -814,6 +860,8 @@ function LessonPlayer({ mission, practiceConceptIds, progress, onProgress, onExi
         setReviewQueue(queue)
         setReviewIndex(0)
         setFeedback(null)
+        setRunnerResult(null)
+        setRunnerStatus(null)
         setHintOpen(false)
         return
       }
@@ -822,6 +870,8 @@ function LessonPlayer({ mission, practiceConceptIds, progress, onProgress, onExi
     }
     setStep((current) => current + 1)
     setFeedback(null)
+    setRunnerResult(null)
+    setRunnerStatus(null)
     setHintOpen(false)
   }
 
@@ -829,7 +879,7 @@ function LessonPlayer({ mission, practiceConceptIds, progress, onProgress, onExi
     if (event.key !== 'Enter' || (!event.ctrlKey && !event.metaKey)) return
     event.preventDefault()
     if (feedback?.correct) continueLesson()
-    else checkAnswer()
+    else void checkAnswer()
   }
 
   if (finished) {
@@ -986,7 +1036,7 @@ function LessonPlayer({ mission, practiceConceptIds, progress, onProgress, onExi
                 )}
               </section>
               <div className="code-workspace">
-                <div className="editor-bar"><span><Code2 size={15} /> {mission.language === 'python' ? 'mission.py' : mission.language === 'cpp' ? 'mission.cpp' : mission.language === 'java' ? 'Mission.java' : 'Mission.cs'}</span><small>TRAINING SIMULATOR</small></div>
+                <div className="editor-bar"><span><Code2 size={15} /> {mission.language === 'python' ? 'mission.py' : mission.language === 'cpp' ? 'mission.cpp' : mission.language === 'java' ? 'Mission.java' : 'Mission.cs'}</span><small>LIVE ISOLATED RUNNER</small></div>
                 <div className="editor-body">
                   <div className="line-numbers">{answer.split('\n').map((_, index) => <span key={index}>{index + 1}</span>)}</div>
                   <textarea
@@ -996,13 +1046,42 @@ function LessonPlayer({ mission, practiceConceptIds, progress, onProgress, onExi
                     onChange={(event) => setAnswer(event.target.value)}
                     onKeyDown={handleEditorKeyDown}
                     spellCheck={false}
-                    disabled={feedback?.correct}
+                    disabled={feedback?.correct || runnerBusy}
                   />
                 </div>
                 <div className="console-pane">
-                  <div><TerminalSquare size={14} /> SIMULATED OUTPUT</div>
-                  <pre>{feedback?.correct ? feedback.output : 'Nothing has run yet. Complete your one small change, then select Run check.'}</pre>
+                  <div><TerminalSquare size={14} /> REAL CONSOLE OUTPUT</div>
+                  <pre>{runnerBusy
+                    ? runnerStatus === 'running' ? 'Your program is running inside a fresh isolated sandbox...' : 'Preparing a fresh isolated sandbox...'
+                    : runnerResult
+                      ? runnerResult.stdout || runnerResult.stderr || '(The program finished without printing any text.)'
+                      : 'Nothing has run yet. Complete your one small change, then select Run check.'}</pre>
                 </div>
+                {runnerResult && (
+                  <section className="runner-report" aria-label="Real runner report">
+                    <div className="runner-report__summary">
+                      <span className={runnerResult.outcome === 'completed' ? 'is-good' : 'is-alert'}>
+                        {runnerResult.diagnostic.title}
+                      </span>
+                      <small>{runnerResult.durationMs} ms · fresh sandbox destroyed after run</small>
+                    </div>
+                    <div className="runner-tests">
+                      {runnerResult.tests.map((test) => (
+                        <article key={`${runnerResult.runId}-${test.name}`}>
+                          {test.passed ? <CheckCircle2 size={15} /> : <MessageCircleQuestion size={15} />}
+                          <span><b>{test.name}</b><small>{test.message}</small></span>
+                          <i>{test.visibility === 'hidden' ? 'HIDDEN CHECK' : 'VISIBLE CHECK'}</i>
+                        </article>
+                      ))}
+                    </div>
+                    {runnerResult.stderr && (
+                      <details>
+                        <summary>Show the language's exact message</summary>
+                        <pre>{runnerResult.stderr}</pre>
+                      </details>
+                    )}
+                  </section>
+                )}
                 <div className="editor-shortcuts" aria-label="Code editor keyboard controls">
                   <span><Keyboard size={14} /> KEYBOARD</span>
                   <p><kbd>Ctrl</kbd> or <kbd>⌘</kbd> + <kbd>Enter</kbd> runs the check. <kbd>Tab</kbd> moves out of the editor normally.</p>
@@ -1023,18 +1102,20 @@ function LessonPlayer({ mission, practiceConceptIds, progress, onProgress, onExi
 
           <div className="exercise-actions">
             {!reviewing && step > 0 && !feedback?.correct && <button className="secondary-action" onClick={() => { setStep((current) => current - 1); setFeedback(null) }}><ArrowLeft size={17} /> Back</button>}
-            <button className="primary-action" onClick={feedback?.correct ? continueLesson : checkAnswer}>
+            <button className="primary-action" disabled={runnerBusy} onClick={feedback?.correct ? continueLesson : () => { void checkAnswer() }}>
               {feedback?.correct
                 ? reviewing
                   ? reviewIndex === reviewQueue.length - 1 ? 'Complete memory repair' : 'Next review'
                   : step === sessionExercises.length - 1
                     ? mistakes.length > 0 ? 'Repair missed concepts' : practiceMode ? 'Finish practice' : 'Finish mission'
                     : 'Continue'
-                : checkActionLabel}
+                : runnerBusy
+                  ? runnerStatus === 'running' ? 'Running your code...' : 'Launching sandbox...'
+                  : checkActionLabel}
               {feedback?.correct ? <ArrowRight size={18} /> : <Play size={16} fill="currentColor" />}
             </button>
           </div>
-          <p className="simulator-note">This first prototype checks each beginner task locally. A sandboxed compiler service is planned for open-ended projects.</p>
+          <p className="simulator-note">Editable code runs on the server in a new network-blocked sandbox. The sandbox is destroyed after every check. Choice and ordering questions stay in your browser because they do not execute code.</p>
         </section>
       </main>
     </div>

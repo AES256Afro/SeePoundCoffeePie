@@ -1,4 +1,10 @@
 import { describe, expect, it, vi } from 'vitest'
+
+vi.mock('@cloudflare/sandbox', () => ({
+  Sandbox: class {},
+  getSandbox: vi.fn(),
+}))
+
 import worker, { handleRequest } from './worker'
 
 const htmlEnv = {
@@ -298,5 +304,108 @@ describe('production Worker', () => {
 
     expect(response.status).toBe(503)
     await expect(response.json()).resolves.toEqual({ error: 'GitHub sign-in is not configured.' })
+  })
+
+  it('reports the runner kill switch without creating a learner identity', async () => {
+    const response = await handleRequest(
+      new Request('https://seepoundcoffeepie.com/api/runner/status'),
+      { ...htmlEnv, RUNNER_ENABLED: 'false' },
+    )
+
+    expect(response.status).toBe(200)
+    await expect(response.json()).resolves.toMatchObject({
+      enabled: false,
+      version: 1,
+      languages: ['python', 'cpp', 'csharp', 'java'],
+    })
+    expect(response.headers.get('Set-Cookie')).toBeNull()
+  })
+
+  it('issues a scoped guest grant and submits only validated source to the coordinator', async () => {
+    const coordinatorFetch = vi.fn(async (_input: RequestInfo | URL, init?: RequestInit) => {
+      const internal = JSON.parse(String(init?.body))
+      expect(internal.exerciseId).toBe('py-print')
+      expect(internal.request).toEqual({ version: 1, language: 'python', source: 'print("Signal online")' })
+      expect(internal.ownerId).toMatch(/^[A-Za-z0-9_-]{40,}$/u)
+      expect(internal.ipHash).toMatch(/^[A-Za-z0-9_-]{40,}$/u)
+      return Response.json({ version: 1, runId: internal.runId, status: 'queued', pollAfterMs: 650 })
+    })
+    const runnerEnv = {
+      ...htmlEnv,
+      RUNNER_ENABLED: 'true',
+      RUNNER_CONTROL: {
+        getByName: vi.fn(() => ({ fetch: coordinatorFetch })),
+      },
+    }
+    const originHeaders = {
+      Origin: 'https://seepoundcoffeepie.com',
+      'Content-Type': 'application/json',
+    }
+    const grantResponse = await handleRequest(
+      new Request('https://seepoundcoffeepie.com/api/runner/grants', {
+        method: 'POST',
+        headers: originHeaders,
+        body: JSON.stringify({ exerciseId: 'py-print', language: 'python' }),
+      }),
+      runnerEnv,
+    )
+    expect(grantResponse.status).toBe(200)
+    const grantBody = await grantResponse.json() as { grant: string }
+    const guestCookie = cookieValue(grantResponse, '__Host-spp_runner_guest')
+    expect(grantBody.grant).toMatch(/^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$/u)
+    expect(guestCookie).toBeTruthy()
+
+    const runResponse = await handleRequest(
+      new Request('https://seepoundcoffeepie.com/api/runner/runs', {
+        method: 'POST',
+        headers: {
+          ...originHeaders,
+          Cookie: `__Host-spp_runner_guest=${guestCookie}`,
+          'CF-Connecting-IP': '192.0.2.4',
+          'X-Runner-Grant': grantBody.grant,
+        },
+        body: JSON.stringify({ version: 1, language: 'python', source: 'print("Signal online")' }),
+      }),
+      runnerEnv,
+    )
+
+    expect(runResponse.status).toBe(200)
+    await expect(runResponse.json()).resolves.toMatchObject({ status: 'queued' })
+    expect(coordinatorFetch).toHaveBeenCalledOnce()
+  })
+
+  it('rejects cross-site grants and learner-selected commands before the coordinator', async () => {
+    const coordinatorFetch = vi.fn()
+    const runnerEnv = {
+      ...htmlEnv,
+      RUNNER_ENABLED: 'true',
+      RUNNER_CONTROL: {
+        getByName: vi.fn(() => ({ fetch: coordinatorFetch })),
+      },
+    }
+    const crossSite = await handleRequest(
+      new Request('https://seepoundcoffeepie.com/api/runner/grants', {
+        method: 'POST',
+        headers: { Origin: 'https://malicious.example', 'Content-Type': 'application/json' },
+        body: JSON.stringify({ exerciseId: 'py-print' }),
+      }),
+      runnerEnv,
+    )
+    expect(crossSite.status).toBe(403)
+
+    const invalid = await handleRequest(
+      new Request('https://seepoundcoffeepie.com/api/runner/runs', {
+        method: 'POST',
+        headers: {
+          Origin: 'https://seepoundcoffeepie.com',
+          'Content-Type': 'application/json',
+          'X-Runner-Grant': 'invalid.invalid',
+        },
+        body: JSON.stringify({ version: 1, language: 'python', source: 'print(1)', command: 'sh' }),
+      }),
+      runnerEnv,
+    )
+    expect(invalid.status).toBe(401)
+    expect(coordinatorFetch).not.toHaveBeenCalled()
   })
 })

@@ -1,19 +1,16 @@
 {
   "$schema": "./node_modules/wrangler/config-schema.json",
-  "name": "see-pound-coffee-pie",
+  "name": "see-pound-coffee-pie-phase2-staging",
   "main": "./src/worker.ts",
   "compatibility_date": "2026-08-24",
   "compatibility_flags": ["nodejs_compat"],
   "workers_dev": true,
   "vars": {
-    "GITHUB_CLIENT_ID": "Ov23liVtLemmmdmrUXoi",
-    "RUNNER_ENABLED": "false"
+    "RUNNER_ENABLED": "false",
+    "RUNNER_ORIGIN": "https://see-pound-coffee-pie-phase2-staging.chris-c39.workers.dev"
   },
   "secrets": {
-    "required": [
-      "GITHUB_CLIENT_SECRET",
-      "SESSION_SECRET"
-    ]
+    "required": ["SESSION_SECRET"]
   },
   "assets": {
     "directory": "./dist",
@@ -24,7 +21,7 @@
   "kv_namespaces": [
     {
       "binding": "RUNNER_CONFIG",
-      "id": "2aeb513663da4186a9aba4dec27790de"
+      "id": "6bf969696f1a4b39b87fc074d16ab233"
     }
   ],
   "containers": [
@@ -32,25 +29,25 @@
       "class_name": "RunnerPythonSandbox",
       "image": "./Dockerfile.runner.python",
       "instance_type": "basic",
-      "max_instances": 4
+      "max_instances": 2
     },
     {
       "class_name": "RunnerCppSandbox",
       "image": "./Dockerfile.runner.cpp",
       "instance_type": "basic",
-      "max_instances": 4
+      "max_instances": 2
     },
     {
       "class_name": "RunnerCsharpSandbox",
       "image": "./Dockerfile.runner.csharp",
       "instance_type": "basic",
-      "max_instances": 4
+      "max_instances": 2
     },
     {
       "class_name": "RunnerJavaSandbox",
       "image": "./Dockerfile.runner.java",
       "instance_type": "basic",
-      "max_instances": 4
+      "max_instances": 2
     }
   ],
   "durable_objects": {
@@ -86,16 +83,6 @@
       "tag": "runner-v2-language-images",
       "new_sqlite_classes": ["RunnerPythonSandbox", "RunnerCppSandbox", "RunnerCsharpSandbox", "RunnerJavaSandbox"],
       "deleted_classes": ["RunnerSandbox"]
-    }
-  ],
-  "routes": [
-    {
-      "pattern": "seepoundcoffeepie.com",
-      "custom_domain": true
-    },
-    {
-      "pattern": "www.seepoundcoffeepie.com",
-      "custom_domain": true
     }
   ],
   "observability": {

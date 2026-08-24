@@ -1,0 +1,6 @@
+import socket
+
+connection = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+connection.settimeout(1)
+connection.connect(("1.1.1.1", 80))
+print("network unexpectedly available")

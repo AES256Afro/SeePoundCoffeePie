@@ -1,3 +1,6 @@
+import { findRunnerAssignment } from './lib/runner-assignments'
+import { RUNNER_API_VERSION, validateRunnerRequest } from './lib/runner-contract'
+
 interface AssetFetcher {
   fetch(request: Request): Promise<Response>
 }
@@ -7,6 +10,10 @@ interface WorkerEnv {
   GITHUB_CLIENT_ID?: string
   GITHUB_CLIENT_SECRET?: string
   SESSION_SECRET?: string
+  RUNNER_CONTROL?: Pick<DurableObjectNamespace, 'getByName'>
+  RUNNER_CONFIG?: KVNamespace
+  RUNNER_ENABLED?: string
+  RUNNER_ORIGIN?: string
 }
 
 interface GitHubUser {
@@ -21,6 +28,19 @@ interface SessionPayload {
   expiresAt: number
 }
 
+interface RunnerGuestPayload {
+  id: string
+  expiresAt: number
+}
+
+interface RunnerGrantPayload {
+  ownerId: string
+  exerciseId: string
+  language: 'python' | 'cpp' | 'csharp' | 'java'
+  expiresAt: number
+  nonce: string
+}
+
 type ExternalFetch = (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>
 
 const CANONICAL_HOST = 'seepoundcoffeepie.com'
@@ -29,9 +49,12 @@ const CALLBACK_URL = `${CANONICAL_ORIGIN}/api/auth/github/callback`
 const GITHUB_API_VERSION = '2026-03-10'
 const OAUTH_COOKIE_AGE = 10 * 60
 const SESSION_COOKIE_AGE = 7 * 24 * 60 * 60
+const RUNNER_GUEST_COOKIE_AGE = 30 * 24 * 60 * 60
+const RUNNER_GRANT_AGE = 5 * 60
 const OAUTH_STATE_COOKIE = '__Host-spp_oauth_state'
 const PKCE_COOKIE = '__Host-spp_oauth_pkce'
 const SESSION_COOKIE = '__Host-spp_session'
+const RUNNER_GUEST_COOKIE = '__Host-spp_runner_guest'
 const PKCE_VERIFIER_PATTERN = /^[A-Za-z0-9._~-]{43,128}$/u
 const encoder = new TextEncoder()
 
@@ -134,12 +157,16 @@ async function hmacKey(secret: string): Promise<CryptoKey> {
 }
 
 async function createSession(payload: SessionPayload, secret: string): Promise<string> {
+  return createSignedPayload(payload, secret)
+}
+
+async function createSignedPayload(payload: unknown, secret: string): Promise<string> {
   const encodedPayload = bytesToBase64Url(encoder.encode(JSON.stringify(payload)))
   const signature = await crypto.subtle.sign('HMAC', await hmacKey(secret), encoder.encode(encodedPayload))
   return `${encodedPayload}.${bytesToBase64Url(new Uint8Array(signature))}`
 }
 
-async function readSession(value: string | undefined, secret: string): Promise<SessionPayload | null> {
+async function readSignedPayload(value: string | undefined, secret: string): Promise<unknown | null> {
   if (!value) return null
   const parts = value.split('.')
   if (parts.length !== 2) return null
@@ -154,7 +181,15 @@ async function readSession(value: string | undefined, secret: string): Promise<S
     )
     if (!valid) return null
 
-    const payload = JSON.parse(new TextDecoder().decode(base64UrlToBytes(encodedPayload))) as SessionPayload
+    return JSON.parse(new TextDecoder().decode(base64UrlToBytes(encodedPayload))) as unknown
+  } catch {
+    return null
+  }
+}
+
+async function readSession(value: string | undefined, secret: string): Promise<SessionPayload | null> {
+  const payload = await readSignedPayload(value, secret) as SessionPayload | null
+  try {
     if (
       typeof payload?.user?.id !== 'string'
       || typeof payload.user.login !== 'string'
@@ -168,6 +203,11 @@ async function readSession(value: string | undefined, secret: string): Promise<S
   } catch {
     return null
   }
+}
+
+async function hmacTag(value: string, secret: string): Promise<string> {
+  const signature = await crypto.subtle.sign('HMAC', await hmacKey(secret), encoder.encode(value))
+  return bytesToBase64Url(new Uint8Array(signature))
 }
 
 function basicAuthorization(clientId: string, clientSecret: string): string {
@@ -377,6 +417,224 @@ async function authRequest(
   return json({ error: 'Auth endpoint not found.' }, 404)
 }
 
+function runnerOrigin(env: WorkerEnv): string {
+  if (!env.RUNNER_ORIGIN) return CANONICAL_ORIGIN
+  try {
+    const configured = new URL(env.RUNNER_ORIGIN)
+    if (configured.protocol === 'https:' && configured.pathname === '/') return configured.origin
+  } catch {
+    // Fall through to the production origin when configuration is malformed.
+  }
+  return CANONICAL_ORIGIN
+}
+
+function sameOrigin(request: Request, env: WorkerEnv): boolean {
+  return request.headers.get('Origin') === runnerOrigin(env)
+}
+
+async function runnerEnabled(env: WorkerEnv): Promise<boolean> {
+  if (env.RUNNER_CONFIG) {
+    const setting = await env.RUNNER_CONFIG.get('enabled')
+    if (setting !== null) return setting === 'true'
+  }
+  return env.RUNNER_ENABLED === 'true'
+}
+
+function validGuestPayload(value: unknown): value is RunnerGuestPayload {
+  if (!value || typeof value !== 'object') return false
+  const payload = value as Partial<RunnerGuestPayload>
+  return typeof payload.id === 'string'
+    && /^[A-Za-z0-9_-]{30,80}$/u.test(payload.id)
+    && typeof payload.expiresAt === 'number'
+    && payload.expiresAt > Math.floor(Date.now() / 1000)
+}
+
+function validGrantPayload(value: unknown): value is RunnerGrantPayload {
+  if (!value || typeof value !== 'object') return false
+  const payload = value as Partial<RunnerGrantPayload>
+  return typeof payload.ownerId === 'string'
+    && payload.ownerId.length >= 32
+    && typeof payload.exerciseId === 'string'
+    && ['python', 'cpp', 'csharp', 'java'].includes(payload.language ?? '')
+    && typeof payload.expiresAt === 'number'
+    && payload.expiresAt > Math.floor(Date.now() / 1000)
+    && typeof payload.nonce === 'string'
+    && payload.nonce.length >= 20
+}
+
+async function runnerOwner(
+  request: Request,
+  env: WorkerEnv,
+  createGuest: boolean,
+): Promise<{ ownerId: string; cookies: string[] } | null> {
+  if (!env.SESSION_SECRET || env.SESSION_SECRET.length < 32) return null
+  const cookies = parseCookies(request)
+  const session = await readSession(cookies.get(SESSION_COOKIE), env.SESSION_SECRET)
+  if (session) {
+    return {
+      ownerId: await hmacTag(`github:${session.user.id}`, env.SESSION_SECRET),
+      cookies: [],
+    }
+  }
+
+  const guestValue = cookies.get(RUNNER_GUEST_COOKIE)
+  const guest = await readSignedPayload(guestValue, env.SESSION_SECRET)
+  if (validGuestPayload(guest)) {
+    return {
+      ownerId: await hmacTag(`guest:${guest.id}`, env.SESSION_SECRET),
+      cookies: [],
+    }
+  }
+  if (!createGuest) return null
+
+  const expiresAt = Math.floor(Date.now() / 1000) + RUNNER_GUEST_COOKIE_AGE
+  const payload: RunnerGuestPayload = { id: randomBase64Url(32), expiresAt }
+  return {
+    ownerId: await hmacTag(`guest:${payload.id}`, env.SESSION_SECRET),
+    cookies: [secureCookie(
+      RUNNER_GUEST_COOKIE,
+      await createSignedPayload(payload, env.SESSION_SECRET),
+      RUNNER_GUEST_COOKIE_AGE,
+    )],
+  }
+}
+
+async function runnerGrant(request: Request, env: WorkerEnv): Promise<Response> {
+  if (!sameOrigin(request, env)) return json({ error: 'Runner grants require a same-origin request.' }, 403)
+  if (!env.SESSION_SECRET || env.SESSION_SECRET.length < 32 || !env.RUNNER_CONTROL) {
+    return json({ error: 'Live code execution is not configured.' }, 503)
+  }
+  if (!await runnerEnabled(env)) return json({ error: 'Live code execution is temporarily paused.' }, 503)
+
+  let body: unknown
+  try {
+    body = await request.json()
+  } catch {
+    return json({ error: 'Send one exercise identifier.' }, 400)
+  }
+  const exerciseId = body && typeof body === 'object' && 'exerciseId' in body
+    ? (body as { exerciseId?: unknown }).exerciseId
+    : null
+  if (typeof exerciseId !== 'string') return json({ error: 'Choose one editable academy exercise.' }, 400)
+
+  const assignment = findRunnerAssignment(exerciseId)
+  if (!assignment) return json({ error: 'That exercise does not support live execution.' }, 404)
+  const owner = await runnerOwner(request, env, true)
+  if (!owner) return json({ error: 'The runner could not create a private learner session.' }, 503)
+
+  const payload: RunnerGrantPayload = {
+    ownerId: owner.ownerId,
+    exerciseId,
+    language: assignment.language,
+    expiresAt: Math.floor(Date.now() / 1000) + RUNNER_GRANT_AGE,
+    nonce: randomBase64Url(18),
+  }
+  return json({
+    version: RUNNER_API_VERSION,
+    grant: await createSignedPayload(payload, env.SESSION_SECRET),
+    expiresIn: RUNNER_GRANT_AGE,
+    language: assignment.language,
+    visibleTest: {
+      name: 'Visible console check',
+      expectedOutput: assignment.expectedOutput,
+    },
+  }, 200, owner.cookies)
+}
+
+async function readRunnerGrant(request: Request, env: WorkerEnv): Promise<RunnerGrantPayload | null> {
+  if (!env.SESSION_SECRET) return null
+  const header = request.headers.get('X-Runner-Grant')
+  const payload = await readSignedPayload(header ?? undefined, env.SESSION_SECRET)
+  return validGrantPayload(payload) ? payload : null
+}
+
+async function submitRunnerRun(request: Request, env: WorkerEnv): Promise<Response> {
+  if (!sameOrigin(request, env)) return json({ error: 'Code runs require a same-origin request.' }, 403)
+  if (!env.SESSION_SECRET || !env.RUNNER_CONTROL) return json({ error: 'Live code execution is not configured.' }, 503)
+  if (!await runnerEnabled(env)) return json({ error: 'Live code execution is temporarily paused.' }, 503)
+
+  const grant = await readRunnerGrant(request, env)
+  const owner = await runnerOwner(request, env, false)
+  if (!grant || !owner || grant.ownerId !== owner.ownerId) {
+    return json({ error: 'This short-lived run grant is missing or expired. Request a new one.' }, 401)
+  }
+
+  const contentLength = Number(request.headers.get('Content-Length') ?? '0')
+  if (Number.isFinite(contentLength) && contentLength > 25_000) {
+    return json({ error: 'The runner request is too large.' }, 413)
+  }
+
+  let body: unknown
+  try {
+    body = await request.json()
+  } catch {
+    return json({ error: 'Send the code run as JSON.' }, 400)
+  }
+  const validation = validateRunnerRequest(body)
+  if (!validation.ok) return json({ error: validation.message, issue: validation.issue }, 400)
+  if (validation.request.language !== grant.language) {
+    return json({ error: 'The run language must match the current exercise.' }, 400)
+  }
+
+  const assignment = findRunnerAssignment(grant.exerciseId)
+  if (!assignment || assignment.language !== grant.language) {
+    return json({ error: 'The run grant no longer matches an academy exercise.' }, 400)
+  }
+
+  const address = request.headers.get('CF-Connecting-IP') ?? 'unknown'
+  const payload = {
+    runId: randomBase64Url(24),
+    ownerId: owner.ownerId,
+    ipHash: await hmacTag(`runner-ip:${address}`, env.SESSION_SECRET),
+    exerciseId: grant.exerciseId,
+    request: validation.request,
+  }
+  const stub = env.RUNNER_CONTROL.getByName('global-v1')
+  const response = await stub.fetch('https://runner.internal/submit', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  })
+  return new Response(response.body, { status: response.status, headers: response.headers })
+}
+
+async function runnerResult(request: Request, env: WorkerEnv, runId: string): Promise<Response> {
+  if (!env.RUNNER_CONTROL) return json({ error: 'Live code execution is not configured.' }, 503)
+  const owner = await runnerOwner(request, env, false)
+  if (!owner) return json({ error: 'Run not found.' }, 404)
+
+  const stub = env.RUNNER_CONTROL.getByName('global-v1')
+  const response = await stub.fetch(`https://runner.internal/result/${encodeURIComponent(runId)}`, {
+    headers: { 'X-Runner-Owner': owner.ownerId },
+  })
+  return new Response(response.body, { status: response.status, headers: response.headers })
+}
+
+async function runnerRequest(request: Request, env: WorkerEnv): Promise<Response> {
+  const url = new URL(request.url)
+  if (url.pathname === '/api/runner/status') {
+    if (request.method !== 'GET') return methodNotAllowed('GET')
+    return json({
+      enabled: Boolean(env.RUNNER_CONTROL) && await runnerEnabled(env),
+      version: RUNNER_API_VERSION,
+      languages: ['python', 'cpp', 'csharp', 'java'],
+    })
+  }
+  if (url.pathname === '/api/runner/grants') {
+    if (request.method !== 'POST') return methodNotAllowed('POST')
+    return runnerGrant(request, env)
+  }
+  if (url.pathname === '/api/runner/runs') {
+    if (request.method !== 'POST') return methodNotAllowed('POST')
+    return submitRunnerRun(request, env)
+  }
+  if (url.pathname.startsWith('/api/runner/runs/')) {
+    if (request.method !== 'GET') return methodNotAllowed('GET')
+    return runnerResult(request, env, url.pathname.slice('/api/runner/runs/'.length))
+  }
+  return json({ error: 'Runner endpoint not found.' }, 404)
+}
+
 function withBrowserSecurityHeaders(response: Response, url: URL): Response {
   const headers = new Headers(response.headers)
 
@@ -425,8 +683,30 @@ export async function handleRequest(
     return authRequest(request, env, externalFetch)
   }
 
+  if (url.pathname.startsWith('/api/runner/')) {
+    const expectedOrigin = new URL(runnerOrigin(env))
+    if (url.origin !== expectedOrigin.origin) {
+      url.protocol = expectedOrigin.protocol
+      url.host = expectedOrigin.host
+      return Response.redirect(url.toString(), 308)
+    }
+    try {
+      return await runnerRequest(request, env)
+    } catch {
+      return json({ error: 'The academy runner had an infrastructure problem. Learner code was not blamed.' }, 500)
+    }
+  }
+
   return withBrowserSecurityHeaders(await env.ASSETS.fetch(request), url)
 }
+
+export {
+  RunnerCoordinator,
+  RunnerCppSandbox,
+  RunnerCsharpSandbox,
+  RunnerJavaSandbox,
+  RunnerPythonSandbox,
+} from './runner-coordinator'
 
 export default {
   fetch(request: Request, env: WorkerEnv): Promise<Response> {

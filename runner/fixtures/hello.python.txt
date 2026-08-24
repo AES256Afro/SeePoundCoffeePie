@@ -1,0 +1,5 @@
+ship_name = "Wayfarer"
+power_cells = 3
+
+print("Ship:", ship_name)
+print("Cells:", power_cells)

@@ -2871,6 +2871,103 @@ p {
   white-space: pre-wrap;
 }
 
+.runner-report {
+  padding: 0.8rem 0.9rem;
+  border-top: 1px solid #1a342c;
+  background: #081612;
+}
+
+.runner-report__summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.runner-report__summary span {
+  font-size: 0.68rem;
+  font-weight: 900;
+}
+
+.runner-report__summary .is-good {
+  color: var(--lime);
+}
+
+.runner-report__summary .is-alert {
+  color: #ffaba5;
+}
+
+.runner-report__summary small {
+  color: #58736a;
+  font-size: 0.52rem;
+}
+
+.runner-tests {
+  display: grid;
+  gap: 0.4rem;
+  margin-top: 0.7rem;
+}
+
+.runner-tests article {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: start;
+  gap: 0.5rem;
+  padding: 0.5rem 0.6rem;
+  color: #86ae95;
+  border: 1px solid #18352c;
+  border-radius: 7px;
+  background: rgba(4, 15, 12, 0.62);
+}
+
+.runner-tests article > span {
+  display: flex;
+  flex-direction: column;
+  gap: 0.12rem;
+}
+
+.runner-tests b {
+  color: #b7d6c3;
+  font-size: 0.62rem;
+}
+
+.runner-tests small {
+  color: #657f76;
+  font-size: 0.55rem;
+  line-height: 1.45;
+}
+
+.runner-tests i {
+  color: #58736a;
+  font-size: 0.44rem;
+  font-style: normal;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+}
+
+.runner-report details {
+  margin-top: 0.65rem;
+  color: #789087;
+  font-size: 0.58rem;
+}
+
+.runner-report summary {
+  cursor: pointer;
+  font-weight: 800;
+}
+
+.runner-report details pre {
+  overflow: auto;
+  max-height: 160px;
+  margin: 0.5rem 0 0;
+  padding: 0.6rem;
+  color: #c1a6a2;
+  border-radius: 6px;
+  background: #050d0b;
+  font-family: "SFMono-Regular", Consolas, monospace;
+  white-space: pre-wrap;
+}
+
 .editor-shortcuts {
   display: flex;
   align-items: center;

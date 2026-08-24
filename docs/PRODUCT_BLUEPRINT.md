@@ -77,7 +77,7 @@ Later sectors should revisit a concept through several exercise forms:
 
 ### Honest execution boundary
 
-The current local simulator is appropriate for a first vertical slice with constrained tasks. It is not a general compiler. Open-ended execution needs isolated, ephemeral workers with:
+Editable exercises now run in isolated, ephemeral workers. Choice, prediction, and ordering exercises remain deterministic browser interactions because they do not execute code. The real runner provides:
 
 - language-specific toolchains;
 - strict execution timeouts;
@@ -170,13 +170,14 @@ Every authored lesson must:
 - Unit, React interaction, curriculum-schema, desktop browser, and 390-pixel mobile checks cover the learning foundation.
 - Each Mission 6 capstone retrieves and combines storage, conditions, collections, loops, and reusable code without introducing another syntax burden.
 
-### Phase 2: Real execution
+### Phase 2: Real execution (complete)
 
-- Implement the isolated runner behind the completed version 1 request contract and [runner security threat model](RUNNER_SECURITY_CONTRACT.md).
-- Add Python and Java workers first, then C# and C++.
-- Stream compile errors through a beginner-focused explanation layer.
-- Keep raw compiler output available under a disclosure for learners who want it.
-- Add hidden and visible tests without hiding the assignment requirements.
+- The isolated runner is implemented behind the version 1 request contract and [runner security threat model](RUNNER_SECURITY_CONTRACT.md).
+- Python, C++, C#, and Java use pinned toolchains and fixed server-owned commands in one-use sandbox VMs.
+- Compile and runtime failures pass through a beginner-focused explanation layer.
+- Sanitized raw compiler output remains available under a disclosure for learners who want it.
+- Every editable exercise has a visible output check and hidden checks that restate requirements already shown to the learner.
+- The release evidence and operations guide are recorded in [the Phase 2 release](PHASE_2_RELEASE.md).
 
 ### Phase 3: Accounts and durable learning data
 

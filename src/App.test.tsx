@@ -6,6 +6,25 @@ import App from './App'
 import { dateKey, initialProgress } from './lib/progress'
 import { serializeProgressBackup } from './lib/progress-backup'
 
+vi.mock('./lib/runner-client', () => ({
+  runExercise: vi.fn(async () => ({
+    version: 1,
+    runId: 'run_12345678901234567890',
+    outcome: 'completed',
+    stdout: 'Signal online\n',
+    stderr: '',
+    exitCode: 0,
+    durationMs: 18,
+    truncated: false,
+    limit: null,
+    tests: [
+      { name: 'Visible console check', visibility: 'visible', passed: true, message: 'The output matched.' },
+      { name: 'Finish without a language error', visibility: 'hidden', passed: true, message: 'The program finished.' },
+    ],
+    diagnostic: { title: 'Program finished', explanation: 'The program ran.', suggestion: 'Continue.', line: null },
+  })),
+}))
+
 const progressKey = 'see-pound-coffee-pie-progress'
 
 function createMemoryStorage(): Storage {
@@ -76,6 +95,7 @@ describe('beginner lesson interactions', () => {
 
     expect(await screen.findByText('System online')).toBeTruthy()
     expect(screen.getByText('Signal online', { selector: 'pre' })).toBeTruthy()
+    expect(screen.getByLabelText('Real runner report').textContent).toContain('fresh sandbox destroyed after run')
     expect(editor.getAttribute('aria-keyshortcuts')).toBe('Control+Enter Meta+Enter')
   })
 

@@ -22,7 +22,7 @@ The current vertical slice includes:
 - guided choices, output prediction, code ordering, bug repair, and editable code exercises;
 - immediate, specific feedback and optional hints;
 - an end-of-mission memory-repair round that repeats missed concepts without duplicate XP;
-- a local training simulator for deterministic beginner challenges;
+- real isolated execution for all 48 editable Python, C++, C#, and Java exercises;
 - XP, adjustable daily goal, streak, star-shard, mission-completion, and accuracy tracking;
 - a spaced-review scheduler that weighs correct and incorrect attempts;
 - a Practice Bay that recommends the completed mission covering the most due concepts, then builds one focused exercise per due concept;
@@ -62,6 +62,12 @@ Or run the same complete local release gate with one command:
 
 ```bash
 npm run check:release
+```
+
+The runner has a separate Docker and operating-system boundary check. It builds all four pinned images and verifies successful programs, compiler errors, CPU, memory, storage, output, and network denial:
+
+```bash
+npm run check:runner:image
 ```
 
 The production bundle is written to `dist/`.
@@ -116,13 +122,15 @@ The authorization flow uses an exact callback, a cryptographic state value, PKCE
 
 GitHub sign-in currently verifies identity only. Course progress, XP, streaks, and review history remain in the learner's browser and are neither uploaded nor synchronized. The Cadet Record can download that local data as a versioned JSON backup and restore it after validating every mission, concept, count, date, and language value.
 
-## How the prototype checks code
+## How editable code runs
 
-The first missions use a local, deterministic training simulator. It checks whether the learner used the required beginner syntax, then shows the expected console output. It does not execute arbitrary code.
+The 48 editable academy exercises use real server-side Python, C++, C#, and Java toolchains. The browser requests a five-minute lesson-scoped run grant, submits only the versioned language, source, and optional text input fields, then polls an opaque learner-owned result ID. Learners cannot choose an executable, command, compiler flag, package, image, path, mount, or network destination.
 
-This boundary is visible inside every code lesson. Open-ended projects will require a sandboxed server-side compiler service with CPU, memory, time, filesystem, and network limits. JavaScript `eval`, unsandboxed child processes, and client-side claims of secure code execution are not acceptable substitutes.
+Every attempt starts in a fresh Cloudflare Sandbox VM with a pinned base image and fixed server-owned toolchain commands. A trusted supervisor drops privileges, blocks socket syscalls, measures the whole process tree, caps CPU, wall time, memory, processes, writable storage, stdout, and stderr, and destroys the VM after the result. Compile errors are translated into beginner language while sanitized raw diagnostics remain available under a disclosure.
 
-Phase 2 now has a versioned request contract, fixed resource ceilings, trust-boundary design, abuse and privacy requirements, and explicit staging release gates. Read the [isolated runner security contract](docs/RUNNER_SECURITY_CONTRACT.md). This is a design and validation milestone only; arbitrary production code execution remains disabled.
+The production runner can be paused independently of the academy and GitHub sign-in. Deployment and kill-switch instructions, supported language versions, staging and production verification commands, rollback steps, and known boundaries are in the Phase 2 release record.
+
+Choice, prediction, and ordering questions remain local because they do not execute code. The complete boundary, exact limits, abuse controls, retention policy, and repeatable validation commands are in the [isolated runner security contract](docs/RUNNER_SECURITY_CONTRACT.md) and [Phase 2 release record](docs/PHASE_2_RELEASE.md).
 
 ## Product direction
 

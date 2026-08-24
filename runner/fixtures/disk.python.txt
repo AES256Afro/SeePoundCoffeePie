@@ -1,0 +1,2 @@
+with open("/tmp/cadet-fill", "wb") as output:
+    output.write(b"0" * (40 * 1024 * 1024))

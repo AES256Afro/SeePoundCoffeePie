@@ -9,3 +9,5 @@ dist/
 coverage/
 .vite/
 *.tsbuildinfo
+__pycache__/
+*.py[cod]

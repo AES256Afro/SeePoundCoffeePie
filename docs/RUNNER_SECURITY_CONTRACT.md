@@ -2,11 +2,9 @@
 
 ## Current boundary
 
-SeePoundCoffeePie does not execute arbitrary learner code in production today. The current training simulator checks narrowly authored syntax patterns in the browser and displays an authored expected result. It is suitable for the guided Phase 1 exercises, but it is not a compiler or security boundary.
+Phase 2 implements real server-side execution for the academy's 48 editable exercises. Choice, prediction, and ordering questions stay in the browser because they do not execute code. Editable Python, C++, C#, and Java source goes through the versioned request contract, a scoped control API, a bounded Durable Object queue, and a fresh Cloudflare Sandbox VM. The VM is destroyed after every result.
 
-The first Phase 2 deliverable is therefore a contract, not a pretend compiler. `src/lib/runner-contract.ts` fixes the only request fields a future runner may accept and rejects oversized, malformed, or command-bearing input before it reaches a language toolchain.
-
-No `/api/run` route should be enabled until every release gate in this document has evidence.
+`src/lib/runner-contract.ts` fixes the only request fields the runner accepts and rejects oversized, malformed, null-bearing, or command-bearing input before it reaches a language toolchain. Production can pause new runs through the `RUNNER_CONFIG` KV kill switch without taking the static academy or GitHub sign-in offline.
 
 ## Trust boundaries
 
@@ -33,7 +31,7 @@ Result store
 Learner browser
 ```
 
-Cloudflare serves the application and can host the control API, but the public Worker must never evaluate code or forward it to a general-purpose shell. The execution service is a separate trust boundary with separate credentials and no access to OAuth or session secrets.
+The public Worker never evaluates code and never accepts a shell command. It sends validated source to a Durable Object coordinator. The coordinator selects a fixed supervisor invocation, and the learner process receives a minimal environment that contains no OAuth or session secrets.
 
 ## Fixed request contract
 
@@ -54,14 +52,21 @@ Every run must enforce all limits outside the learner process:
 | --- | ---: | --- |
 | Source | 20,000 bytes | Control API before queueing |
 | Standard input | 4,000 bytes | Control API before queueing |
-| CPU time | 2 seconds | Host or sandbox supervisor |
-| Wall time | 5 seconds | Host or sandbox supervisor |
-| Memory | 128 MiB | Sandbox cgroup or equivalent |
-| Processes | 32 | Sandbox process limit |
-| Writable storage | 1 MiB | One-use temporary filesystem quota |
+| Runtime CPU time | 2 seconds | Sandbox supervisor with `RLIMIT_CPU` |
+| Compile CPU time | 4 seconds | Sandbox supervisor with `RLIMIT_CPU` |
+| Runtime wall time | 5 seconds | Sandbox supervisor |
+| Compile wall time | 8 seconds | Sandbox supervisor |
+| Runtime memory | 256 MiB | Process-tree measurement plus runtime heap cap |
+| Compile memory | 768 MiB | Process-tree measurement inside a 1 GiB VM |
+| Runtime processes | 32 | Sandbox supervisor with `RLIMIT_NPROC` |
+| Compile processes | 128 | Sandbox supervisor with `RLIMIT_NPROC` |
+| Runtime writable storage | 32 MiB | Allocated blocks in learner-owned workspace and temporary files |
+| Compile writable storage | 128 MiB | Allocated blocks in compiler workspace and temporary files |
 | Standard output | 64,000 bytes | Streaming supervisor with truncation |
 | Standard error | 64,000 bytes | Streaming supervisor with truncation |
-| Network | None | Deny at the sandbox boundary |
+| Network | None | Deny at the sandbox boundary plus runtime seccomp |
+
+The supervisor measures physically allocated blocks so sparse bookkeeping files do not consume the quota at their larger logical length. Python, C++, and Java runtime files also have a 32 MiB logical per-file ceiling. CoreCLR creates a very large sparse logical file during startup in Cloudflare's Firecracker environment, so C# relies on the same 32 MiB physical-block monitor without the redundant logical-length ceiling. The trusted compilation phase raises its inherited soft file-length limit only to the platform's existing hard limit because managed toolchains also create large sparse files. Actual runtime and compiler storage remains capped at 32 MiB and 128 MiB respectively inside the fixed ephemeral disk.
 
 The in-process program cannot be trusted to measure or stop itself. A host-side supervisor must terminate the whole isolation unit when any limit is reached and must report `limit_exceeded` without exposing host details.
 
@@ -70,7 +75,7 @@ The in-process program cannot be trusted to measure or stop itself. A host-side 
 - Start one clean isolation unit per run. Never reuse a learner-writable filesystem between users or attempts.
 - Run as an unprivileged identity with no host user namespace, Docker socket, device access, cloud metadata route, or secret-bearing environment variables.
 - Mount the toolchain and root filesystem read-only. Give the process only a size-limited temporary working directory.
-- Deny inbound and outbound network access, including DNS. Course exercises must not need package downloads.
+- Deny inbound and outbound network access, including DNS, at the VM boundary. Course exercises must not need package downloads. Apply a second socket-syscall restriction to the learner runtime; trusted managed compiler hosts may use local system-probing socket families while still having no VM network route.
 - Use pinned, digest-addressed runner images and pinned compiler or runtime versions. Rebuild them through reviewed CI with vulnerability scanning and a software bill of materials.
 - Select compiler commands and flags from a server-side language table. Never concatenate learner input into a shell command. Invoke executables with an argument array and pass source through a fixed file.
 - Cap output while it is produced. Escape it as text in the interface so terminal control sequences and HTML cannot become interface instructions.
@@ -82,7 +87,7 @@ The in-process program cannot be trusted to measure or stop itself. A host-side 
 - Require a short-lived, same-origin run grant tied to a lesson or project and enforce per-user, per-IP, and global concurrency limits.
 - Apply queue backpressure. A full queue returns a retryable response instead of starting unbounded work.
 - Use opaque random run IDs. Authorize every status and result read; knowing an ID is not authorization.
-- Do not log source code, standard input, or full compiler output by default. Operational logs should contain run ID, language, image digest, outcome, duration, limit reached, and coarse byte counts.
+- Do not log source code, standard input, or full compiler output. Operational events contain opaque run ID, language, outcome, duration, execution phase, limit reached, allocated writable bytes, cleanup status, and coarse output byte counts. The container application configuration separately records the deployed image digest.
 - Keep results only long enough for the learner workflow. Document the exact retention window before launch and provide deletion behavior for account removal.
 - Separate beginner explanations from raw diagnostics. Preserve the original compiler message under a disclosure, but strip host paths and infrastructure details first.
 - Alert on isolation failures, cleanup failures, rising timeout rates, unusual output volume, queue saturation, and repeated rejected command fields.
@@ -101,7 +106,7 @@ The result includes capped `stdout` and `stderr`, a nullable exit code, host-mea
 
 ## Release gates
 
-Real execution remains disabled until all of these are demonstrated in an isolated staging environment:
+Real execution is enabled only after these controls are demonstrated in an isolated staging environment:
 
 1. The request validator rejects malformed bodies, unexpected command fields, null bytes, and byte-limit violations.
 2. Each language has a pinned image, fixed invocation table, and a documented supported language version.
@@ -114,4 +119,4 @@ Real execution remains disabled until all of these are demonstrated in an isolat
 9. A human browser test shows compile errors in beginner language while preserving sanitized raw diagnostics.
 10. Production has a tested kill switch that disables new runs without taking the static academy offline.
 
-Passing unit tests for the TypeScript contract proves only request validation. It does not prove process isolation, sandbox cleanup, platform behavior, or production readiness.
+The repeatable local image matrix is `./scripts/check-runner-image.sh`. The platform gate is `node scripts/check-runner-staging.mjs <staging-origin>`. Passing unit tests for the TypeScript contract proves only request validation. It does not prove process isolation, sandbox cleanup, platform behavior, or production readiness.

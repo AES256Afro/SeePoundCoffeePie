@@ -1,0 +1,7 @@
+public class Main {
+    public static void main(String[] args) {
+        String blendName = "Nebula Roast";
+        int podCount = 12;
+        System.out.println("Blend: " + blendName + " | Pods: " + podCount);
+    }
+}

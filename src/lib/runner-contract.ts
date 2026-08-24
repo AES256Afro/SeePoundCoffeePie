@@ -8,10 +8,15 @@ export const RUNNER_LIMITS = Object.freeze({
   stdoutBytes: 64_000,
   stderrBytes: 64_000,
   wallTimeMs: 5_000,
+  compileWallTimeMs: 8_000,
   cpuTimeMs: 2_000,
-  memoryMiB: 128,
+  compileCpuTimeMs: 4_000,
+  memoryMiB: 256,
+  compileMemoryMiB: 768,
   processCount: 32,
-  writableBytes: 1_048_576,
+  compileProcessCount: 128,
+  writableBytes: 33_554_432,
+  compileWritableBytes: 134_217_728,
 })
 
 export interface RunnerRequest {
@@ -28,6 +33,36 @@ export type RunnerOutcome =
   | 'limit_exceeded'
   | 'system_error'
 
+export type RunnerRunStatus = 'queued' | 'running' | 'complete'
+
+export interface RunnerTestResult {
+  name: string
+  visibility: 'visible' | 'hidden'
+  passed: boolean
+  message: string
+}
+
+export interface RunnerDiagnostic {
+  title: string
+  explanation: string
+  suggestion: string
+  line: number | null
+}
+
+export interface RunnerAccepted {
+  version: typeof RUNNER_API_VERSION
+  runId: string
+  status: 'queued'
+  pollAfterMs: number
+}
+
+export interface RunnerPending {
+  version: typeof RUNNER_API_VERSION
+  runId: string
+  status: 'queued' | 'running'
+  pollAfterMs: number
+}
+
 export interface RunnerResult {
   version: typeof RUNNER_API_VERSION
   runId: string
@@ -37,6 +72,9 @@ export interface RunnerResult {
   exitCode: number | null
   durationMs: number
   truncated: boolean
+  limit: string | null
+  tests: RunnerTestResult[]
+  diagnostic: RunnerDiagnostic
 }
 
 export type RunnerRequestIssue =

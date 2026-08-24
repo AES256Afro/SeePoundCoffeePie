@@ -1,0 +1,44 @@
+FROM docker.io/cloudflare/sandbox@sha256:6d741713aef266e8ae0831a5709c6f2d7b77b4952ac79b549f4f4e380af86fbe
+
+USER root
+
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends \
+        python3=3.10.6-1~22.04.1 \
+        libseccomp2=2.5.3-2ubuntu3~22.04.1 \
+        python3-seccomp=2.5.3-2ubuntu3~22.04.1 \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends \
+        dotnet-sdk-8.0=8.0.130-0ubuntu1~22.04.1 \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN useradd --uid 10001 --no-create-home --home-dir /nonexistent --shell /usr/sbin/nologin cadet \
+    && install -d -m 0755 /opt/runner /opt/runner/csharp /workspace \
+    && chmod 1777 /tmp \
+    && chmod 0755 /var/tmp /dev/shm \
+    && chmod 0700 /workspace
+
+COPY runner/supervisor.py /opt/runner/supervisor.py
+
+RUN chmod 0555 /opt/runner/supervisor.py \
+    && runtime_dir="$(find /usr/lib/dotnet/shared/Microsoft.NETCore.App -mindepth 1 -maxdepth 1 -type d | head -1)" \
+    && find "$runtime_dir" -maxdepth 1 -name '*.dll' -printf '%p\n' | sed 's#^#-r:#' > /opt/runner/csharp/framework.rsp \
+    && printf '%s\n' \
+        'global using global::System;' \
+        'global using global::System.Collections.Generic;' \
+        'global using global::System.IO;' \
+        'global using global::System.Linq;' \
+        'global using global::System.Net.Http;' \
+        'global using global::System.Threading;' \
+        'global using global::System.Threading.Tasks;' \
+        > /opt/runner/csharp/GlobalUsings.cs \
+    && runtime_version="$(basename "$runtime_dir")" \
+    && printf '%s\n' \
+        "{\"runtimeOptions\":{\"tfm\":\"net8.0\",\"framework\":{\"name\":\"Microsoft.NETCore.App\",\"version\":\"$runtime_version\"}}}" \
+        > /opt/runner/csharp/Cadet.runtimeconfig.json \
+    && find /opt/runner -type d -exec chmod 0555 {} + \
+    && find /opt/runner -type f -exec chmod 0444 {} + \
+    && chmod 0555 /opt/runner/supervisor.py \
+    && dotnet --version
