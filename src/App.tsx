@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type KeyboardEvent as ReactKeyboardEvent } from 'react'
+import { useEffect, useMemo, useRef, useState, type ChangeEvent, type KeyboardEvent as ReactKeyboardEvent } from 'react'
 import {
   ArrowDown,
   ArrowLeft,
@@ -15,6 +15,7 @@ import {
   Coffee,
   Compass,
   Crown,
+  Download,
   Flame,
   Gem,
   GitFork as Github,
@@ -35,6 +36,7 @@ import {
   Sparkles,
   TerminalSquare,
   Trophy,
+  Upload,
   UserRound,
   X,
   Zap,
@@ -44,6 +46,7 @@ import { trackById, tracks } from './data/curriculum'
 import { evaluateExercise } from './lib/evaluator'
 import { missionAvailability } from './lib/missions'
 import { buildPracticeExercises, conceptDisplayName, recommendPractice } from './lib/practice'
+import { parseProgressBackup, serializeProgressBackup } from './lib/progress-backup'
 import {
   completeMission,
   dateKey,
@@ -541,15 +544,31 @@ interface CadetRecordProps {
   authBusy: boolean
   authUser: AuthUser | null
   onLogout: () => void
+  onDownloadBackup: () => string
   onReset: () => void
+  onRestoreBackup: (text: string) => string
   onSignIn: () => void
   progress: LearnerProgress
 }
 
-function CadetRecord({ authBusy, authUser, onLogout, onReset, onSignIn, progress }: CadetRecordProps) {
+function CadetRecord({ authBusy, authUser, onDownloadBackup, onLogout, onReset, onRestoreBackup, onSignIn, progress }: CadetRecordProps) {
   const concepts = Object.values(progress.conceptProgress)
   const answers = concepts.reduce((sum, item) => sum + item.correct + item.incorrect, 0)
   const accuracy = answers ? Math.round((concepts.reduce((sum, item) => sum + item.correct, 0) / answers) * 100) : 0
+  const restoreInput = useRef<HTMLInputElement>(null)
+  const [backupMessage, setBackupMessage] = useState('')
+
+  const restoreFile = async (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    event.target.value = ''
+    if (!file) return
+
+    try {
+      setBackupMessage(onRestoreBackup(await file.text()))
+    } catch {
+      setBackupMessage('That backup file could not be read. Your current progress was not changed.')
+    }
+  }
 
   return (
     <main className="content-page">
@@ -580,6 +599,31 @@ function CadetRecord({ authBusy, authUser, onLogout, onReset, onSignIn, progress
             <Github size={16} /> Sign in with GitHub
           </button>
         )}
+      </section>
+      <section className="backup-panel">
+        <span className="account-panel__icon"><Download size={24} /></span>
+        <div>
+          <small>LOCAL PROGRESS BACKUP</small>
+          <h2>Keep a copy before changing browsers</h2>
+          <p>Download your callsign, XP, missions, streak, and review schedule as a JSON file. Restoring validates every value before replacing anything on this device. No course data is uploaded.</p>
+          {backupMessage && <p className="backup-panel__status" role="status">{backupMessage}</p>}
+        </div>
+        <div className="backup-panel__actions">
+          <button className="secondary-action" onClick={() => setBackupMessage(onDownloadBackup())}>
+            <Download size={16} /> Download backup
+          </button>
+          <button className="secondary-action" onClick={() => restoreInput.current?.click()}>
+            <Upload size={16} /> Restore backup
+          </button>
+          <input
+            ref={restoreInput}
+            className="sr-only"
+            type="file"
+            accept="application/json,.json"
+            aria-label="Choose progress backup file"
+            onChange={restoreFile}
+          />
+        </div>
       </section>
       <section className="settings-panel">
         <div><h2>Prototype controls</h2><p>Resetting removes the learner name, XP, mission completion, and review history from this browser.</p></div>
@@ -1036,6 +1080,32 @@ function App() {
     }
   }
 
+  const downloadProgressBackup = () => {
+    const contents = serializeProgressBackup(progress)
+    const url = URL.createObjectURL(new Blob([contents], { type: 'application/json' }))
+    const link = document.createElement('a')
+    link.href = url
+    link.download = `seepoundcoffeepie-progress-${dateKey(new Date())}.json`
+    document.body.append(link)
+    link.click()
+    link.remove()
+    window.setTimeout(() => URL.revokeObjectURL(url), 0)
+    return 'Backup downloaded. Keep the JSON file somewhere you control.'
+  }
+
+  const restoreProgressBackup = (text: string) => {
+    const result = parseProgressBackup(text)
+    if (!result.ok) return result.message
+    if (!window.confirm('Replace this browser’s current SeePoundCoffeePie progress with the selected backup?')) {
+      return 'Restore cancelled. Your current progress was not changed.'
+    }
+
+    setProgress(result.progress)
+    setView('profile')
+    const exported = new Date(result.exportedAt).toLocaleString()
+    return `Progress restored from the backup created ${exported}.`
+  }
+
   if (!progress.onboardingComplete) {
     return (
       <>
@@ -1069,8 +1139,10 @@ function App() {
           <CadetRecord
             authBusy={authBusy}
             authUser={authUser}
+            onDownloadBackup={downloadProgressBackup}
             onLogout={logout}
             onReset={reset}
+            onRestoreBackup={restoreProgressBackup}
             onSignIn={signIn}
             progress={normalizedProgress}
           />

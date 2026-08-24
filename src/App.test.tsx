@@ -4,6 +4,7 @@ import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/re
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import App from './App'
 import { dateKey, initialProgress } from './lib/progress'
+import { serializeProgressBackup } from './lib/progress-backup'
 
 const progressKey = 'see-pound-coffee-pie-progress'
 
@@ -54,6 +55,7 @@ describe('beginner lesson interactions', () => {
   afterEach(() => {
     cleanup()
     vi.unstubAllGlobals()
+    vi.restoreAllMocks()
   })
 
   async function openFirstEditableStep() {
@@ -125,6 +127,40 @@ describe('beginner lesson interactions', () => {
       const stored = JSON.parse(window.localStorage.getItem(progressKey) ?? '{}')
       expect(stored.starShards).toBe(0)
       expect(stored.completedMissions).toEqual(['java-coffee-protocol', 'java-routing-orders'])
+    })
+  })
+
+  it('restores a validated local progress backup from the Cadet Record', async () => {
+    const restored = {
+      ...initialProgress('csharp'),
+      callsign: 'Restored Cadet',
+      xp: 140,
+      starShards: 50,
+      completedMissions: ['cs-shield', 'cs-command-logic'],
+      onboardingComplete: true,
+    }
+    const backup = new File(
+      [serializeProgressBackup(restored, new Date('2026-08-24T15:30:00.000Z'))],
+      'seepoundcoffeepie-progress.json',
+      { type: 'application/json' },
+    )
+    Object.defineProperty(backup, 'text', {
+      configurable: true,
+      value: async () => serializeProgressBackup(restored, new Date('2026-08-24T15:30:00.000Z')),
+    })
+    vi.spyOn(window, 'confirm').mockReturnValue(true)
+
+    render(<App />)
+    fireEvent.click(screen.getByRole('button', { name: 'Cadet record' }))
+    fireEvent.change(screen.getByLabelText('Choose progress backup file'), {
+      target: { files: [backup] },
+    })
+
+    expect(await screen.findByRole('heading', { name: 'Restored Cadet' })).toBeTruthy()
+    expect(screen.getAllByText('140').length).toBeGreaterThan(0)
+    expect(screen.getByText(/Progress restored from the backup created/iu)).toBeTruthy()
+    await waitFor(() => {
+      expect(JSON.parse(window.localStorage.getItem(progressKey) ?? '{}')).toMatchObject(restored)
     })
   })
 })

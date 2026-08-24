@@ -1917,6 +1917,49 @@ p {
   background: rgba(156, 228, 181, 0.045);
 }
 
+.backup-panel {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 1rem;
+  align-items: center;
+  margin-top: 1rem;
+  padding: 1.35rem 1.5rem;
+  border: 1px solid rgba(121, 214, 255, 0.2);
+  border-radius: 13px;
+  background: rgba(121, 214, 255, 0.035);
+}
+
+.backup-panel small {
+  color: #628079;
+  font-size: 0.55rem;
+  font-weight: 900;
+  letter-spacing: 0.14em;
+}
+
+.backup-panel h2 {
+  margin: 0.25rem 0 0.35rem;
+  font-size: 1rem;
+}
+
+.backup-panel p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.7rem;
+  line-height: 1.5;
+}
+
+.backup-panel .backup-panel__status {
+  margin-top: 0.6rem;
+  color: var(--ink);
+}
+
+.backup-panel__actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.6rem;
+}
+
 .account-panel__icon {
   display: grid;
   place-items: center;
@@ -3258,9 +3301,18 @@ p {
     grid-template-columns: auto 1fr;
   }
 
-  .account-panel .secondary-action {
+  .backup-panel {
+    grid-template-columns: auto 1fr;
+  }
+
+  .account-panel .secondary-action,
+  .backup-panel__actions {
     grid-column: 1 / -1;
     width: 100%;
+  }
+
+  .backup-panel__actions .secondary-action {
+    flex: 1 1 170px;
   }
 
   .lesson-header {

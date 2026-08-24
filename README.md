@@ -27,6 +27,7 @@ The current vertical slice includes:
 - a spaced-review scheduler that weighs correct and incorrect attempts;
 - a Practice Bay that recommends the completed mission covering the most due concepts, then builds one focused exercise per due concept;
 - a searchable Codebook with progression-unlocked examples and a Cadet Record;
+- validated local JSON backup and restore for course progress;
 - local browser persistence with a visible reset control;
 - responsive layouts for desktop, tablet, and mobile;
 - keyboard focus states, reduced-motion support, and a documented Ctrl or Command plus Enter editor shortcut;
@@ -106,7 +107,7 @@ For local Worker testing, copy `.dev.vars.example` to `.dev.vars` and fill in lo
 
 The authorization flow uses an exact callback, a cryptographic state value, PKCE with SHA-256, short-lived secure cookies, and a signed seven-day `HttpOnly` session. It requests no private GitHub scopes. After GitHub returns the public account ID and login, the Worker revokes the temporary GitHub grant and does not store the access token. Logging out clears the signed site session and requires a same-origin request.
 
-GitHub sign-in currently verifies identity only. Course progress, XP, streaks, and review history remain in the learner's browser and are neither uploaded nor synchronized.
+GitHub sign-in currently verifies identity only. Course progress, XP, streaks, and review history remain in the learner's browser and are neither uploaded nor synchronized. The Cadet Record can download that local data as a versioned JSON backup and restore it after validating every mission, concept, count, date, and language value.
 
 ## How the prototype checks code
 

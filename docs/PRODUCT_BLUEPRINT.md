@@ -183,7 +183,7 @@ Every authored lesson must:
 - Add authentication with a guest-to-account migration path.
 - Store progress, attempts, review schedules, settings, and achievements server-side.
 - Sync between desktop and mobile.
-- Add export and account deletion controls.
+- Carry the completed local progress backup and restore flow into server-side accounts, then add account deletion controls.
 - Define privacy retention and child-safety requirements before collecting social data.
 
 ### Phase 4: Projects and adaptive practice
