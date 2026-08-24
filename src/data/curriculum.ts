@@ -1064,6 +1064,506 @@ const javaRoutingOrdersExercises: Exercise[] = [
   },
 ]
 
+const pythonCargoLogicExercises: Exercise[] = [
+  {
+    id: 'py3-retrieve-route',
+    conceptId: 'python-conditions',
+    eyebrow: 'Memory ping 1 of 5',
+    title: 'Recall the cargo route',
+    explanation:
+      'Begin with a familiar decision. Python checks whether the cargo count is below three, then runs only the matching indented route.',
+    analogy:
+      'The quartermaster reads one gauge. A low count opens the restock hatch; any other count sends the hold onward.',
+    type: 'prediction',
+    prompt: 'What will this familiar condition display?',
+    displayCode: 'cargo_count = 2\n\nif cargo_count < 3:\n    print("Restock hold")\nelse:\n    print("Hold ready")',
+    choices: [
+      { id: 'a', label: 'Restock hold', detail: 'Two is less than three, so the first route runs.' },
+      { id: 'b', label: 'Hold ready', detail: 'That route would run for three or more crates.' },
+      { id: 'c', label: 'Both messages', detail: 'if and else choose one route, not both.' },
+    ],
+    correctChoice: 'a',
+    output: 'Restock hold',
+    hint: 'Read 2 < 3 as “is two less than three?”',
+    recap: 'A true Python if condition runs its indented route and skips else.',
+    xp: 8,
+  },
+  {
+    id: 'py3-list-purpose',
+    conceptId: 'python-collections',
+    eyebrow: 'Hold registry 2 of 5',
+    title: 'Meet a list',
+    explanation:
+      'A Python list keeps several values together under one variable name. Square brackets surround the items, and commas separate them.',
+    analogy:
+      'Instead of building one locker label per artifact, the cargo manifest keeps an ordered row inside one named container.',
+    type: 'choice',
+    prompt: 'Why use a list for the cargo manifest?',
+    choices: [
+      { id: 'a', label: 'To keep several related values together', detail: 'One ordered collection can hold the full manifest.' },
+      { id: 'b', label: 'To hide every value forever', detail: 'A program can retrieve each item by its position.' },
+      { id: 'c', label: 'To make Python ignore the cargo', detail: 'The list exists so the program can use the values.' },
+    ],
+    correctChoice: 'a',
+    hint: 'Look for the answer about one container holding several related items.',
+    recap: 'A Python list is an ordered collection written with square brackets and comma-separated items.',
+    xp: 10,
+  },
+  {
+    id: 'py3-first-index',
+    conceptId: 'python-indexes',
+    eyebrow: 'Locker address 3 of 5',
+    title: 'Open position zero',
+    explanation:
+      'List positions are called indexes. Python starts counting those positions at zero, so index 0 retrieves the first item.',
+    analogy:
+      'The manifest computer labels its first slot 0, its second slot 1, and its third slot 2. That is the system’s map.',
+    type: 'prediction',
+    prompt: 'What does cargo[0] retrieve?',
+    displayCode: 'cargo = ["crystal", "medkit", "map"]\nprint(cargo[0])',
+    choices: [
+      { id: 'a', label: 'crystal', detail: 'Index 0 is the first list position.' },
+      { id: 'b', label: 'medkit', detail: 'That item is at index 1.' },
+      { id: 'c', label: 'map', detail: 'That item is at index 2.' },
+    ],
+    correctChoice: 'a',
+    output: 'crystal',
+    hint: 'Python begins list indexes at 0, not 1.',
+    recap: 'Use list_name[0] to retrieve the first item from a Python list.',
+    xp: 14,
+  },
+  {
+    id: 'py3-fix-index',
+    conceptId: 'python-indexes',
+    eyebrow: 'Manifest repair 4 of 5',
+    title: 'Repair the last-slot address',
+    explanation:
+      'A three-item list has indexes 0, 1, and 2. Index 3 points one position beyond the list, so Python cannot retrieve an item there.',
+    analogy:
+      'The manifest has three lockers, but their addresses begin at zero. The last real locker is 2, not 3.',
+    type: 'bugfix',
+    prompt: 'Repair the index so the program displays map.',
+    starterCode: 'cargo = ["crystal", "medkit", "map"]\n\nprint(cargo[3])',
+    focus: 'Change the index 3 inside cargo[3] to 2. Leave the three list items in place.',
+    codeGuide: [
+      { code: 'cargo = [...]', plain: 'This stores three text values together in one ordered Python list.' },
+      { code: '0, 1, 2', plain: 'These are the three valid indexes because Python starts counting positions at zero.' },
+      { code: 'cargo[2]', plain: 'Square brackets after the variable name ask for the item at index 2, which is the third item.' },
+    ],
+    checks: [
+      { pattern: 'print\\s*\\(\\s*cargo\\s*\\[\\s*2\\s*\\]\\s*\\)', message: 'Use index 2 to retrieve the third and final list item.' },
+    ],
+    output: 'map',
+    hint: 'The three positions are 0, 1, and 2. Replace cargo[3] with cargo[2].',
+    recap: 'For three items, index 2 is the final valid position because indexing starts at zero.',
+    xp: 16,
+  },
+  {
+    id: 'py3-cargo-report',
+    conceptId: 'python-collections-and-indexes',
+    eyebrow: 'Cargo report 5 of 5',
+    title: 'Report the first and last relics',
+    explanation:
+      'A list lets one variable hold the whole manifest. Add an index in square brackets whenever you need one particular item.',
+    analogy:
+      'The bridge asks for the items at the two ends of the cargo row. Their manifest addresses are 0 and 2.',
+    type: 'code',
+    prompt: 'Replace both blanks so the report displays the first and last cargo items.',
+    starterCode: 'cargo = ["crystal", "medkit", "map"]\n\nprint("First:", _____)\nprint("Last:", _____)',
+    focus: 'Replace the first _____ with cargo[0] and the second with cargo[2].',
+    codeGuide: [
+      { code: 'cargo = ["crystal", "medkit", "map"]', plain: 'Square brackets create one ordered list containing three strings.' },
+      { code: 'cargo[0]', plain: 'Index 0 retrieves crystal, the first value in the list.' },
+      { code: 'cargo[2]', plain: 'Index 2 retrieves map, the third and final value in this three-item list.' },
+      { code: 'print("First:", cargo[0])', plain: 'The comma lets print place a fixed label beside the retrieved list item.' },
+    ],
+    checks: [
+      { pattern: 'print\\s*\\(\\s*["\\\']First:["\\\']\\s*,\\s*cargo\\s*\\[\\s*0\\s*\\]\\s*\\)', message: 'Use cargo[0] in the first print command.' },
+      { pattern: 'print\\s*\\(\\s*["\\\']Last:["\\\']\\s*,\\s*cargo\\s*\\[\\s*2\\s*\\]\\s*\\)', message: 'Use cargo[2] in the second print command.' },
+    ],
+    output: 'First: crystal\nLast: map',
+    hint: 'The two blanks are cargo[0] and cargo[2], in that order.',
+    recap: 'A Python list keeps related values together, and a zero-based index retrieves one item.',
+    xp: 22,
+  },
+]
+
+const cppCargoArrayExercises: Exercise[] = [
+  {
+    id: 'cpp3-retrieve-route',
+    conceptId: 'cpp-conditions',
+    eyebrow: 'Memory ping 1 of 5',
+    title: 'Recall the repair route',
+    explanation:
+      'Begin with a familiar decision. C++ compares the crate count with three and runs only the brace group selected by that condition.',
+    analogy:
+      'The engine room routes a small parts load to restocking and a full load straight to the forge.',
+    type: 'prediction',
+    prompt: 'What will this familiar C++ condition display?',
+    displayCode: 'int crateCount = 2;\n\nif (crateCount < 3) {\n    std::cout << "Restock parts";\n} else {\n    std::cout << "Forge ready";\n}',
+    choices: [
+      { id: 'a', label: 'Restock parts', detail: 'Two is less than three, so the first brace group runs.' },
+      { id: 'b', label: 'Forge ready', detail: 'That route would run for three or more crates.' },
+      { id: 'c', label: 'Both messages', detail: 'if and else select one route.' },
+    ],
+    correctChoice: 'a',
+    output: 'Restock parts',
+    hint: 'The comparison 2 < 3 is true.',
+    recap: 'A true C++ if condition runs its first brace group and skips else.',
+    xp: 8,
+  },
+  {
+    id: 'cpp3-array-purpose',
+    conceptId: 'cpp-collections',
+    eyebrow: 'Parts rack 2 of 5',
+    title: 'Meet an array',
+    explanation:
+      'A C++ array keeps a fixed number of same-type values together under one name. Braces contain the starting items, separated by commas.',
+    analogy:
+      'A three-slot parts rack has one label and three ordered bays. Every bay in this rack holds the same kind of cargo.',
+    type: 'choice',
+    prompt: 'Why use an array for these engine parts?',
+    choices: [
+      { id: 'a', label: 'To keep related same-type values together', detail: 'One ordered rack can hold all three part names.' },
+      { id: 'b', label: 'To remove every type rule', detail: 'A C++ array has one declared item type.' },
+      { id: 'c', label: 'To make the values unordered', detail: 'Each array item has a stable position.' },
+    ],
+    correctChoice: 'a',
+    hint: 'Look for the answer about an ordered group with one item type.',
+    recap: 'A C++ array stores a fixed ordered group of values that share one type.',
+    xp: 10,
+  },
+  {
+    id: 'cpp3-first-index',
+    conceptId: 'cpp-indexes',
+    eyebrow: 'Rack address 3 of 5',
+    title: 'Open position zero',
+    explanation:
+      'C++ array positions are indexes, and they start at zero. Index 0 retrieves the first item from the array.',
+    analogy:
+      'The engineering rack labels its first bay 0, then 1, then 2. The labels are addresses, not a count of parts.',
+    type: 'prediction',
+    prompt: 'What does parts[0] send to the console?',
+    displayCode: 'std::string parts[3] = {"crystal", "coupler", "rune"};\nstd::cout << parts[0];',
+    choices: [
+      { id: 'a', label: 'crystal', detail: 'Index 0 is the first array position.' },
+      { id: 'b', label: 'coupler', detail: 'That value is at index 1.' },
+      { id: 'c', label: 'rune', detail: 'That value is at index 2.' },
+    ],
+    correctChoice: 'a',
+    output: 'crystal',
+    hint: 'C++ begins array indexes at 0, not 1.',
+    recap: 'Use arrayName[0] to retrieve the first value in a C++ array.',
+    xp: 14,
+  },
+  {
+    id: 'cpp3-fix-index',
+    conceptId: 'cpp-indexes',
+    eyebrow: 'Rack repair 4 of 5',
+    title: 'Repair the final-bay address',
+    explanation:
+      'A three-item C++ array has valid indexes 0, 1, and 2. Index 3 is outside the array and must not be read.',
+    analogy:
+      'The parts rack has three bays, but its zero-based address plate makes the final real bay number 2.',
+    type: 'bugfix',
+    prompt: 'Repair the index so the program displays rune.',
+    starterCode: '#include <iostream>\n#include <string>\n\nint main() {\n    std::string parts[3] = {"crystal", "coupler", "rune"};\n    std::cout << parts[3];\n    return 0;\n}',
+    focus: 'Change the index 3 inside parts[3] to 2. Leave the array size and values unchanged.',
+    codeGuide: [
+      ...cppProgramFrame,
+      { code: '#include <string>', plain: 'This supplied line brings in the std::string text type used by the array.' },
+      { code: 'std::string parts[3]', plain: 'This declares an array named parts with exactly three text slots.' },
+      { code: 'parts[2]', plain: 'Index 2 retrieves the third item because C++ starts array positions at zero.' },
+    ],
+    checks: [
+      { pattern: 'std::cout\\s*<<\\s*parts\\s*\\[\\s*2\\s*\\]\\s*;', message: 'Use index 2 to read the third and final array item.' },
+    ],
+    output: 'rune',
+    hint: 'The three positions are 0, 1, and 2. Replace parts[3] with parts[2].',
+    recap: 'A three-item C++ array ends at index 2 because array indexing starts at zero.',
+    xp: 16,
+  },
+  {
+    id: 'cpp3-parts-report',
+    conceptId: 'cpp-collections-and-indexes',
+    eyebrow: 'Forge report 5 of 5',
+    title: 'Report the end parts',
+    explanation:
+      'The array keeps all three part names under one label. Square brackets select the particular slot that an output instruction needs.',
+    analogy:
+      'The chief engineer asks for the parts at both ends of the rack. Their addresses are 0 and 2.',
+    type: 'code',
+    prompt: 'Replace both blanks so the report displays the first and last parts.',
+    starterCode: '#include <iostream>\n#include <string>\n\nint main() {\n    std::string parts[3] = {"crystal", "coupler", "rune"};\n\n    std::cout << "First: " << _____ << "\\n";\n    std::cout << "Last: " << _____ << "\\n";\n    return 0;\n}',
+    focus: 'Replace the first _____ with parts[0] and the second with parts[2].',
+    codeGuide: [
+      ...cppProgramFrame,
+      { code: 'std::string parts[3]', plain: 'The type comes first, parts is the array name, and [3] reserves three ordered text slots.' },
+      { code: '{"crystal", "coupler", "rune"}', plain: 'Braces hold the three starting values, and commas separate one item from the next.' },
+      { code: 'parts[0] and parts[2]', plain: 'These indexes retrieve the first and third values from the zero-based array.' },
+      { code: '"\\n"', plain: 'This text escape moves the console to a new line after each part report.' },
+    ],
+    checks: [
+      { pattern: '"First: "\\s*<<\\s*parts\\s*\\[\\s*0\\s*\\]', message: 'Send parts[0] after the First label.' },
+      { pattern: '"Last: "\\s*<<\\s*parts\\s*\\[\\s*2\\s*\\]', message: 'Send parts[2] after the Last label.' },
+    ],
+    output: 'First: crystal\nLast: rune',
+    hint: 'The two blanks are parts[0] and parts[2], in that order.',
+    recap: 'A C++ array groups same-type values, and a zero-based index retrieves one slot.',
+    xp: 22,
+  },
+]
+
+const csharpCrewRosterExercises: Exercise[] = [
+  {
+    id: 'cs3-retrieve-route',
+    conceptId: 'csharp-conditions',
+    eyebrow: 'Memory ping 1 of 5',
+    title: 'Recall the watch route',
+    explanation:
+      'Begin with a familiar decision. C# checks whether fewer than three officers are ready and runs only the selected brace group.',
+    analogy:
+      'A short bridge watch opens the reserve roster. A full watch continues to the command deck.',
+    type: 'prediction',
+    prompt: 'What will this familiar C# condition display?',
+    displayCode: 'int crewCount = 2;\n\nif (crewCount < 3)\n{\n    Console.WriteLine("Call reserves");\n}\nelse\n{\n    Console.WriteLine("Watch ready");\n}',
+    choices: [
+      { id: 'a', label: 'Call reserves', detail: 'Two is less than three, so the first brace group runs.' },
+      { id: 'b', label: 'Watch ready', detail: 'That route would run for three or more officers.' },
+      { id: 'c', label: 'Both messages', detail: 'if and else select one route.' },
+    ],
+    correctChoice: 'a',
+    output: 'Call reserves',
+    hint: 'The comparison 2 < 3 is true.',
+    recap: 'A true C# if condition runs the first brace group and skips else.',
+    xp: 8,
+  },
+  {
+    id: 'cs3-array-purpose',
+    conceptId: 'csharp-collections',
+    eyebrow: 'Roster registry 2 of 5',
+    title: 'Meet an array',
+    explanation:
+      'A C# array keeps several same-type values together under one name. Square brackets after the type mark it as an array.',
+    analogy:
+      'The captain uses one ordered duty roster instead of a separate clipboard for every crew member.',
+    type: 'choice',
+    prompt: 'Why use an array for this bridge roster?',
+    choices: [
+      { id: 'a', label: 'To keep related same-type values together', detail: 'One ordered roster can hold all three names.' },
+      { id: 'b', label: 'To erase the order of the names', detail: 'Every array item has a stable position.' },
+      { id: 'c', label: 'To remove the string type', detail: 'The string[] type explains what every slot holds.' },
+    ],
+    correctChoice: 'a',
+    hint: 'Look for the answer about one ordered group of related names.',
+    recap: 'A C# array stores an ordered group of values that share one declared type.',
+    xp: 10,
+  },
+  {
+    id: 'cs3-first-index',
+    conceptId: 'csharp-indexes',
+    eyebrow: 'Roster address 3 of 5',
+    title: 'Call position zero',
+    explanation:
+      'C# array positions are indexes, and they start at zero. Index 0 retrieves the first crew name.',
+    analogy:
+      'The bridge roster labels its first station 0, followed by stations 1 and 2. These are computer addresses.',
+    type: 'prediction',
+    prompt: 'What does crew[0] display?',
+    displayCode: 'string[] crew = { "Mira", "Tov", "Pip" };\nConsole.WriteLine(crew[0]);',
+    choices: [
+      { id: 'a', label: 'Mira', detail: 'Index 0 is the first array position.' },
+      { id: 'b', label: 'Tov', detail: 'That name is at index 1.' },
+      { id: 'c', label: 'Pip', detail: 'That name is at index 2.' },
+    ],
+    correctChoice: 'a',
+    output: 'Mira',
+    hint: 'C# begins array indexes at 0, not 1.',
+    recap: 'Use arrayName[0] to retrieve the first value in a C# array.',
+    xp: 14,
+  },
+  {
+    id: 'cs3-fix-index',
+    conceptId: 'csharp-indexes',
+    eyebrow: 'Roster repair 4 of 5',
+    title: 'Repair the final-station address',
+    explanation:
+      'A three-item C# array has valid indexes 0, 1, and 2. Index 3 is one position beyond the roster.',
+    analogy:
+      'There are three bridge stations, but their zero-based plates make the final real station number 2.',
+    type: 'bugfix',
+    prompt: 'Repair the index so the program displays Pip.',
+    starterCode: 'string[] crew = { "Mira", "Tov", "Pip" };\n\nConsole.WriteLine(crew[3]);',
+    focus: 'Change the index 3 inside crew[3] to 2. Leave the three crew names in place.',
+    codeGuide: [
+      { code: 'string[]', plain: 'The string type holds text, and the empty square brackets mark this variable as an array.' },
+      { code: '{ "Mira", "Tov", "Pip" }', plain: 'Braces contain the three starting names, separated by commas.' },
+      { code: 'crew[2]', plain: 'Index 2 retrieves the third name because C# starts array positions at zero.' },
+    ],
+    checks: [
+      { pattern: 'Console\\.WriteLine\\s*\\(\\s*crew\\s*\\[\\s*2\\s*\\]\\s*\\)\\s*;', message: 'Use index 2 to retrieve the third and final crew name.' },
+    ],
+    output: 'Pip',
+    hint: 'The three positions are 0, 1, and 2. Replace crew[3] with crew[2].',
+    recap: 'A three-item C# array ends at index 2 because indexing starts at zero.',
+    xp: 16,
+  },
+  {
+    id: 'cs3-roster-report',
+    conceptId: 'csharp-collections-and-indexes',
+    eyebrow: 'Bridge report 5 of 5',
+    title: 'Report the first and last officers',
+    explanation:
+      'The array stores the entire bridge roster under one name. Add a zero-based index whenever the report needs one crew member.',
+    analogy:
+      'The captain asks who stands at both ends of the command row. Their roster addresses are 0 and 2.',
+    type: 'code',
+    prompt: 'Replace both blanks so the report displays the first and last crew names.',
+    starterCode: 'string[] crew = { "Mira", "Tov", "Pip" };\n\nConsole.WriteLine($"First: {_____}");\nConsole.WriteLine($"Last: {_____}");',
+    focus: 'Replace the first _____ with crew[0] and the second with crew[2].',
+    codeGuide: [
+      { code: 'string[] crew', plain: 'string[] is the array type, and crew is the one name for the complete roster.' },
+      { code: '{ "Mira", "Tov", "Pip" }', plain: 'The braces initialize three ordered string values, separated by commas.' },
+      { code: 'crew[0] and crew[2]', plain: 'These zero-based indexes retrieve the first and third crew names.' },
+      { code: '$"First: {crew[0]}"', plain: 'The $ creates an interpolated string, and the braces insert the selected array item.' },
+    ],
+    checks: [
+      { pattern: '\\{\\s*crew\\s*\\[\\s*0\\s*\\]\\s*\\}', message: 'Put crew[0] inside the first interpolated braces.' },
+      { pattern: '\\{\\s*crew\\s*\\[\\s*2\\s*\\]\\s*\\}', message: 'Put crew[2] inside the second interpolated braces.' },
+    ],
+    output: 'First: Mira\nLast: Pip',
+    hint: 'The two blanks are crew[0] and crew[2], in that order.',
+    recap: 'A C# array groups related values, and a zero-based index retrieves one element.',
+    xp: 22,
+  },
+]
+
+const javaCrewArrayExercises: Exercise[] = [
+  {
+    id: 'java3-retrieve-route',
+    conceptId: 'java-conditions',
+    eyebrow: 'Memory ping 1 of 5',
+    title: 'Recall the lift route',
+    explanation:
+      'Begin with a familiar decision. Java checks whether fewer than three droids are ready and runs only the selected brace group.',
+    analogy:
+      'A short service watch calls the reserve droids. A full watch sends the lift to its normal route.',
+    type: 'prediction',
+    prompt: 'What will this familiar Java condition display?',
+    displayCode: 'int droidCount = 2;\n\nif (droidCount < 3) {\n    System.out.println("Call reserves");\n} else {\n    System.out.println("Watch ready");\n}',
+    choices: [
+      { id: 'a', label: 'Call reserves', detail: 'Two is less than three, so the first brace group runs.' },
+      { id: 'b', label: 'Watch ready', detail: 'That route would run for three or more droids.' },
+      { id: 'c', label: 'Both messages', detail: 'if and else select one route.' },
+    ],
+    correctChoice: 'a',
+    output: 'Call reserves',
+    hint: 'The comparison 2 < 3 is true.',
+    recap: 'A true Java if condition runs the first brace group and skips else.',
+    xp: 8,
+  },
+  {
+    id: 'java3-array-purpose',
+    conceptId: 'java-collections',
+    eyebrow: 'Watch registry 2 of 5',
+    title: 'Meet an array',
+    explanation:
+      'A Java array keeps several same-type values together under one name. Square brackets after the type mark the variable as an array.',
+    analogy:
+      'The service guild keeps one ordered watch roster instead of a separate tablet for every droid.',
+    type: 'choice',
+    prompt: 'Why use an array for this droid roster?',
+    choices: [
+      { id: 'a', label: 'To keep related same-type values together', detail: 'One ordered roster can hold all three droid names.' },
+      { id: 'b', label: 'To make Java forget every type', detail: 'The String[] type applies to every slot.' },
+      { id: 'c', label: 'To erase the order of the names', detail: 'Every array item has a stable position.' },
+    ],
+    correctChoice: 'a',
+    hint: 'Look for the answer about one ordered group of related names.',
+    recap: 'A Java array stores an ordered group of values that share one declared type.',
+    xp: 10,
+  },
+  {
+    id: 'java3-first-index',
+    conceptId: 'java-indexes',
+    eyebrow: 'Roster address 3 of 5',
+    title: 'Call position zero',
+    explanation:
+      'Java array positions are indexes, and they start at zero. Index 0 retrieves the first droid name.',
+    analogy:
+      'The service roster labels its first station 0, followed by stations 1 and 2. These are computer addresses.',
+    type: 'prediction',
+    prompt: 'What does droids[0] display?',
+    displayCode: 'String[] droids = { "MOP-1", "BEEP-7", "HEX-3" };\nSystem.out.println(droids[0]);',
+    choices: [
+      { id: 'a', label: 'MOP-1', detail: 'Index 0 is the first array position.' },
+      { id: 'b', label: 'BEEP-7', detail: 'That name is at index 1.' },
+      { id: 'c', label: 'HEX-3', detail: 'That name is at index 2.' },
+    ],
+    correctChoice: 'a',
+    output: 'MOP-1',
+    hint: 'Java begins array indexes at 0, not 1.',
+    recap: 'Use arrayName[0] to retrieve the first value in a Java array.',
+    xp: 14,
+  },
+  {
+    id: 'java3-fix-index',
+    conceptId: 'java-indexes',
+    eyebrow: 'Roster repair 4 of 5',
+    title: 'Repair the final-station address',
+    explanation:
+      'A three-item Java array has valid indexes 0, 1, and 2. Index 3 is one position beyond the roster.',
+    analogy:
+      'There are three service stations, but their zero-based plates make the final real station number 2.',
+    type: 'bugfix',
+    prompt: 'Repair the index so the program displays HEX-3.',
+    starterCode: 'public class Main {\n    public static void main(String[] args) {\n        String[] droids = { "MOP-1", "BEEP-7", "HEX-3" };\n        System.out.println(droids[3]);\n    }\n}',
+    focus: 'Change the index 3 inside droids[3] to 2. Leave the three droid names in place.',
+    codeGuide: [
+      ...javaProgramFrame,
+      { code: 'String[]', plain: 'The String type holds text, and the empty square brackets mark this variable as an array.' },
+      { code: '{ "MOP-1", "BEEP-7", "HEX-3" }', plain: 'Braces contain the three starting names, separated by commas.' },
+      { code: 'droids[2]', plain: 'Index 2 retrieves the third name because Java starts array positions at zero.' },
+    ],
+    checks: [
+      { pattern: 'System\\.out\\.println\\s*\\(\\s*droids\\s*\\[\\s*2\\s*\\]\\s*\\)\\s*;', message: 'Use index 2 to retrieve the third and final droid name.' },
+    ],
+    output: 'HEX-3',
+    hint: 'The three positions are 0, 1, and 2. Replace droids[3] with droids[2].',
+    recap: 'A three-item Java array ends at index 2 because indexing starts at zero.',
+    xp: 16,
+  },
+  {
+    id: 'java3-roster-report',
+    conceptId: 'java-collections-and-indexes',
+    eyebrow: 'Guild report 5 of 5',
+    title: 'Report the first and last droids',
+    explanation:
+      'The Java array stores the complete watch roster under one name. Add a zero-based index whenever the report needs one droid.',
+    analogy:
+      'The guild master asks who stands at both ends of the service row. Their roster addresses are 0 and 2.',
+    type: 'code',
+    prompt: 'Replace both blanks so the report displays the first and last droid names.',
+    starterCode: 'public class Main {\n    public static void main(String[] args) {\n        String[] droids = { "MOP-1", "BEEP-7", "HEX-3" };\n\n        System.out.println("First: " + _____);\n        System.out.println("Last: " + _____);\n    }\n}',
+    focus: 'Replace the first _____ with droids[0] and the second with droids[2]. Leave the Java program frame alone.',
+    codeGuide: [
+      ...javaProgramFrame,
+      { code: 'String[] droids', plain: 'String[] is the array type, and droids is the one name for the complete roster.' },
+      { code: '{ "MOP-1", "BEEP-7", "HEX-3" }', plain: 'The braces initialize three ordered string values, separated by commas.' },
+      { code: 'droids[0] and droids[2]', plain: 'These zero-based indexes retrieve the first and third droid names.' },
+      { code: '"First: " + droids[0]', plain: 'The + operator joins the fixed label to the selected array value.' },
+    ],
+    checks: [
+      { pattern: '"First: "\\s*\\+\\s*droids\\s*\\[\\s*0\\s*\\]', message: 'Join droids[0] after the First label.' },
+      { pattern: '"Last: "\\s*\\+\\s*droids\\s*\\[\\s*2\\s*\\]', message: 'Join droids[2] after the Last label.' },
+    ],
+    output: 'First: MOP-1\nLast: HEX-3',
+    hint: 'The two blanks are droids[0] and droids[2], in that order.',
+    recap: 'A Java array groups related values, and a zero-based index retrieves one element.',
+    xp: 22,
+  },
+]
+
 const mission = (
   id: string,
   language: LanguageId,
@@ -1099,7 +1599,7 @@ export const tracks: LanguageTrack[] = [
     missions: [
       mission('py-first-spark', 'python', 1, 'First Spark', 'Wake the Wayfarer', 'Console output, text, numbers, and your first variables.', 'signal', 'available', pythonExercises),
       mission('py-signal-protocol', 'python', 2, 'Signal Protocol', 'Make decisions', 'Booleans and if statements route a mysterious transmission.', 'satellite', 'locked', pythonSignalProtocolExercises),
-      mission('py-cargo-logic', 'python', 3, 'Cargo Logic', 'Organize the hold', 'Lists keep a nearly unlimited cargo manifest under control.', 'package', 'locked'),
+      mission('py-cargo-logic', 'python', 3, 'Cargo Logic', 'Organize the hold', 'Lists keep a nearly unlimited cargo manifest under control.', 'package', 'locked', pythonCargoLogicExercises),
       mission('py-looping-orbit', 'python', 4, 'Looping Orbit', 'Repeat with purpose', 'Loops scan moons without repeating every command by hand.', 'terminal', 'locked'),
       mission('py-function-foundry', 'python', 5, 'Function Foundry', 'Build reusable tools', 'Functions turn a working idea into a dependable ship system.', 'shield', 'locked'),
       mission('py-void-wyrm', 'python', 6, 'The Void Wyrm', 'Captain trial', 'Combine your systems in a complete text adventure.', 'crown', 'locked'),
@@ -1116,7 +1616,7 @@ export const tracks: LanguageTrack[] = [
     missions: [
       mission('cpp-reactor', 'cpp', 1, 'Reactor Wake', 'Light the rune core', 'Compilers, output, types, and variables from an engine room in the dark.', 'signal', 'available', cppExercises),
       mission('cpp-hull-logic', 'cpp', 2, 'Hull Logic', 'Choose a repair route', 'Conditions help the damage-control system choose what happens next.', 'shield', 'locked', cppHullLogicExercises),
-      mission('cpp-cargo-array', 'cpp', 3, 'Cargo Array', 'Count every crate', 'Arrays and loops process a full expedition manifest.', 'package', 'locked'),
+      mission('cpp-cargo-array', 'cpp', 3, 'Cargo Array', 'Address every part', 'Arrays keep an ordered expedition manifest under one name.', 'package', 'locked', cppCargoArrayExercises),
       mission('cpp-command-functions', 'cpp', 4, 'Command Functions', 'Make tools reusable', 'Break a complicated repair procedure into clear operations.', 'terminal', 'locked'),
       mission('cpp-fleet-model', 'cpp', 5, 'Fleet Model', 'Design ship objects', 'Classes describe ships, shuttles, and eccentric maintenance drones.', 'satellite', 'locked'),
       mission('cpp-titan-forge', 'cpp', 6, 'Titan Forge', 'Engineer trial', 'Build a tactical simulator from the systems you mastered.', 'crown', 'locked'),
@@ -1133,7 +1633,7 @@ export const tracks: LanguageTrack[] = [
     missions: [
       mission('cs-shield', 'csharp', 1, 'Shield Handshake', 'Bring the Aegis online', '.NET, console output, types, variables, and a tactical report.', 'signal', 'available', csharpExercises),
       mission('cs-command-logic', 'csharp', 2, 'Command Logic', 'Choose under pressure', 'Conditions let your ship respond to changing situations.', 'shield', 'locked', csharpCommandLogicExercises),
-      mission('cs-crew-roster', 'csharp', 3, 'Crew Roster', 'Manage the manifest', 'Collections organize specialists, familiars, and one suspicious goat.', 'package', 'locked'),
+      mission('cs-crew-roster', 'csharp', 3, 'Crew Roster', 'Manage the manifest', 'Arrays organize specialists, familiars, and one suspicious goat.', 'package', 'locked', csharpCrewRosterExercises),
       mission('cs-patrol-loop', 'csharp', 4, 'Patrol Loop', 'Scan the frontier', 'Loops repeat sensor work without exhausting the ensigns.', 'satellite', 'locked'),
       mission('cs-object-fleet', 'csharp', 5, 'Object Fleet', 'Model a living ship', 'Classes and objects organize a growing command system.', 'terminal', 'locked'),
       mission('cs-captains-trial', 'csharp', 6, 'Captain’s Trial', 'Command simulation', 'Build a small encounter system with everything you learned.', 'crown', 'locked'),
@@ -1150,7 +1650,7 @@ export const tracks: LanguageTrack[] = [
     missions: [
       mission('java-coffee-protocol', 'java', 1, 'Coffee Protocol', 'Wake the morning watch', 'The JVM, console output, types, variables, and an essential galley report.', 'signal', 'available', javaExercises),
       mission('java-routing-orders', 'java', 2, 'Routing Orders', 'Choose the right deck', 'Conditions send supplies to the places that need them.', 'satellite', 'locked', javaRoutingOrdersExercises),
-      mission('java-crew-array', 'java', 3, 'Crew Array', 'Organize the watch', 'Arrays and lists keep a growing crew manifest in order.', 'package', 'locked'),
+      mission('java-crew-array', 'java', 3, 'Crew Array', 'Organize the watch', 'Arrays keep a growing service-droid manifest in order.', 'package', 'locked', javaCrewArrayExercises),
       mission('java-repeat-brew', 'java', 4, 'Repeat Brew', 'Automate the routine', 'Loops repeat safe procedures without copying instructions.', 'terminal', 'locked'),
       mission('java-droid-blueprint', 'java', 5, 'Droid Blueprint', 'Model a helper', 'Classes and objects describe the ship’s tiny service droids.', 'shield', 'locked'),
       mission('java-nebula-trial', 'java', 6, 'Nebula Trial', 'Systems trial', 'Combine your tools into a complete expedition planner.', 'crown', 'locked'),

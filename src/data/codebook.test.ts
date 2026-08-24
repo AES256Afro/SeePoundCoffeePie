@@ -19,12 +19,15 @@ describe('progression-aware codebook', () => {
   it('unlocks examples only after the lesson that introduces them', () => {
     const variable = codebookEntries.find((entry) => entry.term === 'Variable')
     const condition = codebookEntries.find((entry) => entry.term === 'Condition')
-    if (!variable || !condition) throw new Error('Required codebook entries are missing')
+    const index = codebookEntries.find((entry) => entry.term === 'Index')
+    if (!variable || !condition || !index) throw new Error('Required codebook entries are missing')
 
     expect(codebookExampleState(variable, java, [])).toBe('locked')
     expect(codebookExampleState(variable, java, ['java-coffee-protocol'])).toBe('unlocked')
     expect(codebookExampleState(condition, java, ['java-coffee-protocol'])).toBe('locked')
     expect(codebookExampleState(condition, java, ['java-coffee-protocol', 'java-routing-orders'])).toBe('unlocked')
+    expect(codebookExampleState(index, java, ['java-coffee-protocol', 'java-routing-orders'])).toBe('locked')
+    expect(codebookExampleState(index, java, ['java-coffee-protocol', 'java-routing-orders', 'java-crew-array'])).toBe('unlocked')
   })
 
   it('does not pretend every term has an example in every language', () => {
@@ -38,7 +41,7 @@ describe('progression-aware codebook', () => {
   it('keeps terms and keywords unique enough for stable search results', () => {
     const normalizedTerms = codebookEntries.map((entry) => entry.term.toLocaleLowerCase())
     expect(new Set(normalizedTerms).size).toBe(normalizedTerms.length)
-    expect(codebookEntries.length).toBeGreaterThanOrEqual(22)
+    expect(codebookEntries.length).toBeGreaterThanOrEqual(27)
     for (const entry of codebookEntries) expect(entry.keywords.length).toBeGreaterThanOrEqual(3)
   })
 })

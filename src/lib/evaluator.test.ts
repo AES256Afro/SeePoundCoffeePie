@@ -156,4 +156,22 @@ describe('evaluateExercise', () => {
   ])('accepts the authored %s code order', (id, answer) => {
     expect(evaluateExercise(exercise(id), answer).correct).toBe(true)
   })
+
+  it.each([
+    ['py3-fix-index', 'cargo = ["crystal", "medkit", "map"]\nprint(cargo[2])'],
+    ['cpp3-fix-index', 'std::string parts[3] = {"crystal", "coupler", "rune"}; std::cout << parts[2];'],
+    ['cs3-fix-index', 'string[] crew = { "Mira", "Tov", "Pip" }; Console.WriteLine(crew[2]);'],
+    ['java3-fix-index', 'String[] droids = { "MOP-1", "BEEP-7", "HEX-3" }; System.out.println(droids[2]);'],
+  ])('accepts the authored %s zero-based index repair', (id, answer) => {
+    expect(evaluateExercise(exercise(id), answer).correct).toBe(true)
+  })
+
+  it.each([
+    ['py3-cargo-report', 'print("First:", cargo[0])\nprint("Last:", cargo[2])'],
+    ['cpp3-parts-report', 'std::cout << "First: " << parts[0]; std::cout << "Last: " << parts[2];'],
+    ['cs3-roster-report', 'Console.WriteLine($"First: {crew[0]}"); Console.WriteLine($"Last: {crew[2]}");'],
+    ['java3-roster-report', 'System.out.println("First: " + droids[0]); System.out.println("Last: " + droids[2]);'],
+  ])('accepts the authored %s collection report', (id, answer) => {
+    expect(evaluateExercise(exercise(id), answer).correct).toBe(true)
+  })
 })

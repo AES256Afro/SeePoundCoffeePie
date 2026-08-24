@@ -7,7 +7,7 @@ describe('beginner curriculum scaffolding', () => {
       track.missions.flatMap((mission) => mission.exercises.filter((exercise) => exercise.type === 'code'))
     ))
 
-    expect(codeExercises).toHaveLength(20)
+    expect(codeExercises).toHaveLength(24)
     for (const exercise of codeExercises) {
       expect(exercise.starterCode, `${exercise.id} needs starter code`).toContain('_____')
       expect(exercise.focus?.length, `${exercise.id} needs a one-job instruction`).toBeGreaterThan(20)
@@ -19,17 +19,23 @@ describe('beginner curriculum scaffolding', () => {
     }
   })
 
-  it('gives every bug-fix exercise one explicit repair and explains the faulty symbol', () => {
+  it('gives every bug-fix exercise one explicit, explained repair', () => {
     const bugFixes = tracks.flatMap((track) => (
       track.missions.flatMap((mission) => mission.exercises.filter((exercise) => exercise.type === 'bugfix'))
     ))
 
-    expect(bugFixes).toHaveLength(4)
+    expect(bugFixes).toHaveLength(8)
     for (const exercise of bugFixes) {
       expect(exercise.starterCode?.length, `${exercise.id} needs faulty starter code`).toBeGreaterThan(40)
       expect(exercise.focus, `${exercise.id} needs a bounded repair instruction`).toMatch(/change/iu)
-      expect(exercise.codeGuide?.some((item) => item.code.includes('==')), `${exercise.id} must explain ==`).toBe(true)
-      expect(exercise.checks?.[0]?.message, `${exercise.id} needs specific feedback`).toContain('==')
+      expect(exercise.codeGuide?.length, `${exercise.id} must explain its repair`).toBeGreaterThanOrEqual(3)
+      expect(exercise.checks?.[0]?.message.length, `${exercise.id} needs specific feedback`).toBeGreaterThan(20)
+    }
+
+    for (const track of tracks) {
+      const comparisonRepair = track.missions[1].exercises.find((exercise) => exercise.type === 'bugfix')
+      expect(comparisonRepair?.codeGuide?.some((item) => item.code.includes('==')), `${track.id} must explain ==`).toBe(true)
+      expect(comparisonRepair?.checks?.[0]?.message, `${track.id} needs comparison feedback`).toContain('==')
     }
   })
 
@@ -46,11 +52,24 @@ describe('beginner curriculum scaffolding', () => {
     }
   })
 
+  it('soft-lands collections with retrieval, explanation, prediction, repair, and use', () => {
+    for (const track of tracks) {
+      const types = track.missions[2].exercises.map((exercise) => exercise.type)
+      expect(types, `${track.id} mission 3 needs a gentle collection sequence`).toEqual([
+        'prediction',
+        'choice',
+        'prediction',
+        'bugfix',
+        'code',
+      ])
+    }
+  })
+
   it('keeps every authored exercise identifiable and fully teachable', () => {
     const exercises = tracks.flatMap((track) => track.missions.flatMap((mission) => mission.exercises))
     const ids = exercises.map((exercise) => exercise.id)
 
-    expect(exercises).toHaveLength(40)
+    expect(exercises).toHaveLength(60)
     expect(new Set(ids).size).toBe(ids.length)
     for (const exercise of exercises) {
       expect(exercise.explanation.length, `${exercise.id} needs a real explanation`).toBeGreaterThan(70)
@@ -97,5 +116,19 @@ describe('beginner curriculum scaffolding', () => {
     expect(guide).toContain('int podCount')
     expect(guide).toContain('+')
     expect(guide).toContain('System.out.println')
+  })
+
+  it('teaches zero-based indexing before each final collection report', () => {
+    for (const track of tracks) {
+      const mission = track.missions[2]
+      const indexLesson = mission.exercises[2]
+      const finalReport = mission.exercises[4]
+      const guide = finalReport.codeGuide?.map((item) => `${item.code} ${item.plain}`).join(' ') ?? ''
+
+      expect(indexLesson.conceptId).toContain('indexes')
+      expect(indexLesson.explanation).toContain('zero')
+      expect(guide).toContain('[0]')
+      expect(guide).toContain('[2]')
+    }
   })
 })

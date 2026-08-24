@@ -6,7 +6,7 @@ export interface CodebookEntry {
   ship: string
   keywords: string[]
   examples?: Partial<Record<LanguageId, string>>
-  unlockAfter?: 1 | 2
+  unlockAfter?: 1 | 2 | 3
 }
 
 export type ExampleState = 'unavailable' | 'locked' | 'unlocked'
@@ -266,6 +266,67 @@ export const codebookEntries: CodebookEntry[] = [
       cpp: 'if (hullIntegrity < 50) {\n    std::cout << "Patch";\n} else {\n    std::cout << "Stable";\n}',
       csharp: 'if (shieldPower >= 80) {\n    Console.WriteLine("Hold");\n} else {\n    Console.WriteLine("Divert");\n}',
       java: 'if (podCount < 6) {\n    System.out.println("Restock");\n} else {\n    System.out.println("Ready");\n}',
+    },
+  },
+  {
+    term: 'Collection',
+    plain: 'One value that keeps several related values together.',
+    ship: 'A named manifest that holds a whole row of related cargo or crew entries.',
+    keywords: ['group', 'multiple values', 'list', 'array', 'container'],
+    unlockAfter: 3,
+    examples: {
+      python: 'cargo = ["crystal", "medkit", "map"]',
+      cpp: 'std::string parts[3] = {"crystal", "coupler", "rune"};',
+      csharp: 'string[] crew = { "Mira", "Tov", "Pip" };',
+      java: 'String[] droids = { "MOP-1", "BEEP-7", "HEX-3" };',
+    },
+  },
+  {
+    term: 'List',
+    plain: 'An ordered collection that can keep several values under one name.',
+    ship: 'A cargo manifest whose entries remain in a known order.',
+    keywords: ['collection', 'square brackets', 'items', 'ordered'],
+    unlockAfter: 3,
+    examples: {
+      python: 'cargo = ["crystal", "medkit", "map"]',
+    },
+  },
+  {
+    term: 'Array',
+    plain: 'An ordered collection whose positions are accessed with indexes.',
+    ship: 'A numbered rack with one name and a specific slot for each item.',
+    keywords: ['collection', 'square brackets', 'fixed size', 'items', 'elements'],
+    unlockAfter: 3,
+    examples: {
+      cpp: 'std::string parts[3] = {"crystal", "coupler", "rune"};',
+      csharp: 'string[] crew = { "Mira", "Tov", "Pip" };',
+      java: 'String[] droids = { "MOP-1", "BEEP-7", "HEX-3" };',
+    },
+  },
+  {
+    term: 'Index',
+    plain: 'A number used as the position address of an item in an ordered collection.',
+    ship: 'The bay number the manifest computer uses to find one exact locker.',
+    keywords: ['position', 'address', 'zero', '[0]', '[2]'],
+    unlockAfter: 3,
+    examples: {
+      python: 'cargo[0]',
+      cpp: 'parts[0]',
+      csharp: 'crew[0]',
+      java: 'droids[0]',
+    },
+  },
+  {
+    term: 'Zero-based indexing',
+    plain: 'A position system where the first item is at index 0, the second at 1, and the third at 2.',
+    ship: 'A rack whose address plates begin with bay 0 instead of bay 1.',
+    keywords: ['zero', 'first item', 'off by one', 'position', 'index 0'],
+    unlockAfter: 3,
+    examples: {
+      python: 'cargo[0]  # first item',
+      cpp: 'parts[0]  // first item',
+      csharp: 'crew[0]  // first item',
+      java: 'droids[0]  // first item',
     },
   },
 ]

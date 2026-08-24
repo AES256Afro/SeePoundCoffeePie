@@ -110,7 +110,7 @@ The first sector uses the same conceptual spine across languages so learners can
 
 1. **Reactor Wake:** compiler, `std::cout`, strings, integers, variables
 2. **Hull Logic:** booleans and conditions
-3. **Cargo Array:** arrays, vectors, and loops
+3. **Cargo Array:** arrays and zero-based indexing
 4. **Command Functions:** parameters, return values, and decomposition
 5. **Fleet Model:** classes, objects, and state
 6. **Titan Forge:** guided tactical simulator
@@ -119,7 +119,7 @@ The first sector uses the same conceptual spine across languages so learners can
 
 1. **Shield Handshake:** .NET, `Console.WriteLine`, strings, integers, variables
 2. **Command Logic:** booleans and conditions
-3. **Crew Roster:** arrays, lists, and iteration
+3. **Crew Roster:** arrays and zero-based indexing
 4. **Patrol Loop:** loops and repeated work
 5. **Object Fleet:** classes, objects, and methods
 6. **Captain’s Trial:** guided encounter system
@@ -128,7 +128,7 @@ The first sector uses the same conceptual spine across languages so learners can
 
 1. **Coffee Protocol:** JVM, `System.out.println`, strings, integers, variables
 2. **Routing Orders:** booleans and conditions
-3. **Crew Array:** arrays, lists, and iteration
+3. **Crew Array:** arrays and zero-based indexing
 4. **Repeat Brew:** loops and automation
 5. **Droid Blueprint:** classes, objects, and methods
 6. **Nebula Trial:** guided expedition planner
@@ -137,7 +137,7 @@ The first sector uses the same conceptual spine across languages so learners can
 
 1. **First Spark:** console, `print`, strings, integers, variables
 2. **Signal Protocol:** booleans and conditions
-3. **Cargo Logic:** lists and structured data
+3. **Cargo Logic:** lists and zero-based indexing
 4. **Looping Orbit:** loops and iteration
 5. **Function Foundry:** parameters, return values, and decomposition
 6. **The Void Wyrm:** guided text adventure
@@ -163,7 +163,7 @@ Every authored lesson must:
 
 ### Phase 1: Learning foundation
 
-- Author missions 3 through 6 for all four tracks. Mission 2 is playable in every track.
+- Author missions 4 through 6 for all four tracks. Missions 1 through 3 are playable in every track.
 - Extend the current output-prediction, ordering, and bug-fix components as later lessons need more complex interactions.
 - Expand the current concept-level Codebook search as later missions introduce new vocabulary and examples.
 - Expand the current accessible editor controls beyond the documented Ctrl or Command plus Enter check shortcut as learner needs become clear.

@@ -109,4 +109,21 @@ describe('practice recommendations', () => {
   it('uses the full mission for optional practice when no concept is due', () => {
     expect(buildPracticeExercises(python.missions[1], [])).toEqual(python.missions[1].exercises)
   })
+
+  it('routes a due index concept into the authored third mission', () => {
+    const java = trackById('java')
+    const progress = {
+      ...initialProgress('java'),
+      completedMissions: ['java-coffee-protocol', 'java-routing-orders', 'java-crew-array'],
+      conceptProgress: {
+        'java-indexes': concept(1),
+      },
+    }
+
+    const recommendation = recommendPractice(java, progress, now)
+    expect(recommendation.mission.id).toBe('java-crew-array')
+    expect(buildPracticeExercises(recommendation.mission, recommendation.coveredConceptIds).map((exercise) => exercise.id)).toEqual([
+      'java3-first-index',
+    ])
+  })
 })
