@@ -21,7 +21,8 @@ describe('progression-aware codebook', () => {
     const condition = codebookEntries.find((entry) => entry.term === 'Condition')
     const index = codebookEntries.find((entry) => entry.term === 'Index')
     const loop = codebookEntries.find((entry) => entry.term === 'Loop')
-    if (!variable || !condition || !index || !loop) throw new Error('Required codebook entries are missing')
+    const parameter = codebookEntries.find((entry) => entry.term === 'Parameter')
+    if (!variable || !condition || !index || !loop || !parameter) throw new Error('Required codebook entries are missing')
 
     expect(codebookExampleState(variable, java, [])).toBe('locked')
     expect(codebookExampleState(variable, java, ['java-coffee-protocol'])).toBe('unlocked')
@@ -31,6 +32,8 @@ describe('progression-aware codebook', () => {
     expect(codebookExampleState(index, java, ['java-coffee-protocol', 'java-routing-orders', 'java-crew-array'])).toBe('unlocked')
     expect(codebookExampleState(loop, java, ['java-coffee-protocol', 'java-routing-orders', 'java-crew-array'])).toBe('locked')
     expect(codebookExampleState(loop, java, ['java-coffee-protocol', 'java-routing-orders', 'java-crew-array', 'java-repeat-brew'])).toBe('unlocked')
+    expect(codebookExampleState(parameter, java, ['java-coffee-protocol', 'java-routing-orders', 'java-crew-array', 'java-repeat-brew'])).toBe('locked')
+    expect(codebookExampleState(parameter, java, ['java-coffee-protocol', 'java-routing-orders', 'java-crew-array', 'java-repeat-brew', 'java-droid-routine'])).toBe('unlocked')
   })
 
   it('does not pretend every term has an example in every language', () => {
@@ -44,7 +47,7 @@ describe('progression-aware codebook', () => {
   it('keeps terms and keywords unique enough for stable search results', () => {
     const normalizedTerms = codebookEntries.map((entry) => entry.term.toLocaleLowerCase())
     expect(new Set(normalizedTerms).size).toBe(normalizedTerms.length)
-    expect(codebookEntries.length).toBeGreaterThanOrEqual(30)
+    expect(codebookEntries.length).toBeGreaterThanOrEqual(33)
     for (const entry of codebookEntries) expect(entry.keywords.length).toBeGreaterThanOrEqual(3)
   })
 })

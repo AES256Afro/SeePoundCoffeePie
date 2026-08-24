@@ -143,4 +143,27 @@ describe('practice recommendations', () => {
       'java4-loop-purpose',
     ])
   })
+
+  it('routes a due function concept into the authored fifth mission', () => {
+    const java = trackById('java')
+    const progress = {
+      ...initialProgress('java'),
+      completedMissions: [
+        'java-coffee-protocol',
+        'java-routing-orders',
+        'java-crew-array',
+        'java-repeat-brew',
+        'java-droid-routine',
+      ],
+      conceptProgress: {
+        'java-functions': concept(0),
+      },
+    }
+
+    const recommendation = recommendPractice(java, progress, now)
+    expect(recommendation.mission.id).toBe('java-droid-routine')
+    expect(buildPracticeExercises(recommendation.mission, recommendation.coveredConceptIds).map((exercise) => exercise.id)).toEqual([
+      'java5-method-purpose',
+    ])
+  })
 })

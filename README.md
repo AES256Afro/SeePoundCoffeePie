@@ -17,7 +17,7 @@ The current vertical slice includes:
 
 - a complete cadet intake flow with language and daily-goal selection;
 - four language stations: Python, C++, C#, and Java;
-- four fully playable five-step beginner missions for each language;
+- five fully playable five-step beginner missions for each language;
 - plain-language explanations and shipboard analogies;
 - guided choices, output prediction, code ordering, bug repair, and editable code exercises;
 - immediate, specific feedback and optional hints;
@@ -34,9 +34,9 @@ The current vertical slice includes:
 
 Planned missions are visible but intentionally locked. This makes the scope of the academy understandable without pretending unfinished curriculum is available.
 
-Each authored mission unlocks only after the previous mission is complete in the same language. Mission 2 retrieves output and variable skills before introducing Booleans, comparisons, `if`, and `else`. Mission 3 retrieves that decision work before introducing collections, arrays or lists, and zero-based indexing. Mission 4 retrieves an indexed item before explaining loops, tracing repeated output, assembling a loop, and applying it to the whole collection. Missions without authored exercises remain visibly marked as coming soon.
+Each authored mission unlocks only after the previous mission is complete in the same language. Mission 2 retrieves output and variable skills before introducing Booleans, comparisons, `if`, and `else`. Mission 3 retrieves that decision work before introducing collections, arrays or lists, and zero-based indexing. Mission 4 retrieves an indexed item before explaining loops, tracing repeated output, assembling a loop, and applying it to the whole collection. Mission 5 retrieves that loop before introducing reusable functions or methods, parameters, arguments, definitions, and calls. Missions without authored exercises remain visibly marked as coming soon.
 
-The current curriculum totals 16 playable missions and 80 authored exercises across the four language stations.
+The current curriculum totals 20 playable missions and 100 authored exercises across the four language stations.
 
 Inside editable code exercises, press Ctrl+Enter on Windows or Linux, or Command+Enter on macOS, to run the same check as the visible button. Tab keeps its normal browser behavior so keyboard learners can leave the editor without getting trapped.
 

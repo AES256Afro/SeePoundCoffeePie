@@ -192,4 +192,22 @@ describe('evaluateExercise', () => {
   ])('accepts the authored %s final loop', (id, answer) => {
     expect(evaluateExercise(exercise(id), answer).correct).toBe(true)
   })
+
+  it.each([
+    ['py5-order-function', 'define|body|call'],
+    ['cpp5-order-function', 'define|body|end|call'],
+    ['cs5-order-method', 'define|body|end|call'],
+    ['java5-order-method', 'define|body|end|call'],
+  ])('accepts the authored %s function order', (id, answer) => {
+    expect(evaluateExercise(exercise(id), answer).correct).toBe(true)
+  })
+
+  it.each([
+    ['py5-report-each', 'def report(current_item):\n    print(current_item)\nfor item in cargo:\n    report(item)'],
+    ['cpp5-report-each', 'void report(std::string currentPart) {} for (std::string part : parts) { report(part); }'],
+    ['cs5-report-each', 'void Report(string currentName) {} foreach (string name in crew) { Report(name); }'],
+    ['java5-report-each', 'static void report(String currentDroid) {} for (String droid : droids) { report(droid); }'],
+  ])('accepts the authored %s reusable report', (id, answer) => {
+    expect(evaluateExercise(exercise(id), answer).correct).toBe(true)
+  })
 })

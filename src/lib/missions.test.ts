@@ -29,7 +29,11 @@ describe('mission availability', () => {
     expect(missionAvailability(python, 3, ['py-cargo-logic'])).toBe('available')
   })
 
+  it('unlocks an authored fifth mission after the fourth is complete', () => {
+    expect(missionAvailability(python, 4, ['py-looping-orbit'])).toBe('available')
+  })
+
   it('does not unlock curriculum that has not been authored', () => {
-    expect(missionAvailability(python, 4, ['py-looping-orbit'])).toBe('coming-soon')
+    expect(missionAvailability(python, 5, ['py-function-foundry'])).toBe('coming-soon')
   })
 })

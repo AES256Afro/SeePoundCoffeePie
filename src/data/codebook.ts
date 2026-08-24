@@ -6,7 +6,7 @@ export interface CodebookEntry {
   ship: string
   keywords: string[]
   examples?: Partial<Record<LanguageId, string>>
-  unlockAfter?: 1 | 2 | 3 | 4
+  unlockAfter?: 1 | 2 | 3 | 4 | 5
 }
 
 export type ExampleState = 'unavailable' | 'locked' | 'unlocked'
@@ -366,6 +366,45 @@ export const codebookEntries: CodebookEntry[] = [
       cpp: 'for (std::string part : parts)  // part is temporary',
       csharp: 'foreach (string name in crew)  // name is temporary',
       java: 'for (String droid : droids)  // droid is temporary',
+    },
+  },
+  {
+    term: 'Function definition',
+    plain: 'The code that gives a reusable job its name, inputs, and instructions.',
+    ship: 'The blueprint for a control module before anyone activates it.',
+    keywords: ['define', 'method', 'def', 'void', 'reusable'],
+    unlockAfter: 5,
+    examples: {
+      python: 'def report(item):\n    print(item)',
+      cpp: 'void report(std::string part) {\n    std::cout << part;\n}',
+      csharp: 'void Report(string name) {\n    Console.WriteLine(name);\n}',
+      java: 'static void report(String droid) {\n    System.out.println(droid);\n}',
+    },
+  },
+  {
+    term: 'Parameter',
+    plain: 'A temporary input name written in a function or method definition.',
+    ship: 'A labeled input port waiting for the next value a caller sends.',
+    keywords: ['input', 'argument', 'temporary name', 'function', 'method'],
+    unlockAfter: 5,
+    examples: {
+      python: 'def report(item):  # item is a parameter',
+      cpp: 'void report(std::string part)  // part is a parameter',
+      csharp: 'void Report(string name)  // name is a parameter',
+      java: 'static void report(String droid)  // droid is a parameter',
+    },
+  },
+  {
+    term: 'Function call',
+    plain: 'An instruction that runs a named function or method and can supply argument values.',
+    ship: 'Pressing an installed control and handing it the value for this activation.',
+    keywords: ['call', 'run', 'invoke', 'argument', 'parentheses'],
+    unlockAfter: 5,
+    examples: {
+      python: 'report(item)',
+      cpp: 'report(part);',
+      csharp: 'Report(name);',
+      java: 'report(droid);',
     },
   },
 ]

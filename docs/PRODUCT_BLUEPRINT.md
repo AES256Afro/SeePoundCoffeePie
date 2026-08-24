@@ -112,7 +112,7 @@ The first sector uses the same conceptual spine across languages so learners can
 2. **Hull Logic:** booleans and conditions
 3. **Cargo Array:** arrays and zero-based indexing
 4. **Engine Loop:** range-based loops and repeated work
-5. **Fleet Model:** functions, classes, objects, and state
+5. **Command Function:** functions, parameters, and calls
 6. **Titan Forge:** guided tactical simulator
 
 ### Pound: C# Command Academy
@@ -121,7 +121,7 @@ The first sector uses the same conceptual spine across languages so learners can
 2. **Command Logic:** booleans and conditions
 3. **Crew Roster:** arrays and zero-based indexing
 4. **Patrol Loop:** loops and repeated work
-5. **Object Fleet:** classes, objects, and methods
+5. **Command Method:** methods, parameters, and calls
 6. **Captain’s Trial:** guided encounter system
 
 ### Coffee: Java Systems Guild
@@ -130,7 +130,7 @@ The first sector uses the same conceptual spine across languages so learners can
 2. **Routing Orders:** booleans and conditions
 3. **Crew Array:** arrays and zero-based indexing
 4. **Repeat Brew:** loops and automation
-5. **Droid Blueprint:** classes, objects, and methods
+5. **Droid Routine:** methods, parameters, and calls
 6. **Nebula Trial:** guided expedition planner
 
 ### Pie: Python Flight School
@@ -163,7 +163,7 @@ Every authored lesson must:
 
 ### Phase 1: Learning foundation
 
-- Author missions 5 and 6 for all four tracks. Missions 1 through 4 are playable in every track.
+- Author Mission 6 for all four tracks. Missions 1 through 5 are playable in every track.
 - Extend the current output-prediction, ordering, and bug-fix components as later lessons need more complex interactions.
 - Expand the current concept-level Codebook search as later missions introduce new vocabulary and examples.
 - Expand the current accessible editor controls beyond the documented Ctrl or Command plus Enter check shortcut as learner needs become clear.
