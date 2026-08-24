@@ -6,7 +6,7 @@ export interface CodebookEntry {
   ship: string
   keywords: string[]
   examples?: Partial<Record<LanguageId, string>>
-  unlockAfter?: 1 | 2 | 3
+  unlockAfter?: 1 | 2 | 3 | 4
 }
 
 export type ExampleState = 'unavailable' | 'locked' | 'unlocked'
@@ -327,6 +327,45 @@ export const codebookEntries: CodebookEntry[] = [
       cpp: 'parts[0]  // first item',
       csharp: 'crew[0]  // first item',
       java: 'droids[0]  // first item',
+    },
+  },
+  {
+    term: 'Loop',
+    plain: 'A structure that repeats a group of instructions.',
+    ship: 'One inspection order sent around every station in a patrol route.',
+    keywords: ['repeat', 'for', 'foreach', 'cycle', 'body'],
+    unlockAfter: 4,
+    examples: {
+      python: 'for item in cargo:\n    print(item)',
+      cpp: 'for (std::string part : parts) {\n    std::cout << part;\n}',
+      csharp: 'foreach (string name in crew) {\n    Console.WriteLine(name);\n}',
+      java: 'for (String droid : droids) {\n    System.out.println(droid);\n}',
+    },
+  },
+  {
+    term: 'Iteration',
+    plain: 'One pass through a loop. A loop over three items performs three iterations.',
+    ship: 'One completed stop on a repeating orbital scan.',
+    keywords: ['pass', 'repeat', 'cycle', 'each item'],
+    unlockAfter: 4,
+    examples: {
+      python: 'item  # one cargo value during this iteration',
+      cpp: 'part  // one array value during this iteration',
+      csharp: 'name  // one crew value during this iteration',
+      java: 'droid  // one roster value during this iteration',
+    },
+  },
+  {
+    term: 'Loop variable',
+    plain: 'A temporary name that holds the current value during one loop iteration.',
+    ship: 'A reusable inspection badge handed to one crew member or cargo item at a time.',
+    keywords: ['temporary', 'current item', 'for each', 'iteration'],
+    unlockAfter: 4,
+    examples: {
+      python: 'for item in cargo:  # item is the loop variable',
+      cpp: 'for (std::string part : parts)  // part is temporary',
+      csharp: 'foreach (string name in crew)  // name is temporary',
+      java: 'for (String droid : droids)  // droid is temporary',
     },
   },
 ]

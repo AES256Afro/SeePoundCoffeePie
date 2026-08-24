@@ -174,4 +174,22 @@ describe('evaluateExercise', () => {
   ])('accepts the authored %s collection report', (id, answer) => {
     expect(evaluateExercise(exercise(id), answer).correct).toBe(true)
   })
+
+  it.each([
+    ['py4-order-loop', 'list|loop|print'],
+    ['cpp4-order-loop', 'array|loop|print|end'],
+    ['cs4-order-loop', 'array|loop|print|end'],
+    ['java4-order-loop', 'array|loop|print|end'],
+  ])('accepts the authored %s loop order', (id, answer) => {
+    expect(evaluateExercise(exercise(id), answer).correct).toBe(true)
+  })
+
+  it.each([
+    ['py4-scan-manifest', 'for item in cargo:\n    print("Scanned:", item)'],
+    ['cpp4-inspect-parts', 'for (std::string part : parts) { std::cout << "Checked: " << part; }'],
+    ['cs4-call-roster', 'foreach (string name in crew) { Console.WriteLine($"Ready: {name}"); }'],
+    ['java4-check-roster', 'for (String droid : droids) { System.out.println("Checked: " + droid); }'],
+  ])('accepts the authored %s final loop', (id, answer) => {
+    expect(evaluateExercise(exercise(id), answer).correct).toBe(true)
+  })
 })

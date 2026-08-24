@@ -111,8 +111,8 @@ The first sector uses the same conceptual spine across languages so learners can
 1. **Reactor Wake:** compiler, `std::cout`, strings, integers, variables
 2. **Hull Logic:** booleans and conditions
 3. **Cargo Array:** arrays and zero-based indexing
-4. **Command Functions:** parameters, return values, and decomposition
-5. **Fleet Model:** classes, objects, and state
+4. **Engine Loop:** range-based loops and repeated work
+5. **Fleet Model:** functions, classes, objects, and state
 6. **Titan Forge:** guided tactical simulator
 
 ### Pound: C# Command Academy
@@ -163,7 +163,7 @@ Every authored lesson must:
 
 ### Phase 1: Learning foundation
 
-- Author missions 4 through 6 for all four tracks. Missions 1 through 3 are playable in every track.
+- Author missions 5 and 6 for all four tracks. Missions 1 through 4 are playable in every track.
 - Extend the current output-prediction, ordering, and bug-fix components as later lessons need more complex interactions.
 - Expand the current concept-level Codebook search as later missions introduce new vocabulary and examples.
 - Expand the current accessible editor controls beyond the documented Ctrl or Command plus Enter check shortcut as learner needs become clear.

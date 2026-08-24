@@ -7,7 +7,7 @@ describe('beginner curriculum scaffolding', () => {
       track.missions.flatMap((mission) => mission.exercises.filter((exercise) => exercise.type === 'code'))
     ))
 
-    expect(codeExercises).toHaveLength(24)
+    expect(codeExercises).toHaveLength(28)
     for (const exercise of codeExercises) {
       expect(exercise.starterCode, `${exercise.id} needs starter code`).toContain('_____')
       expect(exercise.focus?.length, `${exercise.id} needs a one-job instruction`).toBeGreaterThan(20)
@@ -65,11 +65,29 @@ describe('beginner curriculum scaffolding', () => {
     }
   })
 
+  it('soft-lands loops with retrieval, explanation, prediction, assembly, and use', () => {
+    for (const track of tracks) {
+      const types = track.missions[3].exercises.map((exercise) => exercise.type)
+      expect(types, `${track.id} mission 4 needs a gentle loop sequence`).toEqual([
+        'prediction',
+        'choice',
+        'prediction',
+        'ordering',
+        'code',
+      ])
+
+      const ordering = track.missions[3].exercises[3]
+      const initialOrder = ordering.orderItems?.map((item) => item.id) ?? []
+      expect(new Set(initialOrder)).toEqual(new Set(ordering.correctOrder))
+      expect(initialOrder).not.toEqual(ordering.correctOrder)
+    }
+  })
+
   it('keeps every authored exercise identifiable and fully teachable', () => {
     const exercises = tracks.flatMap((track) => track.missions.flatMap((mission) => mission.exercises))
     const ids = exercises.map((exercise) => exercise.id)
 
-    expect(exercises).toHaveLength(60)
+    expect(exercises).toHaveLength(80)
     expect(new Set(ids).size).toBe(ids.length)
     for (const exercise of exercises) {
       expect(exercise.explanation.length, `${exercise.id} needs a real explanation`).toBeGreaterThan(70)

@@ -25,7 +25,11 @@ describe('mission availability', () => {
     expect(missionAvailability(python, 2, ['py-signal-protocol'])).toBe('available')
   })
 
+  it('unlocks an authored fourth mission after the third is complete', () => {
+    expect(missionAvailability(python, 3, ['py-cargo-logic'])).toBe('available')
+  })
+
   it('does not unlock curriculum that has not been authored', () => {
-    expect(missionAvailability(python, 3, ['py-cargo-logic'])).toBe('coming-soon')
+    expect(missionAvailability(python, 4, ['py-looping-orbit'])).toBe('coming-soon')
   })
 })
