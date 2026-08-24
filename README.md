@@ -89,10 +89,9 @@ Production uses a GitHub OAuth App with these exact public settings:
 - homepage URL: `https://seepoundcoffeepie.com`
 - authorization callback URL: `https://seepoundcoffeepie.com/api/auth/github/callback`
 
-The Worker requires three encrypted Cloudflare secrets:
+The GitHub client ID is a public identifier, so it is stored as the `GITHUB_CLIENT_ID` text variable in `wrangler.jsonc`. The Worker requires two encrypted Cloudflare secrets:
 
 ```bash
-npx wrangler secret put GITHUB_CLIENT_ID
 npx wrangler secret put GITHUB_CLIENT_SECRET
 openssl rand -base64 48 | npx wrangler secret put SESSION_SECRET
 ```

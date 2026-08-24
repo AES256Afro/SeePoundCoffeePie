@@ -103,6 +103,66 @@ const glossary = [
     plain: 'A tool that checks and translates source code before it runs.',
     ship: 'An engineering translator that turns orders into machine signals.',
   },
+  {
+    term: 'Source code',
+    plain: 'The human-readable instructions a programmer writes.',
+    ship: 'The flight plan before the computer turns it into action.',
+  },
+  {
+    term: 'Syntax',
+    plain: 'The spelling and punctuation rules a programming language expects.',
+    ship: 'The command format that keeps “open the airlock” from becoming a guessing game.',
+  },
+  {
+    term: 'Keyword',
+    plain: 'A word reserved by a language for a special job, such as class or int.',
+    ship: 'A command word the computer already knows, so you cannot reuse it as a cargo label.',
+  },
+  {
+    term: 'Comment',
+    plain: 'A note for people reading the code. The computer ignores it when the program runs.',
+    ship: 'A mechanic’s note in the margin of the repair manual.',
+  },
+  {
+    term: 'Parentheses ( )',
+    plain: 'Symbols that often hold information given to a function or method.',
+    ship: 'The cargo bay attached to an instruction, carrying what that instruction needs.',
+  },
+  {
+    term: 'Braces { }',
+    plain: 'Symbols that surround a related group of code in languages such as C++, C#, and Java.',
+    ship: 'Bulkhead doors showing where one room of instructions begins and ends.',
+  },
+  {
+    term: 'Semicolon ;',
+    plain: 'A symbol that ends many instructions in C++, C#, and Java.',
+    ship: 'The full stop at the end of an engineering order.',
+  },
+  {
+    term: 'Function or method',
+    plain: 'A named piece of code that performs a job when it is called.',
+    ship: 'A reusable console control, such as run_scan or WriteLine.',
+  },
+  {
+    term: 'Argument',
+    plain: 'A value supplied to a function or method so it knows what to work with.',
+    ship: 'The coordinates handed to the navigation system before telling it to plot a route.',
+  },
+  {
+    term: 'Operator',
+    plain: 'A symbol that performs an action, such as + for adding numbers or joining text.',
+    ship: 'A small control between two readings that tells the system how to combine them.',
+  },
+  {
+    term: 'Entry point',
+    plain: 'The place where a program begins running. Java and C++ commonly call it main.',
+    ship: 'The first checklist the computer opens when the launch sequence begins.',
+  },
+  {
+    term: 'Class',
+    plain: 'A named container used to organize related code and describe kinds of things.',
+    ship: 'A blueprint folder that keeps one system’s data and operations together.',
+  },
 ]
 
 function BrandMark({ compact = false }: { compact?: boolean }) {
@@ -584,6 +644,7 @@ function LessonPlayer({ mission, progress, onProgress, onExit }: LessonPlayerPro
   const answer = answers[exercise?.id] ?? exercise?.starterCode ?? ''
   const totalXp = mission.exercises.reduce((sum, item) => sum + item.xp, 0)
   const earnedXp = mission.exercises.filter((item) => credited.includes(item.id)).reduce((sum, item) => sum + item.xp, 0)
+  const blankCount = exercise?.starterCode?.match(/_____/gu)?.length ?? 0
 
   if (!exercise) return null
 
@@ -663,41 +724,75 @@ function LessonPlayer({ mission, progress, onProgress, onExit }: LessonPlayerPro
 
         <section className="exercise-panel">
           <div className="exercise-panel__head">
-            <div><small>YOUR TASK</small><h2>{exercise.prompt}</h2></div>
+            <div><small>{exercise.type === 'choice' ? 'GUIDED CHECK' : 'YOUR TASK'}</small><h2>{exercise.prompt}</h2></div>
             <span><Trophy size={14} /> {exercise.xp} XP</span>
           </div>
 
           {exercise.type === 'choice' ? (
-            <div className="choice-list">
-              {exercise.choices?.map((choice, index) => (
-                <button
-                  className={answer === choice.id ? 'is-selected' : ''}
-                  key={choice.id}
-                  onClick={() => setAnswer(choice.id)}
-                  disabled={feedback?.correct}
-                >
-                  <span>{String.fromCharCode(65 + index)}</span>
-                  <div><b>{choice.label}</b><small>{choice.detail}</small></div>
-                  <i>{answer === choice.id && <Check size={16} />}</i>
-                </button>
-              ))}
+            <div>
+              <div className="guided-check-note">
+                <BookOpen size={17} />
+                <p><b>This is not a prior-knowledge test.</b> The answer was just explained on the left. Reread it as often as you need, then choose the sentence that matches.</p>
+              </div>
+              <div className="choice-list">
+                {exercise.choices?.map((choice, index) => (
+                  <button
+                    className={answer === choice.id ? 'is-selected' : ''}
+                    key={choice.id}
+                    onClick={() => setAnswer(choice.id)}
+                    disabled={feedback?.correct}
+                  >
+                    <span>{String.fromCharCode(65 + index)}</span>
+                    <div><b>{choice.label}</b><small>{choice.detail}</small></div>
+                    <i>{answer === choice.id && <Check size={16} />}</i>
+                  </button>
+                ))}
+              </div>
             </div>
           ) : (
-            <div className="code-workspace">
-              <div className="editor-bar"><span><Code2 size={15} /> {mission.language === 'python' ? 'mission.py' : mission.language === 'cpp' ? 'mission.cpp' : mission.language === 'java' ? 'Mission.java' : 'Mission.cs'}</span><small>TRAINING SIMULATOR</small></div>
-              <div className="editor-body">
-                <div className="line-numbers">{answer.split('\n').map((_, index) => <span key={index}>{index + 1}</span>)}</div>
-                <textarea
-                  aria-label="Code editor"
-                  value={answer}
-                  onChange={(event) => setAnswer(event.target.value)}
-                  spellCheck={false}
-                  disabled={feedback?.correct}
-                />
-              </div>
-              <div className="console-pane">
-                <div><TerminalSquare size={14} /> SIMULATED OUTPUT</div>
-                <pre>{feedback?.correct ? feedback.output : 'Run the check to see your program’s result.'}</pre>
+            <div>
+              <section className="code-onramp" aria-label="Code walkthrough">
+                <div className="code-focus">
+                  <Compass size={19} />
+                  <div>
+                    <small>YOUR ONE JOB ON THIS SCREEN</small>
+                    <b>{exercise.focus ?? `Replace the ${blankCount === 1 ? 'one' : blankCount} _____ ${blankCount === 1 ? 'blank' : 'blanks'}.`}</b>
+                    <p>Everything else is supplied scaffolding. Read it if you are curious, but you are not expected to memorize or rewrite it yet.</p>
+                  </div>
+                </div>
+                {exercise.codeGuide && exercise.codeGuide.length > 0 && (
+                  <div className="code-guide">
+                    <div className="code-guide__head">
+                      <small>DEMYSTIFY THE CODE</small>
+                      <h3>Read each piece like a sentence</h3>
+                    </div>
+                    <div className="code-guide__items">
+                      {exercise.codeGuide.map((item) => (
+                        <article key={`${exercise.id}-${item.code}`}>
+                          <code>{item.code}</code>
+                          <p>{item.plain}</p>
+                        </article>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </section>
+              <div className="code-workspace">
+                <div className="editor-bar"><span><Code2 size={15} /> {mission.language === 'python' ? 'mission.py' : mission.language === 'cpp' ? 'mission.cpp' : mission.language === 'java' ? 'Mission.java' : 'Mission.cs'}</span><small>TRAINING SIMULATOR</small></div>
+                <div className="editor-body">
+                  <div className="line-numbers">{answer.split('\n').map((_, index) => <span key={index}>{index + 1}</span>)}</div>
+                  <textarea
+                    aria-label="Code editor"
+                    value={answer}
+                    onChange={(event) => setAnswer(event.target.value)}
+                    spellCheck={false}
+                    disabled={feedback?.correct}
+                  />
+                </div>
+                <div className="console-pane">
+                  <div><TerminalSquare size={14} /> SIMULATED OUTPUT</div>
+                  <pre>{feedback?.correct ? feedback.output : 'Nothing has run yet. Complete your one small change, then select Run check.'}</pre>
+                </div>
               </div>
             </div>
           )}

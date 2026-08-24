@@ -22,14 +22,15 @@ Nothing in the first sector assumes prior command-line, IDE, Git, or computer-sc
 
 ## Core learning loop
 
-Every lesson uses the same six-part rhythm:
+Every lesson uses the same seven-part rhythm:
 
 1. **Orient.** Name one new concept in plain language.
 2. **Relate.** Connect it to a shipboard analogy.
-3. **Predict.** Ask the learner what the instruction should do.
-4. **Type.** Make the learner edit or write the relevant code.
-5. **Explain.** Give immediate feedback that identifies the specific missing piece.
-6. **Retrieve later.** Schedule the concept according to memory strength and past mistakes.
+3. **Unmask.** Separate the learner’s one small job from supplied scaffolding, then decode every unfamiliar line and symbol in plain language.
+4. **Predict.** Ask the learner what the instruction should do, while making clear that the answer was just taught and prior knowledge is not expected.
+5. **Type.** Make the learner edit only the relevant code before asking them to build larger structures.
+6. **Explain.** Give immediate feedback that identifies the specific missing piece.
+7. **Retrieve later.** Schedule the concept according to memory strength and past mistakes.
 
 The learner does not watch a long lecture before touching code. Larger projects arrive after enough small pieces have become familiar.
 
@@ -46,6 +47,16 @@ Wrong answers do not consume hearts, lives, energy, or paid currency. A mistake 
 ### Helpful hints without answer dumping
 
 PIE-314 is the academy guide. In the current build it supplies authored hints and analogies. A future conversational guide should know the current lesson, the learner’s code, prior attempts, and the concept being taught. It should ask diagnostic questions and reveal one step at a time. It must not silently replace the learner’s code with the solution.
+
+### Ceremony is not assumed knowledge
+
+C++, C#, and Java often need program framing before a beginner can run one useful instruction. That framing must never appear as unexplained noise. The lesson first labels the learner’s exact edit, then identifies the rest as supplied scaffolding, and finally decodes the frame line by line. Long forms such as Java’s `public static void main(String[] args)` are recognized before they are memorized and revisited before the learner must construct them independently.
+
+The interface should repeatedly distinguish these three things:
+
+- **Your job now:** the smallest code change the learner is expected to make;
+- **Provided for now:** valid surrounding code the learner may read but does not need to reproduce;
+- **Why it exists:** a plain-language explanation of each word and symbol, available before the editor.
 
 ### Practice that changes shape
 

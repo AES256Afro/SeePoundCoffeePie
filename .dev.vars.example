@@ -1,5 +1,4 @@
 # Local-only placeholders for `npx wrangler dev`.
 # Copy this file to .dev.vars and replace every value. Never commit .dev.vars.
-GITHUB_CLIENT_ID="your-github-oauth-client-id"
 GITHUB_CLIENT_SECRET="your-github-oauth-client-secret"
 SESSION_SECRET="generate-a-long-random-value"

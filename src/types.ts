@@ -14,6 +14,11 @@ export interface CodeCheck {
   flags?: string
 }
 
+export interface CodeGuideItem {
+  code: string
+  plain: string
+}
+
 export interface Exercise {
   id: string
   conceptId: string
@@ -24,6 +29,8 @@ export interface Exercise {
   type: ExerciseType
   prompt: string
   starterCode?: string
+  focus?: string
+  codeGuide?: CodeGuideItem[]
   choices?: Array<{ id: string; label: string; detail?: string }>
   correctChoice?: string
   checks?: CodeCheck[]

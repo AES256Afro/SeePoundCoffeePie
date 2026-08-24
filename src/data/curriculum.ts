@@ -1,5 +1,35 @@
 import type { Exercise, LanguageId, LanguageTrack, Mission } from '../types'
 
+const cppProgramFrame = [
+  {
+    code: '#include <iostream>',
+    plain: 'This asks C++ to bring in its console-output toolbox. It is provided scaffolding, so you can recognize it without memorizing it.',
+  },
+  {
+    code: 'int main() {',
+    plain: 'main is the starting doorway of this program. The opening brace { begins its group of instructions. You will study return values later.',
+  },
+  {
+    code: 'return 0; and }',
+    plain: 'return 0 reports a normal finish. The closing brace } shuts the group opened above. Both lines are already supplied.',
+  },
+]
+
+const javaProgramFrame = [
+  {
+    code: 'public class Main {',
+    plain: 'A class is a named program container. This simulator expects the name Main. public lets Java reach it, and { opens the container.',
+  },
+  {
+    code: 'public static void main(String[] args)',
+    plain: 'This is Java’s starting doorway. public makes it reachable, static lets it start without first building an object, void says it returns no value, and String[] args can receive launch words. You do not need to memorize this line yet.',
+  },
+  {
+    code: '{ and }',
+    plain: 'Braces mark where a group begins and ends, like opening and closing the walls of a room. The simulator supplies these braces for you.',
+  },
+]
+
 const pythonExercises: Exercise[] = [
   {
     id: 'py-console',
@@ -34,6 +64,12 @@ const pythonExercises: Exercise[] = [
     type: 'code',
     prompt: 'Replace the blank with a command that displays Signal online.',
     starterCode: '# Tell the bridge our signal is ready\n_____("Signal online")',
+    focus: 'Replace the one _____ blank with print. Leave the message and its punctuation in place.',
+    codeGuide: [
+      { code: '# Tell the bridge...', plain: 'A line beginning with # is a comment for humans. Python ignores it when the program runs.' },
+      { code: 'print', plain: 'This is a built-in Python instruction that sends something to the console.' },
+      { code: '("Signal online")', plain: 'Parentheses hold what print should use. Quotation marks tell Python that Signal online is text.' },
+    ],
     checks: [
       { pattern: 'print\\s*\\(\\s*["\\\']Signal online["\\\']\\s*\\)', message: 'Use print, then put the exact message inside parentheses.' },
     ],
@@ -54,6 +90,13 @@ const pythonExercises: Exercise[] = [
     type: 'code',
     prompt: 'Create a variable named ship_name and store the text Wayfarer in it.',
     starterCode: '# Store the ship name below\nship_name = _____\n\nprint(ship_name)',
+    focus: 'Replace the one _____ blank with the quoted text "Wayfarer".',
+    codeGuide: [
+      { code: 'ship_name', plain: 'This is a variable name: a human-readable label for a value kept in memory.' },
+      { code: '=', plain: 'Here, the equals sign means “store the value on the right under the label on the left.”' },
+      { code: '"Wayfarer"', plain: 'Quotation marks make this a string, which is programming’s word for a piece of text.' },
+      { code: 'print(ship_name)', plain: 'Using the label without quotes retrieves the stored value. Quoting "ship_name" would print the label itself.' },
+    ],
     checks: [
       { pattern: 'ship_name\\s*=\\s*["\\\']Wayfarer["\\\']', message: 'Put the text "Wayfarer" after the equals sign. Text needs quotation marks.' },
       { pattern: 'print\\s*\\(\\s*ship_name\\s*\\)', message: 'Keep print(ship_name) so the simulator can inspect the locker.' },
@@ -75,6 +118,13 @@ const pythonExercises: Exercise[] = [
     type: 'code',
     prompt: 'Store the number 3 in a variable named power_cells.',
     starterCode: '# Numbers do not need quotation marks\npower_cells = _____\n\nprint(power_cells)',
+    focus: 'Replace the one _____ blank with the number 3, without quotation marks.',
+    codeGuide: [
+      { code: 'power_cells', plain: 'This variable name describes what the stored number counts. Clear names make code easier to read.' },
+      { code: '= 3', plain: 'The equals sign stores the whole number 3 under that name.' },
+      { code: '3 versus "3"', plain: '3 is a number that can be used in arithmetic. "3" is text containing the character 3.' },
+      { code: 'print(power_cells)', plain: 'Python looks inside the variable and sends its current value to the console.' },
+    ],
     checks: [
       { pattern: 'power_cells\\s*=\\s*3(?:\\s|$)', message: 'Assign the number 3 to power_cells without quotation marks.' },
       { pattern: 'print\\s*\\(\\s*power_cells\\s*\\)', message: 'Keep print(power_cells) so the count reaches the bridge.' },
@@ -96,6 +146,13 @@ const pythonExercises: Exercise[] = [
     type: 'code',
     prompt: 'Replace both blanks. The report must display the ship name and cell count.',
     starterCode: 'ship_name = "Wayfarer"\npower_cells = 3\n\nprint("Ship:", _____)\nprint("Cells:", _____)',
+    focus: 'Replace only the two _____ blanks: first with ship_name, then with power_cells.',
+    codeGuide: [
+      { code: 'ship_name = "Wayfarer"', plain: 'This stores text under the label ship_name. The value is already waiting for you.' },
+      { code: 'power_cells = 3', plain: 'This stores a whole number under the label power_cells.' },
+      { code: 'print("Ship:", ship_name)', plain: 'A comma lets print place the fixed label and the variable’s value on the same output line.' },
+      { code: 'print("Cells:", power_cells)', plain: 'The same pattern is reused. Repetition is how a new code shape becomes familiar.' },
+    ],
     checks: [
       { pattern: 'print\\s*\\(\\s*["\\\']Ship:["\\\']\\s*,\\s*ship_name\\s*\\)', message: 'Use ship_name in the first print command.' },
       { pattern: 'print\\s*\\(\\s*["\\\']Cells:["\\\']\\s*,\\s*power_cells\\s*\\)', message: 'Use power_cells in the second print command.' },
@@ -141,6 +198,12 @@ const cppExercises: Exercise[] = [
     type: 'code',
     prompt: 'Complete the instruction so the reactor reports Reactor online.',
     starterCode: '#include <iostream>\n\nint main() {\n    _____ << "Reactor online";\n    return 0;\n}',
+    focus: 'Replace the one _____ blank with std::cout. The program frame around it is already supplied.',
+    codeGuide: [
+      ...cppProgramFrame,
+      { code: 'std::cout <<', plain: 'std::cout is C++’s console output stream. The << symbols point the value on their right toward that stream.' },
+      { code: '"Reactor online";', plain: 'Quotation marks identify text. The semicolon ; is a full stop that ends this C++ instruction.' },
+    ],
     checks: [
       { pattern: 'std::cout\\s*<<\\s*"Reactor online"\\s*;', message: 'Use std::cout, the << symbols, the message, and a final semicolon.' },
     ],
@@ -161,6 +224,13 @@ const cppExercises: Exercise[] = [
     type: 'code',
     prompt: 'Create a text variable named core_name with the value Ember.',
     starterCode: '#include <iostream>\n#include <string>\n\nint main() {\n    std::string core_name = _____;\n    std::cout << core_name;\n    return 0;\n}',
+    focus: 'Replace the one _____ blank with the quoted text "Ember".',
+    codeGuide: [
+      ...cppProgramFrame,
+      { code: 'std::string', plain: 'This type tells C++ that the variable will hold text. std names the standard toolbox where string lives.' },
+      { code: 'core_name = "Ember";', plain: 'core_name is the label, = stores a value, quotes mark text, and ; ends the instruction.' },
+      { code: 'std::cout << core_name;', plain: 'Without quotation marks, core_name means “retrieve the value stored under this label.”' },
+    ],
     checks: [
       { pattern: 'std::string\\s+core_name\\s*=\\s*"Ember"\\s*;', message: 'Place "Ember" after the equals sign and keep the semicolon.' },
     ],
@@ -181,6 +251,13 @@ const cppExercises: Exercise[] = [
     type: 'code',
     prompt: 'Declare an integer named charge and set it to 80.',
     starterCode: '#include <iostream>\n\nint main() {\n    _____ charge = 80;\n    std::cout << charge;\n    return 0;\n}',
+    focus: 'Replace the one _____ blank with int, the C++ type for a whole number.',
+    codeGuide: [
+      ...cppProgramFrame,
+      { code: 'int', plain: 'int is short for integer, a whole number with no decimal part.' },
+      { code: 'charge = 80;', plain: 'charge is the variable label. The equals sign stores the number 80, and the semicolon ends the instruction.' },
+      { code: 'std::cout << charge;', plain: 'This retrieves the stored number and routes it to the console.' },
+    ],
     checks: [
       { pattern: 'int\\s+charge\\s*=\\s*80\\s*;', message: 'Use the int type before the variable named charge.' },
     ],
@@ -201,6 +278,13 @@ const cppExercises: Exercise[] = [
     type: 'code',
     prompt: 'Use both variables to produce Core: Ember | Charge: 80.',
     starterCode: '#include <iostream>\n#include <string>\n\nint main() {\n    std::string core_name = "Ember";\n    int charge = 80;\n\n    std::cout << "Core: " << _____\n              << " | Charge: " << _____;\n    return 0;\n}',
+    focus: 'Replace only the two _____ blanks: first with core_name, then with charge.',
+    codeGuide: [
+      ...cppProgramFrame,
+      { code: 'std::string core_name = "Ember";', plain: 'This complete instruction stores text. Type, label, value, and semicolon each have one job.' },
+      { code: 'int charge = 80;', plain: 'This uses the same shape to store a number instead of text.' },
+      { code: 'std::cout << ... << ...;', plain: 'Each << adds the next text or stored value to one output line. Read the chain from left to right.' },
+    ],
     checks: [
       { pattern: '<<\\s*core_name\\s*<<', message: 'Route the core_name variable between the two text sections.' },
       { pattern: '<<\\s*charge\\s*;', message: 'Route the charge variable at the end, before the semicolon.' },
@@ -246,6 +330,13 @@ const csharpExercises: Exercise[] = [
     type: 'code',
     prompt: 'Complete the command so the console displays Shields online.',
     starterCode: '_____("Shields online");',
+    focus: 'Replace the one _____ blank with Console.WriteLine. Keep the message, parentheses, and semicolon.',
+    codeGuide: [
+      { code: 'Console', plain: 'Console is a built-in C# tool representing the text window where a program can communicate.' },
+      { code: '.', plain: 'The dot means “use something belonging to the item on the left.” Here, use a Console operation.' },
+      { code: 'WriteLine', plain: 'This operation writes a value and then moves the console to a new line.' },
+      { code: '("Shields online");', plain: 'Parentheses hold the message, quotes mark it as text, and the semicolon ends the instruction.' },
+    ],
     checks: [
       { pattern: 'Console\\.WriteLine\\s*\\(\\s*"Shields online"\\s*\\)\\s*;', message: 'Use Console.WriteLine with parentheses and a final semicolon.' },
     ],
@@ -266,6 +357,13 @@ const csharpExercises: Exercise[] = [
     type: 'code',
     prompt: 'Create a string named shieldName and store Aegis in it.',
     starterCode: 'string shieldName = _____;\n\nConsole.WriteLine(shieldName);',
+    focus: 'Replace the one _____ blank with the quoted text "Aegis".',
+    codeGuide: [
+      { code: 'string', plain: 'This type tells C# that the variable will hold text.' },
+      { code: 'shieldName', plain: 'This is the variable’s label. The capital N is a common readable style called camel case.' },
+      { code: '= "Aegis";', plain: 'The equals sign stores the quoted text, and the semicolon closes the instruction.' },
+      { code: 'Console.WriteLine(shieldName);', plain: 'Without quotes, shieldName retrieves its stored value and sends that value to the console.' },
+    ],
     checks: [
       { pattern: 'string\\s+shieldName\\s*=\\s*"Aegis"\\s*;', message: 'Put the quoted text "Aegis" after the equals sign.' },
     ],
@@ -286,6 +384,13 @@ const csharpExercises: Exercise[] = [
     type: 'code',
     prompt: 'Declare an integer named strength and set it to 100.',
     starterCode: '_____ strength = 100;\n\nConsole.WriteLine(strength);',
+    focus: 'Replace the one _____ blank with int, the C# type for a whole number.',
+    codeGuide: [
+      { code: 'int', plain: 'int is short for integer, a whole number without a decimal part.' },
+      { code: 'strength', plain: 'This is the descriptive variable label used to find the stored number later.' },
+      { code: '= 100;', plain: 'The equals sign stores 100. It has no quotes because this is numeric data, not text.' },
+      { code: 'Console.WriteLine(strength);', plain: 'C# retrieves the number stored under strength and displays it.' },
+    ],
     checks: [
       { pattern: 'int\\s+strength\\s*=\\s*100\\s*;', message: 'Use the int type before the variable named strength.' },
     ],
@@ -306,6 +411,13 @@ const csharpExercises: Exercise[] = [
     type: 'code',
     prompt: 'Fill both blanks so the report uses the stored name and strength.',
     starterCode: 'string shieldName = "Aegis";\nint strength = 100;\n\nConsole.WriteLine($"Shield: {_____} | Strength: {_____}");',
+    focus: 'Replace only the two _____ blanks: first with shieldName, then with strength.',
+    codeGuide: [
+      { code: 'string shieldName = "Aegis";', plain: 'This stores text under a descriptive variable label.' },
+      { code: 'int strength = 100;', plain: 'This follows the same type, label, value pattern for a whole number.' },
+      { code: '$"..."', plain: 'The $ turns the quoted text into a template that can include live variable values.' },
+      { code: '{shieldName}', plain: 'Braces inside this text template mark a place where C# should insert a stored value. These braces are different from braces that group code.' },
+    ],
     checks: [
       { pattern: '\\{\\s*shieldName\\s*\\}', message: 'Put shieldName inside the first pair of braces.' },
       { pattern: '\\{\\s*strength\\s*\\}', message: 'Put strength inside the second pair of braces.' },
@@ -351,6 +463,12 @@ const javaExercises: Exercise[] = [
     type: 'code',
     prompt: 'Complete the command so the console displays Coffee online.',
     starterCode: 'public class Main {\n    public static void main(String[] args) {\n        _____("Coffee online");\n    }\n}',
+    focus: 'Replace the one _____ blank with System.out.println. The long setup lines are provided, not a test.',
+    codeGuide: [
+      ...javaProgramFrame,
+      { code: 'System.out.println', plain: 'System is Java’s connection to the running computer, out is its standard output channel, and println sends one line through it.' },
+      { code: '("Coffee online");', plain: 'Parentheses hold the message, quotes mark it as text, and the semicolon ends the Java instruction.' },
+    ],
     checks: [
       { pattern: 'System\\.out\\.println\\s*\\(\\s*"Coffee online"\\s*\\)\\s*;', message: 'Use System.out.println with parentheses and a final semicolon.' },
     ],
@@ -371,6 +489,13 @@ const javaExercises: Exercise[] = [
     type: 'code',
     prompt: 'Create a String named blendName and store Nebula Roast in it.',
     starterCode: 'public class Main {\n    public static void main(String[] args) {\n        String blendName = _____;\n        System.out.println(blendName);\n    }\n}',
+    focus: 'Replace the one _____ blank with the quoted text "Nebula Roast". Leave the Java program frame alone.',
+    codeGuide: [
+      ...javaProgramFrame,
+      { code: 'String', plain: 'This type tells Java that the variable will hold text. Its capital S matters because Java is case-sensitive.' },
+      { code: 'blendName = "Nebula Roast";', plain: 'blendName is the label, = stores a value, quotes mark text, and ; ends the instruction.' },
+      { code: 'System.out.println(blendName);', plain: 'Because blendName has no quotes here, Java retrieves its stored text instead of printing the label itself.' },
+    ],
     checks: [
       { pattern: 'String\\s+blendName\\s*=\\s*"Nebula Roast"\\s*;', message: 'Put the quoted text "Nebula Roast" after the equals sign.' },
     ],
@@ -391,6 +516,13 @@ const javaExercises: Exercise[] = [
     type: 'code',
     prompt: 'Declare an integer named podCount and set it to 12.',
     starterCode: 'public class Main {\n    public static void main(String[] args) {\n        _____ podCount = 12;\n        System.out.println(podCount);\n    }\n}',
+    focus: 'Replace the one _____ blank with int, Java’s type for a whole number.',
+    codeGuide: [
+      ...javaProgramFrame,
+      { code: 'int', plain: 'int is short for integer, a whole number with no decimal part.' },
+      { code: 'podCount = 12;', plain: 'podCount is the label. The equals sign stores the number 12, and the semicolon ends the instruction.' },
+      { code: '12 versus "12"', plain: '12 is numeric data that Java can calculate with. "12" would be two text characters.' },
+    ],
     checks: [
       { pattern: 'int\\s+podCount\\s*=\\s*12\\s*;', message: 'Use the int type before the variable named podCount.' },
     ],
@@ -409,8 +541,16 @@ const javaExercises: Exercise[] = [
     analogy:
       'Each + couples another car onto the report train: a label, a stored value, another label, and another value.',
     type: 'code',
-    prompt: 'Fill both blanks so the report uses the stored blend name and pod count.',
+    prompt: 'Replace only the two blanks so the report uses the stored blend name and pod count.',
     starterCode: 'public class Main {\n    public static void main(String[] args) {\n        String blendName = "Nebula Roast";\n        int podCount = 12;\n\n        System.out.println("Blend: " + _____\n            + " | Pods: " + _____);\n    }\n}',
+    focus: 'Replace the first _____ with blendName and the second with podCount. Do not rewrite the surrounding program.',
+    codeGuide: [
+      ...javaProgramFrame,
+      { code: 'String blendName = "Nebula Roast";', plain: 'This complete instruction stores text under the label blendName. It is already done for you.' },
+      { code: 'int podCount = 12;', plain: 'This complete instruction stores a whole number under podCount. It is also already done.' },
+      { code: '+', plain: 'Between text pieces, + joins them into one longer message. Read this output line from left to right, one piece at a time.' },
+      { code: 'System.out.println(...)', plain: 'println displays everything inside its parentheses. The line wraps on screen only to make it easier to read.' },
+    ],
     checks: [
       { pattern: '\\+\\s*blendName', message: 'Join the blendName variable after the first + symbol.' },
       { pattern: '\\+\\s*podCount\\s*\\)', message: 'Join the podCount variable before the closing parenthesis.' },
