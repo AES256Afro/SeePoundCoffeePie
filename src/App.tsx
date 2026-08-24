@@ -1,7 +1,9 @@
 import { useEffect, useMemo, useState } from 'react'
 import {
+  ArrowDown,
   ArrowLeft,
   ArrowRight,
+  ArrowUp,
   BookOpen,
   Box,
   Check,
@@ -37,6 +39,7 @@ import {
 } from 'lucide-react'
 import { trackById, tracks } from './data/curriculum'
 import { evaluateExercise } from './lib/evaluator'
+import { missionAvailability } from './lib/missions'
 import {
   completeMission,
   dateKey,
@@ -433,7 +436,12 @@ function MissionPath({ progress, onStart }: { progress: LearnerProgress; onStart
             {track.missions.map((item, index) => {
               const Icon = missionIcons[item.icon]
               const complete = progress.completedMissions.includes(item.id)
-              const available = item.status === 'available'
+              const availability = missionAvailability(track, index, progress.completedMissions)
+              const available = availability === 'available'
+              const prerequisite = track.missions[index - 1]
+              const lockedMessage = availability === 'coming-soon'
+                ? 'Coming soon'
+                : `Complete ${prerequisite?.title ?? 'earlier training'} to unlock`
               return (
                 <article className={`mission-row ${available ? 'is-available' : 'is-locked'} ${complete ? 'is-complete' : ''}`} key={item.id}>
                   <div className="mission-node">
@@ -448,14 +456,14 @@ function MissionPath({ progress, onStart }: { progress: LearnerProgress; onStart
                       <div className="mission-meta">
                         <span><Clock3 size={14} /> {item.duration}</span>
                         {available && <span><Trophy size={14} /> {item.exercises.reduce((sum, exercise) => sum + exercise.xp, 0)} XP</span>}
-                        {!available && <span>Complete earlier training to unlock</span>}
+                        {!available && <span>{lockedMessage}</span>}
                       </div>
                     </div>
                     <button
                       className={available ? 'mission-play' : 'mission-lock'}
                       onClick={() => available && onStart(item)}
                       disabled={!available}
-                      aria-label={available ? `${complete ? 'Replay' : 'Start'} ${item.title}` : `${item.title} locked`}
+                      aria-label={available ? `${complete ? 'Replay' : 'Start'} ${item.title}` : `${item.title} ${availability === 'coming-soon' ? 'coming soon' : 'locked'}`}
                     >
                       {available ? (complete ? <RotateCcw /> : <Play fill="currentColor" />) : <LockKeyhole />}
                     </button>
@@ -655,12 +663,42 @@ function LessonPlayer({ mission, progress, onProgress, onExit }: LessonPlayerPro
 
   if (!exercise) return null
 
-  const answer = answers[exercise.id] ?? exercise.starterCode ?? ''
+  const initialOrder = exercise.orderItems?.map((item) => item.id).join('|') ?? ''
+  const answer = answers[exercise.id]
+    ?? (exercise.type === 'ordering' ? initialOrder : exercise.starterCode)
+    ?? ''
+  const orderedIds = exercise.type === 'ordering'
+    ? answer.split('|').filter(Boolean)
+    : []
   const blankCount = exercise.starterCode?.match(/_____/gu)?.length ?? 0
+  const choiceExercise = exercise.type === 'choice' || exercise.type === 'prediction'
+  const editableExercise = exercise.type === 'code' || exercise.type === 'bugfix'
+  const taskLabel = reviewing
+    ? 'TRY IT ONCE MORE'
+    : exercise.type === 'choice'
+      ? 'GUIDED CHECK'
+      : exercise.type === 'prediction'
+        ? 'PREDICT THE OUTPUT'
+        : exercise.type === 'ordering'
+          ? 'PUT IT IN ORDER'
+          : exercise.type === 'bugfix'
+            ? 'DEBUGGING TASK'
+            : 'YOUR TASK'
+  const checkActionLabel = editableExercise
+    ? 'Run check'
+    : exercise.type === 'ordering' ? 'Check order' : 'Check answer'
 
   const setAnswer = (value: string) => {
     setAnswers((current) => ({ ...current, [exercise.id]: value }))
     if (feedback && !feedback.correct) setFeedback(null)
+  }
+
+  const moveOrderItem = (index: number, direction: -1 | 1) => {
+    const destination = index + direction
+    if (destination < 0 || destination >= orderedIds.length) return
+    const reordered = [...orderedIds]
+    ;[reordered[index], reordered[destination]] = [reordered[destination], reordered[index]]
+    setAnswer(reordered.join('|'))
   }
 
   const checkAnswer = () => {
@@ -768,15 +806,21 @@ function LessonPlayer({ mission, progress, onProgress, onExit }: LessonPlayerPro
 
         <section className="exercise-panel">
           <div className="exercise-panel__head">
-            <div><small>{reviewing ? 'TRY IT ONCE MORE' : exercise.type === 'choice' ? 'GUIDED CHECK' : 'YOUR TASK'}</small><h2>{exercise.prompt}</h2></div>
+            <div><small>{taskLabel}</small><h2>{exercise.prompt}</h2></div>
             <span>{reviewing ? <><RotateCcw size={14} /> REVIEW</> : <><Trophy size={14} /> {exercise.xp} XP</>}</span>
           </div>
 
-          {exercise.type === 'choice' ? (
+          {choiceExercise ? (
             <div>
+              {exercise.type === 'prediction' && exercise.displayCode && (
+                <div className="prediction-code" aria-label="Code to predict">
+                  <div><Code2 size={15} /> READ THIS CODE</div>
+                  <pre><code>{exercise.displayCode}</code></pre>
+                </div>
+              )}
               <div className="guided-check-note">
                 <BookOpen size={17} />
-                <p><b>This is not a prior-knowledge test.</b> The answer was just explained on the left. Reread it as often as you need, then choose the sentence that matches.</p>
+                <p><b>This is not a prior-knowledge test.</b> {exercise.type === 'prediction' ? 'Read the code from top to bottom and use the explanation on the left.' : 'The answer was just explained on the left.'} Reread it as often as you need, then choose the sentence that matches.</p>
               </div>
               <div className="choice-list">
                 {exercise.choices?.map((choice, index) => (
@@ -792,8 +836,33 @@ function LessonPlayer({ mission, progress, onProgress, onExit }: LessonPlayerPro
                   </button>
                 ))}
               </div>
+              {feedback?.correct && exercise.output && <div className="exercise-result"><TerminalSquare size={15} /><span><b>RESULT</b><code>{exercise.output}</code></span></div>}
             </div>
-          ) : (
+          ) : exercise.type === 'ordering' ? (
+            <div>
+              <div className="guided-check-note">
+                <BookOpen size={17} />
+                <p><b>The computer reads from top to bottom.</b> Use the arrow buttons to place each piece where the computer should meet it. You can change the order as often as you need.</p>
+              </div>
+              <div className="ordering-list" aria-label="Code pieces to order">
+                {orderedIds.map((id, index) => {
+                  const item = exercise.orderItems?.find((candidate) => candidate.id === id)
+                  if (!item) return null
+                  return (
+                    <article key={item.id}>
+                      <span>{index + 1}</span>
+                      <code>{item.code}</code>
+                      <div>
+                        <button onClick={() => moveOrderItem(index, -1)} disabled={index === 0} aria-label={`Move ${item.code} up`}><ArrowUp size={16} /></button>
+                        <button onClick={() => moveOrderItem(index, 1)} disabled={index === orderedIds.length - 1} aria-label={`Move ${item.code} down`}><ArrowDown size={16} /></button>
+                      </div>
+                    </article>
+                  )
+                })}
+              </div>
+              {feedback?.correct && exercise.output && <div className="exercise-result"><TerminalSquare size={15} /><span><b>RESULT</b><code>{exercise.output}</code></span></div>}
+            </div>
+          ) : editableExercise ? (
             <div>
               <section className="code-onramp" aria-label="Code walkthrough">
                 <div className="code-focus">
@@ -839,7 +908,7 @@ function LessonPlayer({ mission, progress, onProgress, onExit }: LessonPlayerPro
                 </div>
               </div>
             </div>
-          )}
+          ) : null}
 
           <button className="hint-toggle" onClick={() => setHintOpen((open) => !open)}><CircleHelp size={17} /> {hintOpen ? 'Hide hint' : 'I need a hint'}</button>
           {hintOpen && <div className="hint-box"><Sparkles size={16} /><span><b>Small nudge</b>{exercise.hint}</span></div>}
@@ -860,7 +929,7 @@ function LessonPlayer({ mission, progress, onProgress, onExit }: LessonPlayerPro
                   : step === mission.exercises.length - 1
                     ? mistakes.length > 0 ? 'Repair missed concepts' : 'Finish mission'
                     : 'Continue'
-                : exercise.type === 'choice' ? 'Check answer' : 'Run check'}
+                : checkActionLabel}
               {feedback?.correct ? <ArrowRight size={18} /> : <Play size={16} fill="currentColor" />}
             </button>
           </div>

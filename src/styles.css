@@ -2091,6 +2091,138 @@ p {
   color: #bdd0c9;
 }
 
+.prediction-code {
+  overflow: hidden;
+  margin-bottom: 0.85rem;
+  border: 1px solid #213d35;
+  border-radius: 11px;
+  background: #071310;
+}
+
+.prediction-code > div {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.65rem 0.85rem;
+  color: #6f8b81;
+  border-bottom: 1px solid #1a342c;
+  background: #0b1b17;
+  font-size: 0.52rem;
+  font-weight: 900;
+  letter-spacing: 0.1em;
+}
+
+.prediction-code > div svg {
+  color: var(--accent, var(--lime));
+}
+
+.prediction-code pre {
+  overflow-x: auto;
+  margin: 0;
+  padding: 1rem;
+  color: #c7ead5;
+  font-family: "SFMono-Regular", Consolas, monospace;
+  font-size: 0.74rem;
+  line-height: 1.65;
+  white-space: pre;
+}
+
+.ordering-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.58rem;
+}
+
+.ordering-list article {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 0.7rem;
+  align-items: center;
+  min-height: 58px;
+  padding: 0.65rem 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: #0d211c;
+}
+
+.ordering-list article > span {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  color: #071310;
+  border-radius: 8px;
+  background: var(--accent, var(--lime));
+  font-family: "SFMono-Regular", Consolas, monospace;
+  font-size: 0.68rem;
+  font-weight: 900;
+}
+
+.ordering-list code {
+  overflow-wrap: anywhere;
+  color: #c7ead5;
+  font-family: "SFMono-Regular", Consolas, monospace;
+  font-size: 0.7rem;
+  line-height: 1.45;
+  white-space: pre-wrap;
+}
+
+.ordering-list article > div {
+  display: flex;
+  gap: 0.3rem;
+}
+
+.ordering-list button {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  color: #9db3ab;
+  border: 1px solid #2b493f;
+  border-radius: 8px;
+  background: #10271f;
+}
+
+.ordering-list button:hover:not(:disabled) {
+  color: #071310;
+  border-color: var(--accent, var(--lime));
+  background: var(--accent, var(--lime));
+}
+
+.ordering-list button:disabled {
+  cursor: not-allowed;
+  opacity: 0.3;
+}
+
+.exercise-result {
+  display: flex;
+  gap: 0.55rem;
+  margin-top: 0.85rem;
+  padding: 0.75rem 0.85rem;
+  color: #8ebca0;
+  border: 1px solid rgba(156, 228, 181, 0.2);
+  border-radius: 9px;
+  background: rgba(156, 228, 181, 0.05);
+}
+
+.exercise-result > span {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.exercise-result b {
+  color: var(--lime);
+  font-size: 0.5rem;
+  letter-spacing: 0.1em;
+}
+
+.exercise-result code {
+  font-family: "SFMono-Regular", Consolas, monospace;
+  font-size: 0.68rem;
+  white-space: pre-wrap;
+}
+
 .choice-list {
   display: flex;
   flex-direction: column;

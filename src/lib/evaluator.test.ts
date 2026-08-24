@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { findExercise } from '../data/curriculum'
 import { evaluateExercise } from './evaluator'
+import type { Exercise } from '../types'
 
 function exercise(id: string) {
   const found = findExercise(id)
@@ -61,5 +62,71 @@ describe('evaluateExercise', () => {
     const result = evaluateExercise(exercise('py-launch'), incomplete)
     expect(result.correct).toBe(false)
     expect(result.message).toContain('power_cells')
+  })
+
+  it('checks output predictions through the authored answer choices', () => {
+    const prediction: Exercise = {
+      id: 'test-prediction',
+      conceptId: 'test-output',
+      eyebrow: 'Test',
+      title: 'Predict',
+      explanation: 'Read from top to bottom.',
+      analogy: 'Follow the signal.',
+      type: 'prediction',
+      prompt: 'What appears?',
+      choices: [{ id: 'a', label: 'Online' }, { id: 'b', label: 'Offline', detail: 'That is not the stored message.' }],
+      correctChoice: 'a',
+      hint: 'Read the print line.',
+      recap: 'The stored message appears.',
+      xp: 5,
+    }
+
+    expect(evaluateExercise(prediction, 'a').correct).toBe(true)
+    expect(evaluateExercise(prediction, 'b')).toMatchObject({
+      correct: false,
+      message: 'That is not the stored message. Reread the explanation above and try once more.',
+    })
+  })
+
+  it('checks ordered code pieces exactly from top to bottom', () => {
+    const ordering: Exercise = {
+      id: 'test-ordering',
+      conceptId: 'test-conditions',
+      eyebrow: 'Test',
+      title: 'Order',
+      explanation: 'Conditions come before their indented work.',
+      analogy: 'Open the hatch before walking through it.',
+      type: 'ordering',
+      prompt: 'Order the pieces.',
+      orderItems: [{ id: 'body', code: '    print("Go")' }, { id: 'if', code: 'if ready:' }],
+      correctOrder: ['if', 'body'],
+      hint: 'The if line opens the route.',
+      recap: 'The condition comes before its indented instruction.',
+      xp: 5,
+    }
+
+    expect(evaluateExercise(ordering, 'body|if').correct).toBe(false)
+    expect(evaluateExercise(ordering, 'if|body')).toMatchObject({ correct: true })
+  })
+
+  it('checks bug fixes with the same deterministic syntax rules as editable code', () => {
+    const bugfix: Exercise = {
+      id: 'test-bugfix',
+      conceptId: 'test-comparison',
+      eyebrow: 'Test',
+      title: 'Repair',
+      explanation: 'Two equals signs compare values.',
+      analogy: 'Inspect instead of replacing.',
+      type: 'bugfix',
+      prompt: 'Repair the comparison.',
+      starterCode: 'if power = 5:',
+      checks: [{ pattern: 'if\\s+power\\s*==\\s*5\\s*:', message: 'Use == to compare the values.' }],
+      hint: 'Replace = with ==.',
+      recap: 'The comparison now asks a question.',
+      xp: 5,
+    }
+
+    expect(evaluateExercise(bugfix, 'if power = 5:').correct).toBe(false)
+    expect(evaluateExercise(bugfix, 'if power == 5:').correct).toBe(true)
   })
 })

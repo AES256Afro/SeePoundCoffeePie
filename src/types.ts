@@ -1,6 +1,6 @@
 export type LanguageId = 'python' | 'cpp' | 'csharp' | 'java'
 
-export type ExerciseType = 'choice' | 'code'
+export type ExerciseType = 'choice' | 'prediction' | 'ordering' | 'bugfix' | 'code'
 
 export interface AuthUser {
   id: string
@@ -19,6 +19,11 @@ export interface CodeGuideItem {
   plain: string
 }
 
+export interface OrderItem {
+  id: string
+  code: string
+}
+
 export interface Exercise {
   id: string
   conceptId: string
@@ -28,11 +33,15 @@ export interface Exercise {
   analogy: string
   type: ExerciseType
   prompt: string
+  displayCode?: string
   starterCode?: string
   focus?: string
   codeGuide?: CodeGuideItem[]
   choices?: Array<{ id: string; label: string; detail?: string }>
   correctChoice?: string
+  orderItems?: OrderItem[]
+  correctOrder?: string[]
+  incorrectMessage?: string
   checks?: CodeCheck[]
   output?: string
   hint: string
