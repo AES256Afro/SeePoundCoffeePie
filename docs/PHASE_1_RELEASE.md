@@ -48,6 +48,7 @@ The authored exercise inventory is:
 - The Practice Bay selects the completed mission covering the most concepts due in the active language and builds one exercise per due concept.
 - The 44-term Codebook searches plain definitions, analogies, keywords, and active-language examples, revealing examples only after their introducing mission.
 - The Cadet Record shows separate completion for all four stations and links directly back to each mission path.
+- Daily goals can be changed between 5, 10, and 15 XP without locking lessons or removing progress.
 - A versioned JSON backup preserves callsign, language, goals, XP, shards, streak, completed missions, and concept review state.
 - Restore rejects malformed JSON, unknown missions or concepts, duplicate completions, invalid dates, unsafe counts, unsupported languages, and oversized files before changing local progress.
 

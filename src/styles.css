@@ -2035,6 +2035,51 @@ p {
   background: rgba(121, 214, 255, 0.035);
 }
 
+.training-goal-panel {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 2rem;
+  margin-top: 1rem;
+  padding: 1.35rem 1.5rem;
+  border: 1px solid rgba(242, 193, 78, 0.2);
+  border-radius: 13px;
+  background: rgba(242, 193, 78, 0.035);
+}
+
+.training-goal-panel small {
+  color: #8c7a47;
+  font-size: 0.55rem;
+  font-weight: 900;
+  letter-spacing: 0.14em;
+}
+
+.training-goal-panel h2 {
+  margin: 0.25rem 0 0.35rem;
+  font-size: 1rem;
+}
+
+.training-goal-panel p {
+  max-width: 620px;
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.7rem;
+  line-height: 1.5;
+}
+
+.training-goal-panel__options {
+  display: flex;
+  flex: 0 0 auto;
+  gap: 0.5rem;
+}
+
+.training-goal-panel__options .secondary-action[aria-pressed="true"] {
+  color: #ffe49a;
+  border-color: rgba(242, 193, 78, 0.6);
+  background: rgba(242, 193, 78, 0.12);
+  box-shadow: 0 0 0 2px rgba(242, 193, 78, 0.08);
+}
+
 .backup-panel small {
   color: #628079;
   font-size: 0.55rem;
@@ -3412,6 +3457,19 @@ p {
   .settings-panel {
     align-items: flex-start;
     flex-direction: column;
+  }
+
+  .training-goal-panel {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .training-goal-panel__options {
+    width: 100%;
+  }
+
+  .training-goal-panel__options .secondary-action {
+    flex: 1 1 0;
   }
 
   .account-panel {

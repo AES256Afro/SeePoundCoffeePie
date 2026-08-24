@@ -187,4 +187,33 @@ describe('beginner lesson interactions', () => {
       expect(stored.completedMissions).toEqual(['py-first-spark', 'java-coffee-protocol'])
     })
   })
+
+  it('changes the daily goal without locking or resetting learning progress', async () => {
+    window.localStorage.setItem(progressKey, JSON.stringify({
+      ...initialProgress('python'),
+      callsign: 'Goal Cadet',
+      xp: 70,
+      starShards: 25,
+      completedMissions: ['py-first-spark'],
+      onboardingComplete: true,
+    }))
+
+    render(<App />)
+    fireEvent.click(screen.getByRole('button', { name: 'Cadet record' }))
+    const fifteenXp = screen.getByRole('button', { name: '15 XP' })
+    expect(fifteenXp.getAttribute('aria-pressed')).toBe('false')
+    fireEvent.click(fifteenXp)
+
+    expect(fifteenXp.getAttribute('aria-pressed')).toBe('true')
+    expect(screen.getByText(/Missing it never locks a lesson/iu)).toBeTruthy()
+    await waitFor(() => {
+      const stored = JSON.parse(window.localStorage.getItem(progressKey) ?? '{}')
+      expect(stored).toMatchObject({
+        dailyGoal: 15,
+        xp: 70,
+        starShards: 25,
+        completedMissions: ['py-first-spark'],
+      })
+    })
+  })
 })

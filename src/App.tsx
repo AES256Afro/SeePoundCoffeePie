@@ -543,6 +543,7 @@ function Codebook({ progress }: { progress: LearnerProgress }) {
 interface CadetRecordProps {
   authBusy: boolean
   authUser: AuthUser | null
+  onDailyGoalChange: (goal: number) => void
   onLogout: () => void
   onDownloadBackup: () => string
   onOpenTrack: (language: LanguageId) => void
@@ -552,7 +553,7 @@ interface CadetRecordProps {
   progress: LearnerProgress
 }
 
-function CadetRecord({ authBusy, authUser, onDownloadBackup, onLogout, onOpenTrack, onReset, onRestoreBackup, onSignIn, progress }: CadetRecordProps) {
+function CadetRecord({ authBusy, authUser, onDailyGoalChange, onDownloadBackup, onLogout, onOpenTrack, onReset, onRestoreBackup, onSignIn, progress }: CadetRecordProps) {
   const concepts = Object.values(progress.conceptProgress)
   const answers = concepts.reduce((sum, item) => sum + item.correct + item.incorrect, 0)
   const accuracy = answers ? Math.round((concepts.reduce((sum, item) => sum + item.correct, 0) / answers) * 100) : 0
@@ -623,6 +624,25 @@ function CadetRecord({ authBusy, authUser, onDownloadBackup, onLogout, onOpenTra
             <Github size={16} /> Sign in with GitHub
           </button>
         )}
+      </section>
+      <section className="training-goal-panel" aria-labelledby="training-goal-title">
+        <div>
+          <small>DAILY TRAINING GOAL</small>
+          <h2 id="training-goal-title">Choose a pace that fits today</h2>
+          <p>The goal is a gentle reminder, not a deadline. Missing it never locks a lesson, removes a streak already earned, or costs shards.</p>
+        </div>
+        <div className="training-goal-panel__options" aria-label="Daily training goal">
+          {[5, 10, 15].map((goal) => (
+            <button
+              key={goal}
+              className="secondary-action"
+              aria-pressed={progress.dailyGoal === goal}
+              onClick={() => onDailyGoalChange(goal)}
+            >
+              <Clock3 size={15} /> {goal} XP
+            </button>
+          ))}
+        </div>
       </section>
       <section className="backup-panel">
         <span className="account-panel__icon"><Download size={24} /></span>
@@ -1163,6 +1183,7 @@ function App() {
           <CadetRecord
             authBusy={authBusy}
             authUser={authUser}
+            onDailyGoalChange={(dailyGoal) => setProgress((current) => ({ ...current, dailyGoal }))}
             onDownloadBackup={downloadProgressBackup}
             onLogout={logout}
             onOpenTrack={(language) => {

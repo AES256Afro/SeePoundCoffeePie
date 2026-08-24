@@ -23,7 +23,7 @@ The current vertical slice includes:
 - immediate, specific feedback and optional hints;
 - an end-of-mission memory-repair round that repeats missed concepts without duplicate XP;
 - a local training simulator for deterministic beginner challenges;
-- XP, daily goal, streak, star-shard, mission-completion, and accuracy tracking;
+- XP, adjustable daily goal, streak, star-shard, mission-completion, and accuracy tracking;
 - a spaced-review scheduler that weighs correct and incorrect attempts;
 - a Practice Bay that recommends the completed mission covering the most due concepts, then builds one focused exercise per due concept;
 - a searchable 44-term beginner Codebook and a Cadet Record with progression-unlocked examples and separate progress for all four stations;
