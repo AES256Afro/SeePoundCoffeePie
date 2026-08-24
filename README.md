@@ -25,7 +25,7 @@ The current vertical slice includes:
 - a local training simulator for deterministic beginner challenges;
 - XP, daily goal, streak, star-shard, mission-completion, and accuracy tracking;
 - a spaced-review scheduler that weighs correct and incorrect attempts;
-- a Practice Bay, Codebook reference foundation, and Cadet Record;
+- a Practice Bay, searchable Codebook with progression-unlocked examples, and Cadet Record;
 - local browser persistence with a visible reset control;
 - responsive layouts for desktop, tablet, and mobile;
 - keyboard focus states and reduced-motion support;

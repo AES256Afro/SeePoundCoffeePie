@@ -163,7 +163,7 @@ Every authored lesson must:
 
 - Author missions 3 through 6 for all four tracks. Mission 2 is playable in every track.
 - Extend the current output-prediction, ordering, and bug-fix components as later lessons need more complex interactions.
-- Add concept-level Codebook search and examples unlocked by completed lessons.
+- Expand the current concept-level Codebook search as later missions introduce new vocabulary and examples.
 - Add accessible keyboard shortcuts inside the editor.
 - Add unit, interaction, and curriculum-schema tests.
 

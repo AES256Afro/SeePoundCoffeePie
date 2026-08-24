@@ -28,6 +28,7 @@ import {
   Radio,
   RotateCcw,
   Satellite,
+  Search,
   Settings,
   Shield,
   Sparkles,
@@ -37,6 +38,7 @@ import {
   X,
   Zap,
 } from 'lucide-react'
+import { codebookEntries, codebookExampleState, codebookMatches } from './data/codebook'
 import { trackById, tracks } from './data/curriculum'
 import { evaluateExercise } from './lib/evaluator'
 import { missionAvailability } from './lib/missions'
@@ -75,99 +77,6 @@ const languageSnippets: Record<LanguageId, string> = {
   csharp: 'Console.WriteLine("Hello, cosmos!");',
   java: 'System.out.println("Hello, cosmos!");',
 }
-
-const glossary = [
-  {
-    term: 'Program',
-    plain: 'A sequence of instructions a computer follows.',
-    ship: 'Like a flight plan, except every step must be precise.',
-  },
-  {
-    term: 'Console',
-    plain: 'A text area where a program can show messages and results.',
-    ship: 'The program’s intercom and status display.',
-  },
-  {
-    term: 'Variable',
-    plain: 'A named place that stores a value so you can use it later.',
-    ship: 'A labeled cargo locker for one useful piece of information.',
-  },
-  {
-    term: 'String',
-    plain: 'A text value, usually surrounded by quotation marks.',
-    ship: 'Words entered in the ship log, such as a vessel name.',
-  },
-  {
-    term: 'Integer',
-    plain: 'A whole number with no decimal part.',
-    ship: 'A count of crew, power cells, shields, or very patient goats.',
-  },
-  {
-    term: 'Compiler',
-    plain: 'A tool that checks and translates source code before it runs.',
-    ship: 'An engineering translator that turns orders into machine signals.',
-  },
-  {
-    term: 'Source code',
-    plain: 'The human-readable instructions a programmer writes.',
-    ship: 'The flight plan before the computer turns it into action.',
-  },
-  {
-    term: 'Syntax',
-    plain: 'The spelling and punctuation rules a programming language expects.',
-    ship: 'The command format that keeps “open the airlock” from becoming a guessing game.',
-  },
-  {
-    term: 'Keyword',
-    plain: 'A word reserved by a language for a special job, such as class or int.',
-    ship: 'A command word the computer already knows, so you cannot reuse it as a cargo label.',
-  },
-  {
-    term: 'Comment',
-    plain: 'A note for people reading the code. The computer ignores it when the program runs.',
-    ship: 'A mechanic’s note in the margin of the repair manual.',
-  },
-  {
-    term: 'Parentheses ( )',
-    plain: 'Symbols that often hold information given to a function or method.',
-    ship: 'The cargo bay attached to an instruction, carrying what that instruction needs.',
-  },
-  {
-    term: 'Braces { }',
-    plain: 'Symbols that surround a related group of code in languages such as C++, C#, and Java.',
-    ship: 'Bulkhead doors showing where one room of instructions begins and ends.',
-  },
-  {
-    term: 'Semicolon ;',
-    plain: 'A symbol that ends many instructions in C++, C#, and Java.',
-    ship: 'The full stop at the end of an engineering order.',
-  },
-  {
-    term: 'Function or method',
-    plain: 'A named piece of code that performs a job when it is called.',
-    ship: 'A reusable console control, such as run_scan or WriteLine.',
-  },
-  {
-    term: 'Argument',
-    plain: 'A value supplied to a function or method so it knows what to work with.',
-    ship: 'The coordinates handed to the navigation system before telling it to plot a route.',
-  },
-  {
-    term: 'Operator',
-    plain: 'A symbol that performs an action, such as + for adding numbers or joining text.',
-    ship: 'A small control between two readings that tells the system how to combine them.',
-  },
-  {
-    term: 'Entry point',
-    plain: 'The place where a program begins running. Java and C++ commonly call it main.',
-    ship: 'The first checklist the computer opens when the launch sequence begins.',
-  },
-  {
-    term: 'Class',
-    plain: 'A named container used to organize related code and describe kinds of things.',
-    ship: 'A blueprint folder that keeps one system’s data and operations together.',
-  },
-]
 
 function BrandMark({ compact = false }: { compact?: boolean }) {
   return (
@@ -540,23 +449,67 @@ function PracticeBay({ progress, onStart }: { progress: LearnerProgress; onStart
   )
 }
 
-function Codebook() {
+function Codebook({ progress }: { progress: LearnerProgress }) {
+  const [query, setQuery] = useState('')
+  const track = trackById(progress.activeLanguage)
+  const filteredEntries = useMemo(
+    () => codebookEntries.filter((entry) => codebookMatches(entry, query, track.id)),
+    [query, track.id],
+  )
+  const entriesWithExamples = codebookEntries.filter((entry) => entry.examples?.[track.id])
+  const unlockedExamples = entriesWithExamples.filter((entry) => (
+    codebookExampleState(entry, track, progress.completedMissions) === 'unlocked'
+  )).length
+
   return (
     <main className="content-page">
       <div className="page-heading page-heading--simple">
-        <div><p className="kicker"><LibraryBig size={14} /> PLAIN-LANGUAGE REFERENCE</p><h1>Cadet codebook</h1><p>Every term comes with a definition and a shipboard analogy.</p></div>
+        <div><p className="kicker"><LibraryBig size={14} /> PLAIN-LANGUAGE REFERENCE</p><h1>Cadet codebook</h1><p>Search every definition now. Code examples unlock after you learn them in a mission.</p></div>
       </div>
-      <div className="glossary-grid">
-        {glossary.map((item, index) => (
-          <article key={item.term}>
-            <span className="glossary-number">{String(index + 1).padStart(2, '0')}</span>
-            <Code2 size={21} />
-            <h2>{item.term}</h2>
-            <p>{item.plain}</p>
-            <div><Sparkles size={15} /><span><b>On the ship</b>{item.ship}</span></div>
-          </article>
-        ))}
-      </div>
+      <section className="codebook-tools" aria-label="Codebook controls">
+        <label className="codebook-search">
+          <Search size={18} />
+          <span className="sr-only">Search the codebook</span>
+          <input type="search" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search variable, true, braces, ==..." />
+          {query && <button onClick={() => setQuery('')} aria-label="Clear codebook search"><X size={15} /></button>}
+        </label>
+        <div className="codebook-unlocks">
+          <small>{track.shortName.toUpperCase()} EXAMPLES</small>
+          <b>{unlockedExamples} of {entriesWithExamples.length} unlocked</b>
+          <span>Complete lessons to reveal syntax you have already met.</span>
+        </div>
+      </section>
+      {filteredEntries.length > 0 ? (
+        <div className="glossary-grid">
+          {filteredEntries.map((item, index) => {
+            const exampleState = codebookExampleState(item, track, progress.completedMissions)
+            const example = item.examples?.[track.id]
+            const requiredMission = item.unlockAfter ? track.missions[item.unlockAfter - 1] : undefined
+            return (
+              <article key={item.term}>
+                <span className="glossary-number">{String(index + 1).padStart(2, '0')}</span>
+                <Code2 size={21} />
+                <h2>{item.term}</h2>
+                <p>{item.plain}</p>
+                <div className="glossary-analogy"><Sparkles size={15} /><span><b>On the ship</b>{item.ship}</span></div>
+                {exampleState === 'unlocked' && example && (
+                  <div className="glossary-example"><small>{track.shortName.toUpperCase()} EXAMPLE</small><code>{example}</code></div>
+                )}
+                {exampleState === 'locked' && (
+                  <div className="glossary-example-lock"><LockKeyhole size={15} /><span><b>EXAMPLE LOCKED</b>Complete {requiredMission?.title ?? 'the introducing mission'} to reveal it.</span></div>
+                )}
+              </article>
+            )
+          })}
+        </div>
+      ) : (
+        <section className="codebook-empty">
+          <Search size={28} />
+          <h2>No codebook term matches “{query}”</h2>
+          <p>Try a plain word such as text, number, decision, output, or braces.</p>
+          <button className="secondary-action" onClick={() => setQuery('')}>Clear search</button>
+        </section>
+      )}
     </main>
   )
 }
@@ -1051,7 +1004,7 @@ function App() {
       >
         {view === 'path' && <MissionPath progress={normalizedProgress} onStart={setActiveMission} />}
         {view === 'practice' && <PracticeBay progress={normalizedProgress} onStart={setActiveMission} />}
-        {view === 'spellbook' && <Codebook />}
+        {view === 'spellbook' && <Codebook progress={normalizedProgress} />}
         {view === 'profile' && (
           <CadetRecord
             authBusy={authBusy}
