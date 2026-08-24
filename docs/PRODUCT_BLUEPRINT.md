@@ -172,7 +172,7 @@ Every authored lesson must:
 
 ### Phase 2: Real execution
 
-- Design the isolated runner API and threat model.
+- Implement the isolated runner behind the completed version 1 request contract and [runner security threat model](RUNNER_SECURITY_CONTRACT.md).
 - Add Python and Java workers first, then C# and C++.
 - Stream compile errors through a beginner-focused explanation layer.
 - Keep raw compiler output available under a disclosure for learners who want it.

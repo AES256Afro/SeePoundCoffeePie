@@ -114,6 +114,8 @@ The first missions use a local, deterministic training simulator. It checks whet
 
 This boundary is visible inside every code lesson. Open-ended projects will require a sandboxed server-side compiler service with CPU, memory, time, filesystem, and network limits. JavaScript `eval`, unsandboxed child processes, and client-side claims of secure code execution are not acceptable substitutes.
 
+Phase 2 now has a versioned request contract, fixed resource ceilings, trust-boundary design, abuse and privacy requirements, and explicit staging release gates. Read the [isolated runner security contract](docs/RUNNER_SECURITY_CONTRACT.md). This is a design and validation milestone only; arbitrary production code execution remains disabled.
+
 ## Product direction
 
 The learning loop draws on broad, well-supported product patterns:
