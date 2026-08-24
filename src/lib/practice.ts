@@ -23,6 +23,14 @@ function conceptIdsForMission(mission: Mission): string[] {
   return [...new Set(mission.exercises.map((exercise) => exercise.conceptId))]
 }
 
+export function buildPracticeExercises(mission: Mission, conceptIds: string[]) {
+  if (conceptIds.length === 0) return mission.exercises
+
+  return conceptIds
+    .map((conceptId) => mission.exercises.find((exercise) => exercise.conceptId === conceptId))
+    .filter((exercise): exercise is Mission['exercises'][number] => Boolean(exercise))
+}
+
 export function conceptDisplayName(track: LanguageTrack, conceptId: string): string {
   const withoutLanguage = conceptId.startsWith(`${track.id}-`)
     ? conceptId.slice(track.id.length + 1)

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { trackById } from '../data/curriculum'
 import { initialProgress } from './progress'
-import { conceptDisplayName, recommendPractice } from './practice'
+import { buildPracticeExercises, conceptDisplayName, recommendPractice } from './practice'
 
 const now = new Date('2026-08-24T12:00:00')
 
@@ -95,5 +95,18 @@ describe('practice recommendations', () => {
 
   it('turns internal concept IDs into learner-facing names', () => {
     expect(conceptDisplayName(python, 'python-output-and-variables')).toBe('output and variables')
+  })
+
+  it('builds one focused exercise for each requested concept', () => {
+    const exercises = buildPracticeExercises(python.missions[0], [
+      'python-variables',
+      'python-output-and-variables',
+    ])
+
+    expect(exercises.map((exercise) => exercise.id)).toEqual(['py-string', 'py-launch'])
+  })
+
+  it('uses the full mission for optional practice when no concept is due', () => {
+    expect(buildPracticeExercises(python.missions[1], [])).toEqual(python.missions[1].exercises)
   })
 })

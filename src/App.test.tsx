@@ -111,6 +111,20 @@ describe('beginner lesson interactions', () => {
     expect(screen.getByText('BEST MATCH · MISSION 02')).toBeTruthy()
     fireEvent.click(reviewButton)
 
-    expect(await screen.findByRole('heading', { name: 'Read the galley count' })).toBeTruthy()
+    expect(await screen.findByRole('heading', { name: 'Ask a routing question' })).toBeTruthy()
+    expect(screen.getByText('FOCUSED REVIEW · 1 OF 1')).toBeTruthy()
+
+    fireEvent.click(screen.getByRole('button', { name: /^A true and falseJava writes/iu }))
+    fireEvent.click(screen.getByRole('button', { name: 'Check answer' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Finish practice' }))
+
+    expect(screen.getByText('PRACTICE COMPLETE')).toBeTruthy()
+    expect(screen.getByText('concepts reviewed')).toBeTruthy()
+    expect(screen.queryByText('star shards')).toBeNull()
+    await waitFor(() => {
+      const stored = JSON.parse(window.localStorage.getItem(progressKey) ?? '{}')
+      expect(stored.starShards).toBe(0)
+      expect(stored.completedMissions).toEqual(['java-coffee-protocol', 'java-routing-orders'])
+    })
   })
 })

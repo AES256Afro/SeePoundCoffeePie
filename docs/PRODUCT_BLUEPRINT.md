@@ -46,7 +46,7 @@ Wrong answers do not consume hearts, lives, energy, or paid currency. A mistake 
 
 Before the current missions award completion, each exercise missed during that run returns in a short memory-repair round. The answer is reset so the learner retrieves it again, all teaching material remains available, and the repaired answer strengthens memory without awarding the exercise XP twice.
 
-The current Practice Bay keeps review queues separate by language. It recommends the completed mission that covers the greatest number of concepts due now, uses lower memory strength to break close matches, and offers the latest completed mission as optional practice when the queue is clear. This is an honest whole-mission replay step toward the later concept-specific adaptive system.
+The current Practice Bay keeps review queues separate by language. It recommends the completed mission that covers the greatest number of concepts due now, uses lower memory strength to break close matches, and creates one focused exercise for each covered concept. A clear queue still offers the latest completed mission as optional practice. Focused completion strengthens review intervals and awards exercise XP, but it does not award mission completion or star shards again.
 
 ### Helpful hints without answer dumping
 
@@ -93,7 +93,7 @@ The current local simulator is appropriate for a first vertical slice with const
 
 | System | Learner purpose | Current behavior |
 | --- | --- | --- |
-| XP | Makes effort visible | Awarded once per correctly completed step in a mission session |
+| XP | Makes effort visible | Awarded once per correctly completed step in a mission or focused-practice session |
 | Daily goal | Creates a small finish line | Learner chooses 5, 10, or 15 minutes, represented by an XP target in the prototype |
 | Streak | Supports a return habit | Advances when a mission is completed on a new consecutive day |
 | Star shards | Marks meaningful completion | Awarded once per mission, not on replay |

@@ -43,7 +43,7 @@ import { codebookEntries, codebookExampleState, codebookMatches } from './data/c
 import { trackById, tracks } from './data/curriculum'
 import { evaluateExercise } from './lib/evaluator'
 import { missionAvailability } from './lib/missions'
-import { conceptDisplayName, recommendPractice } from './lib/practice'
+import { buildPracticeExercises, conceptDisplayName, recommendPractice } from './lib/practice'
 import {
   completeMission,
   dateKey,
@@ -63,6 +63,11 @@ import type {
 } from './types'
 
 type ViewId = 'path' | 'practice' | 'spellbook' | 'profile'
+
+interface ActiveLesson {
+  mission: Mission
+  practiceConceptIds?: string[]
+}
 
 const missionIcons = {
   signal: Radio,
@@ -415,7 +420,7 @@ function MissionPath({ progress, onStart }: { progress: LearnerProgress; onStart
   )
 }
 
-function PracticeBay({ progress, onStart }: { progress: LearnerProgress; onStart: (mission: Mission) => void }) {
+function PracticeBay({ progress, onStart }: { progress: LearnerProgress; onStart: (mission: Mission, conceptIds: string[]) => void }) {
   const track = trackById(progress.activeLanguage)
   const recommendation = recommendPractice(track, progress)
   const { coveredConceptIds, dueConcepts, mission, mode } = recommendation
@@ -440,7 +445,7 @@ function PracticeBay({ progress, onStart }: { progress: LearnerProgress; onStart
           <h2>{heroTitle}</h2>
           <p>{heroText}</p>
         </div>
-        <button className="primary-action" onClick={() => onStart(mission)}><RotateCcw size={17} /> {actionLabel}</button>
+        <button className="primary-action" onClick={() => onStart(mission, mode === 'due' ? coveredConceptIds : [])}><RotateCcw size={17} /> {actionLabel}</button>
       </section>
       <div className="section-label"><span>HOW REVIEWS WORK</span><i /></div>
       <div className="explain-grid">
@@ -607,12 +612,13 @@ function AuthNotice({ message, onDismiss }: { message: string; onDismiss: () => 
 
 interface LessonPlayerProps {
   mission: Mission
+  practiceConceptIds?: string[]
   progress: LearnerProgress
   onProgress: (progress: LearnerProgress) => void
   onExit: () => void
 }
 
-function LessonPlayer({ mission, progress, onProgress, onExit }: LessonPlayerProps) {
+function LessonPlayer({ mission, practiceConceptIds, progress, onProgress, onExit }: LessonPlayerProps) {
   const [step, setStep] = useState(0)
   const [answers, setAnswers] = useState<Record<string, string>>({})
   const [feedback, setFeedback] = useState<EvaluationResult | null>(null)
@@ -622,15 +628,20 @@ function LessonPlayer({ mission, progress, onProgress, onExit }: LessonPlayerPro
   const [mistakes, setMistakes] = useState<string[]>([])
   const [reviewQueue, setReviewQueue] = useState<string[]>([])
   const [reviewIndex, setReviewIndex] = useState(0)
+  const [missionAlreadyComplete] = useState(() => progress.completedMissions.includes(mission.id))
+  const practiceMode = practiceConceptIds !== undefined
+  const sessionExercises = practiceMode
+    ? buildPracticeExercises(mission, practiceConceptIds)
+    : mission.exercises
   const reviewing = reviewQueue.length > 0
   const exercise = reviewing
-    ? mission.exercises.find((item) => item.id === reviewQueue[reviewIndex])
-    : mission.exercises[step]
-  const totalXp = mission.exercises.reduce((sum, item) => sum + item.xp, 0)
-  const earnedXp = mission.exercises.filter((item) => credited.includes(item.id)).reduce((sum, item) => sum + item.xp, 0)
+    ? sessionExercises.find((item) => item.id === reviewQueue[reviewIndex])
+    : sessionExercises[step]
+  const totalXp = sessionExercises.reduce((sum, item) => sum + item.xp, 0)
+  const earnedXp = sessionExercises.filter((item) => credited.includes(item.id)).reduce((sum, item) => sum + item.xp, 0)
   const progressPercent = reviewing
     ? ((reviewIndex + 1) / reviewQueue.length) * 100
-    : ((step + 1) / mission.exercises.length) * 100
+    : ((step + 1) / sessionExercises.length) * 100
 
   if (!exercise) return null
 
@@ -691,11 +702,15 @@ function LessonPlayer({ mission, progress, onProgress, onExit }: LessonPlayerPro
     }
   }
 
+  const finishSession = () => {
+    if (!practiceMode) onProgress(completeMission(progress, mission.id))
+    setFinished(true)
+  }
+
   const continueLesson = () => {
     if (reviewing) {
       if (reviewIndex === reviewQueue.length - 1) {
-        onProgress(completeMission(progress, mission.id))
-        setFinished(true)
+        finishSession()
         return
       }
       setReviewIndex((current) => current + 1)
@@ -704,8 +719,8 @@ function LessonPlayer({ mission, progress, onProgress, onExit }: LessonPlayerPro
       return
     }
 
-    if (step === mission.exercises.length - 1) {
-      const queue = buildReviewQueue(mistakes, mission.exercises.map((item) => item.id))
+    if (step === sessionExercises.length - 1) {
+      const queue = buildReviewQueue(mistakes, sessionExercises.map((item) => item.id))
       if (queue.length > 0) {
         setAnswers((current) => resetReviewAnswers(current, queue))
         setReviewQueue(queue)
@@ -714,8 +729,7 @@ function LessonPlayer({ mission, progress, onProgress, onExit }: LessonPlayerPro
         setHintOpen(false)
         return
       }
-      onProgress(completeMission(progress, mission.id))
-      setFinished(true)
+      finishSession()
       return
     }
     setStep((current) => current + 1)
@@ -731,20 +745,24 @@ function LessonPlayer({ mission, progress, onProgress, onExit }: LessonPlayerPro
   }
 
   if (finished) {
+    const reviewedConcepts = [...new Set(sessionExercises.map((item) => item.conceptId.split('-').slice(1).join(' ')))]
+    const awardedShards = practiceMode || missionAlreadyComplete ? 0 : 25
     return (
       <div className="lesson-overlay">
         <main className="mission-complete">
           <div className="completion-burst" aria-hidden="true"><Sparkles /><span><Check /></span></div>
-          <p className="kicker">MISSION COMPLETE</p>
+          <p className="kicker">{practiceMode ? 'PRACTICE COMPLETE' : 'MISSION COMPLETE'}</p>
           <h1>{mission.title}</h1>
-          <p>You turned unfamiliar symbols into a working report. That is programming.</p>
+          <p>{practiceMode ? 'You brought the idea back from memory and strengthened it for next time.' : 'You turned unfamiliar symbols into a working report. That is programming.'}</p>
           <div className="completion-stats">
             <div><Zap /><b>{earnedXp || totalXp}</b><span>XP earned</span></div>
-            <div><Gem /><b>25</b><span>star shards</span></div>
-            <div><RotateCcw /><b>{reviewQueue.length}</b><span>concepts revisited</span></div>
+            {practiceMode
+              ? <div><Orbit /><b>{reviewedConcepts.length}</b><span>concepts reviewed</span></div>
+              : <div><Gem /><b>{awardedShards}</b><span>star shards</span></div>}
+            <div><RotateCcw /><b>{reviewQueue.length}</b><span>mistakes repaired</span></div>
           </div>
-          <div className="what-learned"><h2>Systems now familiar</h2><div>{[...new Set(mission.exercises.map((item) => item.conceptId.split('-').slice(1).join(' ')))].map((concept) => <span key={concept}><Check size={14} /> {concept}</span>)}</div></div>
-          <button className="primary-action primary-action--wide" onClick={onExit}>Return to mission path <ArrowRight size={18} /></button>
+          <div className="what-learned"><h2>{practiceMode ? 'Memory strengthened' : 'Systems now familiar'}</h2><div>{reviewedConcepts.map((concept) => <span key={concept}><Check size={14} /> {concept}</span>)}</div></div>
+          <button className="primary-action primary-action--wide" onClick={onExit}>Return to {practiceMode ? 'Practice Bay' : 'mission path'} <ArrowRight size={18} /></button>
         </main>
       </div>
     )
@@ -755,11 +773,22 @@ function LessonPlayer({ mission, progress, onProgress, onExit }: LessonPlayerPro
       <header className="lesson-header">
         <button onClick={onExit} className="icon-button" aria-label="Exit lesson"><X /></button>
         <div className="lesson-progress"><i style={{ width: `${progressPercent}%` }} /></div>
-        <div className="lesson-step"><b>{reviewing ? reviewIndex + 1 : step + 1}</b><span>/ {reviewing ? reviewQueue.length : mission.exercises.length}</span></div>
+        <div className="lesson-step"><b>{reviewing ? reviewIndex + 1 : step + 1}</b><span>/ {reviewing ? reviewQueue.length : sessionExercises.length}</span></div>
         <div className="lesson-xp"><Zap size={17} /> {earnedXp} XP</div>
       </header>
 
       <main className="lesson-layout">
+        {practiceMode && !reviewing && (
+          <section className="memory-repair" aria-label="Focused practice round">
+            <Orbit size={22} />
+            <div>
+              <small>FOCUSED REVIEW · {step + 1} OF {sessionExercises.length}</small>
+              <h2>Only the concepts that need another pass.</h2>
+              <p>This short session uses exercises from {mission.title}. Correct answers strengthen the next review interval.</p>
+            </div>
+            <span>SHORT SESSION</span>
+          </section>
+        )}
         {reviewing && (
           <section className="memory-repair" aria-label="Memory repair round">
             <RotateCcw size={22} />
@@ -910,8 +939,8 @@ function LessonPlayer({ mission, progress, onProgress, onExit }: LessonPlayerPro
               {feedback?.correct
                 ? reviewing
                   ? reviewIndex === reviewQueue.length - 1 ? 'Complete memory repair' : 'Next review'
-                  : step === mission.exercises.length - 1
-                    ? mistakes.length > 0 ? 'Repair missed concepts' : 'Finish mission'
+                  : step === sessionExercises.length - 1
+                    ? mistakes.length > 0 ? 'Repair missed concepts' : practiceMode ? 'Finish practice' : 'Finish mission'
                     : 'Continue'
                 : checkActionLabel}
               {feedback?.correct ? <ArrowRight size={18} /> : <Play size={16} fill="currentColor" />}
@@ -927,7 +956,7 @@ function LessonPlayer({ mission, progress, onProgress, onExit }: LessonPlayerPro
 function App() {
   const [progress, setProgress] = useState<LearnerProgress>(() => loadProgress())
   const [view, setView] = useState<ViewId>('path')
-  const [activeMission, setActiveMission] = useState<Mission | null>(null)
+  const [activeLesson, setActiveLesson] = useState<ActiveLesson | null>(null)
   const [authUser, setAuthUser] = useState<AuthUser | null>(null)
   const [authReady, setAuthReady] = useState(false)
   const [authBusy, setAuthBusy] = useState(false)
@@ -1033,8 +1062,8 @@ function App() {
         onLanguageChange={(language) => setProgress((current) => ({ ...current, activeLanguage: language }))}
         onSignIn={signIn}
       >
-        {view === 'path' && <MissionPath progress={normalizedProgress} onStart={setActiveMission} />}
-        {view === 'practice' && <PracticeBay progress={normalizedProgress} onStart={setActiveMission} />}
+        {view === 'path' && <MissionPath progress={normalizedProgress} onStart={(mission) => setActiveLesson({ mission })} />}
+        {view === 'practice' && <PracticeBay progress={normalizedProgress} onStart={(mission, practiceConceptIds) => setActiveLesson({ mission, practiceConceptIds })} />}
         {view === 'spellbook' && <Codebook progress={normalizedProgress} />}
         {view === 'profile' && (
           <CadetRecord
@@ -1047,12 +1076,13 @@ function App() {
           />
         )}
       </AppShell>
-      {activeMission && (
+      {activeLesson && (
         <LessonPlayer
-          mission={activeMission}
+          mission={activeLesson.mission}
+          practiceConceptIds={activeLesson.practiceConceptIds}
           progress={progress}
           onProgress={updateProgress}
-          onExit={() => setActiveMission(null)}
+          onExit={() => setActiveLesson(null)}
         />
       )}
     </>
