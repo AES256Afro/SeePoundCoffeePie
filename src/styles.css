@@ -2677,6 +2677,47 @@ p {
   white-space: pre-wrap;
 }
 
+.editor-shortcuts {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.8rem;
+  padding: 0.55rem 0.85rem;
+  color: #536f66;
+  border-top: 1px solid #173028;
+  background: #081612;
+  font-size: 0.66rem;
+  line-height: 1.5;
+}
+
+.editor-shortcuts > span {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 0.35rem;
+  color: #6f8b81;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+}
+
+.editor-shortcuts p {
+  margin: 0;
+  text-align: right;
+}
+
+.editor-shortcuts kbd {
+  display: inline-block;
+  min-width: 20px;
+  padding: 0.08rem 0.25rem;
+  color: #9eb6ad;
+  border: 1px solid #29463d;
+  border-bottom-color: #3b5b50;
+  border-radius: 4px;
+  background: #10271f;
+  font-family: "SFMono-Regular", Consolas, monospace;
+  text-align: center;
+}
+
 .hint-toggle {
   display: flex;
   align-items: center;
@@ -3243,6 +3284,15 @@ p {
   .memory-repair > span {
     grid-column: 1 / -1;
     justify-self: start;
+  }
+
+  .editor-shortcuts {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .editor-shortcuts p {
+    text-align: left;
   }
 
   .lesson-briefing h1 {

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState, type KeyboardEvent as ReactKeyboardEvent } from 'react'
 import {
   ArrowDown,
   ArrowLeft,
@@ -18,6 +18,7 @@ import {
   Flame,
   Gem,
   GitFork as Github,
+  Keyboard,
   LibraryBig,
   LockKeyhole,
   LogOut,
@@ -705,6 +706,13 @@ function LessonPlayer({ mission, progress, onProgress, onExit }: LessonPlayerPro
     setHintOpen(false)
   }
 
+  const handleEditorKeyDown = (event: ReactKeyboardEvent<HTMLTextAreaElement>) => {
+    if (event.key !== 'Enter' || (!event.ctrlKey && !event.metaKey)) return
+    event.preventDefault()
+    if (feedback?.correct) continueLesson()
+    else checkAnswer()
+  }
+
   if (finished) {
     return (
       <div className="lesson-overlay">
@@ -849,8 +857,10 @@ function LessonPlayer({ mission, progress, onProgress, onExit }: LessonPlayerPro
                   <div className="line-numbers">{answer.split('\n').map((_, index) => <span key={index}>{index + 1}</span>)}</div>
                   <textarea
                     aria-label="Code editor"
+                    aria-keyshortcuts="Control+Enter Meta+Enter"
                     value={answer}
                     onChange={(event) => setAnswer(event.target.value)}
+                    onKeyDown={handleEditorKeyDown}
                     spellCheck={false}
                     disabled={feedback?.correct}
                   />
@@ -859,11 +869,15 @@ function LessonPlayer({ mission, progress, onProgress, onExit }: LessonPlayerPro
                   <div><TerminalSquare size={14} /> SIMULATED OUTPUT</div>
                   <pre>{feedback?.correct ? feedback.output : 'Nothing has run yet. Complete your one small change, then select Run check.'}</pre>
                 </div>
+                <div className="editor-shortcuts" aria-label="Code editor keyboard controls">
+                  <span><Keyboard size={14} /> KEYBOARD</span>
+                  <p><kbd>Ctrl</kbd> or <kbd>⌘</kbd> + <kbd>Enter</kbd> runs the check. <kbd>Tab</kbd> moves out of the editor normally.</p>
+                </div>
               </div>
             </div>
           ) : null}
 
-          <button className="hint-toggle" onClick={() => setHintOpen((open) => !open)}><CircleHelp size={17} /> {hintOpen ? 'Hide hint' : 'I need a hint'}</button>
+          <button className="hint-toggle" aria-expanded={hintOpen} onClick={() => setHintOpen((open) => !open)}><CircleHelp size={17} /> {hintOpen ? 'Hide hint' : 'I need a hint'}</button>
           {hintOpen && <div className="hint-box"><Sparkles size={16} /><span><b>Small nudge</b>{exercise.hint}</span></div>}
 
           {feedback && (

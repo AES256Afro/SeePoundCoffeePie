@@ -28,12 +28,14 @@ The current vertical slice includes:
 - a Practice Bay, searchable Codebook with progression-unlocked examples, and Cadet Record;
 - local browser persistence with a visible reset control;
 - responsive layouts for desktop, tablet, and mobile;
-- keyboard focus states and reduced-motion support;
+- keyboard focus states, reduced-motion support, and a documented Ctrl or Command plus Enter editor shortcut;
 - optional GitHub identity verification with a secure, server-side OAuth flow.
 
 Planned missions are visible but intentionally locked. This makes the scope of the academy understandable without pretending unfinished curriculum is available.
 
 Mission 2 unlocks only after Mission 1 is complete in the same language. It retrieves earlier output and variable skills before introducing Booleans, comparisons, `if`, and `else`. Missions without authored exercises remain visibly marked as coming soon.
+
+Inside editable code exercises, press Ctrl+Enter on Windows or Linux, or Command+Enter on macOS, to run the same check as the visible button. Tab keeps its normal browser behavior so keyboard learners can leave the editor without getting trapped.
 
 ## Run locally
 
