@@ -54,6 +54,7 @@ function createMemoryStorage(): Storage {
 
 describe('beginner lesson interactions', () => {
   beforeEach(() => {
+    window.history.replaceState({}, '', '/academy/python')
     Object.defineProperty(window, 'localStorage', {
       configurable: true,
       value: createMemoryStorage(),
@@ -73,6 +74,7 @@ describe('beginner lesson interactions', () => {
 
   afterEach(() => {
     cleanup()
+    window.history.replaceState({}, '', '/')
     vi.unstubAllGlobals()
     vi.restoreAllMocks()
   })
@@ -105,9 +107,6 @@ describe('beginner lesson interactions', () => {
 
     expect(tabWasNotCancelled).toBe(true)
     expect(screen.getByLabelText('Code editor keyboard controls').textContent).toContain('Tab moves out of the editor normally')
-    await waitFor(() => {
-      expect((screen.getByRole('button', { name: 'Sign in' }) as HTMLButtonElement).disabled).toBe(false)
-    })
   })
 
   it('opens the completed mission that best covers the active review queue', async () => {
@@ -125,9 +124,10 @@ describe('beginner lesson interactions', () => {
         },
       },
     }))
+    window.history.replaceState({}, '', '/academy/java')
 
     render(<App />)
-    fireEvent.click(screen.getByRole('button', { name: 'Practice bay' }))
+    fireEvent.click(screen.getByRole('link', { name: 'Practice bay' }))
 
     const reviewButton = screen.getByRole('button', { name: 'Review Routing Orders' })
     expect(screen.getByText('BEST MATCH · MISSION 02')).toBeTruthy()
@@ -150,7 +150,7 @@ describe('beginner lesson interactions', () => {
     })
   })
 
-  it('restores a validated local progress backup from the Cadet Record', async () => {
+  it('restores a validated local progress backup from Settings', async () => {
     const restored = {
       ...initialProgress('csharp'),
       callsign: 'Restored Cadet',
@@ -171,14 +171,15 @@ describe('beginner lesson interactions', () => {
     vi.spyOn(window, 'confirm').mockReturnValue(true)
 
     render(<App />)
-    fireEvent.click(screen.getByRole('button', { name: 'Cadet record' }))
+    fireEvent.click(screen.getByRole('link', { name: 'Settings' }))
     fireEvent.change(screen.getByLabelText('Choose progress backup file'), {
       target: { files: [backup] },
     })
 
+    expect(await screen.findByText(/Progress restored from the backup created/iu)).toBeTruthy()
+    fireEvent.click(screen.getByRole('link', { name: 'Cadet record' }))
     expect(await screen.findByRole('heading', { name: 'Restored Cadet' })).toBeTruthy()
     expect(screen.getAllByText('140').length).toBeGreaterThan(0)
-    expect(screen.getByText(/Progress restored from the backup created/iu)).toBeTruthy()
     await waitFor(() => {
       expect(JSON.parse(window.localStorage.getItem(progressKey) ?? '{}')).toMatchObject(restored)
     })
@@ -193,7 +194,7 @@ describe('beginner lesson interactions', () => {
     }))
 
     render(<App />)
-    fireEvent.click(screen.getByRole('button', { name: 'Cadet record' }))
+    fireEvent.click(screen.getByRole('link', { name: 'Cadet record' }))
 
     expect(screen.getByRole('heading', { name: 'Station records' })).toBeTruthy()
     expect(screen.getByLabelText('Python 17% complete')).toBeTruthy()
@@ -219,7 +220,7 @@ describe('beginner lesson interactions', () => {
     }))
 
     render(<App />)
-    fireEvent.click(screen.getByRole('button', { name: 'Cadet record' }))
+    fireEvent.click(screen.getByRole('link', { name: 'Settings' }))
     const fifteenXp = screen.getByRole('button', { name: '15 XP' })
     expect(fifteenXp.getAttribute('aria-pressed')).toBe('false')
     fireEvent.click(fifteenXp)
@@ -235,5 +236,50 @@ describe('beginner lesson interactions', () => {
         completedMissions: ['py-first-spark'],
       })
     })
+  })
+
+  it('always shows the public launch page at the root, even with saved progress', () => {
+    window.history.replaceState({}, '', '/')
+
+    render(<App />)
+
+    expect(screen.getByRole('heading', { name: 'The code academy for absolute beginners' })).toBeTruthy()
+    expect(screen.getByRole('link', { name: 'Continue as Test Cadet' }).getAttribute('href')).toBe('/academy/python')
+    expect(screen.queryByRole('heading', { name: 'Python Flight School' })).toBeNull()
+  })
+
+  it('loads Settings directly and gives every main section a real URL', () => {
+    window.history.replaceState({}, '', '/settings')
+
+    render(<App />)
+
+    expect(screen.getByRole('heading', { name: 'Academy settings' })).toBeTruthy()
+    expect(document.title).toBe('Settings | SeePoundCoffeePie')
+    expect(screen.getByRole('link', { name: 'Mission path' }).getAttribute('href')).toBe('/academy/python')
+    expect(screen.getByRole('link', { name: 'Practice bay' }).getAttribute('href')).toBe('/practice/python')
+    expect(screen.getByRole('link', { name: 'Codebook' }).getAttribute('href')).toBe('/codebook/python')
+    expect(screen.getByRole('link', { name: 'Cadet record' }).getAttribute('href')).toBe('/profile')
+    expect(screen.getByRole('link', { name: 'Settings' }).getAttribute('href')).toBe('/settings')
+  })
+
+  it('opens a bookmarked language school and keeps that school active', async () => {
+    window.history.replaceState({}, '', '/academy/java')
+
+    render(<App />)
+
+    expect(screen.getByRole('heading', { name: 'Java Systems Guild' })).toBeTruthy()
+    await waitFor(() => {
+      expect(JSON.parse(window.localStorage.getItem(progressKey) ?? '{}').activeLanguage).toBe('java')
+    })
+  })
+
+  it('opens an available lesson from its bookmarkable URL', () => {
+    window.history.replaceState({}, '', '/academy/python/missions/py-first-spark')
+
+    render(<App />)
+
+    expect(screen.getByRole('heading', { name: 'Meet the console' })).toBeTruthy()
+    expect(window.location.pathname).toBe('/academy/python/missions/py-first-spark')
+    expect(document.title).toBe('First Spark | SeePoundCoffeePie')
   })
 })

@@ -84,11 +84,13 @@ if (
   throw new Error('The www hostname did not redirect to the canonical apex domain')
 }
 
-const spaResponse = await requestWithFreshDns('https://seepoundcoffeepie.com/mission-path', {
-  redirect: 'manual',
-})
-if (spaResponse.status !== 200 || !(await spaResponse.text()).includes(expectedTitle)) {
-  throw new Error('SPA navigation fallback did not return the application shell')
+for (const route of ['/academy/python', '/practice/java', '/codebook/csharp', '/profile', '/settings', '/academy/python/missions/py-first-spark']) {
+  const spaResponse = await requestWithFreshDns(`https://seepoundcoffeepie.com${route}`, {
+    redirect: 'manual',
+  })
+  if (spaResponse.status !== 200 || !(await spaResponse.text()).includes(expectedTitle)) {
+    throw new Error(`SPA navigation fallback did not return the application shell for ${route}`)
+  }
 }
 
-console.log('Live verification passed for apex, www redirect, headers, and SPA fallback.')
+console.log('Live verification passed for apex, www redirect, headers, and all bookmarkable SPA routes.')

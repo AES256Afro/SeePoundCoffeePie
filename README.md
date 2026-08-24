@@ -15,6 +15,7 @@ The product teaches programming through short, guided space-fantasy missions. Ev
 
 The current vertical slice includes:
 
+- a public launch page that always explains the academy before asking a visitor to choose a school;
 - a complete cadet intake flow with language and daily-goal selection;
 - four language stations: Python, C++, C#, and Java;
 - six fully playable five-step beginner missions for each language;
@@ -32,6 +33,22 @@ The current vertical slice includes:
 - responsive layouts for desktop, tablet, and mobile;
 - keyboard focus states, reduced-motion support, and a documented Ctrl or Command plus Enter editor shortcut;
 - optional GitHub identity verification with a secure, server-side OAuth flow.
+
+## Bookmarkable pages
+
+The academy uses clean application URLs instead of separate `.html` files. Cloudflare returns the React application shell for each route, so these pages can be opened directly, refreshed, shared, or bookmarked:
+
+- `/` is the public launch page and is never skipped because of saved progress;
+- `/start` is cadet intake;
+- `/academy/python`, `/academy/cpp`, `/academy/csharp`, and `/academy/java` are the four mission paths;
+- `/practice/:language` is the selected school’s Practice Bay;
+- `/codebook/:language` is the selected school’s Codebook;
+- `/profile` is the Cadet Record;
+- `/settings` contains GitHub identity, training-goal, local-backup, and reset controls;
+- `/academy/:language/missions/:mission-id` is an individual lesson;
+- focused Practice Bay lessons use `/practice/:language/missions/:mission-id` and preserve the review concepts in the query string.
+
+The browser Back and Forward buttons follow these routes normally. Selecting another active station updates language-specific page URLs without erasing progress in the other schools.
 
 Each mission unlocks only after the previous mission is complete in the same language. Mission 2 retrieves output and variable skills before introducing Booleans, comparisons, `if`, and `else`. Mission 3 retrieves that decision work before introducing collections, arrays or lists, and zero-based indexing. Mission 4 retrieves an indexed item before explaining loops, tracing repeated output, assembling a loop, and applying it to the whole collection. Mission 5 retrieves that loop before introducing reusable functions or methods, parameters, arguments, definitions, and calls. Mission 6 then combines storage, conditions, collections, loops, and reusable code in an integrative capstone without adding another syntax burden.
 

@@ -1,4 +1,13 @@
-import { useEffect, useMemo, useRef, useState, type ChangeEvent, type KeyboardEvent as ReactKeyboardEvent } from 'react'
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type AnchorHTMLAttributes,
+  type ChangeEvent,
+  type KeyboardEvent as ReactKeyboardEvent,
+  type MouseEvent as ReactMouseEvent,
+} from 'react'
 import {
   ArrowDown,
   ArrowLeft,
@@ -59,6 +68,15 @@ import {
 import { buildReviewQueue, resetReviewAnswers } from './lib/review'
 import { runExercise, type RunnerClientStatus } from './lib/runner-client'
 import type { RunnerResult } from './lib/runner-contract'
+import {
+  academyPath,
+  codebookPath,
+  missionPath,
+  pagePath,
+  parseAppRoute,
+  practiceMissionPath,
+  practicePath,
+} from './lib/routes'
 import type {
   AuthUser,
   EvaluationResult,
@@ -67,12 +85,7 @@ import type {
   Mission,
 } from './types'
 
-type ViewId = 'path' | 'practice' | 'spellbook' | 'profile'
-
-interface ActiveLesson {
-  mission: Mission
-  practiceConceptIds?: string[]
-}
+type ViewId = 'path' | 'practice' | 'spellbook' | 'profile' | 'settings'
 
 const missionIcons = {
   signal: Radio,
@@ -90,9 +103,47 @@ const languageSnippets: Record<LanguageId, string> = {
   java: 'System.out.println("Hello, cosmos!");',
 }
 
+interface BrowserLocation {
+  pathname: string
+  search: string
+}
+
+function readBrowserLocation(): BrowserLocation {
+  return { pathname: window.location.pathname, search: window.location.search }
+}
+
+function navigateTo(to: string, replace = false) {
+  window.history[replace ? 'replaceState' : 'pushState']({}, '', to)
+  window.dispatchEvent(new PopStateEvent('popstate'))
+}
+
+interface AppLinkProps extends Omit<AnchorHTMLAttributes<HTMLAnchorElement>, 'href'> {
+  to: string
+}
+
+function AppLink({ children, onClick, target, to, ...props }: AppLinkProps) {
+  const followLink = (event: ReactMouseEvent<HTMLAnchorElement>) => {
+    onClick?.(event)
+    if (
+      event.defaultPrevented
+      || event.button !== 0
+      || event.metaKey
+      || event.ctrlKey
+      || event.shiftKey
+      || event.altKey
+      || target === '_blank'
+    ) return
+
+    event.preventDefault()
+    navigateTo(to)
+  }
+
+  return <a {...props} href={to} onClick={followLink} target={target}>{children}</a>
+}
+
 function BrandMark({ compact = false }: { compact?: boolean }) {
   return (
-    <div className={`brand ${compact ? 'brand--compact' : ''}`} aria-label="SeePoundCoffeePie home">
+    <AppLink className={`brand ${compact ? 'brand--compact' : ''}`} aria-label="SeePoundCoffeePie home" to="/">
       <span className="brand__mark" aria-hidden="true">
         <span>C</span><b>#</b><em><Coffee size={10} /></em><i>π</i>
       </span>
@@ -102,19 +153,123 @@ function BrandMark({ compact = false }: { compact?: boolean }) {
           <small>CODE ACADEMY</small>
         </span>
       )}
-    </div>
+    </AppLink>
+  )
+}
+
+function LaunchStory({ language }: { language: LanguageId }) {
+  return (
+    <section className="onboarding__story">
+      <div className="starfield" aria-hidden="true" />
+      <BrandMark />
+      <div className="hero-copy">
+        <p className="kicker"><Sparkles size={15} /> No experience required</p>
+        <h1>Learn code.<br /><span>Run the ship.</span></h1>
+        <p>
+          Your first programming lesson starts with one clear instruction. No jargon dumps.
+          No setup maze. Just small missions, patient explanations, and lots of practice.
+        </p>
+        <div className="hero-console" aria-label="Example code">
+          <div className="console-dots"><i /><i /><i /></div>
+          <code>{languageSnippets[language]}</code>
+          <span className="console-result">› Hello, cosmos!</span>
+        </div>
+      </div>
+      <div className="orbit-illustration" aria-hidden="true">
+        <div className="orbit-ring orbit-ring--one" />
+        <div className="orbit-ring orbit-ring--two" />
+        <div className="orbit-planet" />
+        <div className="orbit-ship"><span /><i /></div>
+      </div>
+      <p className="story-note">An original space-fantasy learning adventure</p>
+    </section>
+  )
+}
+
+interface LandingPageProps {
+  authReady: boolean
+  authUser: AuthUser | null
+  progress: LearnerProgress
+  onSignIn: () => void
+}
+
+function LandingPage({ authReady, authUser, progress, onSignIn }: LandingPageProps) {
+  const [previewLanguage, setPreviewLanguage] = useState<LanguageId>(progress.activeLanguage)
+  const continuePath = academyPath(progress.activeLanguage)
+
+  return (
+    <main className="onboarding landing-page">
+      <LaunchStory language={previewLanguage} />
+      <section className="onboarding__form landing-page__overview">
+        <div className="landing-card">
+          <p className="kicker"><Compass size={15} /> Welcome aboard</p>
+          <h2>The code academy for absolute beginners</h2>
+          <p className="setup-intro">
+            SeePoundCoffeePie teaches Python, C++, C#, and Java from the first building block.
+            You do not need to know what code is, what a variable means, or why punctuation matters.
+            We explain each piece before asking you to use it.
+          </p>
+
+          <div className="landing-promises" id="how-it-works" aria-label="How the academy teaches">
+            <article><CircleHelp size={20} /><span><b>Mystery removed</b><small>Every new word, symbol, and code shape gets a plain-language explanation.</small></span></article>
+            <article><TerminalSquare size={20} /><span><b>Practice it for real</b><small>Type code, run it safely, see what happened, and repair mistakes with guidance.</small></span></article>
+            <article><Orbit size={20} /><span><b>Remember it later</b><small>Short reviews bring ideas back before they drift out of memory.</small></span></article>
+          </div>
+
+          <div className="landing-section-heading">
+            <div><small>FOUR SCHOOLS, ONE FOUNDATION</small><h3>Preview a learning path</h3></div>
+            <p>You can visit every school. Your first choice does not lock you in.</p>
+          </div>
+          <div className="landing-schools">
+            {tracks.map((track) => (
+              <AppLink
+                className={previewLanguage === track.id ? 'is-selected' : ''}
+                key={track.id}
+                onFocus={() => setPreviewLanguage(track.id)}
+                onMouseEnter={() => setPreviewLanguage(track.id)}
+                style={{ '--track-accent': track.accent } as React.CSSProperties}
+                to={academyPath(track.id)}
+              >
+                <Code2 size={18} />
+                <span><b>{track.shortName}</b><small>{track.role}</small></span>
+                {track.id === 'python' && <em>GENTLE START</em>}
+              </AppLink>
+            ))}
+          </div>
+
+          <div className="landing-actions">
+            {progress.onboardingComplete ? (
+              <AppLink className="primary-action" to={continuePath}>Continue as {progress.callsign} <ArrowRight size={18} /></AppLink>
+            ) : (
+              <AppLink className="primary-action" to="/start">Start from the beginning <ArrowRight size={18} /></AppLink>
+            )}
+            <a className="secondary-action" href="#how-it-works">How the academy works</a>
+          </div>
+
+          <div className={`github-intake landing-identity ${authUser ? 'is-connected' : ''}`}>
+            <span><Github size={21} /></span>
+            <div>
+              <b>{authUser ? `Signed in as ${authUser.login}` : 'GitHub sign-in is optional'}</b>
+              <p>{authUser ? 'Your identity is verified.' : 'Start without an account, or use GitHub to verify your cadet identity.'}</p>
+            </div>
+            {!authUser && <button type="button" onClick={onSignIn} disabled={!authReady}><Github size={16} /> {authReady ? 'Sign in' : 'Checking'}</button>}
+          </div>
+        </div>
+      </section>
+    </main>
   )
 }
 
 interface OnboardingProps {
   authReady: boolean
   authUser: AuthUser | null
+  initialLanguage: LanguageId
   onComplete: (progress: LearnerProgress) => void
   onSignIn: () => void
 }
 
-function Onboarding({ authReady, authUser, onComplete, onSignIn }: OnboardingProps) {
-  const [language, setLanguage] = useState<LanguageId>('python')
+function Onboarding({ authReady, authUser, initialLanguage, onComplete, onSignIn }: OnboardingProps) {
+  const [language, setLanguage] = useState<LanguageId>(initialLanguage)
   const [callsign, setCallsign] = useState('')
   const [goal, setGoal] = useState(10)
   const selectedTrack = trackById(language)
@@ -130,30 +285,7 @@ function Onboarding({ authReady, authUser, onComplete, onSignIn }: OnboardingPro
 
   return (
     <main className="onboarding">
-      <section className="onboarding__story">
-        <div className="starfield" aria-hidden="true" />
-        <BrandMark />
-        <div className="hero-copy">
-          <p className="kicker"><Sparkles size={15} /> No experience required</p>
-          <h1>Learn code.<br /><span>Run the ship.</span></h1>
-          <p>
-            Your first programming lesson starts with one clear instruction. No jargon dumps.
-            No setup maze. Just small missions, patient explanations, and lots of practice.
-          </p>
-          <div className="hero-console" aria-label="Example code">
-            <div className="console-dots"><i /><i /><i /></div>
-            <code>{languageSnippets[language]}</code>
-            <span className="console-result">› Hello, cosmos!</span>
-          </div>
-        </div>
-        <div className="orbit-illustration" aria-hidden="true">
-          <div className="orbit-ring orbit-ring--one" />
-          <div className="orbit-ring orbit-ring--two" />
-          <div className="orbit-planet" />
-          <div className="orbit-ship"><span /><i /></div>
-        </div>
-        <p className="story-note">An original space-fantasy learning adventure</p>
-      </section>
+      <LaunchStory language={language} />
 
       <section className="onboarding__form">
         <div className="setup-card">
@@ -240,26 +372,20 @@ interface ShellProps {
   authUser: AuthUser | null
   progress: LearnerProgress
   view: ViewId
-  setView: (view: ViewId) => void
   onLanguageChange: (language: LanguageId) => void
   onSignIn: () => void
   children: React.ReactNode
 }
 
-function AppShell({ authReady, authUser, progress, view, setView, onLanguageChange, onSignIn, children }: ShellProps) {
+function AppShell({ authReady, authUser, progress, view, onLanguageChange, onSignIn, children }: ShellProps) {
   const [mobileNavOpen, setMobileNavOpen] = useState(false)
   const track = trackById(progress.activeLanguage)
-  const navItems: Array<{ id: ViewId; label: string; icon: typeof Compass }> = [
-    { id: 'path', label: 'Mission path', icon: Compass },
-    { id: 'practice', label: 'Practice bay', icon: Orbit },
-    { id: 'spellbook', label: 'Codebook', icon: LibraryBig },
-    { id: 'profile', label: 'Cadet record', icon: UserRound },
+  const navItems: Array<{ id: ViewId; label: string; icon: typeof Compass; to: string }> = [
+    { id: 'path', label: 'Mission path', icon: Compass, to: academyPath(progress.activeLanguage) },
+    { id: 'practice', label: 'Practice bay', icon: Orbit, to: practicePath(progress.activeLanguage) },
+    { id: 'spellbook', label: 'Codebook', icon: LibraryBig, to: codebookPath(progress.activeLanguage) },
+    { id: 'profile', label: 'Cadet record', icon: UserRound, to: '/profile' },
   ]
-
-  const selectView = (nextView: ViewId) => {
-    setView(nextView)
-    setMobileNavOpen(false)
-  }
 
   return (
     <div className="app-shell" style={{ '--accent': track.accent, '--accent-soft': track.accentSoft } as React.CSSProperties}>
@@ -272,9 +398,9 @@ function AppShell({ authReady, authUser, progress, view, setView, onLanguageChan
           {navItems.map((item) => {
             const Icon = item.icon
             return (
-              <button key={item.id} className={view === item.id ? 'is-active' : ''} onClick={() => selectView(item.id)}>
+              <AppLink key={item.id} className={view === item.id ? 'is-active' : ''} onClick={() => setMobileNavOpen(false)} to={item.to}>
                 <Icon size={20} /><span>{item.label}</span>
-              </button>
+              </AppLink>
             )
           })}
         </nav>
@@ -282,7 +408,7 @@ function AppShell({ authReady, authUser, progress, view, setView, onLanguageChan
           <span className="mentor-avatar"><b>π</b><i /></span>
           <div><small>YOUR GUIDE</small><b>PIE-314</b><p>Confused is a normal stop on the route.</p></div>
         </div>
-        <button className="sidebar-settings" onClick={() => selectView('profile')}><Settings size={18} /> Settings</button>
+        <AppLink className={`sidebar-settings ${view === 'settings' ? 'is-active' : ''}`} onClick={() => setMobileNavOpen(false)} to="/settings"><Settings size={18} /> Settings</AppLink>
       </aside>
 
       <div className="app-frame">
@@ -304,15 +430,15 @@ function AppShell({ authReady, authUser, progress, view, setView, onLanguageChan
             <span title="Star shards"><Gem size={19} /><b>{progress.starShards}</b><small>shards</small></span>
           </div>
           {authUser ? (
-            <button className="identity-chip" onClick={() => selectView('profile')} title={`Signed in as ${authUser.login}`}>
+            <AppLink className="identity-chip" to="/profile" title={`Signed in as ${authUser.login}`}>
               <Github size={15} /><span>{authUser.login}</span>
-            </button>
+            </AppLink>
           ) : (
             <button className="github-topbar" onClick={onSignIn} disabled={!authReady}>
               <Github size={16} /><span>{authReady ? 'Sign in' : 'Checking'}</span>
             </button>
           )}
-          <button className="profile-chip" onClick={() => selectView('profile')} aria-label="Open cadet record">{progress.callsign.slice(0, 1).toUpperCase()}</button>
+          <AppLink className="profile-chip" to="/profile" aria-label="Open cadet record">{progress.callsign.slice(0, 1).toUpperCase()}</AppLink>
         </header>
         {children}
       </div>
@@ -543,36 +669,14 @@ function Codebook({ progress }: { progress: LearnerProgress }) {
 }
 
 interface CadetRecordProps {
-  authBusy: boolean
-  authUser: AuthUser | null
-  onDailyGoalChange: (goal: number) => void
-  onLogout: () => void
-  onDownloadBackup: () => string
   onOpenTrack: (language: LanguageId) => void
-  onReset: () => void
-  onRestoreBackup: (text: string) => string
-  onSignIn: () => void
   progress: LearnerProgress
 }
 
-function CadetRecord({ authBusy, authUser, onDailyGoalChange, onDownloadBackup, onLogout, onOpenTrack, onReset, onRestoreBackup, onSignIn, progress }: CadetRecordProps) {
+function CadetRecord({ onOpenTrack, progress }: CadetRecordProps) {
   const concepts = Object.values(progress.conceptProgress)
   const answers = concepts.reduce((sum, item) => sum + item.correct + item.incorrect, 0)
   const accuracy = answers ? Math.round((concepts.reduce((sum, item) => sum + item.correct, 0) / answers) * 100) : 0
-  const restoreInput = useRef<HTMLInputElement>(null)
-  const [backupMessage, setBackupMessage] = useState('')
-
-  const restoreFile = async (event: ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0]
-    event.target.value = ''
-    if (!file) return
-
-    try {
-      setBackupMessage(onRestoreBackup(await file.text()))
-    } catch {
-      setBackupMessage('That backup file could not be read. Your current progress was not changed.')
-    }
-  }
 
   return (
     <main className="content-page">
@@ -606,6 +710,43 @@ function CadetRecord({ authBusy, authUser, onDailyGoalChange, onDownloadBackup, 
           })}
         </div>
       </section>
+    </main>
+  )
+}
+
+interface SettingsPageProps {
+  authBusy: boolean
+  authUser: AuthUser | null
+  onDailyGoalChange: (goal: number) => void
+  onLogout: () => void
+  onDownloadBackup: () => string
+  onReset: () => void
+  onRestoreBackup: (text: string) => string
+  onSignIn: () => void
+  progress: LearnerProgress
+}
+
+function SettingsPage({ authBusy, authUser, onDailyGoalChange, onDownloadBackup, onLogout, onReset, onRestoreBackup, onSignIn, progress }: SettingsPageProps) {
+  const restoreInput = useRef<HTMLInputElement>(null)
+  const [backupMessage, setBackupMessage] = useState('')
+
+  const restoreFile = async (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    event.target.value = ''
+    if (!file) return
+
+    try {
+      setBackupMessage(onRestoreBackup(await file.text()))
+    } catch {
+      setBackupMessage('That backup file could not be read. Your current progress was not changed.')
+    }
+  }
+
+  return (
+    <main className="content-page">
+      <div className="page-heading page-heading--simple">
+        <div><p className="kicker"><Settings size={14} /> SETTINGS</p><h1>Academy settings</h1><p>Identity, training pace, local backups, and this browser’s stored progress.</p></div>
+      </div>
       <section className="account-panel">
         <span className="account-panel__icon"><Github size={24} /></span>
         <div>
@@ -672,7 +813,7 @@ function CadetRecord({ authBusy, authUser, onDailyGoalChange, onDownloadBackup, 
         </div>
       </section>
       <section className="settings-panel">
-        <div><h2>Prototype controls</h2><p>Resetting removes the learner name, XP, mission completion, and review history from this browser.</p></div>
+        <div><small>THIS BROWSER</small><h2>Reset local progress</h2><p>Resetting removes the learner name, XP, mission completion, and review history from this browser.</p></div>
         <button className="danger-button" onClick={onReset}><RotateCcw size={16} /> Reset local progress</button>
       </section>
     </main>
@@ -1122,14 +1263,45 @@ function LessonPlayer({ mission, practiceConceptIds, progress, onProgress, onExi
   )
 }
 
-function App() {
-  const [progress, setProgress] = useState<LearnerProgress>(() => loadProgress())
-  const [view, setView] = useState<ViewId>('path')
-  const [activeLesson, setActiveLesson] = useState<ActiveLesson | null>(null)
+function NotFoundPage({ progress }: { progress: LearnerProgress }) {
+  return (
+    <main className="route-message-page">
+      <BrandMark />
+      <section className="route-message-card">
+        <p className="kicker"><Compass size={15} /> Uncharted route</p>
+        <h1>That page is not on the academy map</h1>
+        <p>The address may be incomplete, outdated, or mistyped. The public introduction and your current academy route are still available.</p>
+        <div className="landing-actions">
+          <AppLink className="primary-action" to="/">Visit the launch page <ArrowRight size={17} /></AppLink>
+          {progress.onboardingComplete && <AppLink className="secondary-action" to={academyPath(progress.activeLanguage)}>Return to the academy</AppLink>}
+        </div>
+      </section>
+    </main>
+  )
+}
+
+function AppContent() {
+  const [location, setLocation] = useState<BrowserLocation>(readBrowserLocation)
+  const route = useMemo(() => parseAppRoute(location.pathname, location.search), [location.pathname, location.search])
+  const [progress, setProgress] = useState<LearnerProgress>(() => {
+    const loaded = loadProgress()
+    const initialRoute = parseAppRoute(window.location.pathname, window.location.search)
+    return initialRoute.language ? { ...loaded, activeLanguage: initialRoute.language } : loaded
+  })
   const [authUser, setAuthUser] = useState<AuthUser | null>(null)
   const [authReady, setAuthReady] = useState(false)
   const [authBusy, setAuthBusy] = useState(false)
   const [authNotice, setAuthNotice] = useState<string | null>(() => authNoticeFromLocation())
+
+  const view: ViewId = route.page === 'practice' || (route.page === 'lesson' && route.practice)
+    ? 'practice'
+    : route.page === 'codebook'
+      ? 'spellbook'
+      : route.page === 'profile'
+        ? 'profile'
+        : route.page === 'settings'
+          ? 'settings'
+          : 'path'
 
   useEffect(() => {
     saveProgress(progress)
@@ -1137,7 +1309,49 @@ function App() {
 
   useEffect(() => {
     window.scrollTo({ top: 0, left: 0 })
-  }, [progress.onboardingComplete, view])
+  }, [location.pathname, location.search])
+
+  useEffect(() => {
+    if (route.page === 'home') {
+      document.title = 'SeePoundCoffeePie | Learn code. Run the ship.'
+      return
+    }
+
+    const track = route.language ? trackById(route.language) : null
+    const mission = track?.missions.find((item) => item.id === route.missionId)
+    const pageTitle = route.page === 'start'
+      ? 'Cadet Intake'
+      : route.page === 'academy'
+        ? track?.name
+        : route.page === 'practice'
+          ? `${track?.shortName} Practice Bay`
+          : route.page === 'codebook'
+            ? `${track?.shortName} Codebook`
+            : route.page === 'profile'
+              ? 'Cadet Record'
+              : route.page === 'settings'
+                ? 'Settings'
+                : route.page === 'lesson'
+                  ? mission?.title
+                  : 'Page not found'
+    document.title = `${pageTitle ?? 'Academy'} | SeePoundCoffeePie`
+  }, [route.language, route.missionId, route.page])
+
+  useEffect(() => {
+    const handleNavigation = () => {
+      const nextLocation = readBrowserLocation()
+      const nextRoute = parseAppRoute(nextLocation.pathname, nextLocation.search)
+      setLocation(nextLocation)
+      if (nextRoute.language) {
+        setProgress((current) => current.activeLanguage === nextRoute.language
+          ? current
+          : { ...current, activeLanguage: nextRoute.language ?? current.activeLanguage })
+      }
+    }
+
+    window.addEventListener('popstate', handleNavigation)
+    return () => window.removeEventListener('popstate', handleNavigation)
+  }, [])
 
   useEffect(() => {
     const url = new URL(window.location.href)
@@ -1170,9 +1384,9 @@ function App() {
   }, [])
 
   const normalizedProgress = useMemo(() => {
-    if (progress.dailyXpDate === dateKey(new Date())) return progress
-    return { ...progress, dailyXp: 0 }
-  }, [progress])
+    const dailyProgress = progress.dailyXpDate === dateKey(new Date()) ? progress : { ...progress, dailyXp: 0 }
+    return route.language ? { ...dailyProgress, activeLanguage: route.language } : dailyProgress
+  }, [progress, route.language])
 
   const updateProgress = (nextProgress: LearnerProgress) => setProgress(nextProgress)
 
@@ -1201,7 +1415,7 @@ function App() {
   const reset = () => {
     if (window.confirm('Reset all local SeePoundCoffeePie progress and return to cadet intake?')) {
       setProgress(initialProgress())
-      setView('path')
+      navigateTo('/start')
     }
   }
 
@@ -1226,20 +1440,102 @@ function App() {
     }
 
     setProgress(result.progress)
-    setView('profile')
     const exported = new Date(result.exportedAt).toLocaleString()
     return `Progress restored from the backup created ${exported}.`
   }
 
-  if (!progress.onboardingComplete) {
+  const completeOnboarding = (nextProgress: LearnerProgress) => {
+    setProgress((current) => current.onboardingComplete
+      ? {
+          ...current,
+          activeLanguage: nextProgress.activeLanguage,
+          callsign: nextProgress.callsign,
+          dailyGoal: nextProgress.dailyGoal,
+        }
+      : nextProgress)
+    navigateTo(academyPath(nextProgress.activeLanguage))
+  }
+
+  if (route.page === 'home') {
+    return (
+      <>
+        {authNotice && <AuthNotice message={authNotice} onDismiss={() => setAuthNotice(null)} />}
+        <LandingPage authReady={authReady} authUser={authUser} onSignIn={signIn} progress={normalizedProgress} />
+      </>
+    )
+  }
+
+  if (route.page === 'not-found') {
+    return <NotFoundPage progress={normalizedProgress} />
+  }
+
+  if (!progress.onboardingComplete || route.page === 'start') {
     return (
       <>
         {authNotice && <AuthNotice message={authNotice} onDismiss={() => setAuthNotice(null)} />}
         <Onboarding
           authReady={authReady}
           authUser={authUser}
-          onComplete={setProgress}
+          initialLanguage={route.language ?? progress.activeLanguage}
+          onComplete={completeOnboarding}
           onSignIn={signIn}
+        />
+      </>
+    )
+  }
+
+  if (route.page === 'lesson') {
+    const track = trackById(route.language ?? progress.activeLanguage)
+    const missionIndex = track.missions.findIndex((mission) => mission.id === route.missionId)
+    const mission = track.missions[missionIndex]
+    const available = mission && mission.language === track.id
+      && missionAvailability(track, missionIndex, progress.completedMissions) === 'available'
+
+    if (!mission || mission.language !== track.id) return <NotFoundPage progress={normalizedProgress} />
+
+    const practiceConceptIds = route.conceptIds.filter((conceptId) => (
+      mission.exercises.some((exercise) => exercise.conceptId === conceptId)
+    ))
+
+    if (!available) {
+      const prerequisite = track.missions[missionIndex - 1]
+      return (
+        <>
+          {authNotice && <AuthNotice message={authNotice} onDismiss={() => setAuthNotice(null)} />}
+          <AppShell
+            authReady={authReady}
+            authUser={authUser}
+            progress={normalizedProgress}
+            view={view}
+            onLanguageChange={(language) => {
+              setProgress((current) => ({ ...current, activeLanguage: language }))
+              navigateTo(academyPath(language))
+            }}
+            onSignIn={signIn}
+          >
+            <main className="content-page">
+              <section className="route-message-card route-message-card--inside">
+                <p className="kicker"><LockKeyhole size={15} /> Mission locked</p>
+                <h1>{mission.title} is still ahead</h1>
+                <p>Complete {prerequisite?.title ?? 'the earlier training'} first. The academy keeps the steps in order so each new idea has a foundation.</p>
+                <AppLink className="primary-action" to={academyPath(track.id)}>Return to {track.shortName} mission path</AppLink>
+              </section>
+            </main>
+          </AppShell>
+        </>
+      )
+    }
+
+    return (
+      <>
+        {authNotice && <AuthNotice message={authNotice} onDismiss={() => setAuthNotice(null)} />}
+        <LessonPlayer
+          key={`${route.practice ? 'practice' : 'academy'}-${mission.id}-${practiceConceptIds.join('-')}`}
+          mission={mission}
+          practiceConceptIds={route.practice ? practiceConceptIds : undefined}
+          progress={progress}
+          onProgress={updateProgress}
+          onExit={() => navigateTo(route.practice ? practicePath(track.id) : academyPath(track.id))}
         />
       </>
     )
@@ -1253,24 +1549,33 @@ function App() {
         authUser={authUser}
         progress={normalizedProgress}
         view={view}
-        setView={setView}
-        onLanguageChange={(language) => setProgress((current) => ({ ...current, activeLanguage: language }))}
+        onLanguageChange={(language) => {
+          setProgress((current) => ({ ...current, activeLanguage: language }))
+          if (route.page === 'academy' || route.page === 'practice' || route.page === 'codebook') {
+            navigateTo(pagePath(route.page, language))
+          }
+        }}
         onSignIn={signIn}
       >
-        {view === 'path' && <MissionPath progress={normalizedProgress} onStart={(mission) => setActiveLesson({ mission })} />}
-        {view === 'practice' && <PracticeBay progress={normalizedProgress} onStart={(mission, practiceConceptIds) => setActiveLesson({ mission, practiceConceptIds })} />}
-        {view === 'spellbook' && <Codebook progress={normalizedProgress} />}
-        {view === 'profile' && (
+        {route.page === 'academy' && <MissionPath progress={normalizedProgress} onStart={(mission) => navigateTo(missionPath(mission.language, mission.id))} />}
+        {route.page === 'practice' && <PracticeBay progress={normalizedProgress} onStart={(mission, practiceConceptIds) => navigateTo(practiceMissionPath(mission.language, mission.id, practiceConceptIds))} />}
+        {route.page === 'codebook' && <Codebook progress={normalizedProgress} />}
+        {route.page === 'profile' && (
           <CadetRecord
+            onOpenTrack={(language) => {
+              setProgress((current) => ({ ...current, activeLanguage: language }))
+              navigateTo(academyPath(language))
+            }}
+            progress={normalizedProgress}
+          />
+        )}
+        {route.page === 'settings' && (
+          <SettingsPage
             authBusy={authBusy}
             authUser={authUser}
             onDailyGoalChange={(dailyGoal) => setProgress((current) => ({ ...current, dailyGoal }))}
             onDownloadBackup={downloadProgressBackup}
             onLogout={logout}
-            onOpenTrack={(language) => {
-              setProgress((current) => ({ ...current, activeLanguage: language }))
-              setView('path')
-            }}
             onReset={reset}
             onRestoreBackup={restoreProgressBackup}
             onSignIn={signIn}
@@ -1278,17 +1583,12 @@ function App() {
           />
         )}
       </AppShell>
-      {activeLesson && (
-        <LessonPlayer
-          mission={activeLesson.mission}
-          practiceConceptIds={activeLesson.practiceConceptIds}
-          progress={progress}
-          onProgress={updateProgress}
-          onExit={() => setActiveLesson(null)}
-        />
-      )}
     </>
   )
+}
+
+function App() {
+  return <AppContent />
 }
 
 export default App
