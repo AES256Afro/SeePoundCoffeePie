@@ -360,7 +360,11 @@ async function authRequest(
   }
   if (url.pathname === '/api/auth/github/callback') {
     if (request.method !== 'GET') return methodNotAllowed('GET')
-    return completeGitHubAuth(request, env, externalFetch)
+    try {
+      return await completeGitHubAuth(request, env, externalFetch)
+    } catch {
+      return authFailure('server-error')
+    }
   }
   if (url.pathname === '/api/auth/session') {
     if (request.method !== 'GET') return methodNotAllowed('GET')
@@ -425,5 +429,7 @@ export async function handleRequest(
 }
 
 export default {
-  fetch: handleRequest,
+  fetch(request: Request, env: WorkerEnv): Promise<Response> {
+    return handleRequest(request, env)
+  },
 }

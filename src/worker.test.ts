@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import { handleRequest } from './worker'
+import worker, { handleRequest } from './worker'
 
 const htmlEnv = {
   ASSETS: {
@@ -176,6 +176,66 @@ describe('production Worker', () => {
     )
     await expect(tamperedSession.json()).resolves.toEqual({ authenticated: false, user: null })
     expect(setCookies(tamperedSession).join('\n')).toContain('Max-Age=0')
+  })
+
+  it('does not mistake Cloudflare runtime context for the outbound fetch function', async () => {
+    const externalFetch = vi.fn(async (input: RequestInfo | URL) => {
+      const url = String(input)
+      if (url === 'https://github.com/login/oauth/access_token') {
+        return Response.json({ access_token: 'temporary-runtime-token' })
+      }
+      if (url === 'https://api.github.com/user') {
+        return Response.json({ id: 314, login: 'cadet-pie', name: 'Cadet Pie' })
+      }
+      if (url === 'https://api.github.com/applications/test-client-id/grant') {
+        return new Response(null, { status: 204 })
+      }
+      throw new Error(`Unexpected GitHub request: ${url}`)
+    })
+    vi.stubGlobal('fetch', externalFetch)
+
+    try {
+      const runtimeFetch = worker.fetch as unknown as (
+        request: Request,
+        env: typeof htmlEnv,
+        context: { waitUntil(promise: Promise<unknown>): void },
+      ) => Promise<Response>
+      const response = await runtimeFetch(
+        new Request('https://seepoundcoffeepie.com/api/auth/github/callback?code=abc&state=test-state', {
+          headers: {
+            Cookie: `__Host-spp_oauth_state=test-state; __Host-spp_oauth_pkce=${testVerifier}`,
+          },
+        }),
+        htmlEnv,
+        { waitUntil: () => undefined },
+      )
+
+      expect(response.status).toBe(302)
+      expect(response.headers.get('Location')).toBe('https://seepoundcoffeepie.com/?auth=success')
+      expect(externalFetch).toHaveBeenCalledTimes(3)
+    } finally {
+      vi.unstubAllGlobals()
+    }
+  })
+
+  it('turns an unexpected OAuth provider failure into a safe redirect', async () => {
+    const response = await handleRequest(
+      new Request('https://seepoundcoffeepie.com/api/auth/github/callback?code=abc&state=test-state', {
+        headers: {
+          Cookie: `__Host-spp_oauth_state=test-state; __Host-spp_oauth_pkce=${testVerifier}`,
+        },
+      }),
+      htmlEnv,
+      vi.fn().mockRejectedValue(new Error('Simulated provider outage')),
+    )
+
+    expect(response.status).toBe(302)
+    expect(response.headers.get('Location')).toBe(
+      'https://seepoundcoffeepie.com/?auth=error&reason=server-error',
+    )
+    expect(setCookies(response).join('\n')).toContain('__Host-spp_oauth_state=')
+    expect(setCookies(response).join('\n')).toContain('__Host-spp_oauth_pkce=')
+    expect(setCookies(response).join('\n')).toContain('Max-Age=0')
   })
 
   it('revokes the temporary grant even when the GitHub profile request fails', async () => {
