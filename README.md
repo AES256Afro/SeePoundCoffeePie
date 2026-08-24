@@ -28,6 +28,7 @@ The current vertical slice includes:
 - local browser persistence with a visible reset control;
 - responsive layouts for desktop, tablet, and mobile;
 - keyboard focus states and reduced-motion support.
+- optional GitHub identity verification with a secure, server-side OAuth flow.
 
 Planned missions are visible but intentionally locked. This makes the scope of the academy understandable without pretending unfinished curriculum is available.
 
@@ -79,6 +80,28 @@ Verify the live apex domain, `www` redirect, security headers, and SPA fallback 
 ```bash
 npm run check:live
 ```
+
+## GitHub sign-in
+
+Production uses a GitHub OAuth App with these exact public settings:
+
+- application name: `SeePoundCoffeePie`
+- homepage URL: `https://seepoundcoffeepie.com`
+- authorization callback URL: `https://seepoundcoffeepie.com/api/auth/github/callback`
+
+The Worker requires three encrypted Cloudflare secrets:
+
+```bash
+npx wrangler secret put GITHUB_CLIENT_ID
+npx wrangler secret put GITHUB_CLIENT_SECRET
+openssl rand -base64 48 | npx wrangler secret put SESSION_SECRET
+```
+
+For local Worker testing, copy `.dev.vars.example` to `.dev.vars` and fill in local values. The real `.dev.vars` file is ignored by Git.
+
+The authorization flow uses an exact callback, a cryptographic state value, PKCE with SHA-256, short-lived secure cookies, and a signed seven-day `HttpOnly` session. It requests no private GitHub scopes. After GitHub returns the public account ID and login, the Worker revokes the temporary GitHub grant and does not store the access token. Logging out clears the signed site session and requires a same-origin request.
+
+GitHub sign-in currently verifies identity only. Course progress, XP, streaks, and review history remain in the learner's browser and are neither uploaded nor synchronized.
 
 ## How the prototype checks code
 

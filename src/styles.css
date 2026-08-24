@@ -408,6 +408,75 @@ p {
   line-height: 1.6;
 }
 
+.github-intake {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 0.75rem;
+  align-items: center;
+  margin: -0.7rem 0 1.3rem;
+  padding: 0.85rem;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: rgba(156, 228, 181, 0.035);
+}
+
+.github-intake.is-connected {
+  border-color: rgba(156, 228, 181, 0.3);
+  background: rgba(156, 228, 181, 0.07);
+}
+
+.github-intake > span {
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  color: #dcebe6;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: #12251f;
+}
+
+.github-intake > div {
+  min-width: 0;
+}
+
+.github-intake b {
+  display: block;
+  margin-bottom: 0.18rem;
+  font-size: 0.76rem;
+}
+
+.github-intake p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.65rem;
+  line-height: 1.35;
+}
+
+.github-intake button,
+.github-topbar,
+.identity-chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  min-height: 36px;
+  padding: 0 0.72rem;
+  color: #dcebe6;
+  border: 1px solid rgba(173, 219, 204, 0.2);
+  border-radius: 9px;
+  background: #132720;
+  font-size: 0.68rem;
+  font-weight: 800;
+}
+
+.github-intake button:hover,
+.github-topbar:hover,
+.identity-chip:hover {
+  border-color: rgba(156, 228, 181, 0.45);
+  background: #193229;
+}
+
 .track-picker {
   display: grid;
   gap: 0.72rem;
@@ -916,6 +985,20 @@ p {
   background: #d9e9e3;
   font-size: 0.8rem;
   font-weight: 900;
+  border: 0;
+}
+
+.github-topbar,
+.identity-chip {
+  flex: 0 1 auto;
+  margin-left: 1.1rem;
+  white-space: nowrap;
+}
+
+.identity-chip span {
+  max-width: 130px;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .mobile-menu,
@@ -1639,6 +1722,93 @@ p {
   border: 1px solid var(--border);
   border-radius: 13px;
   background: rgba(11, 29, 24, 0.7);
+}
+
+.account-panel {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 1rem;
+  align-items: center;
+  margin-top: 2rem;
+  padding: 1.35rem 1.5rem;
+  border: 1px solid rgba(156, 228, 181, 0.22);
+  border-radius: 13px;
+  background: rgba(156, 228, 181, 0.045);
+}
+
+.account-panel__icon {
+  display: grid;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  color: var(--accent);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: rgba(7, 19, 16, 0.55);
+}
+
+.account-panel small {
+  color: #628079;
+  font-size: 0.55rem;
+  font-weight: 900;
+  letter-spacing: 0.14em;
+}
+
+.account-panel h2 {
+  margin: 0.25rem 0 0.35rem;
+  font-size: 1rem;
+}
+
+.account-panel p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.7rem;
+  line-height: 1.5;
+}
+
+.auth-notice {
+  position: fixed;
+  z-index: 250;
+  top: 1rem;
+  left: 50%;
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  width: min(calc(100% - 2rem), 560px);
+  padding: 0.8rem 0.9rem;
+  color: #dcebe6;
+  border: 1px solid rgba(156, 228, 181, 0.32);
+  border-radius: 11px;
+  background: rgba(12, 30, 26, 0.97);
+  box-shadow: var(--shadow);
+  font-size: 0.75rem;
+  transform: translateX(-50%);
+}
+
+.auth-notice > svg {
+  flex: 0 0 auto;
+  color: var(--lime);
+}
+
+.auth-notice span {
+  flex: 1;
+}
+
+.auth-notice button {
+  display: grid;
+  flex: 0 0 auto;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  color: var(--muted);
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+}
+
+.auth-notice button:hover {
+  color: var(--ink);
+  background: rgba(255, 255, 255, 0.06);
 }
 
 .settings-panel h2 {
@@ -2370,6 +2540,15 @@ p {
     padding: 3rem 1.2rem;
   }
 
+  .github-intake {
+    grid-template-columns: auto 1fr;
+  }
+
+  .github-intake button {
+    grid-column: 1 / -1;
+    width: 100%;
+  }
+
   .recommended {
     display: none;
   }
@@ -2419,6 +2598,18 @@ p {
   }
 
   .profile-chip {
+    display: none;
+  }
+
+  .github-topbar,
+  .identity-chip {
+    width: 36px;
+    padding: 0;
+    margin-left: 0.55rem;
+  }
+
+  .github-topbar span,
+  .identity-chip span {
     display: none;
   }
 
@@ -2526,6 +2717,15 @@ p {
   .settings-panel {
     align-items: flex-start;
     flex-direction: column;
+  }
+
+  .account-panel {
+    grid-template-columns: auto 1fr;
+  }
+
+  .account-panel .secondary-action {
+    grid-column: 1 / -1;
+    width: 100%;
   }
 
   .lesson-header {

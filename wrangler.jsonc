@@ -4,6 +4,13 @@
   "main": "./src/worker.ts",
   "compatibility_date": "2026-08-24",
   "workers_dev": true,
+  "secrets": {
+    "required": [
+      "GITHUB_CLIENT_ID",
+      "GITHUB_CLIENT_SECRET",
+      "SESSION_SECRET"
+    ]
+  },
   "assets": {
     "directory": "./dist",
     "binding": "ASSETS",

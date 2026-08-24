@@ -15,8 +15,10 @@ import {
   Crown,
   Flame,
   Gem,
+  GitFork as Github,
   LibraryBig,
   LockKeyhole,
+  LogOut,
   Menu,
   MessageCircleQuestion,
   Orbit,
@@ -45,6 +47,7 @@ import {
   saveProgress,
 } from './lib/progress'
 import type {
+  AuthUser,
   EvaluationResult,
   LanguageId,
   LearnerProgress,
@@ -118,7 +121,14 @@ function BrandMark({ compact = false }: { compact?: boolean }) {
   )
 }
 
-function Onboarding({ onComplete }: { onComplete: (progress: LearnerProgress) => void }) {
+interface OnboardingProps {
+  authReady: boolean
+  authUser: AuthUser | null
+  onComplete: (progress: LearnerProgress) => void
+  onSignIn: () => void
+}
+
+function Onboarding({ authReady, authUser, onComplete, onSignIn }: OnboardingProps) {
   const [language, setLanguage] = useState<LanguageId>('python')
   const [callsign, setCallsign] = useState('')
   const [goal, setGoal] = useState(10)
@@ -127,7 +137,7 @@ function Onboarding({ onComplete }: { onComplete: (progress: LearnerProgress) =>
   const finish = () => {
     onComplete({
       ...initialProgress(language),
-      callsign: callsign.trim() || 'Cadet',
+      callsign: callsign.trim() || authUser?.name || authUser?.login || 'Cadet',
       dailyGoal: goal,
       onboardingComplete: true,
     })
@@ -166,6 +176,19 @@ function Onboarding({ onComplete }: { onComplete: (progress: LearnerProgress) =>
           <h2>Choose your first station</h2>
           <p className="setup-intro">You can explore every path later. Python is our gentlest starting point.</p>
 
+          <div className={`github-intake ${authUser ? 'is-connected' : ''}`}>
+            <span><Github size={21} /></span>
+            <div>
+              <b>{authUser ? `Signed in as ${authUser.login}` : 'Optional GitHub sign-in'}</b>
+              <p>{authUser ? 'GitHub verified your cadet identity.' : 'Verify your identity now. You can also begin without an account.'}</p>
+            </div>
+            {!authUser && (
+              <button type="button" onClick={onSignIn} disabled={!authReady}>
+                <Github size={16} /> {authReady ? 'Sign in' : 'Checking'}
+              </button>
+            )}
+          </div>
+
           <div className="track-picker" role="radiogroup" aria-label="Programming language">
             {tracks.map((track) => (
               <button
@@ -197,7 +220,7 @@ function Onboarding({ onComplete }: { onComplete: (progress: LearnerProgress) =>
             className="text-input"
             value={callsign}
             onChange={(event) => setCallsign(event.target.value)}
-            placeholder="Cadet name or callsign"
+            placeholder={authUser ? authUser.name || authUser.login : 'Cadet name or callsign'}
             maxLength={24}
           />
 
@@ -220,7 +243,7 @@ function Onboarding({ onComplete }: { onComplete: (progress: LearnerProgress) =>
           <button className="primary-action primary-action--wide" onClick={finish}>
             Begin your commission <ArrowRight size={18} />
           </button>
-          <p className="fine-print"><Shield size={13} /> Progress stays in this browser for this prototype.</p>
+          <p className="fine-print"><Shield size={13} /> Course progress stays in this browser. GitHub only verifies identity for now.</p>
         </div>
       </section>
     </main>
@@ -228,14 +251,17 @@ function Onboarding({ onComplete }: { onComplete: (progress: LearnerProgress) =>
 }
 
 interface ShellProps {
+  authReady: boolean
+  authUser: AuthUser | null
   progress: LearnerProgress
   view: ViewId
   setView: (view: ViewId) => void
   onLanguageChange: (language: LanguageId) => void
+  onSignIn: () => void
   children: React.ReactNode
 }
 
-function AppShell({ progress, view, setView, onLanguageChange, children }: ShellProps) {
+function AppShell({ authReady, authUser, progress, view, setView, onLanguageChange, onSignIn, children }: ShellProps) {
   const [mobileNavOpen, setMobileNavOpen] = useState(false)
   const track = trackById(progress.activeLanguage)
   const navItems: Array<{ id: ViewId; label: string; icon: typeof Compass }> = [
@@ -292,7 +318,16 @@ function AppShell({ progress, view, setView, onLanguageChange, children }: Shell
             <span title="Experience points"><Zap size={19} /><b>{progress.xp}</b><small>XP</small></span>
             <span title="Star shards"><Gem size={19} /><b>{progress.starShards}</b><small>shards</small></span>
           </div>
-          <div className="profile-chip">{progress.callsign.slice(0, 1).toUpperCase()}</div>
+          {authUser ? (
+            <button className="identity-chip" onClick={() => selectView('profile')} title={`Signed in as ${authUser.login}`}>
+              <Github size={15} /><span>{authUser.login}</span>
+            </button>
+          ) : (
+            <button className="github-topbar" onClick={onSignIn} disabled={!authReady}>
+              <Github size={16} /><span>{authReady ? 'Sign in' : 'Checking'}</span>
+            </button>
+          )}
+          <button className="profile-chip" onClick={() => selectView('profile')} aria-label="Open cadet record">{progress.callsign.slice(0, 1).toUpperCase()}</button>
         </header>
         {children}
       </div>
@@ -457,7 +492,16 @@ function Codebook() {
   )
 }
 
-function CadetRecord({ progress, onReset }: { progress: LearnerProgress; onReset: () => void }) {
+interface CadetRecordProps {
+  authBusy: boolean
+  authUser: AuthUser | null
+  onLogout: () => void
+  onReset: () => void
+  onSignIn: () => void
+  progress: LearnerProgress
+}
+
+function CadetRecord({ authBusy, authUser, onLogout, onReset, onSignIn, progress }: CadetRecordProps) {
   const concepts = Object.values(progress.conceptProgress)
   const answers = concepts.reduce((sum, item) => sum + item.correct + item.incorrect, 0)
   const accuracy = answers ? Math.round((concepts.reduce((sum, item) => sum + item.correct, 0) / answers) * 100) : 0
@@ -471,11 +515,53 @@ function CadetRecord({ progress, onReset }: { progress: LearnerProgress; onReset
         <article><Trophy /><span><b>{progress.completedMissions.length}</b><small>Missions</small></span></article>
         <article><CheckCircle2 /><span><b>{accuracy}%</b><small>Accuracy</small></span></article>
       </div>
+      <section className="account-panel">
+        <span className="account-panel__icon"><Github size={24} /></span>
+        <div>
+          <small>GITHUB IDENTITY</small>
+          <h2>{authUser ? `Signed in as ${authUser.login}` : 'No account connected'}</h2>
+          <p>
+            {authUser
+              ? 'Your identity is verified. Lessons, XP, and review history still stay only in this browser.'
+              : 'Sign in to verify your identity. This phase does not upload or synchronize course progress.'}
+          </p>
+        </div>
+        {authUser ? (
+          <button className="secondary-action" onClick={onLogout} disabled={authBusy}>
+            <LogOut size={16} /> {authBusy ? 'Signing out' : 'Sign out'}
+          </button>
+        ) : (
+          <button className="secondary-action" onClick={onSignIn} disabled={authBusy}>
+            <Github size={16} /> Sign in with GitHub
+          </button>
+        )}
+      </section>
       <section className="settings-panel">
         <div><h2>Prototype controls</h2><p>Resetting removes the learner name, XP, mission completion, and review history from this browser.</p></div>
         <button className="danger-button" onClick={onReset}><RotateCcw size={16} /> Reset local progress</button>
       </section>
     </main>
+  )
+}
+
+function authNoticeFromLocation(): string | null {
+  const url = new URL(window.location.href)
+  if (url.searchParams.get('auth') === 'success') return 'GitHub identity verified. Welcome aboard.'
+  if (url.searchParams.get('auth') !== 'error') return null
+
+  const reason = url.searchParams.get('reason')
+  if (reason === 'cancelled') return 'GitHub sign-in was cancelled. Your local progress was not changed.'
+  if (reason === 'not-configured') return 'GitHub sign-in is not configured yet.'
+  return 'GitHub sign-in could not be completed. Please try again.'
+}
+
+function AuthNotice({ message, onDismiss }: { message: string; onDismiss: () => void }) {
+  return (
+    <div className="auth-notice" role="status">
+      <Github size={18} />
+      <span>{message}</span>
+      <button onClick={onDismiss} aria-label="Dismiss sign-in message"><X size={16} /></button>
+    </div>
   )
 }
 
@@ -644,6 +730,10 @@ function App() {
   const [progress, setProgress] = useState<LearnerProgress>(() => loadProgress())
   const [view, setView] = useState<ViewId>('path')
   const [activeMission, setActiveMission] = useState<Mission | null>(null)
+  const [authUser, setAuthUser] = useState<AuthUser | null>(null)
+  const [authReady, setAuthReady] = useState(false)
+  const [authBusy, setAuthBusy] = useState(false)
+  const [authNotice, setAuthNotice] = useState<string | null>(() => authNoticeFromLocation())
 
   useEffect(() => {
     saveProgress(progress)
@@ -653,12 +743,64 @@ function App() {
     window.scrollTo({ top: 0, left: 0 })
   }, [progress.onboardingComplete, view])
 
+  useEffect(() => {
+    const url = new URL(window.location.href)
+    if (url.searchParams.has('auth') || url.searchParams.has('reason')) {
+      url.searchParams.delete('auth')
+      url.searchParams.delete('reason')
+      window.history.replaceState({}, '', `${url.pathname}${url.search}${url.hash}`)
+    }
+  }, [])
+
+  useEffect(() => {
+    let active = true
+    fetch('/api/auth/session', {
+      credentials: 'same-origin',
+      headers: { Accept: 'application/json' },
+    })
+      .then(async (response) => {
+        if (!response.ok || !response.headers.get('Content-Type')?.includes('application/json')) return null
+        return response.json() as Promise<{ authenticated: boolean; user: AuthUser | null }>
+      })
+      .then((session) => {
+        if (active && session?.authenticated) setAuthUser(session.user)
+      })
+      .catch(() => undefined)
+      .finally(() => {
+        if (active) setAuthReady(true)
+      })
+
+    return () => { active = false }
+  }, [])
+
   const normalizedProgress = useMemo(() => {
     if (progress.dailyXpDate === dateKey(new Date())) return progress
     return { ...progress, dailyXp: 0 }
   }, [progress])
 
   const updateProgress = (nextProgress: LearnerProgress) => setProgress(nextProgress)
+
+  const signIn = () => {
+    window.location.assign('/api/auth/github/start')
+  }
+
+  const logout = async () => {
+    setAuthBusy(true)
+    try {
+      const response = await fetch('/api/auth/logout', {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: { Accept: 'application/json' },
+      })
+      if (!response.ok) throw new Error('Logout failed')
+      setAuthUser(null)
+      setAuthNotice('Signed out. Your local course progress is still here.')
+    } catch {
+      setAuthNotice('Sign-out could not be completed. Please try again.')
+    } finally {
+      setAuthBusy(false)
+    }
+  }
 
   const reset = () => {
     if (window.confirm('Reset all local SeePoundCoffeePie progress and return to cadet intake?')) {
@@ -668,21 +810,44 @@ function App() {
   }
 
   if (!progress.onboardingComplete) {
-    return <Onboarding onComplete={setProgress} />
+    return (
+      <>
+        {authNotice && <AuthNotice message={authNotice} onDismiss={() => setAuthNotice(null)} />}
+        <Onboarding
+          authReady={authReady}
+          authUser={authUser}
+          onComplete={setProgress}
+          onSignIn={signIn}
+        />
+      </>
+    )
   }
 
   return (
     <>
+      {authNotice && <AuthNotice message={authNotice} onDismiss={() => setAuthNotice(null)} />}
       <AppShell
+        authReady={authReady}
+        authUser={authUser}
         progress={normalizedProgress}
         view={view}
         setView={setView}
         onLanguageChange={(language) => setProgress((current) => ({ ...current, activeLanguage: language }))}
+        onSignIn={signIn}
       >
         {view === 'path' && <MissionPath progress={normalizedProgress} onStart={setActiveMission} />}
         {view === 'practice' && <PracticeBay progress={normalizedProgress} onStart={setActiveMission} />}
         {view === 'spellbook' && <Codebook />}
-        {view === 'profile' && <CadetRecord progress={normalizedProgress} onReset={reset} />}
+        {view === 'profile' && (
+          <CadetRecord
+            authBusy={authBusy}
+            authUser={authUser}
+            onLogout={logout}
+            onReset={reset}
+            onSignIn={signIn}
+            progress={normalizedProgress}
+          />
+        )}
       </AppShell>
       {activeMission && (
         <LessonPlayer

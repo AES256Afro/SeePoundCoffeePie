@@ -2,6 +2,12 @@ export type LanguageId = 'python' | 'cpp' | 'csharp' | 'java'
 
 export type ExerciseType = 'choice' | 'code'
 
+export interface AuthUser {
+  id: string
+  login: string
+  name: string | null
+}
+
 export interface CodeCheck {
   pattern: string
   message: string
