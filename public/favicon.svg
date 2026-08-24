@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <rect width="64" height="64" rx="17" fill="#0b1a17"/>
+  <path d="M8 32h48M32 8v48" stroke="#315047" stroke-width="2"/>
+  <text x="12" y="25" fill="#f2c14e" font-family="system-ui,sans-serif" font-size="18" font-weight="800">C</text>
+  <text x="38" y="25" fill="#9ce4b5" font-family="system-ui,sans-serif" font-size="16" font-weight="800">#</text>
+  <path d="M12 40h14v5a7 7 0 0 1-7 7 7 7 0 0 1-7-7v-5Zm14 2h3a3 3 0 0 1 0 6h-4" fill="none" stroke="#ff936b" stroke-width="2"/>
+  <text x="39" y="52" fill="#eaf7f2" font-family="Georgia,serif" font-size="18">π</text>
+</svg>

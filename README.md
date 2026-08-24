@@ -52,6 +52,34 @@ npm run build
 
 The production bundle is written to `dist/`.
 
+## Production hosting
+
+The production site is deployed as a Cloudflare Worker with Static Assets:
+
+- canonical domain: [https://seepoundcoffeepie.com](https://seepoundcoffeepie.com)
+- `www` redirects to the canonical apex domain;
+- unknown navigation paths return the React application shell;
+- hashed assets receive immutable caching;
+- HTML is revalidated and served with browser security headers.
+
+Run a configuration-only deployment check with:
+
+```bash
+npm run deploy:dry-run
+```
+
+Deploy the current checkout with:
+
+```bash
+npm run deploy
+```
+
+Verify the live apex domain, `www` redirect, security headers, and SPA fallback with:
+
+```bash
+npm run check:live
+```
+
 ## How the prototype checks code
 
 The first missions use a local, deterministic training simulator. It checks whether the learner used the required beginner syntax, then shows the expected console output. It does not execute arbitrary code.
