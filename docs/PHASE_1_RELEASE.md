@@ -68,6 +68,7 @@ The release gate requires:
 - all Vitest files and tests pass;
 - ESLint reports no issues;
 - TypeScript and the Vite production build succeed;
+- emitted JavaScript, CSS, and HTML remain inside the checked raw and gzip bundle budgets;
 - `git diff --check` reports no whitespace errors;
 - the repository contains no U+2014 em dash characters;
 - a full Java route completes each newly authored mission in the browser;

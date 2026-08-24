@@ -6,10 +6,11 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
+    "check:bundle": "node scripts/check-bundle-size.mjs",
     "deploy": "npm run build && wrangler deploy",
     "deploy:dry-run": "npm run build && wrangler deploy --dry-run",
     "check:live": "node scripts/check-live.mjs",
-    "check:release": "npm test && npm run lint && npm run build",
+    "check:release": "npm test && npm run lint && npm run build && npm run check:bundle",
     "lint": "eslint .",
     "test": "vitest run",
     "test:watch": "vitest",

@@ -65,6 +65,7 @@ npm run check:release
 ```
 
 The production bundle is written to `dist/`.
+`npm run check:bundle` enforces raw and gzip budgets for the emitted JavaScript, CSS, and HTML so curriculum growth cannot silently create an oversized first load.
 
 ## Production hosting
 
