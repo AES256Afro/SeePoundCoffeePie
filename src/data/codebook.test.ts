@@ -47,7 +47,34 @@ describe('progression-aware codebook', () => {
   it('keeps terms and keywords unique enough for stable search results', () => {
     const normalizedTerms = codebookEntries.map((entry) => entry.term.toLocaleLowerCase())
     expect(new Set(normalizedTerms).size).toBe(normalizedTerms.length)
-    expect(codebookEntries.length).toBeGreaterThanOrEqual(33)
+    expect(codebookEntries.length).toBeGreaterThanOrEqual(44)
     for (const entry of codebookEntries) expect(entry.keywords.length).toBeGreaterThanOrEqual(3)
+  })
+
+  it('defines the words a true beginner encounters before learning language syntax', () => {
+    const requiredTerms = [
+      'Instruction or statement',
+      'Value',
+      'Data type',
+      'Identifier',
+      'Assignment',
+      'Expression',
+      'Error',
+      'Bug',
+      'Debugging',
+      'Built-in or standard library tool',
+    ]
+
+    for (const term of requiredTerms) {
+      const entry = codebookEntries.find((candidate) => candidate.term === term)
+      expect(entry, `${term} must be available in the Codebook`).toBeTruthy()
+      expect(entry?.plain.length).toBeGreaterThan(60)
+      expect(entry?.ship.length).toBeGreaterThan(50)
+    }
+
+    const debugging = codebookEntries.find((entry) => entry.term === 'Debugging')
+    const error = codebookEntries.find((entry) => entry.term === 'Error')
+    expect(debugging && codebookMatches(debugging, 'troubleshoot', 'python')).toBe(true)
+    expect(error?.plain).toContain('not a judgment')
   })
 })
