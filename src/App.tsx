@@ -21,7 +21,6 @@ import {
   CircleHelp,
   Clock3,
   Code2,
-  Coffee,
   Compass,
   Crown,
   Download,
@@ -144,9 +143,7 @@ function AppLink({ children, onClick, target, to, ...props }: AppLinkProps) {
 function BrandMark({ compact = false }: { compact?: boolean }) {
   return (
     <AppLink className={`brand ${compact ? 'brand--compact' : ''}`} aria-label="SeePoundCoffeePie home" to="/">
-      <span className="brand__mark" aria-hidden="true">
-        <span>C</span><b>#</b><em><Coffee size={10} /></em><i>π</i>
-      </span>
+      <img className="brand__mark" src="/favicon.svg" alt="" aria-hidden="true" />
       {!compact && (
         <span className="brand__name">
           <b>SeePoundCoffeePie</b>

@@ -102,54 +102,11 @@ p {
 }
 
 .brand__mark {
-  position: relative;
-  display: grid;
-  grid-template-columns: 1fr 1fr;
   width: 46px;
   height: 46px;
-  overflow: hidden;
-  border: 1px solid rgba(156, 228, 181, 0.42);
-  border-radius: 14px 6px 14px 6px;
-  background: linear-gradient(145deg, rgba(156, 228, 181, 0.22), rgba(156, 228, 181, 0.05));
-  box-shadow: inset 0 0 24px rgba(156, 228, 181, 0.1), 0 8px 24px rgba(0, 0, 0, 0.28);
+  flex: 0 0 46px;
+  filter: drop-shadow(0 8px 12px rgba(0, 0, 0, 0.32));
   transform: rotate(-3deg);
-}
-
-.brand__mark::after {
-  content: '';
-  position: absolute;
-  inset: 50% 8px auto;
-  height: 1px;
-  background: rgba(156, 228, 181, 0.25);
-}
-
-.brand__mark span,
-.brand__mark b,
-.brand__mark em,
-.brand__mark i {
-  display: grid;
-  place-items: center;
-  font-size: 1rem;
-  font-style: normal;
-  font-weight: 900;
-}
-
-.brand__mark span {
-  color: var(--gold);
-}
-
-.brand__mark b {
-  color: var(--lime);
-}
-
-.brand__mark em {
-  color: #ff936b;
-}
-
-.brand__mark i {
-  color: rgba(234, 247, 242, 0.75);
-  font-family: Georgia, serif;
-  font-size: 1.05rem;
 }
 
 .brand__name {
