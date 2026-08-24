@@ -47,14 +47,17 @@ describe('progression-aware codebook', () => {
   it('keeps terms and keywords unique enough for stable search results', () => {
     const normalizedTerms = codebookEntries.map((entry) => entry.term.toLocaleLowerCase())
     expect(new Set(normalizedTerms).size).toBe(normalizedTerms.length)
-    expect(codebookEntries.length).toBeGreaterThanOrEqual(44)
+    expect(codebookEntries.length).toBeGreaterThanOrEqual(50)
     for (const entry of codebookEntries) expect(entry.keywords.length).toBeGreaterThanOrEqual(3)
   })
 
   it('defines the words a true beginner encounters before learning language syntax', () => {
     const requiredTerms = [
       'Instruction or statement',
+      'Input',
+      'Output',
       'Value',
+      'Literal',
       'Data type',
       'Identifier',
       'Assignment',
@@ -62,6 +65,9 @@ describe('progression-aware codebook', () => {
       'Error',
       'Bug',
       'Debugging',
+      'Case sensitivity',
+      'Block or body',
+      'Indentation',
       'Built-in or standard library tool',
     ]
 

@@ -26,7 +26,7 @@ The current vertical slice includes:
 - XP, adjustable daily goal, streak, star-shard, mission-completion, and accuracy tracking;
 - a spaced-review scheduler that weighs correct and incorrect attempts;
 - a Practice Bay that recommends the completed mission covering the most due concepts, then builds one focused exercise per due concept;
-- a searchable 44-term beginner Codebook and a Cadet Record with progression-unlocked examples and separate progress for all four stations;
+- a searchable 50-term beginner Codebook and a Cadet Record with progression-unlocked examples and separate progress for all four stations;
 - validated local JSON backup and restore for course progress;
 - local browser persistence with a visible reset control;
 - responsive layouts for desktop, tablet, and mobile;

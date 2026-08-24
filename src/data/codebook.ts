@@ -52,6 +52,25 @@ export const codebookEntries: CodebookEntry[] = [
     },
   },
   {
+    term: 'Input',
+    plain: 'Information a program receives so it can work with a learner, file, sensor, service, or another part of the program.',
+    ship: 'A reading or message arriving through an input port before the ship decides what to do with it.',
+    keywords: ['receive', 'user input', 'read', 'argument', 'data in'],
+  },
+  {
+    term: 'Output',
+    plain: 'Information a program produces, such as console text, a saved result, a picture, or a signal sent to another system.',
+    ship: 'A status report leaving the ship computer through the intercom or a display panel.',
+    keywords: ['produce', 'display', 'print', 'result', 'data out'],
+    unlockAfter: 1,
+    examples: {
+      python: 'print("Signal online")',
+      cpp: 'std::cout << "Reactor online";',
+      csharp: 'Console.WriteLine("Shields online");',
+      java: 'System.out.println("Coffee online");',
+    },
+  },
+  {
     term: 'Variable',
     plain: 'A named place that stores a value so you can use it later.',
     ship: 'A labeled cargo locker for one useful piece of information.',
@@ -101,6 +120,19 @@ export const codebookEntries: CodebookEntry[] = [
       cpp: '"Ember"  // a text value\n80  // a number value',
       csharp: '"Aegis"  // a text value\n100  // a number value',
       java: '"Nebula Roast"  // a text value\n12  // a number value',
+    },
+  },
+  {
+    term: 'Literal',
+    plain: 'A value written directly in source code, such as 3, true, or "Ready", instead of retrieved through a variable name.',
+    ship: 'The cargo itself written into the order, rather than a locker label that tells the crew where to retrieve it.',
+    keywords: ['direct value', 'text literal', 'number literal', 'quotes', 'constant value'],
+    unlockAfter: 1,
+    examples: {
+      python: '"Wayfarer"  # string literal\n3  # integer literal',
+      cpp: '"Ember"  // string literal\n80  // integer literal',
+      csharp: '"Aegis"  // string literal\n100  // integer literal',
+      java: '"Nebula Roast"  // string literal\n12  // integer literal',
     },
   },
   {
@@ -180,6 +212,12 @@ export const codebookEntries: CodebookEntry[] = [
     keywords: ['grammar', 'punctuation', 'structure', 'error'],
   },
   {
+    term: 'Case sensitivity',
+    plain: 'A rule where uppercase and lowercase letters make different names. Most programming languages treat cargo and Cargo as two identifiers.',
+    ship: 'Locker CARGO and locker cargo have different exact labels, even when a human might read them as the same word.',
+    keywords: ['uppercase', 'lowercase', 'capital letter', 'exact spelling', 'name mismatch'],
+  },
+  {
     term: 'Error',
     plain: 'A problem that prevents code from being understood, built, or run as intended. The message is a diagnostic clue, not a judgment about the programmer.',
     ship: 'A console warning that points toward the checklist step or system reading that needs inspection.',
@@ -239,6 +277,29 @@ export const codebookEntries: CodebookEntry[] = [
       cpp: 'if (charge > 50) {\n    std::cout << "Ready";\n}',
       csharp: 'if (strength > 50) {\n    Console.WriteLine("Ready");\n}',
       java: 'if (podCount > 6) {\n    System.out.println("Ready");\n}',
+    },
+  },
+  {
+    term: 'Block or body',
+    plain: 'A group of instructions that belongs to a structure such as a condition, loop, function, method, or class.',
+    ship: 'The complete set of orders inside one room of the checklist, bounded by indentation or bulkhead braces.',
+    keywords: ['group', 'body', 'block', 'inside', 'nested'],
+    unlockAfter: 2,
+    examples: {
+      python: 'if ready:\n    print("Launch")  # the indented line is the body',
+      cpp: 'if (ready) {\n    std::cout << "Launch";\n}',
+      csharp: 'if (ready) {\n    Console.WriteLine("Launch");\n}',
+      java: 'if (ready) {\n    System.out.println("Launch");\n}',
+    },
+  },
+  {
+    term: 'Indentation',
+    plain: 'Spaces at the beginning of a line. Python uses indentation to show which instructions belong inside a block.',
+    ship: 'Orders moved inward on the checklist show that they belong beneath the condition or loop above them.',
+    keywords: ['spaces', 'tab', 'Python block', 'inside', 'nesting'],
+    unlockAfter: 2,
+    examples: {
+      python: 'if ready:\n    print("Launch")  # four leading spaces',
     },
   },
   {
