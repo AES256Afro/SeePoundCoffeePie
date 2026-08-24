@@ -3,7 +3,7 @@ import { request as httpsRequest } from 'node:https'
 
 const canonical = 'https://seepoundcoffeepie.com/'
 const expectedTitle = '<title>SeePoundCoffeePie | Learn code. Run the ship.</title>'
-const socialImageUrl = 'https://seepoundcoffeepie.com/social-card-v4.jpg'
+const socialImageUrl = 'https://seepoundcoffeepie.com/social-card-v5.jpg'
 
 async function requestWithFreshDns(input, init = {}) {
   try {

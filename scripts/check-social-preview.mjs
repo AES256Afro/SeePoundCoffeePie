@@ -1,16 +1,16 @@
 import { readFile } from 'node:fs/promises'
 
 const html = await readFile(new URL('../index.html', import.meta.url), 'utf8')
-const image = await readFile(new URL('../public/social-card-v4.jpg', import.meta.url))
+const image = await readFile(new URL('../public/social-card-v5.jpg', import.meta.url))
 
 const requiredMetadata = [
   '<meta property="og:site_name" content="SeePoundCoffeePie" />',
-  '<meta property="og:image" content="https://seepoundcoffeepie.com/social-card-v4.jpg" />',
+  '<meta property="og:image" content="https://seepoundcoffeepie.com/social-card-v5.jpg" />',
   '<meta property="og:image:type" content="image/jpeg" />',
   '<meta property="og:image:width" content="1200" />',
   '<meta property="og:image:height" content="630" />',
   '<meta name="twitter:card" content="summary_large_image" />',
-  '<meta name="twitter:image" content="https://seepoundcoffeepie.com/social-card-v4.jpg" />',
+  '<meta name="twitter:image" content="https://seepoundcoffeepie.com/social-card-v5.jpg" />',
 ]
 
 for (const metadata of requiredMetadata) {
@@ -55,7 +55,7 @@ function readJpegDimensions(bytes) {
 
 const dimensions = readJpegDimensions(image)
 if (dimensions.width !== 1200 || dimensions.height !== 630) {
-  throw new Error(`Expected social-card-v4.jpg to be 1200x630, received ${dimensions.width}x${dimensions.height}`)
+  throw new Error(`Expected social-card-v5.jpg to be 1200x630, received ${dimensions.width}x${dimensions.height}`)
 }
 
 if (image.byteLength < 100_000) {
