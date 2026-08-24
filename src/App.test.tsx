@@ -3,7 +3,7 @@
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import App from './App'
-import { initialProgress } from './lib/progress'
+import { dateKey, initialProgress } from './lib/progress'
 
 const progressKey = 'see-pound-coffee-pie-progress'
 
@@ -86,5 +86,31 @@ describe('beginner lesson interactions', () => {
     await waitFor(() => {
       expect((screen.getByRole('button', { name: 'Sign in' }) as HTMLButtonElement).disabled).toBe(false)
     })
+  })
+
+  it('opens the completed mission that best covers the active review queue', async () => {
+    window.localStorage.setItem(progressKey, JSON.stringify({
+      ...initialProgress('java'),
+      callsign: 'Test Cadet',
+      onboardingComplete: true,
+      completedMissions: ['java-coffee-protocol', 'java-routing-orders'],
+      conceptProgress: {
+        'java-booleans': {
+          strength: 1,
+          correct: 1,
+          incorrect: 1,
+          dueAt: dateKey(new Date()),
+        },
+      },
+    }))
+
+    render(<App />)
+    fireEvent.click(screen.getByRole('button', { name: 'Practice bay' }))
+
+    const reviewButton = screen.getByRole('button', { name: 'Review Routing Orders' })
+    expect(screen.getByText('BEST MATCH · MISSION 02')).toBeTruthy()
+    fireEvent.click(reviewButton)
+
+    expect(await screen.findByRole('heading', { name: 'Read the galley count' })).toBeTruthy()
   })
 })

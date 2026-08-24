@@ -46,6 +46,8 @@ Wrong answers do not consume hearts, lives, energy, or paid currency. A mistake 
 
 Before the current missions award completion, each exercise missed during that run returns in a short memory-repair round. The answer is reset so the learner retrieves it again, all teaching material remains available, and the repaired answer strengthens memory without awarding the exercise XP twice.
 
+The current Practice Bay keeps review queues separate by language. It recommends the completed mission that covers the greatest number of concepts due now, uses lower memory strength to break close matches, and offers the latest completed mission as optional practice when the queue is clear. This is an honest whole-mission replay step toward the later concept-specific adaptive system.
+
 ### Helpful hints without answer dumping
 
 PIE-314 is the academy guide. In the current build it supplies authored hints and analogies. A future conversational guide should know the current lesson, the learner’s code, prior attempts, and the concept being taught. It should ask diagnostic questions and reveal one step at a time. It must not silently replace the learner’s code with the solution.

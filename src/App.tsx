@@ -43,6 +43,7 @@ import { codebookEntries, codebookExampleState, codebookMatches } from './data/c
 import { trackById, tracks } from './data/curriculum'
 import { evaluateExercise } from './lib/evaluator'
 import { missionAvailability } from './lib/missions'
+import { conceptDisplayName, recommendPractice } from './lib/practice'
 import {
   completeMission,
   dateKey,
@@ -415,8 +416,17 @@ function MissionPath({ progress, onStart }: { progress: LearnerProgress; onStart
 }
 
 function PracticeBay({ progress, onStart }: { progress: LearnerProgress; onStart: (mission: Mission) => void }) {
-  const dueConcepts = Object.entries(progress.conceptProgress).filter(([, concept]) => isDue(concept))
-  const starterMission = trackById(progress.activeLanguage).missions[0]
+  const track = trackById(progress.activeLanguage)
+  const recommendation = recommendPractice(track, progress)
+  const { coveredConceptIds, dueConcepts, mission, mode } = recommendation
+  const dueLabel = `${dueConcepts.length} ${dueConcepts.length === 1 ? 'concept is' : 'concepts are'} ready`
+  const heroTitle = mode === 'start' ? 'Your first mission is ready' : mode === 'due' ? dueLabel : 'Your orbit is clear'
+  const heroText = mode === 'start'
+    ? `Begin with ${mission.title}. Reviews appear here after you have practiced a concept.`
+    : mode === 'due'
+      ? `Replay ${mission.title}. It is the best completed mission for ${coveredConceptIds.length} of the ${dueConcepts.length} concepts due in ${track.shortName}.`
+      : `Nothing in ${track.shortName} is due yet. ${mission.title} is available if you want an extra pass.`
+  const actionLabel = mode === 'start' ? `Start ${mission.title}` : mode === 'due' ? `Review ${mission.title}` : `Practice ${mission.title}`
 
   return (
     <main className="content-page">
@@ -426,11 +436,11 @@ function PracticeBay({ progress, onStart }: { progress: LearnerProgress; onStart
       <section className="practice-hero">
         <div className="practice-orbit"><Orbit /><span>{dueConcepts.length}</span></div>
         <div>
-          <small>REVIEW QUEUE</small>
-          <h2>{dueConcepts.length ? `${dueConcepts.length} concepts are ready` : 'Your orbit is clear'}</h2>
-          <p>{dueConcepts.length ? 'Replay the first mission to reinforce the concepts currently due.' : 'Complete a mission and any shaky concepts will return here for another pass.'}</p>
+          <small>{mode === 'due' ? `BEST MATCH · MISSION ${String(mission.chapter).padStart(2, '0')}` : 'REVIEW QUEUE'}</small>
+          <h2>{heroTitle}</h2>
+          <p>{heroText}</p>
         </div>
-        <button className="primary-action" onClick={() => onStart(starterMission)}><RotateCcw size={17} /> {progress.completedMissions.includes(starterMission.id) ? 'Practice mission' : 'Start first mission'}</button>
+        <button className="primary-action" onClick={() => onStart(mission)}><RotateCcw size={17} /> {actionLabel}</button>
       </section>
       <div className="section-label"><span>HOW REVIEWS WORK</span><i /></div>
       <div className="explain-grid">
@@ -441,8 +451,15 @@ function PracticeBay({ progress, onStart }: { progress: LearnerProgress; onStart
       {dueConcepts.length > 0 && (
         <section className="concept-list">
           <h2>Due concepts</h2>
-          {dueConcepts.map(([id, concept]) => (
-            <div key={id}><Code2 /><span><b>{id.replaceAll('-', ' ')}</b><small>Memory strength {concept.strength} of 5</small></span><strong>READY</strong></div>
+          {dueConcepts.map(({ id, missionTitles, progress: concept }) => (
+            <div key={id}>
+              <Code2 />
+              <span>
+                <b>{conceptDisplayName(track, id)}</b>
+                <small>Learned in {missionTitles.join(' and ')} · Memory strength {concept.strength} of 5</small>
+              </span>
+              <strong>{coveredConceptIds.includes(id) ? 'IN REVIEW' : 'WAITING'}</strong>
+            </div>
           ))}
         </section>
       )}
