@@ -2540,6 +2540,519 @@ const javaDroidRoutineExercises: Exercise[] = [
   },
 ]
 
+const pythonVoidWyrmExercises: Exercise[] = [
+  {
+    id: 'py6-trace-threat',
+    conceptId: 'python-conditions',
+    eyebrow: 'Systems recall 1 of 5',
+    title: 'Trace the threat scan',
+    explanation:
+      'This program combines a list, a loop, and a condition you already know. The loop visits both hazards, but the indented print runs only when the current value equals wyrm.',
+    analogy:
+      'A scanner sweeps every contact, while the alarm sounds only for the contact that matches the danger profile.',
+    type: 'prediction',
+    prompt: 'Which line reaches the console?',
+    displayCode: 'hazards = ["mist", "wyrm"]\n\nfor hazard in hazards:\n    if hazard == "wyrm":\n        print("Alert:", hazard)',
+    choices: [
+      { id: 'a', label: 'Alert: wyrm', detail: 'Only wyrm makes the comparison true.' },
+      { id: 'b', label: 'Alert: mist then Alert: wyrm', detail: 'The loop visits both, but the condition filters the output.' },
+      { id: 'c', label: 'Nothing', detail: 'The second list value makes the condition true.' },
+    ],
+    correctChoice: 'a',
+    output: 'Alert: wyrm',
+    hint: 'Trace the condition once with mist and once with wyrm.',
+    recap: 'A condition inside a loop can choose which visited values trigger an action.',
+    xp: 10,
+  },
+  {
+    id: 'py6-plan-system',
+    conceptId: 'python-program-planning',
+    eyebrow: 'Captain plan 2 of 5',
+    title: 'Choose the small pieces',
+    explanation:
+      'A larger program is still made from small familiar jobs. A list stores the contacts, a loop visits them, and a function gives the repeated report a reusable name.',
+    analogy:
+      'The captain does not issue one enormous order. Cargo, patrol, and communications each receive one clear responsibility.',
+    type: 'choice',
+    prompt: 'Which plan gives each programming tool one clear job?',
+    choices: [
+      { id: 'a', label: 'List stores, loop visits, function reports', detail: 'Each tool handles the job it was designed to do.' },
+      { id: 'b', label: 'Function stores every value automatically', detail: 'A function runs a job; it does not replace the list.' },
+      { id: 'c', label: 'Loop invents the contacts', detail: 'A loop visits values that the program already has.' },
+    ],
+    correctChoice: 'a',
+    hint: 'Match storage, repetition, and reusable work to the tool that performs each job.',
+    recap: 'Plan a program as several small responsibilities that work together.',
+    xp: 12,
+  },
+  {
+    id: 'py6-order-system',
+    conceptId: 'python-capstone-assembly',
+    eyebrow: 'Flight plan 3 of 5',
+    title: 'Assemble the defense scan',
+    explanation:
+      'Python first defines the reusable report, then creates the list, then loops through it. The indented call belongs inside the loop so every current value reaches the function.',
+    analogy:
+      'Install the alarm, load the sensor contacts, begin the sweep, then send each contact through the installed alarm.',
+    type: 'ordering',
+    prompt: 'Arrange the pieces into a complete reusable scan.',
+    orderItems: [
+      { id: 'call', code: '    report(hazard)' },
+      { id: 'list', code: 'hazards = ["mist", "wyrm"]' },
+      { id: 'body', code: '    print("Scanned:", hazard)' },
+      { id: 'loop', code: 'for hazard in hazards:' },
+      { id: 'define', code: 'def report(hazard):' },
+    ],
+    correctOrder: ['define', 'body', 'list', 'loop', 'call'],
+    incorrectMessage: 'Define report with its indented body, create the list, open the loop, then call report inside that loop.',
+    output: 'Scanned: mist\nScanned: wyrm',
+    hint: 'Build the function before the list and loop use it.',
+    recap: 'Definitions come before calls, and indentation shows which instructions belong inside each structure.',
+    xp: 16,
+  },
+  {
+    id: 'py6-repair-filter',
+    conceptId: 'python-capstone-repair',
+    eyebrow: 'Damage control 4 of 5',
+    title: 'Repair the danger comparison',
+    explanation:
+      'The equals sign stores a value, while two equals signs compare values. An if question needs the comparison operator == so Python can produce true or false.',
+    analogy:
+      'The scanner must ask whether the contact matches wyrm. A cargo transfer order cannot answer that question.',
+    type: 'bugfix',
+    prompt: 'Repair the comparison so the function reports the wyrm.',
+    starterCode: 'def report(hazard):\n    if hazard = "wyrm":\n        print("Alert:", hazard)\n\nreport("wyrm")',
+    focus: 'Change the single = in the if line to ==. Do not change the function or its call.',
+    codeGuide: [
+      { code: '=', plain: 'One equals sign stores a value. It is not the comparison question needed by this if statement.' },
+      { code: '==', plain: 'Two equals signs ask whether the values match and produce either true or false.' },
+      { code: 'if hazard == "wyrm":', plain: 'The colon opens the indented route that runs only when the comparison is true.' },
+    ],
+    checks: [
+      { pattern: 'if\\s+hazard\\s*==\\s*["\\\']wyrm["\\\']\\s*:', message: 'Use == in the if line so Python compares hazard with "wyrm".' },
+      { pattern: 'report\\s*\\(\\s*["\\\']wyrm["\\\']\\s*\\)', message: 'Keep report("wyrm") so the repaired function is called.' },
+    ],
+    output: 'Alert: wyrm',
+    hint: 'The repaired question is if hazard == "wyrm":',
+    recap: 'Use = to store a value and == to compare two values.',
+    xp: 18,
+  },
+  {
+    id: 'py6-void-wyrm',
+    conceptId: 'python-capstone',
+    eyebrow: 'Captain trial 5 of 5',
+    title: 'Face the Void Wyrm',
+    explanation:
+      'This final program already contains every structure. Connect the loop to hazards and pass its current hazard into report. The function decides which contact triggers the alarm.',
+    analogy:
+      'The ship sweeps its complete sensor list and routes each contact through one reusable threat console.',
+    type: 'code',
+    prompt: 'Replace both blanks to scan every hazard through the report function.',
+    starterCode: 'def report(current_hazard):\n    if current_hazard == "wyrm":\n        print("Alert:", current_hazard)\n\nhazards = ["mist", "wyrm", "moon"]\n\nfor hazard in _____:\n    report(_____)',
+    focus: 'Replace only the two _____ blanks: first with hazards, then with hazard.',
+    codeGuide: [
+      { code: 'def report(current_hazard):', plain: 'This defines a reusable job with one temporary input parameter named current_hazard.' },
+      { code: 'if current_hazard == "wyrm":', plain: 'The function reports only the input value that matches the danger name.' },
+      { code: 'for hazard in hazards:', plain: 'The loop retrieves one value at a time from the complete hazards list.' },
+      { code: 'report(hazard)', plain: 'The call sends the current loop value into the function for inspection.' },
+    ],
+    checks: [
+      { pattern: 'for\\s+hazard\\s+in\\s+hazards\\s*:', message: 'Put hazards after in so the loop visits the complete list.' },
+      { pattern: 'report\\s*\\(\\s*hazard\\s*\\)', message: 'Pass hazard into report so the function receives the current loop value.' },
+      { pattern: 'if\\s+current_hazard\\s*==\\s*["\\\']wyrm["\\\']\\s*:', message: 'Keep the comparison inside report so only the wyrm triggers the alert.' },
+    ],
+    output: 'Alert: wyrm',
+    hint: 'The final two lines should read for hazard in hazards: and report(hazard).',
+    recap: 'You combined storage, repetition, decisions, and a reusable function into one working Python system.',
+    xp: 29,
+  },
+]
+
+const cppTitanForgeExercises: Exercise[] = [
+  {
+    id: 'cpp6-trace-damage',
+    conceptId: 'cpp-conditions',
+    eyebrow: 'Systems recall 1 of 5',
+    title: 'Trace the hull scan',
+    explanation:
+      'This C++ program combines an array, a loop, and a condition. The loop visits both parts, but std::cout runs only when the current part equals cracked seal.',
+    analogy:
+      'An inspection arm checks every component, while the repair alarm speaks only for the component matching the fault record.',
+    type: 'prediction',
+    prompt: 'Which line reaches the console?',
+    displayCode: 'std::string parts[] = { "stable plate", "cracked seal" };\n\nfor (std::string part : parts) {\n    if (part == "cracked seal") {\n        std::cout << "Repair: " << part;\n    }\n}',
+    choices: [
+      { id: 'a', label: 'Repair: cracked seal', detail: 'Only cracked seal makes the comparison true.' },
+      { id: 'b', label: 'Both parts are reported', detail: 'The loop visits both, but the condition filters the output.' },
+      { id: 'c', label: 'Nothing', detail: 'The second array value makes the condition true.' },
+    ],
+    correctChoice: 'a',
+    output: 'Repair: cracked seal',
+    hint: 'Trace the condition once for each array value.',
+    recap: 'A condition inside a loop can select which inspected values trigger an action.',
+    xp: 10,
+  },
+  {
+    id: 'cpp6-plan-system',
+    conceptId: 'cpp-program-planning',
+    eyebrow: 'Engineer plan 2 of 5',
+    title: 'Assign each system a job',
+    explanation:
+      'A larger C++ program is still made from small familiar jobs. An array stores parts, a loop visits them, and a function gives the repeated inspection a reusable name.',
+    analogy:
+      'The chief engineer divides one repair order between storage racks, an inspection arm, and a reusable diagnostic module.',
+    type: 'choice',
+    prompt: 'Which plan gives each programming tool one clear job?',
+    choices: [
+      { id: 'a', label: 'Array stores, loop visits, function inspects', detail: 'Each tool handles the responsibility it was designed for.' },
+      { id: 'b', label: 'Function becomes the entire array', detail: 'A function runs a job; it does not replace stored values.' },
+      { id: 'c', label: 'Loop invents every part', detail: 'A loop visits values that the program already has.' },
+    ],
+    correctChoice: 'a',
+    hint: 'Match storage, repetition, and reusable work to their separate tools.',
+    recap: 'Plan a larger program as several small responsibilities that cooperate.',
+    xp: 12,
+  },
+  {
+    id: 'cpp6-order-system',
+    conceptId: 'cpp-capstone-assembly',
+    eyebrow: 'Forge plan 3 of 5',
+    title: 'Assemble the repair scan',
+    explanation:
+      'C++ defines the reusable inspect function before main calls it. Inside main, create the array before the loop and place the function call inside the loop braces.',
+    analogy:
+      'Install the diagnostic module, load the parts rack, begin inspection, then feed each current part into the module.',
+    type: 'ordering',
+    prompt: 'Arrange the pieces into the working center of a repair scan.',
+    orderItems: [
+      { id: 'call', code: '    inspect(part);' },
+      { id: 'array', code: 'std::string parts[] = { "plate", "seal" };' },
+      { id: 'end', code: '}' },
+      { id: 'loop', code: 'for (std::string part : parts) {' },
+      { id: 'define', code: 'void inspect(std::string part) { /* report part */ }' },
+    ],
+    correctOrder: ['define', 'array', 'loop', 'call', 'end'],
+    incorrectMessage: 'Define inspect first, create the array, open the loop, call inspect inside it, then close the loop brace.',
+    output: 'plate\nseal',
+    hint: 'Build the function before the array and loop use it.',
+    recap: 'C++ definitions come before calls, and braces group the instructions that a loop repeats.',
+    xp: 16,
+  },
+  {
+    id: 'cpp6-repair-filter',
+    conceptId: 'cpp-capstone-repair',
+    eyebrow: 'Damage control 4 of 5',
+    title: 'Repair the fault comparison',
+    explanation:
+      'One equals sign stores a value, while two equals signs compare values. An if question needs == so C++ can decide whether part matches cracked seal.',
+    analogy:
+      'The diagnostic must ask whether a part matches the fault record. A reassignment order cannot answer that question.',
+    type: 'bugfix',
+    prompt: 'Repair the comparison so the function reports the cracked seal.',
+    starterCode: 'void inspect(std::string part) {\n    if (part = "cracked seal") {\n        std::cout << "Repair: " << part;\n    }\n}\n\ninspect("cracked seal");',
+    focus: 'Change the single = in the if line to ==. Do not change the function or its call.',
+    codeGuide: [
+      { code: '=', plain: 'One equals sign assigns or stores a value. It is not the comparison needed by this if statement.' },
+      { code: '==', plain: 'Two equals signs compare values and produce the true or false answer that if needs.' },
+      { code: 'if (part == "cracked seal")', plain: 'Parentheses hold the question, while braces surround the route taken when it is true.' },
+    ],
+    checks: [
+      { pattern: 'if\\s*\\(\\s*part\\s*==\\s*"cracked seal"\\s*\\)', message: 'Use == inside the if parentheses so C++ compares the two text values.' },
+      { pattern: 'inspect\\s*\\(\\s*"cracked seal"\\s*\\)\\s*;', message: 'Keep the inspect call so the repaired function receives a part.' },
+    ],
+    output: 'Repair: cracked seal',
+    hint: 'The repaired question is if (part == "cracked seal") {',
+    recap: 'Use = to store a value and == to compare two values in C++.',
+    xp: 18,
+  },
+  {
+    id: 'cpp6-titan-forge',
+    conceptId: 'cpp-capstone',
+    eyebrow: 'Engineer trial 5 of 5',
+    title: 'Activate the Titan Forge',
+    explanation:
+      'The final simulator already contains every structure. Connect the loop to parts and pass its current part into inspect. The function decides which component needs repair.',
+    analogy:
+      'The forge moves every component past one reusable diagnostic station and raises an alarm only for the damaged one.',
+    type: 'code',
+    prompt: 'Replace both blanks to inspect every part in the array.',
+    starterCode: '#include <iostream>\n#include <string>\n\nvoid inspect(std::string currentPart) {\n    if (currentPart == "cracked seal") {\n        std::cout << "Repair: " << currentPart;\n    }\n}\n\nint main() {\n    std::string parts[] = { "stable plate", "cracked seal", "charged core" };\n\n    for (std::string part : _____) {\n        inspect(_____);\n    }\n    return 0;\n}',
+    focus: 'Replace only the two _____ blanks: first with parts, then with part.',
+    codeGuide: [
+      ...cppProgramFrame,
+      { code: 'void inspect(std::string currentPart)', plain: 'void says this function returns no value. currentPart is its typed temporary input parameter.' },
+      { code: 'for (std::string part : parts)', plain: 'The range-based loop retrieves one text value at a time from the complete array.' },
+      { code: 'inspect(part);', plain: 'This call sends the current loop value into the reusable inspection function.' },
+    ],
+    checks: [
+      { pattern: 'for\\s*\\(\\s*std::string\\s+part\\s*:\\s*parts\\s*\\)', message: 'Put parts after the colon so the loop visits the complete array.' },
+      { pattern: 'inspect\\s*\\(\\s*part\\s*\\)\\s*;', message: 'Pass part into inspect so the function receives the current loop value.' },
+      { pattern: 'currentPart\\s*==\\s*"cracked seal"', message: 'Keep the comparison in inspect so only the cracked seal triggers the repair report.' },
+    ],
+    output: 'Repair: cracked seal',
+    hint: 'The loop header ends with : parts, and its body calls inspect(part);',
+    recap: 'You combined typed storage, repetition, decisions, and a reusable function into one working C++ system.',
+    xp: 29,
+  },
+]
+
+const csharpCaptainsTrialExercises: Exercise[] = [
+  {
+    id: 'cs6-trace-scout',
+    conceptId: 'csharp-conditions',
+    eyebrow: 'Systems recall 1 of 5',
+    title: 'Trace the away-team scan',
+    explanation:
+      'This C# program combines an array, a foreach loop, and a condition. The loop visits both officers, but the output runs only when the current name equals Pip.',
+    analogy:
+      'The bridge checks every badge, while the scout signal opens only for the officer assigned to reconnaissance.',
+    type: 'prediction',
+    prompt: 'Which line reaches the console?',
+    displayCode: 'string[] crew = { "Mira", "Pip" };\n\nforeach (string name in crew)\n{\n    if (name == "Pip")\n    {\n        Console.WriteLine($"Scout: {name}");\n    }\n}',
+    choices: [
+      { id: 'a', label: 'Scout: Pip', detail: 'Only Pip makes the comparison true.' },
+      { id: 'b', label: 'Both officers are reported', detail: 'The loop visits both, but the condition filters the output.' },
+      { id: 'c', label: 'Nothing', detail: 'The second array value makes the condition true.' },
+    ],
+    correctChoice: 'a',
+    output: 'Scout: Pip',
+    hint: 'Trace the comparison once for Mira and once for Pip.',
+    recap: 'A condition inside a foreach loop can select which roster values trigger an action.',
+    xp: 10,
+  },
+  {
+    id: 'cs6-plan-system',
+    conceptId: 'csharp-program-planning',
+    eyebrow: 'Captain plan 2 of 5',
+    title: 'Delegate the bridge jobs',
+    explanation:
+      'A larger C# program is still made from small familiar jobs. An array stores officers, a loop visits them, and a method gives the repeated order a reusable name.',
+    analogy:
+      'A captain delegates roster, patrol, and reporting duties instead of giving the bridge one impossible command.',
+    type: 'choice',
+    prompt: 'Which plan gives each programming tool one clear job?',
+    choices: [
+      { id: 'a', label: 'Array stores, loop visits, method reports', detail: 'Each tool handles the responsibility it was designed for.' },
+      { id: 'b', label: 'Method becomes the entire roster', detail: 'A method runs a job; it does not replace stored values.' },
+      { id: 'c', label: 'Loop invents every officer', detail: 'A loop visits values that the program already has.' },
+    ],
+    correctChoice: 'a',
+    hint: 'Match storage, repetition, and reusable work to their separate tools.',
+    recap: 'Plan a larger program as several small responsibilities that cooperate.',
+    xp: 12,
+  },
+  {
+    id: 'cs6-order-system',
+    conceptId: 'csharp-capstone-assembly',
+    eyebrow: 'Command plan 3 of 5',
+    title: 'Assemble the crew report',
+    explanation:
+      'C# defines the reusable Report method before the later loop calls it. Create the array before foreach, and place the method call inside the loop braces.',
+    analogy:
+      'Install the report control, load the crew manifest, begin roll call, then feed each current officer into the control.',
+    type: 'ordering',
+    prompt: 'Arrange the pieces into a complete reusable crew report.',
+    orderItems: [
+      { id: 'call', code: '    Report(name);' },
+      { id: 'array', code: 'string[] crew = { "Mira", "Pip" };' },
+      { id: 'end', code: '}' },
+      { id: 'loop', code: 'foreach (string name in crew) {' },
+      { id: 'define', code: 'void Report(string name) { Console.WriteLine(name); }' },
+    ],
+    correctOrder: ['define', 'array', 'loop', 'call', 'end'],
+    incorrectMessage: 'Define Report first, create the array, open foreach, call Report inside it, then close the loop brace.',
+    output: 'Mira\nPip',
+    hint: 'Build the method before the array and loop use it.',
+    recap: 'C# method definitions come before calls, and braces group the instructions that a loop repeats.',
+    xp: 16,
+  },
+  {
+    id: 'cs6-repair-scout',
+    conceptId: 'csharp-capstone-repair',
+    eyebrow: 'Command repair 4 of 5',
+    title: 'Repair the scout comparison',
+    explanation:
+      'One equals sign stores a value, while two equals signs compare values. An if question needs == so C# can decide whether the current name matches Pip.',
+    analogy:
+      'The bridge must ask whether this officer is the scout. Reassigning the badge cannot answer that question.',
+    type: 'bugfix',
+    prompt: 'Repair the comparison so the method reports the scout.',
+    starterCode: 'void Report(string name)\n{\n    if (name = "Pip")\n    {\n        Console.WriteLine($"Scout: {name}");\n    }\n}\n\nReport("Pip");',
+    focus: 'Change the single = in the if line to ==. Do not change the method or its call.',
+    codeGuide: [
+      { code: '=', plain: 'One equals sign assigns or stores a value. It is not the comparison needed by this if statement.' },
+      { code: '==', plain: 'Two equals signs compare values and produce the true or false answer that if needs.' },
+      { code: 'if (name == "Pip")', plain: 'Parentheses hold the question, while braces surround the route taken when it is true.' },
+    ],
+    checks: [
+      { pattern: 'if\\s*\\(\\s*name\\s*==\\s*"Pip"\\s*\\)', message: 'Use == inside the if parentheses so C# compares the two text values.' },
+      { pattern: 'Report\\s*\\(\\s*"Pip"\\s*\\)\\s*;', message: 'Keep the Report call so the repaired method receives an officer name.' },
+    ],
+    output: 'Scout: Pip',
+    hint: 'The repaired question is if (name == "Pip")',
+    recap: 'Use = to store a value and == to compare two values in C#.',
+    xp: 18,
+  },
+  {
+    id: 'cs6-captains-trial',
+    conceptId: 'csharp-capstone',
+    eyebrow: 'Captain trial 5 of 5',
+    title: 'Command the encounter',
+    explanation:
+      'The final simulation already contains every structure. Connect foreach to crew and pass its current name into Report. The method decides which officer receives the scout order.',
+    analogy:
+      'Roll call moves every officer past one reusable command station and dispatches only the matching scout.',
+    type: 'code',
+    prompt: 'Replace both blanks to process every officer in the array.',
+    starterCode: 'void Report(string currentName)\n{\n    if (currentName == "Pip")\n    {\n        Console.WriteLine($"Scout: {currentName}");\n    }\n}\n\nstring[] crew = { "Mira", "Tov", "Pip" };\n\nforeach (string name in _____)\n{\n    Report(_____);\n}',
+    focus: 'Replace only the two _____ blanks: first with crew, then with name.',
+    codeGuide: [
+      { code: 'void Report(string currentName)', plain: 'void says this method returns no value. currentName is its typed temporary input parameter.' },
+      { code: 'if (currentName == "Pip")', plain: 'The method reports only the input value that matches the scout name.' },
+      { code: 'foreach (string name in crew)', plain: 'The loop retrieves one text value at a time from the complete crew array.' },
+      { code: 'Report(name);', plain: 'The call sends the current loop value into the reusable command method.' },
+    ],
+    checks: [
+      { pattern: 'foreach\\s*\\(\\s*string\\s+name\\s+in\\s+crew\\s*\\)', message: 'Put crew after in so foreach visits the complete array.' },
+      { pattern: 'Report\\s*\\(\\s*name\\s*\\)\\s*;', message: 'Pass name into Report so the method receives the current loop value.' },
+      { pattern: 'currentName\\s*==\\s*"Pip"', message: 'Keep the comparison in Report so only Pip receives the scout order.' },
+    ],
+    output: 'Scout: Pip',
+    hint: 'The foreach header ends with in crew, and its body calls Report(name);',
+    recap: 'You combined typed storage, repetition, decisions, and a reusable method into one working C# system.',
+    xp: 29,
+  },
+]
+
+const javaNebulaTrialExercises: Exercise[] = [
+  {
+    id: 'java6-trace-power',
+    conceptId: 'java-conditions',
+    eyebrow: 'Systems recall 1 of 5',
+    title: 'Trace the battery scan',
+    explanation:
+      'This Java program combines an array, an enhanced for loop, and a condition. The loop visits both levels, but the output runs only when the current level is below 30.',
+    analogy:
+      'A service scanner checks every battery, while the warning lamp opens only for a reading below the safe line.',
+    type: 'prediction',
+    prompt: 'Which line reaches the console?',
+    displayCode: 'int[] levels = { 80, 25 };\n\nfor (int level : levels) {\n    if (level < 30) {\n        System.out.println("Low: " + level);\n    }\n}',
+    choices: [
+      { id: 'a', label: 'Low: 25', detail: 'Only 25 is below 30.' },
+      { id: 'b', label: 'Low: 80 then Low: 25', detail: 'The loop visits both, but the condition filters the output.' },
+      { id: 'c', label: 'Nothing', detail: 'The second array value makes the condition true.' },
+    ],
+    correctChoice: 'a',
+    output: 'Low: 25',
+    hint: 'Compare each battery level with 30, one loop pass at a time.',
+    recap: 'A condition inside an enhanced for loop can select which array values trigger an action.',
+    xp: 10,
+  },
+  {
+    id: 'java6-plan-system',
+    conceptId: 'java-program-planning',
+    eyebrow: 'Guild plan 2 of 5',
+    title: 'Assign each system a job',
+    explanation:
+      'A larger Java program is still made from small familiar jobs. An array stores levels, a loop visits them, and a method gives the repeated inspection a reusable name.',
+    analogy:
+      'The guild divides one expedition order between storage racks, a service cycle, and a reusable diagnostic module.',
+    type: 'choice',
+    prompt: 'Which plan gives each programming tool one clear job?',
+    choices: [
+      { id: 'a', label: 'Array stores, loop visits, method inspects', detail: 'Each tool handles the responsibility it was designed for.' },
+      { id: 'b', label: 'Method becomes the entire array', detail: 'A method runs a job; it does not replace stored values.' },
+      { id: 'c', label: 'Loop invents each battery level', detail: 'A loop visits values that the program already has.' },
+    ],
+    correctChoice: 'a',
+    hint: 'Match storage, repetition, and reusable work to their separate tools.',
+    recap: 'Plan a larger program as several small responsibilities that cooperate.',
+    xp: 12,
+  },
+  {
+    id: 'java6-order-system',
+    conceptId: 'java-capstone-assembly',
+    eyebrow: 'Expedition plan 3 of 5',
+    title: 'Assemble the battery report',
+    explanation:
+      'Java keeps the reusable inspect method in the class before main calls it. Inside main, create the array before the loop and place the method call inside the loop braces.',
+    analogy:
+      'Install the diagnostic behavior, load the battery readings, begin the service cycle, then feed each reading into the module.',
+    type: 'ordering',
+    prompt: 'Arrange the pieces into the working center of a battery scan.',
+    orderItems: [
+      { id: 'call', code: '    inspect(level);' },
+      { id: 'array', code: 'int[] levels = { 80, 25 };' },
+      { id: 'end', code: '}' },
+      { id: 'loop', code: 'for (int level : levels) {' },
+      { id: 'define', code: 'static void inspect(int level) { /* report level */ }' },
+    ],
+    correctOrder: ['define', 'array', 'loop', 'call', 'end'],
+    incorrectMessage: 'Define inspect first, create the array, open the loop, call inspect inside it, then close the loop brace.',
+    output: '80\n25',
+    hint: 'Build the method before the array and loop use it.',
+    recap: 'Java method definitions live in the class, and braces group the instructions that a loop repeats.',
+    xp: 16,
+  },
+  {
+    id: 'java6-repair-power',
+    conceptId: 'java-capstone-repair',
+    eyebrow: 'Service repair 4 of 5',
+    title: 'Repair the battery comparison',
+    explanation:
+      'One equals sign stores a value, while two equals signs compare values. An if question needs == so Java can decide whether the current level equals 25.',
+    analogy:
+      'The diagnostic must ask whether this reading matches the fault record. Replacing the reading cannot answer that question.',
+    type: 'bugfix',
+    prompt: 'Repair the comparison so the method reports the low battery.',
+    starterCode: 'static void inspect(int level) {\n    if (level = 25) {\n        System.out.println("Low: " + level);\n    }\n}\n\ninspect(25);',
+    focus: 'Change the single = in the if line to ==. Do not change the method or its call.',
+    codeGuide: [
+      { code: '=', plain: 'One equals sign assigns or stores a value. It is not the comparison needed by this if statement.' },
+      { code: '==', plain: 'Two equals signs compare values and produce the true or false answer that if needs.' },
+      { code: 'if (level == 25)', plain: 'Parentheses hold the question, while braces surround the route taken when it is true.' },
+    ],
+    checks: [
+      { pattern: 'if\\s*\\(\\s*level\\s*==\\s*25\\s*\\)', message: 'Use == inside the if parentheses so Java compares level with 25.' },
+      { pattern: 'inspect\\s*\\(\\s*25\\s*\\)\\s*;', message: 'Keep the inspect call so the repaired method receives a battery level.' },
+    ],
+    output: 'Low: 25',
+    hint: 'The repaired question is if (level == 25) {',
+    recap: 'Use = to store a value and == to compare two values in Java.',
+    xp: 18,
+  },
+  {
+    id: 'java6-nebula-trial',
+    conceptId: 'java-capstone',
+    eyebrow: 'Systems trial 5 of 5',
+    title: 'Chart the nebula expedition',
+    explanation:
+      'The final planner already contains every structure. Connect the enhanced for loop to levels and pass its current level into inspect. The method decides which reading needs attention.',
+    analogy:
+      'The expedition checks every stored battery reading through one reusable service module before entering the nebula.',
+    type: 'code',
+    prompt: 'Replace both blanks to inspect every battery level in the array.',
+    starterCode: 'public class Main {\n    static void inspect(int currentLevel) {\n        if (currentLevel < 30) {\n            System.out.println("Low: " + currentLevel);\n        }\n    }\n\n    public static void main(String[] args) {\n        int[] levels = { 80, 25, 60 };\n\n        for (int level : _____) {\n            inspect(_____);\n        }\n    }\n}',
+    focus: 'Replace only the two _____ blanks: first with levels, then with level.',
+    codeGuide: [
+      ...javaProgramFrame,
+      { code: 'static void inspect(int currentLevel)', plain: 'static lets main call this method directly. currentLevel is its typed temporary input parameter.' },
+      { code: 'if (currentLevel < 30)', plain: 'The method reports only an input number that falls below the safe battery threshold.' },
+      { code: 'for (int level : levels)', plain: 'The enhanced for loop retrieves one integer at a time from the complete array.' },
+      { code: 'inspect(level);', plain: 'The call sends the current loop value into the reusable inspection method.' },
+    ],
+    checks: [
+      { pattern: 'for\\s*\\(\\s*int\\s+level\\s*:\\s*levels\\s*\\)', message: 'Put levels after the colon so the loop visits the complete array.' },
+      { pattern: 'inspect\\s*\\(\\s*level\\s*\\)\\s*;', message: 'Pass level into inspect so the method receives the current loop value.' },
+      { pattern: 'currentLevel\\s*<\\s*30', message: 'Keep the comparison in inspect so only a low battery triggers the report.' },
+    ],
+    output: 'Low: 25',
+    hint: 'The loop header ends with : levels, and its body calls inspect(level);',
+    recap: 'You combined typed storage, repetition, decisions, and a reusable method into one working Java system.',
+    xp: 29,
+  },
+]
+
 const mission = (
   id: string,
   language: LanguageId,
@@ -2578,7 +3091,7 @@ export const tracks: LanguageTrack[] = [
       mission('py-cargo-logic', 'python', 3, 'Cargo Logic', 'Organize the hold', 'Lists keep a nearly unlimited cargo manifest under control.', 'package', 'locked', pythonCargoLogicExercises),
       mission('py-looping-orbit', 'python', 4, 'Looping Orbit', 'Repeat with purpose', 'Loops scan every cargo item without repeating commands by hand.', 'terminal', 'locked', pythonLoopingOrbitExercises),
       mission('py-function-foundry', 'python', 5, 'Function Foundry', 'Build reusable tools', 'Functions turn a working idea into a dependable ship system.', 'shield', 'locked', pythonFunctionFoundryExercises),
-      mission('py-void-wyrm', 'python', 6, 'The Void Wyrm', 'Captain trial', 'Combine your systems in a complete text adventure.', 'crown', 'locked'),
+      mission('py-void-wyrm', 'python', 6, 'The Void Wyrm', 'Captain trial', 'Combine your systems in a complete text adventure.', 'crown', 'locked', pythonVoidWyrmExercises),
     ],
   },
   {
@@ -2595,7 +3108,7 @@ export const tracks: LanguageTrack[] = [
       mission('cpp-cargo-array', 'cpp', 3, 'Cargo Array', 'Address every part', 'Arrays keep an ordered expedition manifest under one name.', 'package', 'locked', cppCargoArrayExercises),
       mission('cpp-engine-loop', 'cpp', 4, 'Engine Loop', 'Repeat the inspection', 'Loops inspect every part without copying the same engineering order.', 'terminal', 'locked', cppEngineLoopExercises),
       mission('cpp-command-function', 'cpp', 5, 'Command Function', 'Build a reusable module', 'Functions turn a working operation into a dependable engineering module.', 'satellite', 'locked', cppCommandFunctionExercises),
-      mission('cpp-titan-forge', 'cpp', 6, 'Titan Forge', 'Engineer trial', 'Build a tactical simulator from the systems you mastered.', 'crown', 'locked'),
+      mission('cpp-titan-forge', 'cpp', 6, 'Titan Forge', 'Engineer trial', 'Build a tactical simulator from the systems you mastered.', 'crown', 'locked', cppTitanForgeExercises),
     ],
   },
   {
@@ -2612,7 +3125,7 @@ export const tracks: LanguageTrack[] = [
       mission('cs-crew-roster', 'csharp', 3, 'Crew Roster', 'Manage the manifest', 'Arrays organize specialists, familiars, and one suspicious goat.', 'package', 'locked', csharpCrewRosterExercises),
       mission('cs-patrol-loop', 'csharp', 4, 'Patrol Loop', 'Call every station', 'Loops repeat roster work without exhausting the ensigns.', 'satellite', 'locked', csharpPatrolLoopExercises),
       mission('cs-command-method', 'csharp', 5, 'Command Method', 'Build a reusable order', 'Methods turn a working command into a dependable bridge control.', 'terminal', 'locked', csharpCommandMethodExercises),
-      mission('cs-captains-trial', 'csharp', 6, 'Captain’s Trial', 'Command simulation', 'Build a small encounter system with everything you learned.', 'crown', 'locked'),
+      mission('cs-captains-trial', 'csharp', 6, 'Captain’s Trial', 'Command simulation', 'Build a small encounter system with everything you learned.', 'crown', 'locked', csharpCaptainsTrialExercises),
     ],
   },
   {
@@ -2629,7 +3142,7 @@ export const tracks: LanguageTrack[] = [
       mission('java-crew-array', 'java', 3, 'Crew Array', 'Organize the watch', 'Arrays keep a growing service-droid manifest in order.', 'package', 'locked', javaCrewArrayExercises),
       mission('java-repeat-brew', 'java', 4, 'Repeat Brew', 'Automate the routine', 'Loops repeat safe droid checks without copying instructions.', 'terminal', 'locked', javaRepeatBrewExercises),
       mission('java-droid-routine', 'java', 5, 'Droid Routine', 'Build reusable behavior', 'Methods turn a working routine into dependable droid behavior.', 'shield', 'locked', javaDroidRoutineExercises),
-      mission('java-nebula-trial', 'java', 6, 'Nebula Trial', 'Systems trial', 'Combine your tools into a complete expedition planner.', 'crown', 'locked'),
+      mission('java-nebula-trial', 'java', 6, 'Nebula Trial', 'Systems trial', 'Combine your tools into a complete expedition planner.', 'crown', 'locked', javaNebulaTrialExercises),
     ],
   },
 ]

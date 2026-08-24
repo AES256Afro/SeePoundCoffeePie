@@ -7,7 +7,7 @@ describe('beginner curriculum scaffolding', () => {
       track.missions.flatMap((mission) => mission.exercises.filter((exercise) => exercise.type === 'code'))
     ))
 
-    expect(codeExercises).toHaveLength(32)
+    expect(codeExercises).toHaveLength(36)
     for (const exercise of codeExercises) {
       expect(exercise.starterCode, `${exercise.id} needs starter code`).toContain('_____')
       expect(exercise.focus?.length, `${exercise.id} needs a one-job instruction`).toBeGreaterThan(20)
@@ -24,7 +24,7 @@ describe('beginner curriculum scaffolding', () => {
       track.missions.flatMap((mission) => mission.exercises.filter((exercise) => exercise.type === 'bugfix'))
     ))
 
-    expect(bugFixes).toHaveLength(8)
+    expect(bugFixes).toHaveLength(12)
     for (const exercise of bugFixes) {
       expect(exercise.starterCode?.length, `${exercise.id} needs faulty starter code`).toBeGreaterThan(40)
       expect(exercise.focus, `${exercise.id} needs a bounded repair instruction`).toMatch(/change/iu)
@@ -96,11 +96,29 @@ describe('beginner curriculum scaffolding', () => {
     }
   })
 
+  it('finishes each track with recall, planning, assembly, repair, and a capstone', () => {
+    for (const track of tracks) {
+      const types = track.missions[5].exercises.map((exercise) => exercise.type)
+      expect(types, `${track.id} mission 6 needs an integrative capstone sequence`).toEqual([
+        'prediction',
+        'choice',
+        'ordering',
+        'bugfix',
+        'code',
+      ])
+
+      const capstone = track.missions[5].exercises[4]
+      expect(capstone.conceptId).toContain('capstone')
+      expect(capstone.codeGuide?.length).toBeGreaterThanOrEqual(4)
+      expect(capstone.starterCode?.match(/_____/g)).toHaveLength(2)
+    }
+  })
+
   it('keeps every authored exercise identifiable and fully teachable', () => {
     const exercises = tracks.flatMap((track) => track.missions.flatMap((mission) => mission.exercises))
     const ids = exercises.map((exercise) => exercise.id)
 
-    expect(exercises).toHaveLength(100)
+    expect(exercises).toHaveLength(120)
     expect(new Set(ids).size).toBe(ids.length)
     for (const exercise of exercises) {
       expect(exercise.explanation.length, `${exercise.id} needs a real explanation`).toBeGreaterThan(70)

@@ -210,4 +210,31 @@ describe('evaluateExercise', () => {
   ])('accepts the authored %s reusable report', (id, answer) => {
     expect(evaluateExercise(exercise(id), answer).correct).toBe(true)
   })
+
+  it.each([
+    ['py6-order-system', 'define|body|list|loop|call'],
+    ['cpp6-order-system', 'define|array|loop|call|end'],
+    ['cs6-order-system', 'define|array|loop|call|end'],
+    ['java6-order-system', 'define|array|loop|call|end'],
+  ])('accepts the authored %s capstone assembly', (id, answer) => {
+    expect(evaluateExercise(exercise(id), answer).correct).toBe(true)
+  })
+
+  it.each([
+    ['py6-repair-filter', 'def report(hazard):\n    if hazard == "wyrm":\n        print(hazard)\nreport("wyrm")'],
+    ['cpp6-repair-filter', 'void inspect(std::string part) { if (part == "cracked seal") {} } inspect("cracked seal");'],
+    ['cs6-repair-scout', 'void Report(string name) { if (name == "Pip") {} } Report("Pip");'],
+    ['java6-repair-power', 'static void inspect(int level) { if (level == 25) {} } inspect(25);'],
+  ])('accepts the authored %s capstone repair', (id, answer) => {
+    expect(evaluateExercise(exercise(id), answer).correct).toBe(true)
+  })
+
+  it.each([
+    ['py6-void-wyrm', 'def report(current_hazard):\n    if current_hazard == "wyrm":\n        print(current_hazard)\nfor hazard in hazards:\n    report(hazard)'],
+    ['cpp6-titan-forge', 'if (currentPart == "cracked seal") {} for (std::string part : parts) { inspect(part); }'],
+    ['cs6-captains-trial', 'if (currentName == "Pip") {} foreach (string name in crew) { Report(name); }'],
+    ['java6-nebula-trial', 'if (currentLevel < 30) {} for (int level : levels) { inspect(level); }'],
+  ])('accepts the authored %s final capstone', (id, answer) => {
+    expect(evaluateExercise(exercise(id), answer).correct).toBe(true)
+  })
 })

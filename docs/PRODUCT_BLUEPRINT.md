@@ -161,13 +161,14 @@ Every authored lesson must:
 
 ## Delivery roadmap
 
-### Phase 1: Learning foundation
+### Phase 1: Learning foundation (complete)
 
-- Author Mission 6 for all four tracks. Missions 1 through 5 are playable in every track.
-- Extend the current output-prediction, ordering, and bug-fix components as later lessons need more complex interactions.
-- Expand the current concept-level Codebook search as later missions introduce new vocabulary and examples.
-- Expand the current accessible editor controls beyond the documented Ctrl or Command plus Enter check shortcut as learner needs become clear.
-- Expand the current unit, browser-interaction, and curriculum-schema coverage as missions are authored.
+- Six sequential, five-step missions are playable in all four language tracks.
+- Output prediction, explanation choices, code ordering, bug repair, and guided code editing all have authored curriculum coverage.
+- The concept-level Codebook unlocks examples with progression and supports search in the active language.
+- The editor documents Ctrl or Command plus Enter, preserves normal Tab navigation, and exposes hint state to assistive technology.
+- Unit, React interaction, curriculum-schema, desktop browser, and 390-pixel mobile checks cover the learning foundation.
+- Each Mission 6 capstone retrieves and combines storage, conditions, collections, loops, and reusable code without introducing another syntax burden.
 
 ### Phase 2: Real execution
 

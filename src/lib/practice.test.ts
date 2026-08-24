@@ -166,4 +166,21 @@ describe('practice recommendations', () => {
       'java5-method-purpose',
     ])
   })
+
+  it('routes a due capstone repair into the completed sixth mission', () => {
+    const java = trackById('java')
+    const progress = {
+      ...initialProgress('java'),
+      completedMissions: java.missions.map((mission) => mission.id),
+      conceptProgress: {
+        'java-capstone-repair': concept(0),
+      },
+    }
+
+    const recommendation = recommendPractice(java, progress, now)
+    expect(recommendation.mission.id).toBe('java-nebula-trial')
+    expect(buildPracticeExercises(recommendation.mission, recommendation.coveredConceptIds).map((exercise) => exercise.id)).toEqual([
+      'java6-repair-power',
+    ])
+  })
 })

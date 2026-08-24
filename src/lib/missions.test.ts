@@ -33,7 +33,7 @@ describe('mission availability', () => {
     expect(missionAvailability(python, 4, ['py-looping-orbit'])).toBe('available')
   })
 
-  it('does not unlock curriculum that has not been authored', () => {
-    expect(missionAvailability(python, 5, ['py-function-foundry'])).toBe('coming-soon')
+  it('unlocks the authored capstone after the fifth mission is complete', () => {
+    expect(missionAvailability(python, 5, ['py-function-foundry'])).toBe('available')
   })
 })
