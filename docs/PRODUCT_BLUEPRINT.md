@@ -196,12 +196,25 @@ Every authored lesson must:
 - The production interface uses open document layouts, a readable light palette, normal sentence-case labels, modest corners, and the eye, `#`, coffee cup, and `π` symbols. It does not rely on space scenes, gradients, glows, glass effects, or a permanent sidebar.
 - Source commit `6cbba1d` and Cloudflare Worker version `658fcb18-970c-41e4-a614-839998d7c23e` were published on 2026-08-25. The automated release gate, accessibility review, paused-runner deployment, live canonical-route checks, full four-language production runner regression, production browser exercise, and final smoke test all passed.
 
-### Phase 4: Projects and adaptive practice
+### Phase 4: Projects and adaptive practice (in progress)
 
-- Add guided projects after each sector.
-- Generate practice from mastered and weak concepts with strict curriculum constraints.
-- Add project checkpoints, test history, and a portfolio export.
-- Experiment with cooperative crew missions before competitive leaderboards.
+Phase 4A establishes the project system with one complete Python path:
+
+- `Your First Interactive Program` follows Python Foundations with 12 ordered, bookmarkable checkpoints.
+- Every checkpoint introduces its vocabulary, explains each visible code shape, gives one concrete job, and reduces scaffolding gradually.
+- The project retrieves output, strings, variables, integers, arithmetic, input, type conversion, f-strings, traceback reading, and multi-line assembly before the final build.
+- Ten editable checkpoints use the isolated runner. `Run` accepts learner-supplied practice input without grading, while `Check` uses assignment-owned input and code requirements.
+- The final Coffee Counter assessment uses one visible and three private input cases plus six private structural requirements. Private cases and the reference solution are absent from the browser bundle and result payload.
+- Project source drafts stay only in a separate browser-local record. Synchronized progress stores completion identifiers and concept aggregates, not source, console output, or detailed history.
+- Official check history keeps at most 20 local summaries. The completed `.py` file can be downloaded directly from the project workspace.
+- The workspace uses the approved open split layout on desktop and a single readable flow at 390 CSS pixels, with distinct text scale, keyboard access, runner announcements, and concrete progress labels.
+
+The remaining Phase 4 work is to:
+
+- add one comparable guided project after C++, C#, and Java Foundations;
+- generate adaptive practice from mastered and weak concepts under strict curriculum constraints;
+- define a deliberate portfolio export instead of treating a raw source download as a public portfolio;
+- evaluate cooperative learning only after a separate privacy, child-safety, and moderation review, and before considering competitive leaderboards.
 
 ## Release gates
 

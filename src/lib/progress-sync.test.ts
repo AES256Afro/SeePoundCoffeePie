@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
+import { pythonInteractiveProject } from '../data/python-interactive-project'
 import { initialProgress } from './progress'
 import {
   deleteRemoteProgress,
@@ -20,8 +21,10 @@ function recordProgress() {
     streak: 2,
     lastStudyDate: '2026-08-25',
     completedMissions: ['py-first-spark'],
+    completedProjectCheckpoints: [pythonInteractiveProject.checkpoints[0].id],
+    completedProjects: [pythonInteractiveProject.id],
     conceptProgress: {
-      'py-output': { strength: 2, correct: 3, incorrect: 1, dueAt: '2026-08-28' },
+      'python-print': { strength: 2, correct: 3, incorrect: 1, dueAt: '2026-08-28' },
     },
   }
 }
@@ -30,6 +33,14 @@ describe('durable progress synchronization', () => {
   it('detects real guest progress without treating defaults as a migration', () => {
     expect(hasMeaningfulProgress(initialProgress())).toBe(false)
     expect(hasMeaningfulProgress(recordProgress())).toBe(true)
+    expect(hasMeaningfulProgress({
+      ...initialProgress(),
+      completedProjectCheckpoints: [pythonInteractiveProject.checkpoints[0].id],
+    })).toBe(true)
+    expect(hasMeaningfulProgress({
+      ...initialProgress(),
+      completedProjects: [pythonInteractiveProject.id],
+    })).toBe(true)
   })
 
   it('conservatively combines completion and review state without double-counting rewards', () => {
@@ -42,8 +53,10 @@ describe('durable progress synchronization', () => {
       dailyXp: 12,
       starShards: 50,
       completedMissions: ['py-first-spark', 'java-coffee-protocol'],
+      completedProjectCheckpoints: [pythonInteractiveProject.checkpoints[1].id],
+      completedProjects: [pythonInteractiveProject.id],
       conceptProgress: {
-        'py-output': { strength: 1, correct: 5, incorrect: 0, dueAt: '2026-08-26' },
+        'python-print': { strength: 1, correct: 5, incorrect: 0, dueAt: '2026-08-26' },
         'java-output': { strength: 1, correct: 1, incorrect: 0, dueAt: '2026-08-26' },
       },
     }
@@ -55,11 +68,40 @@ describe('durable progress synchronization', () => {
       dailyXp: 20,
       starShards: 50,
       completedMissions: ['java-coffee-protocol', 'py-first-spark'],
+      completedProjectCheckpoints: [
+        pythonInteractiveProject.checkpoints[0].id,
+        pythonInteractiveProject.checkpoints[1].id,
+      ],
+      completedProjects: [pythonInteractiveProject.id],
       conceptProgress: {
-        'py-output': { strength: 2, correct: 5, incorrect: 1, dueAt: '2026-08-28' },
+        'python-print': { strength: 2, correct: 5, incorrect: 1, dueAt: '2026-08-28' },
         'java-output': { strength: 1, correct: 1, incorrect: 0, dueAt: '2026-08-26' },
       },
     })
+  })
+
+  it('migrates an old version 1 remote record that omits project arrays', async () => {
+    const legacyProgress: Record<string, unknown> = { ...recordProgress() }
+    delete legacyProgress.completedProjectCheckpoints
+    delete legacyProgress.completedProjects
+    const record = {
+      version: 1 as const,
+      revision: 1,
+      updatedAt: '2026-08-25T12:00:00.000Z',
+      progress: legacyProgress,
+    }
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(Response.json({ record })))
+
+    try {
+      await expect(fetchRemoteProgress()).resolves.toMatchObject({
+        progress: {
+          completedProjectCheckpoints: [],
+          completedProjects: [],
+        },
+      })
+    } finally {
+      vi.unstubAllGlobals()
+    }
   })
 
   it('reads, writes, reports conflicts, and deletes through same-origin account endpoints', async () => {

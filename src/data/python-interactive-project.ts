@@ -1,0 +1,550 @@
+import type { Exercise, LanguageId } from '../types'
+import { pythonInteractiveProjectManifest } from './python-interactive-project-manifest'
+
+export type ProjectScaffoldingLevel = 'guided' | 'supported' | 'independent'
+
+export interface ProjectTerm {
+  term: string
+  meaning: string
+}
+
+export interface ProjectTestCase {
+  id: string
+  name: string
+  visibility: 'visible' | 'hidden'
+  stdin: string
+  expectedStdout: string
+  purpose: string
+}
+
+export interface ExpectedFirstRun {
+  outcome: 'runtime_error'
+  diagnosticTitle: string
+  explanation: string
+}
+
+export interface ProjectAssessmentSummary {
+  visibleTestCase: ProjectTestCase
+  hiddenTestCount: number
+  structuralCheckCount: number
+}
+
+export interface PythonProjectCheckpoint {
+  id: string
+  order: number
+  title: string
+  objective: string
+  scaffolding: ProjectScaffoldingLevel
+  newTerms: ProjectTerm[]
+  exercise: Exercise
+  practiceStdin?: string
+  requirements?: string[]
+  expectedFirstRun?: ExpectedFirstRun
+  assessmentSummary?: ProjectAssessmentSummary
+}
+
+export interface PythonInteractiveProject {
+  id: 'first-interactive-program'
+  language: LanguageId
+  title: string
+  subtitle: string
+  description: string
+  outcome: string
+  duration: string
+  route: string
+  checkpoints: PythonProjectCheckpoint[]
+}
+
+const finalProjectVisibleTestCase: ProjectTestCase = {
+  id: 'final-visible-two-cups',
+  name: 'A two-cup order',
+  visibility: 'visible',
+  stdin: 'Avery\n2\n',
+  expectedStdout: [
+    'Welcome to the Coffee Counter!',
+    'What is your name?',
+    'How many cups would you like?',
+    'Avery, your 2 cup order costs $6.',
+  ].join('\n'),
+  purpose: 'Shows the learner one complete example before the official check.',
+}
+
+export const pythonInteractiveProject = {
+  ...pythonInteractiveProjectManifest,
+  checkpoints: [
+    {
+      id: 'project-py-print',
+      order: 1,
+      title: 'Let the program speak',
+      objective: 'Use print to send one line of text to the console.',
+      scaffolding: 'guided',
+      newTerms: [
+        { term: 'program', meaning: 'A sequence of instructions that a computer follows.' },
+        { term: 'console', meaning: 'The text area where a running program can display information.' },
+        { term: 'print', meaning: 'A built-in Python instruction that displays a value in the console.' },
+        { term: 'string', meaning: 'Programming vocabulary for text, such as a name or sentence.' },
+      ],
+      exercise: {
+        id: 'project-py-print',
+        conceptId: 'project-python-print',
+        eyebrow: 'Checkpoint 1 of 12',
+        title: 'Let the program speak',
+        explanation:
+          'A program is a list of instructions for a computer. Python uses print when the program needs to display a string, which is the programming word for text, in the console.',
+        analogy:
+          'Imagine writing a note and placing it on a counter where everyone can see it. print places the quoted message on the computer\'s console.',
+        type: 'code',
+        prompt: 'Replace the one blank with the Python instruction that displays Coffee counter ready.',
+        starterCode: '# A comment is a note for people. Python skips it.\n_____("Coffee counter ready.")',
+        focus: 'Replace only the _____ blank with print. Leave the quotation marks, parentheses, and period in place.',
+        codeGuide: [
+          { code: '# A comment...', plain: 'A line beginning with # is a note for a person reading the code. Python skips the line when the program runs.' },
+          { code: 'print', plain: 'This built-in Python instruction tells the computer to display something in the console.' },
+          { code: '(...)', plain: 'Parentheses hold the value that the print instruction should use.' },
+          { code: '"Coffee counter ready."', plain: 'Quotation marks surround the string so Python recognizes the words as text.' },
+        ],
+        checks: [
+          { pattern: 'print\\s*\\(\\s*["\\\']Coffee counter ready\\.["\\\']\\s*\\)', message: 'Use print, then keep the exact quoted message inside its parentheses.' },
+        ],
+        output: 'Coffee counter ready.',
+        hint: 'The completed line is print("Coffee counter ready.").',
+        recap: 'print displays a value in the console. Quotation marks tell Python that the value is a string of text.',
+        xp: 8,
+      },
+    },
+    {
+      id: 'project-py-string',
+      order: 2,
+      title: 'Recognize the text',
+      objective: 'Predict what Python displays when print receives a quoted string.',
+      scaffolding: 'guided',
+      newTerms: [
+        { term: 'quotation marks', meaning: 'The matching marks that show where a Python string begins and ends.' },
+      ],
+      exercise: {
+        id: 'project-py-string',
+        conceptId: 'project-python-strings',
+        eyebrow: 'Checkpoint 2 of 12',
+        title: 'Recognize the text',
+        explanation:
+          'Quotation marks tell Python where a string begins and ends. They are part of the code that describes the text, but print does not include the quotation marks in the visible result.',
+        analogy:
+          'Quotation marks are like a picture frame. They show Python which words belong together, while the viewer pays attention to the picture inside the frame.',
+        type: 'prediction',
+        prompt: 'What will appear in the console when this instruction runs?',
+        displayCode: 'print("Welcome, beginner!")',
+        choices: [
+          { id: 'a', label: '"Welcome, beginner!"', detail: 'The quotation marks guide Python, but they are not part of the displayed text.' },
+          { id: 'b', label: 'Welcome, beginner!', detail: 'print displays the characters inside the quotation marks.' },
+          { id: 'c', label: 'print', detail: 'print is the instruction, not the value sent to the console.' },
+        ],
+        correctChoice: 'b',
+        hint: 'Look inside the quotation marks, then leave the quotation marks themselves out of the result.',
+        recap: 'Quotation marks identify a string in Python code. print displays the text inside them.',
+        xp: 8,
+      },
+    },
+    {
+      id: 'project-py-variable',
+      order: 3,
+      title: 'Give a value a name',
+      objective: 'Store a customer name in a variable and retrieve it later.',
+      scaffolding: 'guided',
+      newTerms: [
+        { term: 'variable', meaning: 'A human-readable name that refers to a value stored by the program.' },
+        { term: 'assignment', meaning: 'The act of storing the value on the right under the variable name on the left.' },
+      ],
+      exercise: {
+        id: 'project-py-variable',
+        conceptId: 'project-python-variables',
+        eyebrow: 'Checkpoint 3 of 12',
+        title: 'Give a value a name',
+        explanation:
+          'A variable is a name that points to a stored value. An equals sign performs assignment: Python evaluates the value on the right, then stores it under the name on the left.',
+        analogy:
+          'Think of customer_name as a labeled order slip. The label stays easy to recognize, while the value written on the slip can be used again later.',
+        type: 'code',
+        prompt: 'Store the string Maya in customer_name so the existing print instruction can use it.',
+        starterCode: 'customer_name = _____\n\nprint(customer_name)',
+        focus: 'Replace only the _____ blank with the quoted string "Maya". Do not put quotation marks around customer_name.',
+        codeGuide: [
+          { code: 'customer_name', plain: 'This descriptive variable name tells a reader what kind of value is stored there.' },
+          { code: '=', plain: 'In an assignment, the equals sign stores the value on the right under the name on the left.' },
+          { code: '"Maya"', plain: 'The quotation marks make Maya a string instead of an instruction or variable name.' },
+          { code: 'print(customer_name)', plain: 'Without quotes, customer_name retrieves its stored value and passes that value to print.' },
+        ],
+        checks: [
+          { pattern: 'customer_name\\s*=\\s*["\\\']Maya["\\\']', message: 'Store the quoted string "Maya" in customer_name.' },
+          { pattern: 'print\\s*\\(\\s*customer_name\\s*\\)', message: 'Keep print(customer_name) so Python retrieves and displays the stored value.' },
+        ],
+        output: 'Maya',
+        hint: 'The assignment is customer_name = "Maya".',
+        recap: 'A variable gives a value a useful name. Writing the variable name later retrieves the value stored under it.',
+        xp: 10,
+      },
+    },
+    {
+      id: 'project-py-integer',
+      order: 4,
+      title: 'Store a whole number',
+      objective: 'Store an integer without quotation marks.',
+      scaffolding: 'guided',
+      newTerms: [
+        { term: 'integer', meaning: 'A whole number, such as 0, 4, or 27, stored without quotation marks.' },
+        { term: 'data type', meaning: 'A category that describes how Python can use a value, such as string text or an integer number.' },
+      ],
+      exercise: {
+        id: 'project-py-integer',
+        conceptId: 'project-python-integers',
+        eyebrow: 'Checkpoint 4 of 12',
+        title: 'Store a whole number',
+        explanation:
+          'An integer is a whole number. Python can perform arithmetic with integers, so an integer is written without quotation marks. Quoted digits form a string instead.',
+        analogy:
+          'A cafe receipt treats 4 as an amount it can calculate with. The text "4" is more like four printed on a name tag: readable, but not yet ready for arithmetic.',
+        type: 'code',
+        prompt: 'Store the integer 4 in cups, then let the existing print instruction display it.',
+        starterCode: '# Whole numbers do not need quotation marks.\ncups = _____\n\nprint(cups)',
+        focus: 'Replace only the _____ blank with 4. Do not surround the number with quotation marks.',
+        codeGuide: [
+          { code: 'cups', plain: 'This variable name explains that the stored integer counts cups in the order.' },
+          { code: '= 4', plain: 'This assignment stores the integer 4 under the variable name cups.' },
+          { code: '4 versus "4"', plain: '4 is an integer that supports arithmetic. "4" is a string containing one text character.' },
+          { code: 'print(cups)', plain: 'Python retrieves the integer from cups and sends it to the console.' },
+        ],
+        checks: [
+          { pattern: 'cups\\s*=\\s*4(?:\\s|$)', message: 'Assign the integer 4 to cups without quotation marks.' },
+          { pattern: 'print\\s*\\(\\s*cups\\s*\\)', message: 'Keep print(cups) so the stored integer reaches the console.' },
+        ],
+        output: '4',
+        hint: 'Write cups = 4. Quotation marks would change the number into text.',
+        recap: 'An integer is a whole number. Leave quotation marks off an integer when the program needs to calculate with it.',
+        xp: 10,
+      },
+    },
+    {
+      id: 'project-py-arithmetic',
+      order: 5,
+      title: 'Calculate an order total',
+      objective: 'Multiply two stored integers and save the result in another variable.',
+      scaffolding: 'supported',
+      newTerms: [
+        { term: 'operator', meaning: 'A symbol that tells Python to perform an operation. The * operator means multiply.' },
+        { term: 'expression', meaning: 'A piece of code that Python evaluates to produce a value.' },
+      ],
+      exercise: {
+        id: 'project-py-arithmetic',
+        conceptId: 'project-python-arithmetic',
+        eyebrow: 'Checkpoint 5 of 12',
+        title: 'Calculate an order total',
+        explanation:
+          'The * operator tells Python to multiply. The expression cups * price_per_cup produces a number, and assignment stores that result in a new variable named total.',
+        analogy:
+          'A cashier multiplies how many items the customer wants by the price of one item. The total variable is the box where the calculated answer is kept.',
+        type: 'code',
+        prompt: 'Complete the total calculation by multiplying cups by price_per_cup.',
+        starterCode: 'cups = 4\nprice_per_cup = 3\ntotal = _____ * _____\n\nprint(total)',
+        focus: 'Replace the two blanks with cups and price_per_cup, in that order. Keep the * multiplication operator between them.',
+        codeGuide: [
+          { code: 'cups = 4', plain: 'The first variable stores how many cups belong in this sample order.' },
+          { code: 'price_per_cup = 3', plain: 'The second variable stores the price of one cup as an integer.' },
+          { code: 'cups * price_per_cup', plain: 'The * operator multiplies the two retrieved integers and produces 12.' },
+          { code: 'total = ...', plain: 'The assignment stores the calculated result so the program can reuse it.' },
+        ],
+        checks: [
+          { pattern: 'total\\s*=\\s*cups\\s*\\*\\s*price_per_cup', message: 'Set total to cups * price_per_cup.' },
+          { pattern: 'print\\s*\\(\\s*total\\s*\\)', message: 'Keep print(total) so the calculated value appears in the console.' },
+        ],
+        output: '12',
+        hint: 'The complete calculation is total = cups * price_per_cup.',
+        recap: 'An expression produces a value. Assignment can store that value in a variable so later instructions can use it.',
+        xp: 14,
+      },
+    },
+    {
+      id: 'project-py-input',
+      order: 6,
+      title: 'Ask the customer',
+      objective: 'Use input to pause the program and collect a typed answer.',
+      scaffolding: 'supported',
+      newTerms: [
+        { term: 'input', meaning: 'A built-in Python instruction that waits for a person to type an answer and press Enter.' },
+        { term: 'prompt', meaning: 'The message that tells a person what the program is asking them to enter.' },
+        { term: 'newline', meaning: 'A move to the next console line, written as \\n inside a Python string.' },
+      ],
+      exercise: {
+        id: 'project-py-input',
+        conceptId: 'project-python-input',
+        eyebrow: 'Checkpoint 6 of 12',
+        title: 'Ask the customer',
+        explanation:
+          'input displays a prompt, pauses the program, and waits for a person to type an answer and press Enter. The answer it receives can be stored in a variable.',
+        analogy:
+          'A paper order form asks a question, leaves a space for the answer, and keeps what the customer writes. input performs those same three jobs for a program.',
+        type: 'code',
+        prompt: 'Replace the blank with input so the program asks for a name before saying hello.',
+        starterCode: 'name = _____("What is your name?\\n")\nprint("Hello,", name)',
+        focus: 'Replace only the _____ blank with input. The practice runner will answer Avery for you.',
+        codeGuide: [
+          { code: 'input(...)', plain: 'input shows its prompt and waits until the person types an answer and presses Enter.' },
+          { code: '"What is your name?\\n"', plain: 'This prompt explains what to type. \\n moves the console to a fresh line before the answer is processed.' },
+          { code: 'name = input(...)', plain: 'The assignment stores the typed answer under the variable name name.' },
+          { code: 'print("Hello,", name)', plain: 'A comma lets print display fixed string text followed by the value retrieved from name.' },
+        ],
+        checks: [
+          { pattern: 'name\\s*=\\s*input\\s*\\(', message: 'Call input() and store its returned answer in name.' },
+          { pattern: 'print\\s*\\(\\s*["\\\']Hello,["\\\']\\s*,\\s*name\\s*\\)', message: 'Keep the final print instruction so it uses the stored name.' },
+        ],
+        output: 'What is your name?\nHello, Avery',
+        hint: 'The first line begins name = input(...).',
+        recap: 'input displays a prompt, waits for a typed answer, and returns that answer so a variable can store it.',
+        xp: 14,
+      },
+      practiceStdin: 'Avery\n',
+    },
+    {
+      id: 'project-py-input-text',
+      order: 7,
+      title: 'Notice what input returns',
+      objective: 'Recognize that input returns a string even when the person types digits.',
+      scaffolding: 'supported',
+      newTerms: [
+        { term: 'return value', meaning: 'The value that an instruction gives back after it finishes its work.' },
+      ],
+      exercise: {
+        id: 'project-py-input-text',
+        conceptId: 'project-python-input-as-text',
+        eyebrow: 'Checkpoint 7 of 12',
+        title: 'Notice what input returns',
+        explanation:
+          'input always returns a string. If a person types the digit 3, Python first stores it as the string "3". Adding that string to itself joins the text and produces "33".',
+        analogy:
+          'A written order slip contains marks on paper, even when those marks look like a number. The program must deliberately convert the written digits before calculating with them.',
+        type: 'prediction',
+        prompt: 'The practice input is 3. What will the final print instruction display?',
+        displayCode: 'cups_text = input("Cups?\\n")\nprint(cups_text + cups_text)',
+        choices: [
+          { id: 'a', label: '6', detail: 'That would be numeric addition, but input returned a string.' },
+          { id: 'b', label: 'A language error', detail: 'Python can join one string to another string, so this code can run.' },
+          { id: 'c', label: '33', detail: 'The + operator joins the string "3" to another copy of the same string.' },
+        ],
+        correctChoice: 'c',
+        hint: 'input returned the string "3", not the integer 3. Think about joining two pieces of text.',
+        recap: 'input always returns a string. Digits that came from input must be converted before the program performs numeric arithmetic.',
+        xp: 12,
+      },
+      practiceStdin: '3\n',
+    },
+    {
+      id: 'project-py-conversion',
+      order: 8,
+      title: 'Convert the typed count',
+      objective: 'Replace one complete line so int converts typed text into an integer.',
+      scaffolding: 'supported',
+      newTerms: [
+        { term: 'conversion', meaning: 'Changing a value from one data type into another data type.' },
+        { term: 'int()', meaning: 'A built-in Python instruction that converts suitable text into an integer.' },
+      ],
+      exercise: {
+        id: 'project-py-conversion',
+        conceptId: 'project-python-int-conversion',
+        eyebrow: 'Checkpoint 8 of 12',
+        title: 'Convert the typed count',
+        explanation:
+          'int() performs a conversion. It can turn a string containing whole-number digits, such as "4", into the integer 4. The converted value can then be multiplied normally.',
+        analogy:
+          'The order slip says "4" in ink. int() is the cashier entering that written count into the calculator as the number 4.',
+        type: 'code',
+        prompt: 'Replace the full cups assignment with cups = int(cups_text) so the program calculates 12 instead of repeating text.',
+        starterCode: 'cups_text = "4"\ncups = cups_text\ntotal = cups * 3\nprint(total)',
+        focus: 'Change the complete line cups = cups_text to cups = int(cups_text). There is no fill-in-the-blank marker now.',
+        codeGuide: [
+          { code: 'cups_text = "4"', plain: 'The _text ending reminds the reader that this variable currently stores a string.' },
+          { code: 'int(cups_text)', plain: 'int reads the digit characters in cups_text and returns the integer 4.' },
+          { code: 'cups = int(cups_text)', plain: 'The assignment stores the converted integer under a new, clearer variable name.' },
+          { code: 'cups * 3', plain: 'Once cups is an integer, the * operator performs numeric multiplication and produces 12.' },
+        ],
+        checks: [
+          { pattern: 'cups\\s*=\\s*int\\s*\\(\\s*cups_text\\s*\\)', message: 'Convert cups_text with int(), then store the integer in cups.' },
+          { pattern: 'total\\s*=\\s*cups\\s*\\*\\s*3', message: 'Keep the multiplication that uses the converted cups value.' },
+        ],
+        output: '12',
+        hint: 'The repaired line is cups = int(cups_text).',
+        recap: 'int(text_value) converts suitable digit text into an integer that Python can use for arithmetic.',
+        xp: 18,
+      },
+    },
+    {
+      id: 'project-py-f-string',
+      order: 9,
+      title: 'Write a personal report',
+      objective: 'Replace a fixed string with an f-string that inserts three variable values.',
+      scaffolding: 'supported',
+      newTerms: [
+        { term: 'f-string', meaning: 'A Python string prefixed with f that can insert variable values inside braces.' },
+        { term: 'replacement field', meaning: 'A pair of braces in an f-string containing the variable or expression Python should insert.' },
+      ],
+      exercise: {
+        id: 'project-py-f-string',
+        conceptId: 'project-python-f-strings',
+        eyebrow: 'Checkpoint 9 of 12',
+        title: 'Write a personal report',
+        explanation:
+          'An f-string begins with f before its opening quotation mark. Each replacement field uses braces, such as {name}, to insert the current value of a variable into the surrounding text.',
+        analogy:
+          'A receipt template has marked spaces for the customer, count, and total. An f-string fills those spaces with the values from this specific order.',
+        type: 'code',
+        prompt: 'Replace the full final print instruction with an f-string that displays Avery, your 2 cup order costs $6.',
+        starterCode: 'name = "Avery"\ncups = 2\ntotal = 6\n\nprint("name, your cups cup order costs $total.")',
+        focus: 'Change the complete print line. Use f before the string and insert name, cups, and total with braces. There is no _____ blank.',
+        codeGuide: [
+          { code: 'f"..."', plain: 'The f prefix turns a normal quoted string into an f-string that can insert values.' },
+          { code: '{name}', plain: 'This replacement field asks Python to retrieve and insert the value stored in name.' },
+          { code: '{cups}', plain: 'This replacement field inserts the integer stored in cups without adding quotation marks.' },
+          { code: '${total}', plain: 'The dollar sign stays ordinary text, while {total} inserts the calculated number after it.' },
+        ],
+        checks: [
+          { pattern: 'print\\s*\\(\\s*f["\\\'][^"\\\']*\\{\\s*name\\s*\\}[^"\\\']*\\{\\s*cups\\s*\\}[^"\\\']*\\{\\s*total\\s*\\}[^"\\\']*["\\\']\\s*\\)', message: 'Use one f-string with replacement fields for name, cups, and total, in that order.' },
+        ],
+        output: 'Avery, your 2 cup order costs $6.',
+        hint: 'Start with print(f"{name}, your {cups} cup order costs ${total}.").',
+        recap: 'An f-string combines readable fixed text with live variable values placed inside braces.',
+        xp: 18,
+      },
+    },
+    {
+      id: 'project-py-traceback',
+      order: 10,
+      title: 'Read your first traceback',
+      objective: 'Use a Python traceback to locate and repair an invalid integer conversion.',
+      scaffolding: 'supported',
+      newTerms: [
+        { term: 'error', meaning: 'A problem that prevents the program from completing as intended.' },
+        { term: 'traceback', meaning: 'Python\'s report showing where a runtime error happened and what kind of problem it found.' },
+        { term: 'ValueError', meaning: 'An error reported when a value is the wrong form for an attempted operation, such as converting "three" with int().' },
+      ],
+      exercise: {
+        id: 'project-py-traceback',
+        conceptId: 'project-python-traceback',
+        eyebrow: 'Checkpoint 10 of 12',
+        title: 'Read your first traceback',
+        explanation:
+          'Python stops on the conversion line because the string "three" does not contain digit characters. Its traceback ends with ValueError and describes the value that int() could not convert.',
+        analogy:
+          'A receipt printer that jams reports both the station where it stopped and the reason. A traceback does the same for a running Python program.',
+        type: 'bugfix',
+        prompt: 'Run the faulty program, read the ValueError, then change only the starting text value so the program displays 9.',
+        starterCode: 'cups_text = "three"\ncups = int(cups_text)\ntotal = cups * 3\nprint(total)',
+        focus: 'Change the string "three" to the digit string "3". Keep the int conversion so the repaired value becomes an integer.',
+        codeGuide: [
+          { code: 'ValueError', plain: 'The final traceback line names the error. Here it means the supplied string has the wrong form for int().' },
+          { code: 'cups = int(cups_text)', plain: 'The traceback points to this line because this is where Python discovers that conversion cannot finish.' },
+          { code: '"three" versus "3"', plain: 'People understand both forms, but int() expects digit characters such as "3".' },
+          { code: 'print(total)', plain: 'When the conversion is repaired, the later calculation and print instruction can finally run.' },
+        ],
+        checks: [
+          { pattern: 'cups_text\\s*=\\s*["\\\']3["\\\']', message: 'Change the starting value to the digit string "3" so int() can convert it.' },
+          { pattern: 'cups\\s*=\\s*int\\s*\\(\\s*cups_text\\s*\\)', message: 'Keep int(cups_text). Removing conversion would hide the lesson instead of repairing it.' },
+        ],
+        output: '9',
+        hint: 'The traceback tells you that int() cannot convert "three". It can convert "3".',
+        recap: 'A traceback is evidence, not a punishment. Read its last line for the error type, then inspect the code line it identifies.',
+        xp: 20,
+      },
+      expectedFirstRun: {
+        outcome: 'runtime_error',
+        diagnosticTitle: 'ValueError',
+        explanation: 'The starter value uses a word instead of digit characters, so int() cannot complete the conversion.',
+      },
+    },
+    {
+      id: 'project-py-assembly',
+      order: 11,
+      title: 'Connect the pieces',
+      objective: 'Write three complete lines that convert, calculate, and report a prepared order.',
+      scaffolding: 'independent',
+      newTerms: [],
+      exercise: {
+        id: 'project-py-assembly',
+        conceptId: 'project-python-assembly',
+        eyebrow: 'Checkpoint 11 of 12',
+        title: 'Connect the pieces',
+        explanation:
+          'A useful program connects small steps in a deliberate order. First convert the text count, then calculate with the integer, then build a report from the stored results.',
+        analogy:
+          'A cashier cannot announce a total before reading the order and calculating its cost. Code also becomes reliable when each step prepares the value needed by the next step.',
+        type: 'code',
+        prompt: 'Under the comments, write three complete lines: convert cups_text into cups, calculate total, and print the personalized report.',
+        starterCode: 'name = "Jordan"\ncups_text = "3"\nprice_per_cup = 3\n\n# Convert cups_text into an integer named cups.\n# Calculate total from cups and price_per_cup.\n# Print: Jordan, your 3 cup order costs $9.',
+        focus: 'Write each complete instruction yourself below its comment. There are no _____ blanks to replace.',
+        codeGuide: [
+          { code: 'number = int(text_value)', plain: 'This familiar shape converts a text variable and stores the returned integer under a new name.' },
+          { code: 'result = amount * price', plain: 'This generic shape stores the result of multiplying two numeric variables.' },
+          { code: 'print(f"{label}: {result}")', plain: 'This generic f-string shape combines fixed words with values from variables.' },
+          { code: 'top to bottom', plain: 'Place conversion before calculation and calculation before the report because Python runs these instructions in order.' },
+        ],
+        checks: [
+          { pattern: 'cups\\s*=\\s*int\\s*\\(\\s*cups_text\\s*\\)', message: 'Write a complete conversion assignment for cups.' },
+          { pattern: 'total\\s*=\\s*(?:cups\\s*\\*\\s*price_per_cup|price_per_cup\\s*\\*\\s*cups)', message: 'Write a complete assignment that calculates total.' },
+          { pattern: 'print\\s*\\(\\s*f["\\\'][^"\\\']*\\{\\s*name\\s*\\}[^"\\\']*\\{\\s*cups\\s*\\}[^"\\\']*\\{\\s*total\\s*\\}[^"\\\']*["\\\']\\s*\\)', message: 'Write one f-string report containing name, cups, and total.' },
+        ],
+        output: 'Jordan, your 3 cup order costs $9.',
+        hint: 'Reuse these three shapes in order: cups = int(...), total = ... * ..., and print(f"...").',
+        recap: 'A program is a connected sequence. Each instruction can use values prepared by an earlier instruction.',
+        xp: 24,
+      },
+    },
+    {
+      id: 'project-py-final',
+      order: 12,
+      title: 'Build the Coffee Counter',
+      objective: 'Write a multi-line interactive program and prove that it works with changing input.',
+      scaffolding: 'independent',
+      newTerms: [
+        { term: 'test case', meaning: 'One set of input and expected output used to check whether a program behaves correctly.' },
+        { term: 'hidden check', meaning: 'An official test whose exact input is withheld so the program must solve the general task.' },
+      ],
+      requirements: [
+        'Keep price_per_cup set to the integer 3.',
+        'Display Welcome to the Coffee Counter! on its own line.',
+        'Ask What is your name? and store the answer in name.',
+        'Ask How many cups would you like? and store the text answer in cups_text.',
+        'Convert cups_text with int() and store the integer in cups.',
+        'Calculate total by multiplying cups and price_per_cup.',
+        'Use one f-string to report the customer name, cup count, and total cost.',
+      ],
+      exercise: {
+        id: 'project-py-final',
+        conceptId: 'project-python-final-interactive-program',
+        eyebrow: 'Checkpoint 12 of 12',
+        title: 'Build the Coffee Counter',
+        explanation:
+          'This final program combines output, strings, variables, integer arithmetic, input, conversion, and an f-string. The official check supplies several orders so the result must come from the typed values.',
+        analogy:
+          'You now have every station on a small counter: a greeting, an order form, a calculator, and a receipt printer. Your job is to connect them into one dependable workflow.',
+        type: 'code',
+        prompt: 'Complete the program from the written requirements. The visible example uses Avery and 2 cups, but hidden checks use different names and counts.',
+        starterCode: 'price_per_cup = 3\n\n# Display the welcome line.\n# Ask for the customer name.\n# Ask for the cup count as text.\n# Convert the count to an integer.\n# Calculate the total.\n# Print the personalized report.',
+        focus: 'Write the six missing instructions as complete Python lines. There are no _____ blanks, and the test inputs will change.',
+        codeGuide: [
+          { code: 'print("message")', plain: 'Use the familiar print shape for the fixed welcome message.' },
+          { code: 'answer = input("question\\n")', plain: 'Use this general shape twice, with clear variable names for the two returned strings.' },
+          { code: 'number = int(text_value)', plain: 'Convert only the cup-count text. A customer name should remain a string.' },
+          { code: 'result = amount * price', plain: 'Calculate from variables so the same code works when a hidden test changes the count.' },
+          { code: 'print(f"...")', plain: 'Use replacement fields for the customer name, integer cup count, and calculated total.' },
+          { code: 'Run before Check', plain: 'Try the visible input first. Then use the official check to run the additional server-owned cases.' },
+        ],
+        output: finalProjectVisibleTestCase.expectedStdout,
+        hint: 'Build from the prior checkpoint, then replace the fixed name and count with two input calls.',
+        recap: 'You built an interactive program that listens, stores, converts, calculates, and replies. Changing the input now changes the result.',
+        xp: 40,
+      },
+      practiceStdin: finalProjectVisibleTestCase.stdin,
+      assessmentSummary: {
+        visibleTestCase: finalProjectVisibleTestCase,
+        hiddenTestCount: 3,
+        structuralCheckCount: 6,
+      },
+    },
+  ],
+} satisfies PythonInteractiveProject

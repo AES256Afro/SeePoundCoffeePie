@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { findExercise } from '../data/curriculum'
-import { evaluateExercise } from './evaluator'
+import { evaluateExercise, evaluateExerciseChecks } from './evaluator'
 import type { Exercise } from '../types'
 
 function exercise(id: string) {
@@ -62,6 +62,21 @@ describe('evaluateExercise', () => {
     const result = evaluateExercise(exercise('py-launch'), incomplete)
     expect(result.correct).toBe(false)
     expect(result.message).toContain('power_cells')
+  })
+
+  it('reports each authored code requirement separately for the server runner', () => {
+    const requirements = evaluateExerciseChecks(
+      exercise('py6-void-wyrm'),
+      'print("Alert: wyrm")',
+    )
+
+    expect(requirements).toHaveLength(3)
+    expect(requirements.every((requirement) => !requirement.passed)).toBe(true)
+    expect(requirements.map((requirement) => requirement.message)).toEqual([
+      'Put hazards after in so the loop visits the complete list.',
+      'Pass hazard into report so the function receives the current loop value.',
+      'Keep the comparison inside report so only the wyrm triggers the alert.',
+    ])
   })
 
   it('checks output predictions through the authored answer choices', () => {

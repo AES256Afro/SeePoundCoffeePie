@@ -2,6 +2,8 @@ import type { LanguageId } from '../types'
 
 export const RUNNER_API_VERSION = 1 as const
 
+export type RunnerPurpose = 'run' | 'check'
+
 export const RUNNER_LIMITS = Object.freeze({
   sourceBytes: 20_000,
   stdinBytes: 4_000,
@@ -24,6 +26,7 @@ export interface RunnerRequest {
   language: LanguageId
   source: string
   stdin?: string
+  purpose?: RunnerPurpose
 }
 
 export type RunnerOutcome =
@@ -93,7 +96,7 @@ export type RunnerRequestValidation =
   | { ok: false; issue: RunnerRequestIssue; message: string }
 
 const languages = new Set<LanguageId>(['python', 'cpp', 'csharp', 'java'])
-const requestFields = new Set(['version', 'language', 'source', 'stdin'])
+const requestFields = new Set(['version', 'language', 'source', 'stdin', 'purpose'])
 const encoder = new TextEncoder()
 
 function utf8Bytes(value: string): number {
@@ -160,6 +163,14 @@ export function validateRunnerRequest(input: unknown): RunnerRequestValidation {
     }
   }
 
+  if (body.purpose !== undefined && body.purpose !== 'run' && body.purpose !== 'check') {
+    return {
+      ok: false,
+      issue: 'invalid_body',
+      message: 'Choose either a practice run or an official checkpoint check.',
+    }
+  }
+
   return {
     ok: true,
     request: {
@@ -167,6 +178,7 @@ export function validateRunnerRequest(input: unknown): RunnerRequestValidation {
       language: body.language as LanguageId,
       source: body.source,
       ...(stdin === undefined ? {} : { stdin }),
+      ...(body.purpose === undefined ? {} : { purpose: body.purpose as RunnerPurpose }),
     },
   }
 }

@@ -10,6 +10,7 @@ import {
   parseAppRoute,
   practiceMissionPath,
   practicePath,
+  projectPath,
 } from './routes'
 
 describe('bookmarkable application routes', () => {
@@ -26,6 +27,12 @@ describe('bookmarkable application routes', () => {
     expect(missionPath('python', 'py-first-spark')).toBe('/academy/python/missions/py-first-spark')
     expect(practiceMissionPath('java', 'java-routing-orders', ['java-booleans'])).toBe(
       '/practice/java/missions/java-routing-orders?concepts=java-booleans',
+    )
+    expect(projectPath('python', 'first-interactive-program')).toBe(
+      '/projects/python/first-interactive-program',
+    )
+    expect(projectPath('python', 'first-interactive-program', 'read-the-plan')).toBe(
+      '/projects/python/first-interactive-program/read-the-plan',
     )
   })
 
@@ -59,8 +66,28 @@ describe('bookmarkable application routes', () => {
     })
   })
 
+  it('parses the Python project and checkpoint deep links', () => {
+    expect(parseAppRoute('/projects/python/first-interactive-program')).toEqual({
+      page: 'project',
+      language: 'python',
+      projectId: 'first-interactive-program',
+      checkpointId: undefined,
+      conceptIds: [],
+    })
+    expect(parseAppRoute('/projects/python/first-interactive-program/read%20the%20plan')).toEqual({
+      page: 'project',
+      language: 'python',
+      projectId: 'first-interactive-program',
+      checkpointId: 'read the plan',
+      conceptIds: [],
+    })
+  })
+
   it('rejects misspelled languages and unknown paths', () => {
     expect(parseAppRoute('/academy/ruby').page).toBe('not-found')
+    expect(parseAppRoute('/projects/java/first-interactive-program').page).toBe('not-found')
+    expect(parseAppRoute('/projects/python/not-a-project').page).toBe('not-found')
+    expect(parseAppRoute('/projects/python/first-interactive-program/checkpoint/extra').page).toBe('not-found')
     expect(parseAppRoute('/anything-else').page).toBe('not-found')
   })
 })

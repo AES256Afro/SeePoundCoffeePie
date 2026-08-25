@@ -1,15 +1,26 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
+import { pythonInteractiveProject } from '../data/python-interactive-project'
 import {
   completeMission,
+  completeProject,
+  completeProjectCheckpoint,
   dateKey,
   initialProgress,
   isDue,
+  loadProgress,
   nextStreak,
   recordAttempt,
   updateConcept,
 } from './progress'
 
 describe('progress helpers', () => {
+  it('starts with no project completion metadata', () => {
+    expect(initialProgress()).toMatchObject({
+      completedProjectCheckpoints: [],
+      completedProjects: [],
+    })
+  })
+
   it('formats local dates as stable day keys', () => {
     expect(dateKey(new Date(2026, 7, 4, 23, 59))).toBe('2026-08-04')
   })
@@ -75,5 +86,69 @@ describe('progress helpers', () => {
     expect(first.starShards).toBe(25)
     expect(replay.completedMissions).toEqual(['py-first-spark'])
     expect(replay.starShards).toBe(25)
+  })
+
+  it('awards checkpoint XP and one concept update only on first completion', () => {
+    const now = new Date(2026, 7, 26)
+    const checkpoint = pythonInteractiveProject.checkpoints[0]
+    const first = completeProjectCheckpoint(
+      initialProgress(),
+      pythonInteractiveProject.id,
+      checkpoint.id,
+      now,
+    )
+    const replay = completeProjectCheckpoint(first, pythonInteractiveProject.id, checkpoint.id, now)
+
+    expect(first.completedProjectCheckpoints).toEqual([checkpoint.id])
+    expect(first.xp).toBe(checkpoint.exercise.xp)
+    expect(first.dailyXp).toBe(checkpoint.exercise.xp)
+    expect(first.dailyXpDate).toBe('2026-08-26')
+    expect(first.conceptProgress[checkpoint.exercise.conceptId]).toMatchObject({
+      strength: 1,
+      correct: 1,
+      incorrect: 0,
+    })
+    expect(replay).toBe(first)
+    expect(completeProjectCheckpoint(first, 'unknown-project', checkpoint.id, now)).toBe(first)
+    expect(completeProjectCheckpoint(first, pythonInteractiveProject.id, 'unknown-checkpoint', now)).toBe(first)
+  })
+
+  it('awards 50 shards and advances the study streak only on first project completion', () => {
+    const starting = {
+      ...initialProgress(),
+      streak: 3,
+      lastStudyDate: '2026-08-25',
+    }
+    const first = completeProject(starting, pythonInteractiveProject.id, new Date(2026, 7, 26))
+    const replay = completeProject(first, pythonInteractiveProject.id, new Date(2026, 7, 27))
+
+    expect(first.completedProjects).toEqual([pythonInteractiveProject.id])
+    expect(first.starShards).toBe(50)
+    expect(first.streak).toBe(4)
+    expect(first.lastStudyDate).toBe('2026-08-26')
+    expect(replay).toBe(first)
+    expect(completeProject(starting, 'unknown-project', new Date(2026, 7, 26))).toBe(starting)
+  })
+
+  it('migrates old browser records without project arrays to empty completion lists', () => {
+    const legacyProgress: Record<string, unknown> = { ...initialProgress('java') }
+    delete legacyProgress.completedProjectCheckpoints
+    delete legacyProgress.completedProjects
+    const localStorage = {
+      getItem: vi.fn(() => JSON.stringify({ ...legacyProgress, callsign: 'Legacy Cadet' })),
+      setItem: vi.fn(),
+    }
+    vi.stubGlobal('window', { localStorage })
+
+    try {
+      expect(loadProgress()).toMatchObject({
+        callsign: 'Legacy Cadet',
+        activeLanguage: 'java',
+        completedProjectCheckpoints: [],
+        completedProjects: [],
+      })
+    } finally {
+      vi.unstubAllGlobals()
+    }
   })
 })

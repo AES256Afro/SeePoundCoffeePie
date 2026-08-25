@@ -1,9 +1,16 @@
 import { getSandbox, Sandbox } from '@cloudflare/sandbox'
 import type { LanguageId } from './types'
-import { evaluateRunnerAssignment, findRunnerAssignment } from './lib/runner-assignments'
+import {
+  aggregateRunnerDurationMs,
+  evaluateProjectRunnerAssignment,
+  evaluateRunnerAssignment,
+  findRunnerAssignment,
+  runnerInputCases,
+} from './lib/runner-assignments'
 import {
   RUNNER_API_VERSION,
   type RunnerPending,
+  type RunnerPurpose,
   type RunnerRequest,
   type RunnerResult,
   validateRunnerRequest,
@@ -42,6 +49,7 @@ interface StoredQueuedRun {
   language: LanguageId
   source: string
   stdin: string
+  purpose?: RunnerPurpose
   status: 'queued' | 'running'
   createdAt: number
   startedAt: number | null
@@ -122,6 +130,18 @@ function parseSupervisorResult(value: string): SupervisorResult | null {
     return result as SupervisorResult
   } catch {
     return null
+  }
+}
+
+function supervisorSystemError(durationMs = 0): SupervisorResult {
+  return {
+    outcome: 'system_error',
+    stdout: '',
+    stderr: '',
+    exit_code: null,
+    duration_ms: durationMs,
+    truncated: false,
+    limit: null,
   }
 }
 
@@ -257,6 +277,7 @@ export class RunnerCoordinator {
       language: validated.request.language,
       source: validated.request.source,
       stdin: validated.request.stdin ?? '',
+      purpose: validated.request.purpose ?? 'check',
       status: 'queued',
       createdAt: now,
       startedAt: null,
@@ -276,6 +297,7 @@ export class RunnerCoordinator {
       queueDepth: queue.length + 1,
       sourceBytes: textEncoder.encode(validated.request.source).byteLength,
       stdinBytes: textEncoder.encode(validated.request.stdin ?? '').byteLength,
+      purpose: validated.request.purpose ?? 'check',
     }))
 
     return json({
@@ -326,61 +348,116 @@ export class RunnerCoordinator {
   }
 
   private async execute(record: StoredQueuedRun): Promise<void> {
-    const sandbox = getSandbox(this.sandboxNamespace(record.language), `run-${record.id}`, {
-      sleepAfter: '1m',
-      normalizeId: true,
-      labels: { workload: 'learner-code', language: record.language },
-    })
-
-    let supervisor: SupervisorResult | null = null
-    let cleanupSucceeded: boolean
-    try {
-      await sandbox.writeFile('/workspace/source.txt', record.source)
-      await sandbox.writeFile('/workspace/stdin.txt', record.stdin)
-      const execution = await sandbox.exec(`/opt/runner/supervisor.py ${record.language}`, {
-        timeout: SUPERVISOR_TIMEOUT_MS,
-      })
-      if (execution.success) supervisor = parseSupervisorResult(execution.stdout)
-    } catch {
-      supervisor = null
-    } finally {
+    const assignment = findRunnerAssignment(record.exerciseId)
+    const purpose = record.purpose ?? 'check'
+    const inputs = assignment
+      ? runnerInputCases(assignment, purpose, record.stdin)
+      : [record.stdin]
+    const officialProjectAssessment = assignment?.kind === 'project'
+      && purpose === 'check'
+      && assignment.projectAssessment
+      ? assignment.projectAssessment
+      : null
+    let supervisorRuns: SupervisorResult[] = []
+    let cleanupSucceeded = true
+    for (const [caseIndex, stdin] of inputs.entries()) {
+      // Every protected case gets a different VM. Learner-created processes,
+      // memory, sockets, and files therefore cannot cross a case boundary.
+      const sandbox = getSandbox(
+        this.sandboxNamespace(record.language),
+        `run-${record.id}-case-${caseIndex + 1}`,
+        {
+          sleepAfter: '1m',
+          normalizeId: true,
+          labels: { workload: 'learner-code', language: record.language },
+        },
+      )
       try {
-        await withTimeout(sandbox.destroy(), DESTROY_TIMEOUT_MS)
-        cleanupSucceeded = true
+        await sandbox.writeFile('/workspace/source.txt', record.source)
+        await sandbox.writeFile('/workspace/stdin.txt', stdin)
+        const execution = await sandbox.exec(`/opt/runner/supervisor.py ${record.language}`, {
+          timeout: SUPERVISOR_TIMEOUT_MS,
+        })
+        const supervisor = execution.success
+          ? parseSupervisorResult(execution.stdout)
+          : null
+        const safeSupervisor = supervisor ?? supervisorSystemError()
+        supervisorRuns.push(safeSupervisor)
       } catch {
-        cleanupSucceeded = false
+        supervisorRuns.push(supervisorSystemError())
+      } finally {
+        try {
+          await withTimeout(sandbox.destroy(), DESTROY_TIMEOUT_MS)
+        } catch {
+          cleanupSucceeded = false
+        }
       }
+      if (!cleanupSucceeded || supervisorRuns.at(-1)?.outcome !== 'completed') break
     }
 
-    const assignment = findRunnerAssignment(record.exerciseId)
-    const safeResult: SupervisorResult = supervisor && cleanupSucceeded
-      ? supervisor
-      : {
-          outcome: 'system_error',
-          stdout: '',
-          stderr: '',
-          exit_code: null,
-          duration_ms: supervisor?.duration_ms ?? 0,
-          truncated: false,
-          limit: null,
-        }
-    const stdout = sanitizeRunnerOutput(safeResult.stdout)
-    const stderr = sanitizeRunnerOutput(safeResult.stderr)
-    const tests = assignment
-      ? evaluateRunnerAssignment(assignment, safeResult.outcome, stdout, record.source)
-      : []
+    if (!cleanupSucceeded) {
+      supervisorRuns = [supervisorSystemError(aggregateRunnerDurationMs(
+        supervisorRuns.map((supervisor) => supervisor.duration_ms),
+      ))]
+    } else if (!supervisorRuns.length) {
+      supervisorRuns = [supervisorSystemError()]
+    }
+
+    const sanitizedRuns = supervisorRuns.map((supervisor) => ({
+      ...supervisor,
+      stdout: sanitizeRunnerOutput(supervisor.stdout),
+      stderr: sanitizeRunnerOutput(supervisor.stderr),
+    }))
+    const failureIndex = sanitizedRuns.findIndex((supervisor) => supervisor.outcome !== 'completed')
+    const representativeIndex = failureIndex >= 0 ? failureIndex : 0
+    const representative = sanitizedRuns[representativeIndex] ?? supervisorSystemError()
+    const projectEvaluation = officialProjectAssessment && assignment
+      ? evaluateProjectRunnerAssignment(
+          assignment,
+          sanitizedRuns.map((supervisor) => ({
+            outcome: supervisor.outcome,
+            stdout: supervisor.stdout,
+          })),
+          record.source,
+        )
+      : null
+    const projectPracticeRun = assignment?.kind === 'project' && purpose === 'run'
+    const tests = projectPracticeRun
+      ? []
+      : projectEvaluation
+        ? projectEvaluation.tests
+        : assignment
+          ? evaluateRunnerAssignment(
+              assignment,
+              representative.outcome,
+              sanitizedRuns[0]?.stdout ?? '',
+              record.source,
+            )
+          : []
+    const visibleCaseIndex = officialProjectAssessment?.testCases.findIndex((testCase) => (
+      testCase.visibility === 'visible'
+    )) ?? -1
+    const stdout = projectEvaluation
+      ? projectEvaluation.visibleStdout
+      : sanitizedRuns[0]?.stdout ?? ''
+    const stderr = projectEvaluation && representativeIndex !== visibleCaseIndex
+      ? ''
+      : representative.stderr
+    const durationMs = aggregateRunnerDurationMs(
+      sanitizedRuns.map((supervisor) => supervisor.duration_ms),
+    )
     const result: RunnerResult = {
       version: RUNNER_API_VERSION,
       runId: record.id,
-      outcome: safeResult.outcome,
+      outcome: representative.outcome,
       stdout,
       stderr,
-      exitCode: safeResult.exit_code,
-      durationMs: Math.max(0, Math.round(safeResult.duration_ms)),
-      truncated: safeResult.truncated,
-      limit: safeResult.limit,
+      exitCode: representative.exit_code,
+      durationMs,
+      truncated: sanitizedRuns.some((supervisor) => supervisor.truncated),
+      limit: representative.limit,
       tests,
-      diagnostic: explainRunnerResult(record.language, safeResult.outcome, stderr, safeResult.limit),
+      diagnostic: explainRunnerResult(record.language, representative.outcome, stderr, representative.limit),
     }
     const now = Date.now()
     const completed: StoredCompletedRun = {
@@ -400,19 +477,21 @@ export class RunnerCoordinator {
       [`${RUN_ERROR_PREFIX}${record.id}`]: stderr,
     })
     const completionEvent = JSON.stringify({
-      event: safeResult.outcome === 'system_error' ? 'runner.system_error' : 'runner.complete',
+      event: representative.outcome === 'system_error' ? 'runner.system_error' : 'runner.complete',
       runId: record.id,
       language: record.language,
-      outcome: safeResult.outcome,
+      outcome: representative.outcome,
       durationMs: result.durationMs,
       limit: result.limit,
-      phase: safeResult.phase ?? 'unknown',
-      allocatedBytes: safeResult.allocated_bytes ?? null,
+      phase: representative.phase ?? 'unknown',
+      allocatedBytes: representative.allocated_bytes ?? null,
       stdoutBytes: textEncoder.encode(stdout).byteLength,
       stderrBytes: textEncoder.encode(stderr).byteLength,
       cleanupSucceeded,
+      caseCount: sanitizedRuns.length,
+      purpose,
     })
-    if (safeResult.outcome === 'system_error') console.error(completionEvent)
+    if (representative.outcome === 'system_error') console.error(completionEvent)
     else console.info(completionEvent)
   }
 

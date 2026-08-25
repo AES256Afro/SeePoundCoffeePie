@@ -12,6 +12,7 @@ describe('isolated runner request contract', () => {
       language,
       source: 'print("Hello")',
       stdin: 'cadet input',
+      purpose: 'run',
     })).toEqual({
       ok: true,
       request: {
@@ -19,6 +20,24 @@ describe('isolated runner request contract', () => {
         language,
         source: 'print("Hello")',
         stdin: 'cadet input',
+        purpose: 'run',
+      },
+    })
+  })
+
+  it('preserves an official check purpose without requiring caller input', () => {
+    expect(validateRunnerRequest({
+      version: RUNNER_API_VERSION,
+      language: 'python',
+      source: 'print("Ready")',
+      purpose: 'check',
+    })).toEqual({
+      ok: true,
+      request: {
+        version: RUNNER_API_VERSION,
+        language: 'python',
+        source: 'print("Ready")',
+        purpose: 'check',
       },
     })
   })
@@ -30,6 +49,7 @@ describe('isolated runner request contract', () => {
     [{ version: 1, language: 'javascript', source: 'console.log(1)' }, 'unsupported_language'],
     [{ version: 1, language: 'python', source: '   ' }, 'empty_source'],
     [{ version: 1, language: 'python', source: 'print(1)', stdin: 7 }, 'invalid_stdin'],
+    [{ version: 1, language: 'python', source: 'print(1)', purpose: 'publish' }, 'invalid_body'],
   ])('rejects malformed request %#', (input, issue) => {
     expect(validateRunnerRequest(input)).toMatchObject({ ok: false, issue })
   })

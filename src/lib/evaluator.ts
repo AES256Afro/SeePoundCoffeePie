@@ -1,5 +1,20 @@
 import type { EvaluationResult, Exercise } from '../types'
 
+export interface ExerciseCheckResult {
+  passed: boolean
+  message: string
+}
+
+export function evaluateExerciseChecks(
+  exercise: Pick<Exercise, 'checks'>,
+  answer: string,
+): ExerciseCheckResult[] {
+  return (exercise.checks ?? []).map((check) => ({
+    passed: new RegExp(check.pattern, check.flags).test(answer),
+    message: check.message,
+  }))
+}
+
 export function evaluateExercise(exercise: Exercise, answer: string): EvaluationResult {
   if (exercise.type === 'choice' || exercise.type === 'prediction') {
     if (!answer) {
@@ -37,11 +52,9 @@ export function evaluateExercise(exercise: Exercise, answer: string): Evaluation
     return { correct: false, message: 'The editor is empty. Add your instruction, then run the check.' }
   }
 
-  for (const check of exercise.checks ?? []) {
-    const expression = new RegExp(check.pattern, check.flags)
-    if (!expression.test(answer)) {
-      return { correct: false, message: check.message }
-    }
+  const failedCheck = evaluateExerciseChecks(exercise, answer).find((check) => !check.passed)
+  if (failedCheck) {
+    return { correct: false, message: failedCheck.message }
   }
 
   return {

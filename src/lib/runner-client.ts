@@ -1,6 +1,7 @@
 import type { LanguageId } from '../types'
 import {
   RUNNER_API_VERSION,
+  type RunnerPurpose,
   type RunnerAccepted,
   type RunnerPending,
   type RunnerResult,
@@ -11,6 +12,11 @@ const MIN_POLL_MS = 200
 const MAX_POLL_MS = 2_000
 
 export type RunnerClientStatus = 'requesting' | 'queued' | 'running'
+
+export interface RunExerciseOptions {
+  stdin?: string
+  purpose?: RunnerPurpose
+}
 
 export class RunnerClientError extends Error {
   readonly retryable: boolean
@@ -78,6 +84,7 @@ export async function runExercise(
   language: LanguageId,
   source: string,
   onStatus?: (status: RunnerClientStatus) => void,
+  options: RunExerciseOptions = {},
 ): Promise<RunnerResult> {
   onStatus?.('requesting')
   const grantBody = await expectJson(await fetch('/api/runner/grants', {
@@ -97,7 +104,13 @@ export async function runExercise(
       'Content-Type': 'application/json',
       'X-Runner-Grant': grantBody.grant,
     },
-    body: JSON.stringify({ version: RUNNER_API_VERSION, language, source }),
+    body: JSON.stringify({
+      version: RUNNER_API_VERSION,
+      language,
+      source,
+      ...(options.stdin === undefined ? {} : { stdin: options.stdin }),
+      ...(options.purpose === undefined ? {} : { purpose: options.purpose }),
+    }),
   }))
   if (!isAccepted(acceptedBody)) {
     throw new RunnerClientError('The training runner did not return a valid queue receipt. Please try again.', true)

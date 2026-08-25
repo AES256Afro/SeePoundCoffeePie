@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { pythonInteractiveProject } from '../data/python-interactive-project'
 import { initialProgress } from './progress'
 import {
   PROGRESS_BACKUP_FORMAT,
@@ -20,12 +21,20 @@ function completedProgress() {
     streak: 4,
     lastStudyDate: '2026-08-24',
     completedMissions: ['java-coffee-protocol', 'java-routing-orders'],
+    completedProjectCheckpoints: [pythonInteractiveProject.checkpoints[0].id],
+    completedProjects: [pythonInteractiveProject.id],
     conceptProgress: {
       'java-conditions': {
         strength: 2,
         correct: 3,
         incorrect: 1,
         dueAt: '2026-08-27',
+      },
+      [pythonInteractiveProject.checkpoints[0].exercise.conceptId]: {
+        strength: 1,
+        correct: 1,
+        incorrect: 0,
+        dueAt: '2026-08-25',
       },
     },
     onboardingComplete: true,
@@ -83,6 +92,32 @@ describe('local progress backups', () => {
     envelope.progress.completedMissions.push('java-coffee-protocol')
 
     expect(parseProgressBackup(JSON.stringify(envelope))).toMatchObject({ ok: false })
+  })
+
+  it('migrates version 1 backups without project arrays to empty lists', () => {
+    const envelope = JSON.parse(serializeProgressBackup(initialProgress(), exportedAt))
+    delete envelope.progress.completedProjectCheckpoints
+    delete envelope.progress.completedProjects
+
+    expect(parseProgressBackup(JSON.stringify(envelope))).toEqual({
+      ok: true,
+      progress: initialProgress(),
+      exportedAt: exportedAt.toISOString(),
+    })
+  })
+
+  it('rejects unknown or duplicate project completion identifiers', () => {
+    const unknownCheckpoint = JSON.parse(serializeProgressBackup(completedProgress(), exportedAt))
+    unknownCheckpoint.progress.completedProjectCheckpoints.push('unknown-checkpoint')
+    expect(parseProgressBackup(JSON.stringify(unknownCheckpoint))).toMatchObject({ ok: false })
+
+    const duplicateCheckpoint = JSON.parse(serializeProgressBackup(completedProgress(), exportedAt))
+    duplicateCheckpoint.progress.completedProjectCheckpoints.push(pythonInteractiveProject.checkpoints[0].id)
+    expect(parseProgressBackup(JSON.stringify(duplicateCheckpoint))).toMatchObject({ ok: false })
+
+    const unknownProject = JSON.parse(serializeProgressBackup(completedProgress(), exportedAt))
+    unknownProject.progress.completedProjects = ['unknown-project']
+    expect(parseProgressBackup(JSON.stringify(unknownProject))).toMatchObject({ ok: false })
   })
 
   it('rejects files above the fixed backup byte limit', () => {

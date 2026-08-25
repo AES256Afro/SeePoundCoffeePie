@@ -1,0 +1,11 @@
+from pathlib import Path
+
+workspace_marker = Path("/workspace/previous-case.txt")
+temporary_marker = Path("/tmp/previous-case.txt")
+state_is_clean = not workspace_marker.exists() and not temporary_marker.exists()
+
+print(input().strip())
+print("state: clean" if state_is_clean else "state: leaked")
+
+workspace_marker.write_text("created by this case", encoding="utf-8")
+temporary_marker.write_text("created by this case", encoding="utf-8")

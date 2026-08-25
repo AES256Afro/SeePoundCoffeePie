@@ -41,7 +41,13 @@ describe('runExercise', () => {
       }))
     vi.stubGlobal('fetch', fetchMock)
 
-    const promise = runExercise('py-print', 'python', 'print("Signal online")', (status) => statuses.push(status))
+    const promise = runExercise(
+      'py-print',
+      'python',
+      'print("Signal online")',
+      (status) => statuses.push(status),
+      { stdin: 'Ada\n', purpose: 'run' },
+    )
     await vi.runAllTimersAsync()
     const result = await promise
 
@@ -50,7 +56,13 @@ describe('runExercise', () => {
     expect(fetchMock).toHaveBeenNthCalledWith(2, '/api/runner/runs', expect.objectContaining({ method: 'POST' }))
     const submission = JSON.parse(fetchMock.mock.calls[1][1].body)
     expect(fetchMock.mock.calls[1][1].headers).toMatchObject({ 'X-Runner-Grant': 'signed-grant' })
-    expect(submission).toMatchObject({ version: 1, language: 'python', source: 'print("Signal online")' })
+    expect(submission).toMatchObject({
+      version: 1,
+      language: 'python',
+      source: 'print("Signal online")',
+      stdin: 'Ada\n',
+      purpose: 'run',
+    })
     expect(submission).not.toHaveProperty('command')
   })
 

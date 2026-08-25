@@ -4,10 +4,17 @@ import path from 'node:path'
 
 const root = new URL('../dist/', import.meta.url)
 const budgets = {
-  // Semantic labels and focus management compress well. Keep transfer size as the tighter gate.
-  javascript: { raw: 465_000, gzip: 125_000 },
-  css: { raw: 58_000, gzip: 12_500 },
-  html: { raw: 5_000, gzip: 2_000 },
+  // The first-load budget stays tight. Route-loaded teaching content gets a separate total cap.
+  initial: {
+    javascript: { raw: 480_000, gzip: 130_000 },
+    css: { raw: 70_000, gzip: 13_000 },
+    html: { raw: 5_000, gzip: 2_000 },
+  },
+  total: {
+    javascript: { raw: 525_000, gzip: 145_000 },
+    css: { raw: 70_000, gzip: 13_000 },
+    html: { raw: 5_000, gzip: 2_000 },
+  },
 }
 
 async function filesBelow(directory) {
@@ -37,9 +44,11 @@ const totals = {
   css: { raw: 0, gzip: 0 },
   html: { raw: 0, gzip: 0 },
 }
+const fileSizes = new Map()
 const failures = []
 
-for (const file of await filesBelow(root)) {
+const files = await filesBelow(root)
+for (const file of files) {
   const fileName = path.basename(file.pathname)
   const kind = category(fileName)
   if (!kind) continue
@@ -47,16 +56,43 @@ for (const file of await filesBelow(root)) {
   const contents = await readFile(file)
   const raw = (await stat(file)).size
   const gzip = gzipSync(contents).byteLength
+  fileSizes.set(fileName, { kind, raw, gzip })
   totals[kind].raw += raw
   totals[kind].gzip += gzip
 }
 
-for (const [kind, sizes] of Object.entries(totals)) {
-  const budget = budgets[kind]
-  console.log(`${kind}: ${kilobytes(sizes.raw)} raw, ${kilobytes(sizes.gzip)} gzip`)
-  if (sizes.raw > budget.raw) failures.push(`${kind} raw size exceeds ${kilobytes(budget.raw)}`)
-  if (sizes.gzip > budget.gzip) failures.push(`${kind} gzip size exceeds ${kilobytes(budget.gzip)}`)
+const initial = {
+  javascript: { raw: 0, gzip: 0 },
+  css: { raw: 0, gzip: 0 },
+  html: { raw: 0, gzip: 0 },
 }
+const indexFile = files.find((file) => path.basename(file.pathname) === 'index.html')
+if (!indexFile) throw new Error('dist/index.html is missing.')
+const indexContents = await readFile(indexFile, 'utf8')
+const initialAssetNames = new Set(
+  [...indexContents.matchAll(/(?:src|href)="[^"]*\/([^/"?]+\.(?:js|css))(?:\?[^" ]*)?"/giu)]
+    .map((match) => match[1]),
+)
+for (const assetName of initialAssetNames) {
+  const sizes = fileSizes.get(assetName)
+  if (!sizes) throw new Error(`Initial asset ${assetName} is missing from dist.`)
+  initial[sizes.kind].raw += sizes.raw
+  initial[sizes.kind].gzip += sizes.gzip
+}
+const htmlSizes = fileSizes.get('index.html')
+if (htmlSizes) initial.html = { raw: htmlSizes.raw, gzip: htmlSizes.gzip }
+
+function check(scope, sizesByKind) {
+  for (const [kind, sizes] of Object.entries(sizesByKind)) {
+    const budget = budgets[scope][kind]
+    console.log(`${scope} ${kind}: ${kilobytes(sizes.raw)} raw, ${kilobytes(sizes.gzip)} gzip`)
+    if (sizes.raw > budget.raw) failures.push(`${scope} ${kind} raw size exceeds ${kilobytes(budget.raw)}`)
+    if (sizes.gzip > budget.gzip) failures.push(`${scope} ${kind} gzip size exceeds ${kilobytes(budget.gzip)}`)
+  }
+}
+
+check('initial', initial)
+check('total', totals)
 
 if (failures.length > 0) {
   console.error('\nBundle budget failed:')

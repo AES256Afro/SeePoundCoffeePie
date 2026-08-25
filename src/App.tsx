@@ -1,4 +1,6 @@
 import {
+  lazy,
+  Suspense,
   useCallback,
   useEffect,
   useMemo,
@@ -52,7 +54,9 @@ import {
 } from 'lucide-react'
 import { codebookEntries, codebookExampleState, codebookMatches } from './data/codebook'
 import { trackById, tracks } from './data/curriculum'
+import { pythonInteractiveProjectManifest as pythonInteractiveProject } from './data/python-interactive-project-manifest'
 import { buildCourseCards, buildCourseModel, type CourseCardModel } from './lib/course-model'
+import { orderedChoices } from './lib/choice-order'
 import { evaluateExercise } from './lib/evaluator'
 import { missionAvailability } from './lib/missions'
 import { buildPracticeExercises, conceptDisplayName, recommendPractice } from './lib/practice'
@@ -89,6 +93,7 @@ import {
   parseAppRoute,
   practiceMissionPath,
   practicePath,
+  projectPath,
 } from './lib/routes'
 import type {
   AuthUser,
@@ -99,6 +104,11 @@ import type {
 } from './types'
 
 type ViewId = 'home' | 'courses' | 'path' | 'practice' | 'spellbook' | 'profile' | 'settings'
+
+const ProjectStudio = lazy(async () => {
+  const module = await import('./ProjectStudio')
+  return { default: module.ProjectStudio }
+})
 
 const languageSnippets: Record<LanguageId, string> = {
   python: 'print("Hello, cosmos!")',
@@ -586,16 +596,21 @@ function CourseCatalog({ progress }: { progress: LearnerProgress }) {
       </section>}
       {showProjects && <section className="guided-project-list" aria-labelledby="guided-projects-title">
         <div className="section-heading-open">
-          <div><p className="eyebrow">Included capstones</p><h2 id="guided-projects-title">Guided projects</h2></div>
-          <p>Each foundations course ends with a project that combines its earlier ideas.</p>
+          <div><p className="eyebrow">Build something complete</p><h2 id="guided-projects-title">Guided projects</h2></div>
+          <p>Start with small checkpoints, then finish with a program you can download and keep.</p>
         </div>
+        <AppLink className="guided-project-row guided-project-row--featured" to={projectPath('python', pythonInteractiveProject.id)}>
+          <LanguageSymbol language="python" />
+          <span><small>Python project studio · 12 checkpoints</small><b>{pythonInteractiveProject.title}</b><p>{pythonInteractiveProject.subtitle}</p></span>
+          <strong>Open project <ArrowRight size={16} /></strong>
+        </AppLink>
         {tracks.map((track) => {
           const project = track.missions.at(-1)
           if (!project) return null
           return (
-            <AppLink className="guided-project-row" key={project.id} to={coursePath(track.id)}>
+            <AppLink className="guided-project-row guided-project-row--capstone" key={project.id} to={coursePath(track.id)}>
               <LanguageSymbol language={track.id} />
-              <span><small>{track.shortName} guided project</small><b>{project.title}</b><p>{project.description}</p></span>
+              <span><small>{track.shortName} foundation capstone</small><b>{project.title}</b><p>{project.description}</p></span>
               <strong>{project.exercises.length} lessons <ArrowRight size={16} /></strong>
             </AppLink>
           )
@@ -609,9 +624,39 @@ function LearnerHome({ progress }: { progress: LearnerProgress }) {
   const courses = buildCourseCards(progress)
   const activeCourse = buildCourseModel(trackById(progress.activeLanguage), progress)
   const reviewsDue = Object.values(progress.conceptProgress).filter((concept) => isDue(concept)).length
-  const continueTo = activeCourse.currentModuleId && activeCourse.currentLessonId
-    ? lessonPath(activeCourse.id, activeCourse.currentModuleId, activeCourse.currentLessonId)
-    : coursePath(activeCourse.id)
+  const projectReady = activeCourse.id === 'python' && activeCourse.status === 'complete'
+  const completedProjectCheckpointCount = pythonInteractiveProject.checkpoints.filter((checkpoint) => (
+    progress.completedProjectCheckpoints.includes(checkpoint.id)
+  )).length
+  const nextProjectCheckpoint = pythonInteractiveProject.checkpoints.find((checkpoint) => (
+    !progress.completedProjectCheckpoints.includes(checkpoint.id)
+  ))
+  const projectComplete = progress.completedProjects.includes(pythonInteractiveProject.id)
+  const continueTo = projectReady
+    ? completedProjectCheckpointCount > 0 && nextProjectCheckpoint && !projectComplete
+      ? projectPath('python', pythonInteractiveProject.id, nextProjectCheckpoint.id)
+      : projectPath('python', pythonInteractiveProject.id)
+    : activeCourse.currentModuleId && activeCourse.currentLessonId
+      ? lessonPath(activeCourse.id, activeCourse.currentModuleId, activeCourse.currentLessonId)
+      : coursePath(activeCourse.id)
+  const continueEyebrow = projectReady
+    ? projectComplete ? 'Project complete' : completedProjectCheckpointCount > 0 ? 'Continue your project' : 'Your next step'
+    : 'Continue learning'
+  const continueTitle = projectReady
+    ? pythonInteractiveProject.title
+    : activeCourse.currentLessonTitle ?? activeCourse.title
+  const continueDescription = projectReady
+    ? projectComplete
+      ? 'Your Coffee Counter is complete. Reopen any checkpoint, download the program again, or explain how each piece works.'
+      : completedProjectCheckpointCount > 0
+        ? `${completedProjectCheckpointCount} of ${pythonInteractiveProject.checkpoints.length} checkpoints complete. Your browser saved the code for your next small step.`
+        : pythonInteractiveProject.subtitle
+    : activeCourse.currentModuleTitle
+      ? `${activeCourse.title}, Module ${activeCourse.modules.find((item) => item.id === activeCourse.currentModuleId)?.number}: ${activeCourse.currentModuleTitle}`
+      : activeCourse.outcome
+  const continueAction = projectReady
+    ? projectComplete ? 'Review project' : completedProjectCheckpointCount > 0 ? 'Continue project' : 'Start project'
+    : activeCourse.status === 'complete' ? 'Review course' : 'Continue lesson'
   const today = new Date()
   const days = Array.from({ length: 7 }, (_, offset) => {
     const date = new Date(today)
@@ -633,11 +678,11 @@ function LearnerHome({ progress }: { progress: LearnerProgress }) {
       <section className={`continue-panel continue-panel--${activeCourse.id}`}>
         <CourseSymbol course={activeCourse} size="large" />
         <div>
-          <p className="eyebrow">Continue learning</p>
-          <h2>{activeCourse.currentLessonTitle ?? activeCourse.title}</h2>
-          <p>{activeCourse.currentModuleTitle ? `${activeCourse.title}, Module ${activeCourse.modules.find((item) => item.id === activeCourse.currentModuleId)?.number}: ${activeCourse.currentModuleTitle}` : activeCourse.outcome}</p>
+          <p className="eyebrow">{continueEyebrow}</p>
+          <h2>{continueTitle}</h2>
+          <p>{continueDescription}</p>
         </div>
-        <AppLink className="primary-action" to={continueTo}>{activeCourse.status === 'complete' ? 'Review course' : 'Continue lesson'} <ArrowRight size={17} /></AppLink>
+        <AppLink className="primary-action" to={continueTo}>{continueAction} <ArrowRight size={17} /></AppLink>
       </section>
 
       <div className="learner-home-grid">
@@ -717,6 +762,22 @@ function MissionPath({ progress }: { progress: LearnerProgress }) {
           )
         })}
       </section>
+      {track.id === 'python' && (
+        <section className="course-project-next" aria-labelledby="course-project-next-title">
+          <LanguageSymbol language="python" size="large" />
+          <div>
+            <p className="eyebrow">After the foundations</p>
+            <h2 id="course-project-next-title">{pythonInteractiveProject.title}</h2>
+            <p>{pythonInteractiveProject.subtitle}</p>
+            <span>{pythonInteractiveProject.checkpoints.length} checkpoints · {pythonInteractiveProject.duration} · downloadable Python file</span>
+          </div>
+          <AppLink className="primary-action" to={projectPath('python', pythonInteractiveProject.id)}>
+            {progress.completedProjects.includes(pythonInteractiveProject.id)
+              ? 'Review project'
+              : course.status === 'complete' ? 'Open project' : 'Preview project'} <ArrowRight size={17} />
+          </AppLink>
+        </section>
+      )}
     </main>
   )
 }
@@ -1199,6 +1260,7 @@ function LessonPlayer({ initialExerciseId, mission, onExerciseChange, practiceCo
     : []
   const blankCount = exercise.starterCode?.match(/_____/gu)?.length ?? 0
   const choiceExercise = exercise.type === 'choice' || exercise.type === 'prediction'
+  const displayChoices = choiceExercise ? orderedChoices(exercise) : []
   const editableExercise = exercise.type === 'code' || exercise.type === 'bugfix'
   const taskLabel = reviewing
     ? 'TRY IT ONCE MORE'
@@ -1447,7 +1509,7 @@ function LessonPlayer({ initialExerciseId, mission, onExerciseChange, practiceCo
               </div>
               <fieldset className="choice-list">
                 <legend className="sr-only">{exercise.prompt}</legend>
-                {exercise.choices?.map((choice, index) => (
+                {displayChoices.map((choice, index) => (
                   <label
                     className={answer === choice.id ? 'is-selected' : ''}
                     key={choice.id}
@@ -1638,7 +1700,7 @@ function AppContent() {
   const [progress, setProgress] = useState<LearnerProgress>(() => {
     const loaded = loadProgress()
     const initialRoute = parseAppRoute(window.location.pathname, window.location.search)
-    if (initialRoute.language && ['academy', 'practice', 'codebook', 'lesson'].includes(initialRoute.page)) {
+    if (initialRoute.language && ['academy', 'practice', 'codebook', 'lesson', 'project'].includes(initialRoute.page)) {
       return { ...loaded, activeLanguage: initialRoute.language }
     }
     return loaded
@@ -1659,7 +1721,7 @@ function AppContent() {
 
   const view: ViewId = route.page === 'home'
     ? 'home'
-    : route.page === 'courses' || route.page === 'course' || route.page === 'academy'
+    : route.page === 'courses' || route.page === 'course' || route.page === 'academy' || route.page === 'project'
       ? 'courses'
       : route.page === 'practice' || (route.page === 'lesson' && route.practice)
     ? 'practice'
@@ -1697,6 +1759,9 @@ function AppContent() {
     const track = route.language ? trackById(route.language) : null
     const mission = track?.missions.find((item) => item.id === route.missionId)
     const exercise = mission?.exercises.find((item) => item.id === route.exerciseId)
+    const projectCheckpoint = route.page === 'project'
+      ? pythonInteractiveProject.checkpoints.find((item) => item.id === route.checkpointId)
+      : undefined
     const pageTitle = route.page === 'home'
       ? 'Learning Home'
       : route.page === 'start'
@@ -1713,18 +1778,20 @@ function AppContent() {
               ? 'Learner Record'
               : route.page === 'settings'
                 ? 'Settings'
+                : route.page === 'project'
+                  ? projectCheckpoint?.title ?? pythonInteractiveProject.title
                 : route.page === 'lesson'
                   ? exercise?.title ?? mission?.title
                   : 'Page not found'
     document.title = `${pageTitle ?? 'Academy'} | SeePoundCoffeePie`
-  }, [route.exerciseId, route.language, route.missionId, route.page])
+  }, [route.checkpointId, route.exerciseId, route.language, route.missionId, route.page])
 
   useEffect(() => {
     const handleNavigation = () => {
       const nextLocation = readBrowserLocation()
       const nextRoute = parseAppRoute(nextLocation.pathname, nextLocation.search)
       setLocation(nextLocation)
-      if (nextRoute.language && ['academy', 'practice', 'codebook', 'lesson'].includes(nextRoute.page)) {
+      if (nextRoute.language && ['academy', 'practice', 'codebook', 'lesson', 'project'].includes(nextRoute.page)) {
         setProgress((current) => current.activeLanguage === nextRoute.language
           ? current
           : { ...current, activeLanguage: nextRoute.language ?? current.activeLanguage })
@@ -1877,7 +1944,7 @@ function AppContent() {
 
   const normalizedProgress = useMemo(() => {
     const dailyProgress = progress.dailyXpDate === dateKey(new Date()) ? progress : { ...progress, dailyXp: 0 }
-    if (route.language && ['academy', 'practice', 'codebook', 'lesson'].includes(route.page)) {
+    if (route.language && ['academy', 'practice', 'codebook', 'lesson', 'project'].includes(route.page)) {
       return { ...dailyProgress, activeLanguage: route.language }
     }
     return dailyProgress
@@ -2126,6 +2193,56 @@ function AppContent() {
           onProgress={updateProgress}
           onExit={() => navigateTo(route.practice ? practicePath(track.id) : coursePath(track.id))}
         />
+      </>
+    )
+  }
+
+  if (route.page === 'project') {
+    const checkpointExists = !route.checkpointId || pythonInteractiveProject.checkpoints.some((checkpoint) => (
+      checkpoint.id === route.checkpointId
+    ))
+    if (
+      route.language !== pythonInteractiveProject.language
+      || route.projectId !== pythonInteractiveProject.id
+      || !checkpointExists
+    ) {
+      return <NotFoundPage progress={normalizedProgress} />
+    }
+
+    return (
+      <>
+        {authNotice && <AuthNotice message={authNotice} onDismiss={() => setAuthNotice(null)} />}
+        {syncDialog}
+        <AppShell
+          authReady={authReady}
+          authUser={authUser}
+          progress={normalizedProgress}
+          view={view}
+          onLanguageChange={(language) => {
+            setProgress((current) => ({ ...current, activeLanguage: language }))
+            navigateTo(language === 'python'
+              ? projectPath('python', pythonInteractiveProject.id)
+              : coursePath(language))
+          }}
+          onSignIn={signIn}
+        >
+          <Suspense fallback={(
+            <main className="content-page" aria-busy="true">
+              <section className="route-message-card route-message-card--inside">
+                <p className="kicker"><Coffee size={15} /> Project studio</p>
+                <h1>Opening your project</h1>
+                <p>Loading the lesson notes, editor, and your browser-saved draft.</p>
+              </section>
+            </main>
+          )}>
+            <ProjectStudio
+              checkpointId={route.checkpointId}
+              onNavigate={navigateTo}
+              onProgress={updateProgress}
+              progress={normalizedProgress}
+            />
+          </Suspense>
+        </AppShell>
       </>
     )
   }

@@ -173,6 +173,35 @@ def workspace_allocated_bytes() -> int:
     return total
 
 
+def clear_workspace(preserve_names: frozenset[str] = frozenset()) -> None:
+    """Remove learner-owned artifacts without following learner symlinks."""
+
+    for path in WORKSPACE.iterdir():
+        if path.name in preserve_names:
+            continue
+        if path.is_dir() and not path.is_symlink():
+            shutil.rmtree(path)
+        else:
+            path.unlink(missing_ok=True)
+
+
+def clear_case_state(preserve_workspace_names: frozenset[str] = frozenset()) -> None:
+    """Clear every writable path a prior learner case could use as memory."""
+
+    clear_workspace(preserve_workspace_names)
+    learner_uid = pwd.getpwnam(LEARNER_USER).pw_uid
+    for path in Path("/tmp").iterdir():
+        try:
+            if path.lstat().st_uid != learner_uid:
+                continue
+            if path.is_dir() and not path.is_symlink():
+                shutil.rmtree(path)
+            else:
+                path.unlink(missing_ok=True)
+        except FileNotFoundError:
+            continue
+
+
 def process_tree(root_pid: int) -> set[int]:
     """Return the root process and every descendant visible in /proc."""
 
@@ -352,6 +381,10 @@ def prepare_workspace(language: str, toolchain: Toolchain) -> bytes:
     if not source_path.is_file():
         raise RuntimeError("source file is missing")
 
+    # Each coordinator case uses a fresh VM. Clear learner-owned paths here as
+    # defense in depth before moving the trusted source and input into place.
+    clear_case_state(frozenset({"source.txt", "stdin.txt"}))
+
     source_target = WORKSPACE / toolchain.source_name
     if source_target != source_path:
         source_path.replace(source_target)
@@ -468,6 +501,23 @@ def main() -> int:
             "limit": None,
             "internal_error": type(error).__name__,
         }
+    finally:
+        # Leave no learner-controlled path behind for a later protected case.
+        # Cleanup failure is an infrastructure error because case isolation can
+        # no longer be guaranteed inside this VM.
+        try:
+            clear_case_state()
+        except Exception as error:
+            result = {
+                "outcome": "system_error",
+                "stdout": "",
+                "stderr": "",
+                "exit_code": None,
+                "duration_ms": 0,
+                "truncated": False,
+                "limit": None,
+                "internal_error": type(error).__name__,
+            }
 
     sys.stdout.write(json.dumps(result, ensure_ascii=False, separators=(",", ":")))
     return 0

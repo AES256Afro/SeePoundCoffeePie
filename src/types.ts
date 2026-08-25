@@ -91,6 +91,8 @@ export interface LearnerProgress {
   streak: number
   lastStudyDate: string | null
   completedMissions: string[]
+  completedProjectCheckpoints: string[]
+  completedProjects: string[]
   conceptProgress: Record<string, ConceptProgress>
   onboardingComplete: boolean
 }

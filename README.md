@@ -20,6 +20,7 @@ The current vertical slice includes:
 - an open learner home with one continuation action, review priorities, and visible course progress;
 - a bookmarkable course catalog and separate outlines for Python, C++, C#, and Java Foundations;
 - six fully playable five-lesson modules for each language;
+- a bookmarkable 12-checkpoint Python project that grows from one `print` instruction into a downloadable interactive coffee-order calculator;
 - plain-language explanations and concrete analogies;
 - guided choices, output prediction, code ordering, bug repair, and editable code exercises;
 - immediate, specific feedback and optional hints;
@@ -46,6 +47,7 @@ The academy uses clean application URLs instead of separate `.html` files. Cloud
 - `/courses` is the complete course catalog;
 - `/courses/python-foundations`, `/courses/cpp-foundations`, `/courses/csharp-foundations`, and `/courses/java-foundations` are the four course outlines;
 - `/learn/:course-slug/:module-id/:lesson-id` is an exact lesson URL. For example, `/learn/python-foundations/py-first-spark/py-console` opens the first Python lesson directly;
+- `/projects/python/first-interactive-program` is the Python project overview, and adding a checkpoint ID opens that exact project checkpoint;
 - `/practice/:language` is the selected course’s Practice page;
 - `/codebook/:language` is the selected course’s Codebook;
 - `/profile` is the learner record;
@@ -57,7 +59,7 @@ The browser Back and Forward buttons follow these routes normally. Browsing anot
 
 Each module unlocks only after the previous module is complete in the same language. Module 2 retrieves output and variable skills before introducing Booleans, comparisons, `if`, and `else`. Module 3 retrieves that decision work before introducing collections, arrays or lists, and zero-based indexing. Module 4 retrieves an indexed item before explaining loops, tracing repeated output, assembling a loop, and applying it to the whole collection. Module 5 retrieves that loop before introducing reusable functions or methods, parameters, arguments, definitions, and calls. Module 6 then combines storage, conditions, collections, loops, and reusable code in an integrative capstone without adding another syntax burden.
 
-The current curriculum totals 24 playable modules and 120 authored lessons across the four foundation courses.
+The current curriculum totals 24 playable modules and 120 authored lessons across the four foundation courses, plus the 12-checkpoint Python project studio.
 
 Inside editable code exercises, press Ctrl+Enter on Windows or Linux, or Command+Enter on macOS, to run the same check as the visible button. Tab keeps its normal browser behavior so keyboard learners can leave the editor without getting trapped.
 
@@ -167,9 +169,9 @@ The Cadet Record can also download a versioned JSON backup and restore it after 
 
 ## How editable code runs
 
-The 48 editable academy exercises use real server-side Python, C++, C#, and Java toolchains. The browser requests a five-minute lesson-scoped run grant, submits only the versioned language, source, and optional text input fields, then polls an opaque learner-owned result ID. Learners cannot choose an executable, command, compiler flag, package, image, path, mount, or network destination.
+The 48 editable foundation exercises and 10 editable Python project checkpoints use real server-side Python, C++, C#, and Java toolchains. The browser requests a five-minute exercise-scoped run grant, submits only the versioned language, source, optional text input, and `run` or `check` purpose, then polls an opaque learner-owned result ID. Learners cannot choose an executable, command, compiler flag, package, image, path, mount, or network destination.
 
-Every attempt starts in a fresh Cloudflare Sandbox VM with a pinned base image and fixed server-owned toolchain commands. A trusted supervisor drops privileges, blocks socket syscalls, measures the whole process tree, caps CPU, wall time, memory, processes, writable storage, stdout, and stderr, and destroys the VM after the result. Compile errors are translated into beginner language while sanitized raw diagnostics remain available under a disclosure.
+Every attempt starts in a fresh Cloudflare Sandbox VM with a pinned base image and fixed server-owned toolchain commands. A trusted supervisor drops privileges, blocks socket syscalls, measures the whole process tree, caps CPU, wall time, memory, processes, writable storage, stdout, and stderr, and destroys the VM after the result. The final Python project check replaces caller-supplied input with one visible and three server-owned cases. Every case uses a different fresh VM, returns only the visible output and pass summaries, and keeps private inputs and the reference solution out of the browser bundle. Compile errors are translated into beginner language while sanitized raw diagnostics remain available under a disclosure.
 
 The production runner can be paused independently of the academy and GitHub sign-in. Deployment and kill-switch instructions, supported language versions, staging and production verification commands, rollback steps, and known boundaries are in the Phase 2 release record.
 
@@ -192,6 +194,7 @@ Read the full [product and curriculum blueprint](docs/PRODUCT_BLUEPRINT.md).
 The verified Phase 1 scope and handoff are recorded in the [Phase 1 learning foundation release](docs/PHASE_1_RELEASE.md).
 The verified Phase 2 execution boundary is recorded in the [Phase 2 real execution release](docs/PHASE_2_RELEASE.md).
 The Phase 3 account and durable-learning-data contract is recorded in the [Phase 3 release](docs/PHASE_3_RELEASE.md).
+The Python project studio, protected assessment, local-draft boundary, and Phase 4A verification are recorded in the [Phase 4A release](docs/PHASE_4A_RELEASE.md).
 The course, lesson, navigation, accessibility, and visual direction is recorded in the [Open Learning Workshop milestone](docs/UI_REDESIGN_MOCKUPS.md). The milestone is live, and its release record includes the exact source commit, deployed Worker version, accessibility review, route checks, runner regressions, and production browser evidence.
 
 ## Research references

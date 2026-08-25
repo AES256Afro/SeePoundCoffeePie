@@ -52,4 +52,37 @@ run_fixture python memory.python.txt limit_exceeded
 run_fixture python disk.python.txt limit_exceeded
 run_fixture python network.python.txt runtime_error
 
+repeated_case_results="$(docker run --rm \
+  --platform linux/amd64 \
+  --network none \
+  --memory 1g \
+  --pids-limit 256 \
+  --entrypoint /bin/sh \
+  -e SPP_LOCAL_QEMU=1 \
+  -v "$project_dir/runner/fixtures/repeated-case.python.txt:/fixture/source.txt:ro" \
+  "$image_prefix-python:worker" \
+  -c '
+    cp /fixture/source.txt /workspace/source.txt
+    printf "first\n" > /workspace/stdin.txt
+    /opt/runner/supervisor.py python > /tmp/first-result.json
+    cp /fixture/source.txt /workspace/source.txt
+    printf "second\n" > /workspace/stdin.txt
+    /opt/runner/supervisor.py python > /tmp/second-result.json
+    cat /tmp/first-result.json
+    printf "\n"
+    cat /tmp/second-result.json
+  ')"
+
+RESULTS="$repeated_case_results" node --input-type=module -e '
+  const results = process.env.RESULTS.trim().split("\n").map((line) => JSON.parse(line))
+  const expected = ["first\nstate: clean\n", "second\nstate: clean\n"]
+  if (results.length !== expected.length) throw new Error("repeated case check returned the wrong result count")
+  for (const [index, result] of results.entries()) {
+    if (result.outcome !== "completed" || result.stdout !== expected[index]) {
+      throw new Error(`repeated case ${index + 1} retained writable state or returned the wrong output`)
+    }
+  }
+  process.stdout.write("pass repeated protected cases: learner writable state cleared\n")
+'
+
 echo "Runner image checks passed. The network test used Docker --network none. Production seccomp is verified separately in Cloudflare staging."

@@ -12,6 +12,7 @@ export type RoutePage =
   | 'profile'
   | 'settings'
   | 'lesson'
+  | 'project'
   | 'not-found'
 
 export interface AppRoute {
@@ -19,6 +20,8 @@ export interface AppRoute {
   language?: LanguageId
   missionId?: string
   exerciseId?: string
+  projectId?: string
+  checkpointId?: string
   practice?: boolean
   conceptIds: string[]
 }
@@ -35,6 +38,10 @@ const courseSlugs: Record<LanguageId, string> = {
 const languagesByCourseSlug = Object.fromEntries(
   Object.entries(courseSlugs).map(([language, slug]) => [slug, language]),
 ) as Record<string, LanguageId>
+
+const projectIdsByLanguage: Partial<Record<LanguageId, readonly string[]>> = {
+  python: ['first-interactive-program'],
+}
 
 function languageFromSegment(value: string | undefined): LanguageId | undefined {
   return languageIds.find((language) => language === value)
@@ -70,6 +77,11 @@ export function coursePath(language: LanguageId): string {
 
 export function lessonPath(language: LanguageId, missionId: string, exerciseId: string): string {
   return `/learn/${courseSlug(language)}/${encodeURIComponent(missionId)}/${encodeURIComponent(exerciseId)}`
+}
+
+export function projectPath(language: LanguageId, projectId: string, checkpointId?: string): string {
+  const project = `/projects/${language}/${encodeURIComponent(projectId)}`
+  return checkpointId ? `${project}/${encodeURIComponent(checkpointId)}` : project
 }
 
 export function practicePath(language: LanguageId): string {
@@ -124,6 +136,23 @@ export function parseAppRoute(pathname: string, search = ''): AppRoute {
       missionId: segments[2],
       exerciseId: segments[3],
       practice: false,
+      conceptIds: emptyConcepts,
+    }
+  }
+
+  if (segments[0] === 'projects' && (segments.length === 3 || segments.length === 4)) {
+    const projectLanguage = languageFromSegment(segments[1])
+    const projectId = segments[2]
+    const knownProject = projectLanguage
+      ? projectIdsByLanguage[projectLanguage]?.includes(projectId)
+      : false
+
+    if (!projectLanguage || !knownProject) return { page: 'not-found', conceptIds: emptyConcepts }
+    return {
+      page: 'project',
+      language: projectLanguage,
+      projectId,
+      checkpointId: segments[3],
       conceptIds: emptyConcepts,
     }
   }

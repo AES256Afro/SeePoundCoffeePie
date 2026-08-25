@@ -3,6 +3,9 @@
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import App from './App'
+import { trackById } from './data/curriculum'
+import { pythonInteractiveProject } from './data/python-interactive-project'
+import { saveProjectDraft } from './lib/project-drafts'
 import { dateKey, initialProgress } from './lib/progress'
 import { serializeProgressBackup } from './lib/progress-backup'
 
@@ -26,6 +29,7 @@ vi.mock('./lib/runner-client', () => ({
 }))
 
 const progressKey = 'see-pound-coffee-pie-progress'
+const pythonMissionIds = trackById('python').missions.map((mission) => mission.id)
 
 function createMemoryStorage(): Storage {
   const values = new Map<string, string>()
@@ -372,6 +376,41 @@ describe('beginner lesson interactions', () => {
     expect(document.title).toBe('Learning Home | SeePoundCoffeePie')
   })
 
+  it('hands a Python graduate from the learning home into the guided project', () => {
+    window.localStorage.setItem(progressKey, JSON.stringify({
+      ...initialProgress('python'),
+      callsign: 'Project Cadet',
+      onboardingComplete: true,
+      completedMissions: pythonMissionIds,
+    }))
+    window.history.replaceState({}, '', '/home')
+
+    const { unmount } = render(<App />)
+
+    expect(screen.getByText('Your next step')).toBeTruthy()
+    expect(screen.getByRole('heading', { name: pythonInteractiveProject.title })).toBeTruthy()
+    expect(screen.getByRole('link', { name: /Start project/iu }).getAttribute('href')).toBe(
+      '/projects/python/first-interactive-program',
+    )
+
+    unmount()
+    window.localStorage.setItem(progressKey, JSON.stringify({
+      ...initialProgress('python'),
+      callsign: 'Project Cadet',
+      onboardingComplete: true,
+      completedMissions: pythonMissionIds,
+      completedProjectCheckpoints: [pythonInteractiveProject.checkpoints[0].id],
+    }))
+
+    render(<App />)
+
+    expect(screen.getByText('Continue your project')).toBeTruthy()
+    expect(screen.getByText('1 of 12 checkpoints complete. Your browser saved the code for your next small step.')).toBeTruthy()
+    expect(screen.getByRole('link', { name: /Continue project/iu }).getAttribute('href')).toBe(
+      '/projects/python/first-interactive-program/project-py-string',
+    )
+  })
+
   it('lists all four foundation courses with canonical course links', () => {
     window.history.replaceState({}, '', '/courses')
 
@@ -388,6 +427,122 @@ describe('beginner lesson interactions', () => {
       '/courses/java-foundations',
     ])
     expect(document.title).toBe('Courses | SeePoundCoffeePie')
+  })
+
+  it('lists the featured Python project with its canonical catalog link', () => {
+    window.history.replaceState({}, '', '/courses')
+
+    render(<App />)
+
+    expect(screen.getByRole('navigation', { name: 'Course filters' })).toBeTruthy()
+    expect(screen.getByRole('button', { name: 'Open navigation' }).getAttribute('aria-controls')).toBe('primary-navigation')
+    expect(screen.getByRole('button', { name: 'Open navigation' }).getAttribute('aria-expanded')).toBe('false')
+    expect(screen.getByRole('button', { name: 'All courses' }).getAttribute('aria-pressed')).toBe('true')
+    expect(screen.getByRole('button', { name: 'Guided projects' })).toBeTruthy()
+    expect(screen.getByRole('link', { name: /Your First Interactive Program/iu }).getAttribute('href')).toBe(
+      '/projects/python/first-interactive-program',
+    )
+  })
+
+  it('keeps the project overview locked until Python Foundations is complete', async () => {
+    window.history.replaceState({}, '', '/projects/python/first-interactive-program')
+
+    render(<App />)
+
+    expect(await screen.findByRole('heading', { name: 'Your First Interactive Program' })).toBeTruthy()
+    expect(screen.getByRole('heading', {
+      name: 'Finish Python Foundations, then build without training wheels.',
+    })).toBeTruthy()
+    expect(screen.queryByRole('textbox', { name: 'Project code editor' })).toBeNull()
+    expect(screen.getByRole('progressbar', { name: 'Project progress' }).getAttribute('aria-valuenow')).toBe('0')
+    expect(screen.getByRole('link', { name: /Continue Python Foundations/iu }).getAttribute('href')).toBe(
+      '/courses/python-foundations',
+    )
+    expect(document.title).toBe('Your First Interactive Program | SeePoundCoffeePie')
+  })
+
+  it('opens an unlocked project checkpoint at its canonical deep link with accessible controls', async () => {
+    window.localStorage.setItem(progressKey, JSON.stringify({
+      ...initialProgress('python'),
+      callsign: 'Test Cadet',
+      onboardingComplete: true,
+      completedMissions: pythonMissionIds,
+    }))
+    window.history.replaceState({}, '', '/projects/python/first-interactive-program/project-py-print')
+
+    render(<App />)
+
+    const projectHeading = await screen.findByRole('heading', { level: 1, name: 'Let the program speak' })
+    expect(projectHeading).toBeTruthy()
+    await waitFor(() => expect(document.activeElement).toBe(projectHeading))
+    expect(window.location.pathname).toBe('/projects/python/first-interactive-program/project-py-print')
+    expect(document.title).toBe('Let the program speak | SeePoundCoffeePie')
+    expect(screen.getByRole('link', { name: 'Back to project overview' }).getAttribute('href')).toBe(
+      '/projects/python/first-interactive-program',
+    )
+    expect(screen.getByRole('progressbar', { name: 'Checkpoint progress' }).getAttribute('aria-valuenow')).toBe('8')
+    expect(screen.getByRole('navigation', { name: 'Project checkpoints' })).toBeTruthy()
+    expect(screen.getByRole('link', { name: 'Checkpoint 1: Let the program speak' }).getAttribute('aria-current')).toBe('step')
+    expect(screen.getByText('Checkpoint 2: Recognize the text, locked')).toBeTruthy()
+
+    const editor = screen.getByRole('textbox', { name: 'Project code editor' })
+    expect(editor.getAttribute('aria-keyshortcuts')).toBe('Control+Enter Meta+Enter')
+    expect(screen.getByRole('button', { name: 'Run' })).toBeTruthy()
+    expect(screen.getByRole('button', { name: 'Reset checkpoint' })).toBeTruthy()
+    expect(screen.getByRole('button', { name: 'Download .py' })).toBeTruthy()
+    expect(screen.getByRole('button', { name: /Check checkpoint/iu })).toBeTruthy()
+    expect(screen.getByLabelText('Program console')).toBeTruthy()
+    expect(screen.getByText('I need a hint', { selector: 'summary' })).toBeTruthy()
+  })
+
+  it('falls back to the project overview when a known checkpoint is not available yet', async () => {
+    window.localStorage.setItem(progressKey, JSON.stringify({
+      ...initialProgress('python'),
+      callsign: 'Test Cadet',
+      onboardingComplete: true,
+      completedMissions: pythonMissionIds,
+    }))
+    window.history.replaceState({}, '', '/projects/python/first-interactive-program/project-py-variable')
+
+    render(<App />)
+
+    expect(await screen.findByRole('heading', { name: 'Your First Interactive Program' })).toBeTruthy()
+    expect(screen.queryByRole('textbox', { name: 'Project code editor' })).toBeNull()
+    expect(screen.getByRole('link', { name: /Start project/iu }).getAttribute('href')).toBe(
+      '/projects/python/first-interactive-program/project-py-print',
+    )
+    expect(window.location.pathname).toBe('/projects/python/first-interactive-program/project-py-variable')
+  })
+
+  it('shows the safe not-found page for an invalid project checkpoint', () => {
+    window.history.replaceState({}, '', '/projects/python/first-interactive-program/not-a-checkpoint')
+
+    render(<App />)
+
+    expect(screen.getByRole('heading', { name: 'That page is not on the academy map' })).toBeTruthy()
+    expect(screen.getByRole('link', { name: 'Return to your learning home' }).getAttribute('href')).toBe('/home')
+    expect(screen.queryByRole('textbox', { name: 'Project code editor' })).toBeNull()
+  })
+
+  it('restores a saved project draft when the learner returns to a checkpoint', async () => {
+    const savedDraft = '# My saved work\nprint("Coffee counter ready.")'
+    window.localStorage.setItem(progressKey, JSON.stringify({
+      ...initialProgress('python'),
+      callsign: 'Test Cadet',
+      onboardingComplete: true,
+      completedMissions: pythonMissionIds,
+    }))
+    expect(saveProjectDraft(
+      'first-interactive-program',
+      'project-py-print',
+      savedDraft,
+      window.localStorage,
+    )).toBe(true)
+    window.history.replaceState({}, '', '/projects/python/first-interactive-program/project-py-print')
+
+    render(<App />)
+
+    expect((await screen.findByRole('textbox', { name: 'Project code editor' }) as HTMLTextAreaElement).value).toBe(savedDraft)
   })
 
   it('does not change the active language when merely browsing another course', async () => {

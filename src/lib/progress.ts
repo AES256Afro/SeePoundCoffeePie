@@ -1,6 +1,14 @@
+import { pythonInteractiveProjectManifest as pythonInteractiveProject } from '../data/python-interactive-project-manifest'
 import type { ConceptProgress, LanguageId, LearnerProgress } from '../types'
 
 const REVIEW_INTERVALS = [0, 1, 3, 7, 14, 30]
+const projectCheckpointIds = new Set(pythonInteractiveProject.checkpoints.map((checkpoint) => checkpoint.id))
+const projectIds: ReadonlySet<string> = new Set([pythonInteractiveProject.id])
+
+function knownIds(value: unknown, allowed: ReadonlySet<string>): string[] {
+  if (!Array.isArray(value)) return []
+  return [...new Set(value.filter((id): id is string => typeof id === 'string' && allowed.has(id)))]
+}
 
 export function dateKey(date: Date): string {
   const year = date.getFullYear()
@@ -41,6 +49,8 @@ export function initialProgress(activeLanguage: LanguageId = 'python'): LearnerP
     streak: 0,
     lastStudyDate: null,
     completedMissions: [],
+    completedProjectCheckpoints: [],
+    completedProjects: [],
     conceptProgress: {},
     onboardingComplete: false,
   }
@@ -108,6 +118,46 @@ export function completeMission(
   }
 }
 
+export function completeProjectCheckpoint(
+  current: LearnerProgress,
+  projectId: string,
+  checkpointId: string,
+  now = new Date(),
+): LearnerProgress {
+  if (projectId !== pythonInteractiveProject.id) return current
+  const checkpoint = pythonInteractiveProject.checkpoints.find((candidate) => candidate.id === checkpointId)
+  const completedCheckpoints = knownIds(current.completedProjectCheckpoints, projectCheckpointIds)
+  if (!checkpoint || completedCheckpoints.includes(checkpointId)) return current
+
+  const withAttempt = recordAttempt(
+    current,
+    checkpoint.conceptId,
+    true,
+    checkpoint.xp,
+    now,
+  )
+  return {
+    ...withAttempt,
+    completedProjectCheckpoints: [...completedCheckpoints, checkpointId],
+  }
+}
+
+export function completeProject(
+  current: LearnerProgress,
+  projectId: string,
+  now = new Date(),
+): LearnerProgress {
+  const completedProjects = knownIds(current.completedProjects, projectIds)
+  if (!projectIds.has(projectId) || completedProjects.includes(projectId)) return current
+  return {
+    ...current,
+    completedProjects: [...completedProjects, projectId],
+    starShards: current.starShards + 50,
+    streak: nextStreak(current, now),
+    lastStudyDate: dateKey(now),
+  }
+}
+
 export function isDue(concept: ConceptProgress, now = new Date()): boolean {
   return concept.dueAt <= dateKey(now)
 }
@@ -116,12 +166,24 @@ export function loadProgress(): LearnerProgress {
   try {
     const stored = window.localStorage.getItem('see-pound-coffee-pie-progress')
     if (!stored) return initialProgress()
-    return { ...initialProgress(), ...JSON.parse(stored) } as LearnerProgress
+    const parsed: unknown = JSON.parse(stored)
+    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return initialProgress()
+    const storedProgress = parsed as Partial<LearnerProgress>
+    return {
+      ...initialProgress(),
+      ...storedProgress,
+      completedProjectCheckpoints: knownIds(storedProgress.completedProjectCheckpoints, projectCheckpointIds),
+      completedProjects: knownIds(storedProgress.completedProjects, projectIds),
+    }
   } catch {
     return initialProgress()
   }
 }
 
 export function saveProgress(progress: LearnerProgress): void {
-  window.localStorage.setItem('see-pound-coffee-pie-progress', JSON.stringify(progress))
+  window.localStorage.setItem('see-pound-coffee-pie-progress', JSON.stringify({
+    ...progress,
+    completedProjectCheckpoints: knownIds(progress.completedProjectCheckpoints, projectCheckpointIds),
+    completedProjects: knownIds(progress.completedProjects, projectIds),
+  }))
 }

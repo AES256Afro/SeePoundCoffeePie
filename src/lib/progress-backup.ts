@@ -1,4 +1,5 @@
 import { tracks } from '../data/curriculum'
+import { pythonInteractiveProjectManifest as pythonInteractiveProject } from '../data/python-interactive-project-manifest'
 import type { ConceptProgress, LanguageId, LearnerProgress } from '../types'
 
 export const PROGRESS_BACKUP_FORMAT = 'seepoundcoffeepie-progress' as const
@@ -18,9 +19,14 @@ export type ProgressBackupParseResult =
 
 const languages = new Set<LanguageId>(tracks.map((track) => track.id))
 const missionIds = new Set(tracks.flatMap((track) => track.missions.map((mission) => mission.id)))
-const conceptIds = new Set(tracks.flatMap((track) => (
-  track.missions.flatMap((mission) => mission.exercises.map((exercise) => exercise.conceptId))
-)))
+const projectIds = new Set([pythonInteractiveProject.id])
+const projectCheckpointIds = new Set(pythonInteractiveProject.checkpoints.map((checkpoint) => checkpoint.id))
+const conceptIds = new Set([
+  ...tracks.flatMap((track) => (
+    track.missions.flatMap((mission) => mission.exercises.map((exercise) => exercise.conceptId))
+  )),
+  ...pythonInteractiveProject.checkpoints.map((checkpoint) => checkpoint.conceptId),
+])
 const encoder = new TextEncoder()
 const datePattern = /^\d{4}-\d{2}-\d{2}$/u
 
@@ -54,6 +60,13 @@ function readConceptProgress(value: unknown): ConceptProgress | null {
   }
 }
 
+function readCompletionIds(value: unknown, knownIds: ReadonlySet<string>): string[] | null {
+  if (value === undefined) return []
+  if (!Array.isArray(value) || !value.every((id) => typeof id === 'string' && knownIds.has(id))) return null
+  if (new Set(value).size !== value.length) return null
+  return [...value]
+}
+
 export function parseLearnerProgress(value: unknown): LearnerProgress | null {
   if (!isRecord(value)) return null
   if (typeof value.callsign !== 'string' || value.callsign.length > 80) return null
@@ -68,6 +81,10 @@ export function parseLearnerProgress(value: unknown): LearnerProgress | null {
     typeof id === 'string' && missionIds.has(id)
   ))) return null
   if (new Set(value.completedMissions).size !== value.completedMissions.length) return null
+
+  const completedProjectCheckpoints = readCompletionIds(value.completedProjectCheckpoints, projectCheckpointIds)
+  const completedProjects = readCompletionIds(value.completedProjects, projectIds)
+  if (!completedProjectCheckpoints || !completedProjects) return null
 
   if (!isRecord(value.conceptProgress)) return null
   const restoredConcepts: Record<string, ConceptProgress> = {}
@@ -89,6 +106,8 @@ export function parseLearnerProgress(value: unknown): LearnerProgress | null {
     streak: value.streak,
     lastStudyDate: value.lastStudyDate as string | null,
     completedMissions: [...value.completedMissions] as string[],
+    completedProjectCheckpoints,
+    completedProjects,
     conceptProgress: restoredConcepts,
     onboardingComplete: value.onboardingComplete,
   }

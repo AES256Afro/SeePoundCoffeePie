@@ -2,7 +2,7 @@
 
 ## Current boundary
 
-Phase 2 implements real server-side execution for the academy's 48 editable exercises. Choice, prediction, and ordering questions stay in the browser because they do not execute code. Editable Python, C++, C#, and Java source goes through the versioned request contract, a scoped control API, a bounded Durable Object queue, and a fresh Cloudflare Sandbox VM. The VM is destroyed after every result.
+The runner implements real server-side execution for the academy's 48 editable foundation exercises and 10 editable Python project checkpoints. Choice, prediction, and ordering questions stay in the browser because they do not execute code. Editable Python, C++, C#, and Java source goes through the versioned request contract, a scoped control API, a bounded Durable Object queue, and a fresh Cloudflare Sandbox VM. The VM is destroyed after every result.
 
 `src/lib/runner-contract.ts` fixes the only request fields the runner accepts and rejects oversized, malformed, null-bearing, or command-bearing input before it reaches a language toolchain. Production can pause new runs through the `RUNNER_CONFIG` KV kill switch without taking the static academy or GitHub sign-in offline.
 
@@ -40,9 +40,12 @@ The version 1 request contains only:
 - `version`: exactly `1`;
 - `language`: `python`, `cpp`, `csharp`, or `java`;
 - `source`: non-empty UTF-8 text, at most 20,000 bytes;
-- `stdin`: optional UTF-8 text, at most 4,000 bytes.
+- `stdin`: optional UTF-8 text, at most 4,000 bytes;
+- `purpose`: optional `run` or `check`, defaulting to `check` for older clients.
 
-The request cannot select an executable, compiler path, command-line flag, package, filesystem path, environment variable, image, network destination, mount, or working directory. Those are server-owned policy. Unknown fields are rejected instead of ignored so later client mistakes cannot silently weaken the boundary.
+The request cannot select an executable, compiler path, command-line flag, package, filesystem path, environment variable, image, network destination, mount, working directory, expected result, structural test, or protected test case. Those are server-owned policy. Unknown fields are rejected instead of ignored so later client mistakes cannot silently weaken the boundary.
+
+`purpose` changes presentation, not authority. A project `run` uses the learner's supplied input once and returns no grading tests. A project `check` ignores caller-supplied input where the assignment owns protected cases. Completion is awarded only when the returned official tests all pass.
 
 ## Execution limits
 
@@ -73,6 +76,8 @@ The in-process program cannot be trusted to measure or stop itself. A host-side 
 ## Required isolation controls
 
 - Start one clean isolation unit per run. Never reuse a learner-writable filesystem between users or attempts.
+- For a protected multi-case project check, create a different fresh VM for every case. Write source and one server-owned input from trusted coordinator data, collect the bounded result, and destroy that VM before acquiring the next one. The supervisor also clears learner-owned workspace and temporary paths before and after its one execution as defense in depth.
+- Evaluate required Python project structures only against executable top-level code. Ignore comments, ordinary string contents, and indented suites; inspect required f-string expressions through the trusted structural validator.
 - Run as an unprivileged identity with no host user namespace, Docker socket, device access, cloud metadata route, or secret-bearing environment variables.
 - Mount the toolchain and root filesystem read-only. Give the process only a size-limited temporary working directory.
 - Deny inbound and outbound network access, including DNS, at the VM boundary. Course exercises must not need package downloads. Apply a second socket-syscall restriction to the learner runtime; trusted managed compiler hosts may use local system-probing socket families while still having no VM network route.
@@ -105,6 +110,8 @@ Every result uses one explicit outcome:
 - `system_error`: academy infrastructure failed and the learner should not be blamed.
 
 The result includes capped `stdout` and `stderr`, a nullable exit code, host-measured duration, and a `truncated` flag. It never returns host paths, environment variables, internal addresses, container identifiers, stack traces from the control plane, or secret values.
+
+Project checks add visible and hidden test summaries. The browser receives the visible example's output and generic hidden-case pass or fail messages. It never receives hidden input, hidden expected output, hidden case identifiers, the reference solution, or a diagnostic string produced only by a hidden case. Completed results expire after 15 minutes. Source and standard input exist only in the queued record and one-use sandbox during that short run lifecycle; they are not copied into learner progress, project history, analytics, or operational logs.
 
 ## Release gates
 
