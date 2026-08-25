@@ -70,11 +70,11 @@ The final Coffee Counter check uses:
 - three server-owned input and output cases whose values are not shipped to the browser;
 - six server-owned code-shape requirements covering the price, both `input` calls, `int` conversion, multiplication, and the final f-string.
 
-Private cases, structural regular expressions, and the reference solution live in `src/data/python-interactive-project.server.ts`. The client curriculum module does not import that module. A regression test verifies the source boundary, and the production asset scan verifies that private names, case identifiers, expected results, unique reference lines, and the complete solution do not appear in emitted browser JavaScript or CSS.
+Private cases, server-owned structural requirements, and the reference solution live in `src/data/python-interactive-project.server.ts`. The client curriculum module does not import that module. A regression test verifies the source boundary, and the production asset scan verifies that private names, case identifiers, expected results, unique reference lines, and the complete solution do not appear in emitted browser JavaScript or CSS.
 
 An official multi-case check uses a different fresh Cloudflare Sandbox VM for every visible or protected case. The trusted coordinator writes the same source and one server-owned input into each isolated VM, collects the bounded result, and destroys that VM before starting the next case. Processes, memory, sockets, and files therefore cannot cross a case boundary. The trusted supervisor also removes learner-controlled workspace and temporary paths before and after its one execution as defense in depth.
 
-The six final code requirements are evaluated against a Python-aware top-level source view. Comments, ordinary string contents, and indented suites do not count as working project code. F-string expressions are inspected through indexed tokens, so code-shaped text inside an unused string cannot satisfy the report requirement.
+The six final code requirements are evaluated from Python's parsed abstract syntax tree inside the trusted supervisor, before learner code runs. The supervisor parses the exact source bytes with the same encoding-cookie rules used by Python execution, accepts only the small straight-line statement and expression grammar taught by this project, records bounded structural facts, and returns those facts only to the coordinator. Comments and ordinary string contents are not executable syntax. Conditional suites, loops, functions, imports, exception handling, early exits, line-continuation tricks, parser-encoding disagreements, name shadowing, unsupported calls, and duplicate required assignments fail closed. The coordinator validates the analysis schema, requires exactly one correct assignment for each required name, and checks direct f-string fields. The analysis never enters the public runner result.
 
 If a private case fails, the result contains only the visible example output, a generic private-case summary, and a beginner-safe diagnostic. It does not return the private input, expected output, case identity, reference solution, or private-case stderr.
 
@@ -135,6 +135,7 @@ Automated coverage includes:
 - all 12 authored checkpoints and their beginner-content schema;
 - all editable project runner assignments;
 - rejection of memorized visible output when required code is missing;
+- fail-closed Python AST analysis for comments, string decoys, unreachable suites, explicit line continuations, early exits, unsupported control flow, name shadowing, and duplicate assignments;
 - visible and private multi-case aggregation;
 - private-case result scrubbing;
 - workspace rewrite counts for every protected case;

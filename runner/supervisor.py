@@ -10,6 +10,7 @@ network-denying seccomp rules are applied before the learner toolchain starts.
 from __future__ import annotations
 
 import argparse
+import ast
 import ctypes
 import errno
 import json
@@ -41,7 +42,19 @@ RUN_CPU_SECONDS = 2
 COMPILE_WALL_SECONDS = 8.0
 RUN_WALL_SECONDS = 5.0
 
+PYTHON_ANALYSIS_VERSION = 1
+PYTHON_ANALYSIS_SOURCE_LIMIT = 64 * 1024
+PYTHON_ANALYSIS_IDENTIFIER_LIMIT = 128
+PYTHON_ANALYSIS_IDENTIFIER_BUDGET = 4096
+PYTHON_ANALYSIS_ASSIGNMENT_LIMIT = 64
+PYTHON_ANALYSIS_FSTRING_LIMIT = 32
+PYTHON_ANALYSIS_FSTRING_FIELD_LIMIT = 16
+PYTHON_ANALYSIS_INTEGER_LIMIT = (1 << 53) - 1
+PYTHON_RESERVED_NAMES = frozenset({"input", "int", "print"})
+
 PR_SET_NO_NEW_PRIVS = 38
+
+
 @dataclass(frozen=True)
 class Toolchain:
     source_name: str
@@ -104,6 +117,218 @@ TOOLCHAINS: dict[str, Toolchain] = {
         run_command=("/usr/bin/dotnet", "out/Cadet.dll"),
     ),
 }
+
+
+def failed_python_analysis(*, parsed: bool = False) -> dict[str, object]:
+    """Return a stable analysis value that cannot satisfy a trusted check."""
+
+    return {
+        "version": PYTHON_ANALYSIS_VERSION,
+        "parsed": parsed,
+        "straight_line": False,
+        "assignments": [],
+        "print_fstrings": [],
+    }
+
+
+def analyze_python_source(source: str | bytes) -> dict[str, object]:
+    """Describe a small, trusted subset of direct top-level Python code.
+
+    This is deliberately not a general-purpose Python normalizer. Any syntax or
+    expression outside the beginner project's straight-line grammar makes the
+    result fail closed. Facts remain useful to the Worker for exact counting,
+    including repeated assignments, but are never an authorization by
+    themselves.
+    """
+
+    try:
+        source_size = len(source if isinstance(source, bytes) else source.encode("utf-8"))
+    except UnicodeEncodeError:
+        return failed_python_analysis()
+    if source_size > PYTHON_ANALYSIS_SOURCE_LIMIT:
+        return failed_python_analysis()
+
+    try:
+        module = ast.parse(source, filename="mission.py", mode="exec")
+    except (MemoryError, RecursionError, SyntaxError, UnicodeDecodeError, ValueError):
+        return failed_python_analysis()
+
+    assignments: list[dict[str, object]] = []
+    print_fstrings: list[dict[str, object]] = []
+    occurrences: dict[str, int] = {}
+    straight_line = True
+    identifier_budget = 0
+
+    def normalized_identifier(name: str) -> str | None:
+        nonlocal identifier_budget, straight_line
+        if len(name) > PYTHON_ANALYSIS_IDENTIFIER_LIMIT:
+            straight_line = False
+            return None
+        identifier_budget += len(name)
+        if identifier_budget > PYTHON_ANALYSIS_IDENTIFIER_BUDGET:
+            straight_line = False
+            return None
+        return name
+
+    def expression_fact(expression: ast.expr) -> tuple[dict[str, object], bool]:
+        if isinstance(expression, ast.Constant):
+            # bool is an int subclass in Python, so require the exact type.
+            if type(expression.value) is int and abs(expression.value) <= PYTHON_ANALYSIS_INTEGER_LIMIT:
+                return {"kind": "integer", "value": expression.value}, True
+            if type(expression.value) is str:
+                return {"kind": "string"}, True
+            return {"kind": "unsupported"}, False
+
+        if isinstance(expression, ast.Name):
+            name = normalized_identifier(expression.id)
+            if name is not None:
+                return {"kind": "name", "name": name}, True
+            return {"kind": "unsupported"}, False
+
+        if isinstance(expression, ast.Call) and isinstance(expression.func, ast.Name):
+            if expression.func.id == "input":
+                valid_prompt = (
+                    not expression.keywords
+                    and len(expression.args) <= 1
+                    and (
+                        not expression.args
+                        or (
+                            isinstance(expression.args[0], ast.Constant)
+                            and type(expression.args[0].value) is str
+                        )
+                    )
+                )
+                return ({"kind": "input"}, True) if valid_prompt else ({"kind": "unsupported"}, False)
+
+            if expression.func.id == "int":
+                valid_name = (
+                    not expression.keywords
+                    and len(expression.args) == 1
+                    and isinstance(expression.args[0], ast.Name)
+                )
+                if valid_name:
+                    name = normalized_identifier(expression.args[0].id)
+                    if name is not None:
+                        return {"kind": "int_name", "name": name}, True
+                return {"kind": "unsupported"}, False
+
+        if (
+            isinstance(expression, ast.BinOp)
+            and isinstance(expression.op, ast.Mult)
+            and isinstance(expression.left, ast.Name)
+            and isinstance(expression.right, ast.Name)
+        ):
+            left = normalized_identifier(expression.left.id)
+            right = normalized_identifier(expression.right.id)
+            if left is not None and right is not None:
+                return {"kind": "multiply_names", "names": sorted((left, right))}, True
+
+        # This covers unknown calls, walrus expressions, comprehensions,
+        # lambdas, conditional expressions, attributes, and nested arithmetic.
+        return {"kind": "unsupported"}, False
+
+    def fstring_fields(expression: ast.JoinedStr) -> list[str] | None:
+        fields: list[str] = []
+        for value in expression.values:
+            if isinstance(value, ast.Constant) and type(value.value) is str:
+                continue
+            if not isinstance(value, ast.FormattedValue):
+                return None
+            if (
+                value.conversion != -1
+                or value.format_spec is not None
+                or not isinstance(value.value, ast.Name)
+            ):
+                return None
+            if len(fields) >= PYTHON_ANALYSIS_FSTRING_FIELD_LIMIT:
+                return None
+            name = normalized_identifier(value.value.id)
+            if name is None:
+                return None
+            fields.append(name)
+        return fields
+
+    for statement in module.body:
+        if isinstance(statement, ast.Assign):
+            if len(statement.targets) != 1 or not isinstance(statement.targets[0], ast.Name):
+                straight_line = False
+                continue
+
+            target = normalized_identifier(statement.targets[0].id)
+            if target is None:
+                continue
+            occurrences[target] = occurrences.get(target, 0) + 1
+            expression, supported = expression_fact(statement.value)
+            if len(assignments) >= PYTHON_ANALYSIS_ASSIGNMENT_LIMIT:
+                straight_line = False
+                continue
+            assignments.append({
+                "target": target,
+                "occurrence": occurrences[target],
+                **expression,
+            })
+            if target in PYTHON_RESERVED_NAMES or not supported:
+                straight_line = False
+            continue
+
+        if isinstance(statement, ast.Expr):
+            # Ordinary string expressions, including a module docstring, are
+            # inert and cannot create structural facts.
+            if isinstance(statement.value, ast.Constant) and type(statement.value.value) is str:
+                continue
+
+            call = statement.value
+            if not (
+                isinstance(call, ast.Call)
+                and isinstance(call.func, ast.Name)
+                and call.func.id == "print"
+                and not call.keywords
+                and len(call.args) == 1
+            ):
+                straight_line = False
+                continue
+
+            argument = call.args[0]
+            if isinstance(argument, ast.Constant) and type(argument.value) is str:
+                continue
+            if isinstance(argument, ast.JoinedStr):
+                fields = fstring_fields(argument)
+                if fields is not None and len(print_fstrings) < PYTHON_ANALYSIS_FSTRING_LIMIT:
+                    print_fstrings.append({
+                        "occurrence": len(print_fstrings) + 1,
+                        "fields": fields,
+                    })
+                    continue
+            straight_line = False
+            continue
+
+        # All control flow and declaration statements are forbidden here. This
+        # includes if (regardless of spelling), raise/SystemExit paths, imports,
+        # functions, classes, loops, try, with, match, and assertion shortcuts.
+        straight_line = False
+
+    return {
+        "version": PYTHON_ANALYSIS_VERSION,
+        "parsed": True,
+        "straight_line": straight_line,
+        "assignments": assignments,
+        "print_fstrings": print_fstrings,
+    }
+
+
+def analyze_python_source_file() -> dict[str, object]:
+    """Analyze the exact bytes that the Python runtime will execute."""
+
+    try:
+        source_bytes = (WORKSPACE / "source.txt").read_bytes()
+        if len(source_bytes) > PYTHON_ANALYSIS_SOURCE_LIMIT:
+            return failed_python_analysis()
+        # ast.parse(bytes) uses Python's PEP 263 encoding detection, just like
+        # executing mission.py. Passing decoded text here would let a coding
+        # cookie make analysis and execution interpret different programs.
+        return analyze_python_source(source_bytes)
+    except OSError:
+        return failed_python_analysis()
 
 
 def install_network_seccomp() -> None:
@@ -487,6 +712,15 @@ def main() -> int:
     parser = argparse.ArgumentParser(add_help=False)
     parser.add_argument("language", choices=sorted(TOOLCHAINS))
     args = parser.parse_args()
+    python_analysis = None
+    if args.language == "python":
+        try:
+            python_analysis = analyze_python_source_file()
+        except Exception:
+            # Analysis is evidence for a trusted check, never a reason to make
+            # learner execution less available. Unexpected analyzer failures
+            # therefore return an explicit value that no check can accept.
+            python_analysis = failed_python_analysis()
 
     try:
         result = execute(args.language)
@@ -519,6 +753,8 @@ def main() -> int:
                 "internal_error": type(error).__name__,
             }
 
+    if python_analysis is not None:
+        result["python_analysis"] = python_analysis
     sys.stdout.write(json.dumps(result, ensure_ascii=False, separators=(",", ":")))
     return 0
 

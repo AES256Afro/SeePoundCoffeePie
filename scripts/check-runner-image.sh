@@ -4,6 +4,8 @@ set -euo pipefail
 image_prefix="${1:-spp-runner}"
 project_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
+python3 "$project_dir/runner/test_supervisor_analysis.py"
+
 docker build --platform linux/amd64 -t "$image_prefix-python:worker" -f "$project_dir/Dockerfile.runner.python" "$project_dir"
 docker build --platform linux/amd64 -t "$image_prefix-cpp:worker" -f "$project_dir/Dockerfile.runner.cpp" "$project_dir"
 docker build --platform linux/amd64 -t "$image_prefix-java:worker" -f "$project_dir/Dockerfile.runner.java" "$project_dir"
@@ -27,13 +29,24 @@ run_fixture() {
     -c 'cp /fixture/source.txt /workspace/source.txt && : > /workspace/stdin.txt && exec /opt/runner/supervisor.py "$0"' \
     "$language")"
 
-  RESULT="$result" EXPECTED_OUTCOME="$expected_outcome" FIXTURE="$fixture" node --input-type=module -e '
+  RESULT="$result" EXPECTED_OUTCOME="$expected_outcome" FIXTURE="$fixture" LANGUAGE="$language" node --input-type=module -e '
     const result = JSON.parse(process.env.RESULT)
     if (result.outcome !== process.env.EXPECTED_OUTCOME) {
       throw new Error(`${process.env.FIXTURE}: expected ${process.env.EXPECTED_OUTCOME}, received ${result.outcome}`)
     }
     if (typeof result.stdout !== "string" || typeof result.stderr !== "string") {
       throw new Error(`${process.env.FIXTURE}: missing bounded output fields`)
+    }
+    if (process.env.LANGUAGE === "python") {
+      const analysis = result.python_analysis
+      if (!analysis || analysis.version !== 1 || analysis.parsed !== true || typeof analysis.straight_line !== "boolean") {
+        throw new Error(`${process.env.FIXTURE}: missing trusted Python analysis`)
+      }
+      if (!Array.isArray(analysis.assignments) || !Array.isArray(analysis.print_fstrings)) {
+        throw new Error(`${process.env.FIXTURE}: malformed trusted Python analysis facts`)
+      }
+    } else if ("python_analysis" in result) {
+      throw new Error(`${process.env.FIXTURE}: non-Python result exposed Python analysis`)
     }
     process.stdout.write(`pass ${process.env.FIXTURE}: ${result.outcome}${result.limit ? ` (${result.limit})` : ""}\n`)
   '

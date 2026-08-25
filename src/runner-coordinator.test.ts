@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { pythonInteractiveProjectServerAssessment } from './data/python-interactive-project.server'
+import type { PythonAnalysis } from './lib/runner-assignments'
 import type { RunnerPurpose, RunnerResult } from './lib/runner-contract'
 
 const sandboxMocks = vi.hoisted(() => ({
@@ -53,6 +54,7 @@ function supervisorResult(
   stdout: string,
   stderr = '',
   durationMs = 5,
+  pythonAnalysis: unknown = emptyPythonAnalysis(),
 ) {
   return JSON.stringify({
     outcome,
@@ -62,7 +64,34 @@ function supervisorResult(
     duration_ms: durationMs,
     truncated: false,
     limit: null,
+    ...(pythonAnalysis === null ? {} : { python_analysis: pythonAnalysis }),
   })
+}
+
+function emptyPythonAnalysis(): PythonAnalysis {
+  return {
+    version: 1,
+    parsed: true,
+    straight_line: true,
+    assignments: [],
+    print_fstrings: [],
+  }
+}
+
+function referencePythonAnalysis(): PythonAnalysis {
+  return {
+    version: 1,
+    parsed: true,
+    straight_line: true,
+    assignments: [
+      { target: 'price_per_cup', occurrence: 1, kind: 'integer', value: 3 },
+      { target: 'name', occurrence: 1, kind: 'input' },
+      { target: 'cups_text', occurrence: 1, kind: 'input' },
+      { target: 'cups', occurrence: 1, kind: 'int_name', name: 'cups_text' },
+      { target: 'total', occurrence: 1, kind: 'multiply_names', names: ['cups', 'price_per_cup'] },
+    ],
+    print_fstrings: [{ occurrence: 1, fields: ['name', 'cups', 'total'] }],
+  }
 }
 
 function queuedRun(source: string, purpose: RunnerPurpose, stdin = ''): TestQueuedRun {
@@ -170,7 +199,13 @@ describe('project multi-case sandbox execution', () => {
         ))
         return {
           success: true,
-          stdout: supervisorResult('completed', testCase?.expectedStdout ?? 'wrong case'),
+          stdout: supervisorResult(
+            'completed',
+            testCase?.expectedStdout ?? 'wrong case',
+            '',
+            5,
+            referencePythonAnalysis(),
+          ),
         }
       }),
       destroy: vi.fn(async () => undefined),
@@ -192,6 +227,8 @@ describe('project multi-case sandbox execution', () => {
     const serialized = JSON.stringify(result)
     expect(serialized).not.toMatch(/Morgan|Riley|Sam Lee|\$3\.|\$21\.|\$0\./u)
     expect(serialized).not.toContain(pythonInteractiveProjectServerAssessment.referenceSolution)
+    expect(serialized).not.toContain('python_analysis')
+    expect(serialized).not.toContain('print_fstrings')
   })
 
   it('stops after a hidden runtime failure and removes its private error text', async () => {
@@ -200,10 +237,25 @@ describe('project multi-case sandbox execution', () => {
     const sandbox = {
       writeFile: vi.fn(async () => undefined),
       exec: vi.fn()
-        .mockResolvedValueOnce({ success: true, stdout: supervisorResult('completed', visibleCase.expectedStdout) })
         .mockResolvedValueOnce({
           success: true,
-          stdout: supervisorResult('runtime_error', '', 'Morgan caused a private hidden failure.'),
+          stdout: supervisorResult(
+            'completed',
+            visibleCase.expectedStdout,
+            '',
+            5,
+            referencePythonAnalysis(),
+          ),
+        })
+        .mockResolvedValueOnce({
+          success: true,
+          stdout: supervisorResult(
+            'runtime_error',
+            '',
+            'Morgan caused a private hidden failure.',
+            5,
+            referencePythonAnalysis(),
+          ),
         }),
       destroy: vi.fn(async () => undefined),
     }
@@ -246,5 +298,52 @@ describe('project multi-case sandbox execution', () => {
     const result = storedResult(storage, record.id)
     expect(result.stdout).toBe('Practice output')
     expect(result.tests).toEqual([])
+  })
+
+  it.each([
+    ['missing', null],
+    ['wrong version', { ...emptyPythonAnalysis(), version: 2 }],
+    ['invalid parsed state', { ...emptyPythonAnalysis(), parsed: false }],
+    ['nonsequential assignment occurrence', {
+      ...emptyPythonAnalysis(),
+      assignments: [{ target: 'name', occurrence: 2, kind: 'input' }],
+    }],
+    ['unsorted multiplication names', {
+      ...emptyPythonAnalysis(),
+      assignments: [{
+        target: 'total',
+        occurrence: 1,
+        kind: 'multiply_names',
+        names: ['price_per_cup', 'cups'],
+      }],
+    }],
+    ['oversized f-string fact list', {
+      ...emptyPythonAnalysis(),
+      print_fstrings: Array.from({ length: 33 }, (_, index) => ({
+        occurrence: index + 1,
+        fields: [],
+      })),
+    }],
+  ])('fails closed when Python analysis is %s', async (_name, pythonAnalysis) => {
+    const storage = new MemoryStorage()
+    const sandbox = {
+      writeFile: vi.fn(async () => undefined),
+      exec: vi.fn(async () => ({
+        success: true,
+        stdout: supervisorResult('completed', 'Behavior output', '', 5, pythonAnalysis),
+      })),
+      destroy: vi.fn(async () => undefined),
+    }
+    sandboxMocks.getSandbox.mockReturnValue(sandbox)
+    const record = queuedRun('print("Behavior output")', 'check')
+
+    await coordinatorWith(storage).execute(record)
+
+    const result = storedResult(storage, record.id)
+    expect(sandbox.exec).toHaveBeenCalledOnce()
+    expect(result.outcome).toBe('system_error')
+    expect(result.tests).toHaveLength(10)
+    expect(result.tests.every((test) => !test.passed)).toBe(true)
+    expect(JSON.stringify(result)).not.toContain('python_analysis')
   })
 })

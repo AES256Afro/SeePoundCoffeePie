@@ -9,13 +9,34 @@ export interface ServerOwnedProjectAssessment {
   testCases: ProjectTestCase[]
 }
 
-export interface ServerOwnedProjectStructuralCheck {
-  validation: 'python-top-level-pattern' | 'python-top-level-print-f-string'
-  pattern: string
-  flags?: string
-  requiredExpressions?: string[]
+interface ServerOwnedProjectStructuralCheckBase {
   message: string
 }
+
+export type ServerOwnedProjectStructuralCheck =
+  | ServerOwnedProjectStructuralCheckBase & {
+      validation: 'python-assignment-integer'
+      target: string
+      value: number
+    }
+  | ServerOwnedProjectStructuralCheckBase & {
+      validation: 'python-assignment-input'
+      target: string
+    }
+  | ServerOwnedProjectStructuralCheckBase & {
+      validation: 'python-assignment-int-name'
+      target: string
+      name: string
+    }
+  | ServerOwnedProjectStructuralCheckBase & {
+      validation: 'python-assignment-multiply-names'
+      target: string
+      names: [string, string]
+    }
+  | ServerOwnedProjectStructuralCheckBase & {
+      validation: 'python-print-f-string'
+      requiredFields: string[]
+    }
 
 const finalCheckpoint = pythonInteractiveProject.checkpoints.find((checkpoint) => (
   checkpoint.id === 'project-py-final'
@@ -28,39 +49,36 @@ if (!visibleTestCase) {
 
 const structuralChecks: ServerOwnedProjectStructuralCheck[] = [
   {
-    validation: 'python-top-level-pattern',
-    pattern: '^price_per_cup\\s*=\\s*3\\s*$',
-    flags: 'm',
+    validation: 'python-assignment-integer',
+    target: 'price_per_cup',
+    value: 3,
     message: 'Keep price_per_cup as the integer 3 so every test uses the same price.',
   },
   {
-    validation: 'python-top-level-pattern',
-    pattern: '^name\\s*=\\s*input\\s*\\([^)]*\\)\\s*$',
-    flags: 'm',
+    validation: 'python-assignment-input',
+    target: 'name',
     message: 'Ask for the customer name with input(), then store the returned text in name.',
   },
   {
-    validation: 'python-top-level-pattern',
-    pattern: '^cups_text\\s*=\\s*input\\s*\\([^)]*\\)\\s*$',
-    flags: 'm',
+    validation: 'python-assignment-input',
+    target: 'cups_text',
     message: 'Ask for the cup count with input(), then store the returned text in cups_text.',
   },
   {
-    validation: 'python-top-level-pattern',
-    pattern: '^cups\\s*=\\s*int\\s*\\(\\s*cups_text\\s*\\)\\s*$',
-    flags: 'm',
+    validation: 'python-assignment-int-name',
+    target: 'cups',
+    name: 'cups_text',
     message: 'Convert cups_text with int() and store the resulting integer in cups.',
   },
   {
-    validation: 'python-top-level-pattern',
-    pattern: '^total\\s*=\\s*(?:cups\\s*\\*\\s*price_per_cup|price_per_cup\\s*\\*\\s*cups)\\s*$',
-    flags: 'm',
+    validation: 'python-assignment-multiply-names',
+    target: 'total',
+    names: ['cups', 'price_per_cup'],
     message: 'Calculate total by multiplying cups and price_per_cup.',
   },
   {
-    validation: 'python-top-level-print-f-string',
-    pattern: 'print\\s*\\(\\s*f["\\\'][^"\\\']*\\{\\s*name\\s*\\}[^"\\\']*\\{\\s*cups\\s*\\}[^"\\\']*\\{\\s*total\\s*\\}[^"\\\']*["\\\']\\s*\\)',
-    requiredExpressions: ['name', 'cups', 'total'],
+    validation: 'python-print-f-string',
+    requiredFields: ['name', 'cups', 'total'],
     message: 'Use one f-string that includes name, cups, and total in the personalized report.',
   },
 ]

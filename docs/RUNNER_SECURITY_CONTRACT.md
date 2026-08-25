@@ -77,7 +77,7 @@ The in-process program cannot be trusted to measure or stop itself. A host-side 
 
 - Start one clean isolation unit per run. Never reuse a learner-writable filesystem between users or attempts.
 - For a protected multi-case project check, create a different fresh VM for every case. Write source and one server-owned input from trusted coordinator data, collect the bounded result, and destroy that VM before acquiring the next one. The supervisor also clears learner-owned workspace and temporary paths before and after its one execution as defense in depth.
-- Evaluate required Python project structures only against executable top-level code. Ignore comments, ordinary string contents, and indented suites; inspect required f-string expressions through the trusted structural validator.
+- Parse the exact protected Python source bytes inside the trusted supervisor, using the same encoding-cookie rules as execution, and return only a bounded internal analysis to the coordinator. Require the exact straight-line grammar taught by the project and fail closed on parse errors, conditionals, loops, imports, functions, exception handling, early exits, line-continuation tricks, parser-encoding disagreements, unsupported calls, name shadowing, duplicate required assignments, and malformed analysis. Never place the analysis in the public runner result.
 - Run as an unprivileged identity with no host user namespace, Docker socket, device access, cloud metadata route, or secret-bearing environment variables.
 - Mount the toolchain and root filesystem read-only. Give the process only a size-limited temporary working directory.
 - Deny inbound and outbound network access, including DNS, at the VM boundary. Course exercises must not need package downloads. Apply a second socket-syscall restriction to the learner runtime; trusted managed compiler hosts may use local system-probing socket families while still having no VM network route.
@@ -111,7 +111,7 @@ Every result uses one explicit outcome:
 
 The result includes capped `stdout` and `stderr`, a nullable exit code, host-measured duration, and a `truncated` flag. It never returns host paths, environment variables, internal addresses, container identifiers, stack traces from the control plane, or secret values.
 
-Project checks add visible and hidden test summaries. The browser receives the visible example's output and generic hidden-case pass or fail messages. It never receives hidden input, hidden expected output, hidden case identifiers, the reference solution, or a diagnostic string produced only by a hidden case. Completed results expire after 15 minutes. Source and standard input exist only in the queued record and one-use sandbox during that short run lifecycle; they are not copied into learner progress, project history, analytics, or operational logs.
+Project checks add visible and hidden test summaries. The browser receives the visible example's output and generic hidden-case pass or fail messages. It never receives hidden input, hidden expected output, hidden case identifiers, the reference solution, the trusted Python analysis, or a diagnostic string produced only by a hidden case. Completed results expire after 15 minutes. Source and standard input exist only in the queued record and one-use sandbox during that short run lifecycle; they are not copied into learner progress, project history, analytics, or operational logs.
 
 ## Release gates
 

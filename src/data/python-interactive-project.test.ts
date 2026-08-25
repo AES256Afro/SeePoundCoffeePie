@@ -8,12 +8,29 @@ import {
 } from './python-interactive-project'
 import { pythonInteractiveProjectServerAssessment } from './python-interactive-project.server'
 import { pythonInteractiveProjectManifest } from './python-interactive-project-manifest'
-import { evaluateProjectStructuralChecks } from '../lib/runner-assignments'
+import {
+  evaluateProjectStructuralChecks,
+  type PythonAnalysis,
+} from '../lib/runner-assignments'
 
 const checkpoints = pythonInteractiveProject.checkpoints
 const exercises = checkpoints.map((checkpoint) => checkpoint.exercise)
 const clientModuleSource = readFileSync(new URL('./python-interactive-project.ts', import.meta.url), 'utf8')
 const serverModuleSource = readFileSync(new URL('./python-interactive-project.server.ts', import.meta.url), 'utf8')
+
+const referencePythonAnalysis: PythonAnalysis = {
+  version: 1,
+  parsed: true,
+  straight_line: true,
+  assignments: [
+    { target: 'price_per_cup', occurrence: 1, kind: 'integer', value: 3 },
+    { target: 'name', occurrence: 1, kind: 'input' },
+    { target: 'cups_text', occurrence: 1, kind: 'input' },
+    { target: 'cups', occurrence: 1, kind: 'int_name', name: 'cups_text' },
+    { target: 'total', occurrence: 1, kind: 'multiply_names', names: ['cups', 'price_per_cup'] },
+  ],
+  print_fstrings: [{ occurrence: 1, fields: ['name', 'cups', 'total'] }],
+}
 
 describe('Phase 4A Python interactive project', () => {
   it('defines one bookmarkable twelve-checkpoint Python project', () => {
@@ -186,7 +203,7 @@ describe('Phase 4A Python interactive project', () => {
 
     expect(evaluateProjectStructuralChecks(
       pythonInteractiveProjectServerAssessment,
-      source,
+      referencePythonAnalysis,
     ).every((check) => check.passed)).toBe(true)
   })
 
@@ -220,7 +237,7 @@ describe('Phase 4A Python interactive project', () => {
       'final-hidden-spaced-name',
       'referenceSolution',
       'name = input("What is your name?\\\\n")',
-      'price_per_cup\\\\s*=\\\\s*3',
+      "validation: 'python-assignment-integer'",
     ]
 
     for (const marker of privateMarkers) {

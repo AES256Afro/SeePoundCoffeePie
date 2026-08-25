@@ -6,6 +6,8 @@ import {
   evaluateRunnerAssignment,
   findRunnerAssignment,
   runnerInputCases,
+  type PythonAnalysis,
+  type PythonAssignmentFact,
 } from './lib/runner-assignments'
 import {
   RUNNER_API_VERSION,
@@ -88,6 +90,7 @@ interface SupervisorResult {
   limit: string | null
   phase?: 'compile' | 'runtime'
   allocated_bytes?: number
+  python_analysis?: PythonAnalysis
 }
 
 function json(body: unknown, status = 200): Response {
@@ -115,7 +118,85 @@ function isSubmitPayload(value: unknown): value is SubmitPayload {
     && typeof payload.request?.stdin !== 'number'
 }
 
-function parseSupervisorResult(value: string): SupervisorResult | null {
+function isBoundedAnalysisName(value: unknown): value is string {
+  return typeof value === 'string' && value.length > 0 && value.length <= 128
+}
+
+function isPositiveBoundedInteger(value: unknown, maximum: number): value is number {
+  return Number.isInteger(value) && Number(value) >= 1 && Number(value) <= maximum
+}
+
+function isPythonAssignmentFact(value: unknown): value is PythonAssignmentFact {
+  if (!value || typeof value !== 'object') return false
+  const fact = value as Partial<PythonAssignmentFact>
+  if (
+    !isBoundedAnalysisName(fact.target)
+    || !isPositiveBoundedInteger(fact.occurrence, 64)
+    || !['integer', 'string', 'name', 'input', 'int_name', 'multiply_names', 'unsupported'].includes(fact.kind ?? '')
+  ) return false
+
+  switch (fact.kind) {
+    case 'integer':
+      return Number.isSafeInteger(fact.value)
+    case 'name':
+    case 'int_name':
+      return isBoundedAnalysisName(fact.name)
+    case 'multiply_names':
+      return Array.isArray(fact.names)
+        && fact.names.length === 2
+        && fact.names.every(isBoundedAnalysisName)
+        && fact.names[0] <= fact.names[1]
+    case 'string':
+    case 'input':
+    case 'unsupported':
+      return true
+    default:
+      return false
+  }
+}
+
+function parsePythonAnalysis(value: unknown): PythonAnalysis | null {
+  if (!value || typeof value !== 'object') return null
+  const analysis = value as Partial<PythonAnalysis>
+  if (
+    analysis.version !== 1
+    || typeof analysis.parsed !== 'boolean'
+    || typeof analysis.straight_line !== 'boolean'
+    || !Array.isArray(analysis.assignments)
+    || analysis.assignments.length > 64
+    || !analysis.assignments.every(isPythonAssignmentFact)
+    || !Array.isArray(analysis.print_fstrings)
+    || analysis.print_fstrings.length > 32
+  ) return null
+
+  if (!analysis.parsed && (
+    analysis.straight_line
+    || analysis.assignments.length > 0
+    || analysis.print_fstrings.length > 0
+  )) return null
+
+  const targetOccurrences = new Map<string, number>()
+  for (const fact of analysis.assignments) {
+    const expectedOccurrence = (targetOccurrences.get(fact.target) ?? 0) + 1
+    if (fact.occurrence !== expectedOccurrence) return null
+    targetOccurrences.set(fact.target, expectedOccurrence)
+  }
+
+  for (const [index, fact] of analysis.print_fstrings.entries()) {
+    if (
+      !fact
+      || typeof fact !== 'object'
+      || fact.occurrence !== index + 1
+      || !Array.isArray(fact.fields)
+      || fact.fields.length > 16
+      || !fact.fields.every(isBoundedAnalysisName)
+    ) return null
+  }
+
+  return analysis as PythonAnalysis
+}
+
+function parseSupervisorResult(value: string, language: LanguageId): SupervisorResult | null {
   try {
     const result = JSON.parse(value) as Partial<SupervisorResult>
     if (
@@ -127,7 +208,15 @@ function parseSupervisorResult(value: string): SupervisorResult | null {
       || typeof result.truncated !== 'boolean'
       || (typeof result.limit !== 'string' && result.limit !== null)
     ) return null
-    return result as SupervisorResult
+    const pythonAnalysis = result.python_analysis === undefined
+      ? null
+      : parsePythonAnalysis(result.python_analysis)
+    if (result.python_analysis !== undefined && !pythonAnalysis) return null
+    if (language === 'python' && !pythonAnalysis) return null
+    return {
+      ...result as SupervisorResult,
+      ...(pythonAnalysis ? { python_analysis: pythonAnalysis } : {}),
+    }
   } catch {
     return null
   }
@@ -379,7 +468,7 @@ export class RunnerCoordinator {
           timeout: SUPERVISOR_TIMEOUT_MS,
         })
         const supervisor = execution.success
-          ? parseSupervisorResult(execution.stdout)
+          ? parseSupervisorResult(execution.stdout, record.language)
           : null
         const safeSupervisor = supervisor ?? supervisorSystemError()
         supervisorRuns.push(safeSupervisor)
@@ -418,7 +507,7 @@ export class RunnerCoordinator {
             outcome: supervisor.outcome,
             stdout: supervisor.stdout,
           })),
-          record.source,
+          sanitizedRuns[0]?.python_analysis,
         )
       : null
     const projectPracticeRun = assignment?.kind === 'project' && purpose === 'run'

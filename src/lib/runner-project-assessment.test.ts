@@ -7,7 +7,36 @@ import {
   evaluateProjectRunnerAssignment,
   findRunnerAssignment,
   runnerInputCases,
+  type PythonAnalysis,
 } from './runner-assignments'
+
+function emptyPythonAnalysis(straightLine = true): PythonAnalysis {
+  return {
+    version: 1,
+    parsed: true,
+    straight_line: straightLine,
+    assignments: [],
+    print_fstrings: [],
+  }
+}
+
+function referencePythonAnalysis(): PythonAnalysis {
+  return {
+    version: 1,
+    parsed: true,
+    straight_line: true,
+    assignments: [
+      { target: 'price_per_cup', occurrence: 1, kind: 'integer', value: 3 },
+      { target: 'name', occurrence: 1, kind: 'input' },
+      { target: 'cups_text', occurrence: 1, kind: 'input' },
+      { target: 'cups', occurrence: 1, kind: 'int_name', name: 'cups_text' },
+      { target: 'total', occurrence: 1, kind: 'multiply_names', names: ['cups', 'price_per_cup'] },
+    ],
+    print_fstrings: [
+      { occurrence: 1, fields: ['name', 'cups', 'total'] },
+    ],
+  }
+}
 
 function finalAssignment() {
   const assignment = findRunnerAssignment('project-py-final')
@@ -51,7 +80,7 @@ describe('server-owned Python project assessment', () => {
     const evaluation = evaluateProjectRunnerAssignment(
       assignment,
       executions,
-      `print(${JSON.stringify(visibleOutput)})`,
+      emptyPythonAnalysis(),
     )
     const caseTests = evaluation.tests.slice(0, 4)
     const structuralTests = evaluation.tests.slice(4)
@@ -71,7 +100,7 @@ describe('server-owned Python project assessment', () => {
     const evaluation = evaluateProjectRunnerAssignment(
       finalAssignment(),
       executions,
-      pythonInteractiveProjectServerAssessment.referenceSolution,
+      referencePythonAnalysis(),
     )
 
     expect(evaluation.tests).toHaveLength(10)
@@ -80,58 +109,67 @@ describe('server-owned Python project assessment', () => {
     expect(evaluation.tests.every((test) => test.passed)).toBe(true)
   })
 
-  it('ignores required-looking code in comments, strings, and indented unreachable suites', () => {
-    const requiredLookingText = [
-      '# price_per_cup = 3',
-      '# name = input("What is your name?")',
-      '# cups_text = input("How many cups?")',
-      '# cups = int(cups_text)',
-      '# total = cups * price_per_cup',
-      '# print(f"{name}, {cups}, {total}")',
-      'decoy = \'name = input("unused") cups = int(cups_text) total = cups * price_per_cup\'',
-      'if False:',
-      '    price_per_cup = 3',
-      '    name = input("unused")',
-      '    cups_text = input("unused")',
-      '    cups = int(cups_text)',
-      '    total = cups * price_per_cup',
-      '    print(f"{name}, {cups}, {total}")',
-      'if False: price_per_cup = 3',
-      'if False: name = input("unused")',
-      'if False: cups_text = input("unused")',
-      'if False: cups = int(cups_text)',
-      'if False: total = cups * price_per_cup',
-      'if False: print(f"{name}, {cups}, {total}")',
-    ].join('\n')
-
+  it('fails closed when parsing fails or the program is not straight-line code', () => {
     const results = evaluateProjectStructuralChecks(
       pythonInteractiveProjectServerAssessment,
-      requiredLookingText,
+      {
+        ...referencePythonAnalysis(),
+        straight_line: false,
+      },
+    )
+    const parseFailure = evaluateProjectStructuralChecks(
+      pythonInteractiveProjectServerAssessment,
+      {
+        version: 1,
+        parsed: false,
+        straight_line: false,
+        assignments: [],
+        print_fstrings: [],
+      },
+    )
+    const missing = evaluateProjectStructuralChecks(
+      pythonInteractiveProjectServerAssessment,
+      null,
     )
 
     expect(results).toHaveLength(6)
     expect(results.every((check) => !check.passed)).toBe(true)
+    expect(parseFailure.every((check) => !check.passed)).toBe(true)
+    expect(missing.every((check) => !check.passed)).toBe(true)
   })
 
-  it('rejects the exact one-line unreachable-suite bypass against passing behavior cases', () => {
-    const source = [
-      'if False: price_per_cup = 3',
-      'if False: name = input("unused")',
-      'if False: cups_text = input("unused")',
-      'if False: cups = int(cups_text)',
-      'if False: total = cups * price_per_cup',
-      'if False: print(f"{name}, {cups}, {total}")',
-      'print("Behavior is supplied by aliases in this regression.")',
-    ].join('\n')
+  it('rejects duplicate required assignments against passing behavior cases', () => {
     const executions = pythonInteractiveProjectServerAssessment.testCases.map((testCase) => ({
       outcome: 'completed' as const,
       stdout: testCase.expectedStdout,
     }))
-    const evaluation = evaluateProjectRunnerAssignment(finalAssignment(), executions, source)
+    const analysis = referencePythonAnalysis()
+    analysis.assignments.splice(1, 0,
+      { target: 'price_per_cup', occurrence: 2, kind: 'integer', value: 3 },
+    )
+    const evaluation = evaluateProjectRunnerAssignment(finalAssignment(), executions, analysis)
 
     expect(evaluation.tests.slice(0, 4).every((test) => test.passed)).toBe(true)
-    expect(evaluation.tests.slice(4).every((test) => !test.passed)).toBe(true)
+    expect(evaluation.tests[4]).toMatchObject({ passed: false })
+    expect(evaluation.tests.slice(5).every((test) => test.passed)).toBe(true)
     expect(evaluation.tests.every((test) => test.passed)).toBe(false)
+  })
+
+  it('requires exact assignment shapes and direct f-string fields', () => {
+    const wrongShapes = referencePythonAnalysis()
+    wrongShapes.assignments = [
+      { target: 'price_per_cup', occurrence: 1, kind: 'integer', value: 3 },
+      { target: 'name', occurrence: 1, kind: 'string' },
+      { target: 'cups_text', occurrence: 1, kind: 'input' },
+      { target: 'cups', occurrence: 1, kind: 'int_name', name: 'name' },
+      { target: 'total', occurrence: 1, kind: 'multiply_names', names: ['cups', 'subtotal'] },
+    ]
+    wrongShapes.print_fstrings = [{ occurrence: 1, fields: ['name', 'cups'] }]
+
+    expect(evaluateProjectStructuralChecks(
+      pythonInteractiveProjectServerAssessment,
+      wrongShapes,
+    ).map((check) => check.passed)).toEqual([true, false, true, false, false, false])
   })
 
   it('does not serialize hidden inputs, hidden outputs, or the reference solution', () => {
@@ -142,7 +180,7 @@ describe('server-owned Python project assessment', () => {
     const evaluation = evaluateProjectRunnerAssignment(
       finalAssignment(),
       executions,
-      pythonInteractiveProjectServerAssessment.referenceSolution,
+      referencePythonAnalysis(),
     )
     const serializedResult = JSON.stringify({
       stdout: evaluation.visibleStdout,

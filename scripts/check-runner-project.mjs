@@ -36,6 +36,38 @@ const decoySource = [
   'print(f"{person}, your {amount} cup order costs ${cost}.")',
 ].join('\n')
 
+const unreachableContinuationSource = [
+  'print("Welcome to the Coffee Counter!")',
+  'person = input("What is your name?\\n")',
+  'amount = int(input("How many cups would you like?\\n"))',
+  'cost = amount + amount + amount',
+  'print(f"{person}, your {amount} cup order costs ${cost}.")',
+  'raise SystemExit',
+  'if False: \\',
+  'price_per_cup = 3',
+  'if False: \\',
+  'name = input("unused")',
+  'if False: \\',
+  'cups_text = input("unused")',
+  'if False: \\',
+  'cups = int(cups_text)',
+  'if False: \\',
+  'total = cups * price_per_cup',
+  'if False: \\',
+  'print(f"{name}, your {cups} cup order costs ${total}.")',
+].join('\n')
+
+const encodedSourceDisagreement = [
+  '# coding: utf-7',
+  '# +AAo-print("Welcome to the Coffee Counter!") +AAo-person = input("What is your name?\\n") +AAo-amount = int(input("How many cups would you like?\\n")) +AAo-cost = amount * 3 +AAo-print(f"{person}, your {amount} cup order costs ${cost}.") +AAo-raise SystemExit',
+  'price_per_cup = 3',
+  'name = input("unused")',
+  'cups_text = input("unused")',
+  'cups = int(cups_text)',
+  'total = cups * price_per_cup',
+  'print(f"{name}, your {cups} cup order costs ${total}.")',
+].join('\n')
+
 function assert(condition, message) {
   if (!condition) throw new Error(message)
 }
@@ -104,6 +136,7 @@ function assertProtectedResult(result) {
   for (const marker of privateMarkers) {
     assert(!serialized.includes(marker), `protected project value escaped in the result: ${marker}`)
   }
+  assert(!serialized.includes('python_analysis'), 'trusted Python analysis escaped in the public result')
 }
 
 const status = await responseJson(await fetch(`${origin}/api/runner/status`), 'runner status')
@@ -122,6 +155,46 @@ assert(decoy.tests.slice(0, 4).every((test) => test.passed), 'project decoy did 
 assert(decoy.tests.slice(4).every((test) => !test.passed), 'commented code satisfied a protected structural requirement')
 assertProtectedResult(decoy)
 console.log('pass project integrity: behavior aliases passed while commented required code was rejected')
+
+const unreachableContinuation = await run(unreachableContinuationSource, 'check')
+assert(
+  unreachableContinuation.outcome === 'completed',
+  `project unreachable-continuation check returned ${unreachableContinuation.outcome}`,
+)
+assert(
+  Array.isArray(unreachableContinuation.tests) && unreachableContinuation.tests.length === 10,
+  'project unreachable-continuation check returned the wrong test count',
+)
+assert(
+  unreachableContinuation.tests.slice(0, 4).every((test) => test.passed),
+  'project unreachable-continuation source did not prove all protected behavior cases',
+)
+assert(
+  unreachableContinuation.tests.slice(4).every((test) => !test.passed),
+  'unreachable continued lines satisfied protected structural requirements',
+)
+assertProtectedResult(unreachableContinuation)
+console.log('pass project integrity: early exit and explicit-line-continuation decoys were rejected')
+
+const encodedDisagreement = await run(encodedSourceDisagreement, 'check')
+assert(
+  encodedDisagreement.outcome === 'completed',
+  `project encoded-source check returned ${encodedDisagreement.outcome}`,
+)
+assert(
+  Array.isArray(encodedDisagreement.tests) && encodedDisagreement.tests.length === 10,
+  'project encoded-source check returned the wrong test count',
+)
+assert(
+  encodedDisagreement.tests.slice(0, 4).every((test) => test.passed),
+  'project encoded-source source did not prove all protected behavior cases',
+)
+assert(
+  encodedDisagreement.tests.slice(4).every((test) => !test.passed),
+  'source encoding disagreement satisfied protected structural requirements',
+)
+assertProtectedResult(encodedDisagreement)
+console.log('pass project integrity: the trusted parser and Python execution used the same source encoding')
 
 const complete = await run(correctSource, 'check')
 assert(complete.outcome === 'completed', `complete project check returned ${complete.outcome}`)

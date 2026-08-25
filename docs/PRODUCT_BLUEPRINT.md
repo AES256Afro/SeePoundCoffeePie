@@ -204,7 +204,7 @@ Phase 4A establishes the project system with one complete Python path:
 - Every checkpoint introduces its vocabulary, explains each visible code shape, gives one concrete job, and reduces scaffolding gradually.
 - The project retrieves output, strings, variables, integers, arithmetic, input, type conversion, f-strings, traceback reading, and multi-line assembly before the final build.
 - Ten editable checkpoints use the isolated runner. `Run` accepts learner-supplied practice input without grading, while `Check` uses assignment-owned input and code requirements.
-- The final Coffee Counter assessment uses one visible and three private input cases plus six private structural requirements. Private cases and the reference solution are absent from the browser bundle and result payload.
+- The final Coffee Counter assessment uses one visible and three private input cases plus six private structural requirements. A trusted Python AST analysis accepts only the taught straight-line code shape and fails closed on disguised or unreachable required lines. Private cases, the reference solution, and the internal analysis are absent from the browser bundle and result payload.
 - Project source drafts stay only in a separate browser-local record. Synchronized progress stores completion identifiers and concept aggregates, not source, console output, or detailed history.
 - Official check history keeps at most 20 local summaries. The completed `.py` file can be downloaded directly from the project workspace.
 - The workspace uses the approved open split layout on desktop and a single readable flow at 390 CSS pixels, with distinct text scale, keyboard access, runner announcements, and concrete progress labels.
