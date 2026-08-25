@@ -67,4 +67,30 @@ describe('runExercise', () => {
       }),
     )
   })
+
+  it('does not blame learner code when the API route returns a page instead of JSON', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => new Response('<!doctype html><title>Local preview</title>', {
+      headers: { 'Content-Type': 'text/html' },
+    })))
+
+    await expect(runExercise('py-print', 'python', 'print(1)')).rejects.toEqual(
+      expect.objectContaining<Partial<RunnerClientError>>({
+        message: 'The live runner could not be reached. Your code was not marked wrong. Please try again.',
+        retryable: true,
+      }),
+    )
+  })
+
+  it('does not blame learner code when the runner returns incomplete JSON', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => new Response('{"grant":', {
+      headers: { 'Content-Type': 'application/json' },
+    })))
+
+    await expect(runExercise('py-print', 'python', 'print(1)')).rejects.toEqual(
+      expect.objectContaining<Partial<RunnerClientError>>({
+        message: 'The live runner sent an incomplete response. Your code was not marked wrong. Please try again.',
+        retryable: true,
+      }),
+    )
+  })
 })

@@ -2,7 +2,7 @@ import { Resolver } from 'node:dns/promises'
 import { request as httpsRequest } from 'node:https'
 
 const canonical = 'https://seepoundcoffeepie.com/'
-const expectedTitle = '<title>SeePoundCoffeePie | Learn code. Run the ship.</title>'
+const expectedTitle = '<title>SeePoundCoffeePie | Programming from the beginning.</title>'
 const socialImageUrl = 'https://seepoundcoffeepie.com/social-card-v7.jpg'
 
 async function requestWithFreshDns(input, init = {}) {
@@ -107,7 +107,30 @@ if (
   throw new Error('The www hostname did not redirect to the canonical apex domain')
 }
 
-for (const route of ['/academy/python', '/practice/java', '/codebook/csharp', '/profile', '/settings', '/academy/python/missions/py-first-spark']) {
+const canonicalRoutes = [
+  '/start',
+  '/home',
+  '/courses',
+  '/courses/python-foundations',
+  '/courses/cpp-foundations',
+  '/courses/csharp-foundations',
+  '/courses/java-foundations',
+  '/learn/python-foundations/py-first-spark/py-console',
+  '/learn/cpp-foundations/cpp-reactor/cpp-compiler',
+  '/learn/csharp-foundations/cs-shield/cs-dotnet',
+  '/learn/java-foundations/java-coffee-protocol/java-jvm',
+  '/practice/java',
+  '/codebook/csharp',
+  '/profile',
+  '/settings',
+]
+
+const legacyRoutes = [
+  '/academy/python',
+  '/academy/python/missions/py-first-spark',
+]
+
+for (const route of [...canonicalRoutes, ...legacyRoutes]) {
   const spaResponse = await requestWithFreshDns(`https://seepoundcoffeepie.com${route}`, {
     redirect: 'manual',
   })
@@ -116,4 +139,4 @@ for (const route of ['/academy/python', '/practice/java', '/codebook/csharp', '/
   }
 }
 
-console.log('Live verification passed for social previews, apex, www redirect, headers, and all bookmarkable SPA routes.')
+console.log(`Live verification passed for social previews, apex, www redirect, headers, ${canonicalRoutes.length} canonical routes, and ${legacyRoutes.length} legacy routes.`)

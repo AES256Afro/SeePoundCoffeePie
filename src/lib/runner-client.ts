@@ -23,10 +23,14 @@ export class RunnerClientError extends Error {
 }
 
 async function readJson(response: Response): Promise<Record<string, unknown>> {
+  const contentType = response.headers.get('Content-Type') ?? ''
+  if (!contentType.toLowerCase().includes('application/json')) {
+    throw new RunnerClientError('The live runner could not be reached. Your code was not marked wrong. Please try again.', true)
+  }
   try {
     return await response.json() as Record<string, unknown>
   } catch {
-    throw new RunnerClientError('The training runner returned an unreadable response. Please try again.', true)
+    throw new RunnerClientError('The live runner sent an incomplete response. Your code was not marked wrong. Please try again.', true)
   }
 }
 

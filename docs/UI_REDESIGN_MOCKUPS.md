@@ -1,8 +1,22 @@
 # Open Learning Workshop UI Direction
 
-Status: concept mockups for review, not an approved production implementation
+Status: approved direction, implemented in the current release candidate, pending publication and live verification
 
 Mockup set: [open-learning-workshop](mockups/open-learning-workshop)
+
+## Milestone status
+
+The Open Learning Workshop redesign now has a working implementation in the application checkout:
+
+- a compact top navigation replaces the permanent course sidebar;
+- the learner home, course catalog, four course outlines, intake, Practice, Codebook, learner record, and Settings share one readable visual system;
+- the lesson workspace uses the approved explanation-and-work split while retaining the existing exercise engine and isolated runner;
+- the existing track, mission, and exercise identifiers are presented as courses, modules, and lessons without migrating or inventing progress;
+- `/home`, `/courses`, all four `/courses/:course-slug` pages, and exact `/learn/:course-slug/:module-id/:lesson-id` pages are directly addressable;
+- legacy academy and mission URLs remain supported for saved bookmarks and compatibility;
+- desktop and 390-pixel layouts are implemented, with reduced-motion and keyboard behavior retained.
+
+The remaining release work is verification rather than another structural redesign: finish the automated release gate, complete keyboard and assistive-technology review, publish the Worker with the runner paused, exercise the new live route set, re-enable the runner, and run the production runner regression checks. This document does not claim the redesign is live until that evidence is recorded.
 
 ## Why this direction
 
@@ -32,19 +46,19 @@ SeePoundCoffeePie keeps its own identity through the four symbols: the eye for C
 9. Metadata is written in normal sentence case. Tiny all-caps labels are removed.
 10. Progress is visible but quiet. Thin lines and plain counts replace large reward widgets.
 
-## Proposed information architecture
+## Implemented information architecture
 
 ### Home
 
 The signed-in learner sees one continuation action, a seven-day activity strip, concepts ready for review, their current courses, and the active course outline.
 
-Suggested route: `/home`
+Canonical route: `/home`
 
 ### Courses
 
 The catalog displays the four foundation courses first. Future guided projects can appear below them without turning the page into a dense marketplace.
 
-Suggested route: `/courses`
+Canonical route: `/courses`
 
 Initial courses:
 
@@ -57,7 +71,7 @@ Initial courses:
 
 Each course has six modules. A module expands to show its short lessons, duration, and current state. This replaces the current idea of one language school containing only a row of mission cards.
 
-Suggested route: `/courses/:course-slug`
+Canonical route: `/courses/:course-slug`
 
 Initial foundation modules:
 
@@ -79,7 +93,9 @@ The desktop workspace uses a 43/57 split:
 - Run code and Check answer are distinct actions;
 - Reset and Show hint remain secondary text actions.
 
-Suggested route: `/learn/:course-slug/:module-slug/:lesson-slug`
+Canonical route: `/learn/:course-slug/:module-id/:lesson-id`
+
+The route uses the existing mission ID as the module ID and the existing exercise ID as the lesson ID. For example, `/learn/python-foundations/py-first-spark/py-console` opens the first lesson of Python Foundations without changing the stored progress schema.
 
 Choice and prediction lessons can replace the editor with the relevant interaction while preserving the same reading pane and page structure.
 
@@ -87,16 +103,16 @@ Choice and prediction lessons can replace the editor with the relevant interacti
 
 Practice and Codebook remain first-class pages in the top navigation. Their internal layouts should use the same open document and row patterns rather than dense card grids.
 
-Suggested routes:
+Canonical routes:
 
-- `/practice`
-- `/codebook`
+- `/practice/:language`
+- `/codebook/:language`
 
 ### Beginner intake
 
 Intake asks one question per page, explains why it is being asked, and always provides `I'm not sure yet`. Recommendations do not lock the learner into a course.
 
-Suggested route: `/start`
+Canonical route: `/start`
 
 ## Mockup notes
 
@@ -133,16 +149,16 @@ The current curriculum can be migrated without rewriting every exercise immediat
 
 This mapping lets the interface change first while preserving learner progress. A compatibility layer can translate existing completed mission IDs into course and module completion until the progress schema is deliberately upgraded.
 
-## Recommended implementation order
+## Implementation sequence
 
-1. Establish the shared top navigation, typography, colors, spacing, buttons, and row primitives.
-2. Build the new lesson workspace around the existing exercise engine and runner.
-3. Introduce the course, module, and lesson presentation model without changing stored progress IDs.
-4. Build the course outline and catalog pages.
-5. Replace the academy landing shell with the learner home.
-6. Rework intake as four short recommendation questions.
-7. Convert Practice, Codebook, Settings, and Cadet Record to the same visual system.
-8. Validate desktop, 390-pixel mobile, keyboard flow, zoom, reduced motion, and screen-reader landmarks before deployment.
+1. The shared top navigation, typography, colors, spacing, buttons, and row primitives are implemented.
+2. The lesson workspace wraps the existing exercise engine and runner rather than replacing their behavior.
+3. The course, module, and lesson presentation model retains stored progress IDs.
+4. The course outline, catalog, and learner home are implemented as separate bookmarkable pages.
+5. Intake uses four short recommendation questions and keeps course browsing optional.
+6. Practice, Codebook, Settings, and the learner record use the shared visual system.
+7. Desktop and 390-pixel browser layouts have been reviewed in the release candidate.
+8. The complete automated, keyboard, assistive-technology, deployment, and production smoke gates remain required before the status changes to live.
 
 ## Prompt set used for the mockups
 

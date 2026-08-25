@@ -81,8 +81,8 @@ describe('beginner lesson interactions', () => {
 
   async function openFirstEditableStep() {
     render(<App />)
-    fireEvent.click(screen.getByRole('button', { name: 'Start First Spark' }))
-    fireEvent.click(screen.getByRole('button', { name: /Shows text from the program/iu }))
+    fireEvent.click(screen.getByRole('link', { name: /Meet the console/iu }))
+    fireEvent.click(screen.getByRole('radio', { name: /Shows text from the program/iu }))
     fireEvent.click(screen.getByRole('button', { name: 'Check answer' }))
     fireEvent.click(screen.getByRole('button', { name: 'Continue' }))
     return screen.getByRole('textbox', { name: 'Code editor' })
@@ -127,7 +127,7 @@ describe('beginner lesson interactions', () => {
     window.history.replaceState({}, '', '/academy/java')
 
     render(<App />)
-    fireEvent.click(screen.getByRole('link', { name: 'Practice bay' }))
+    fireEvent.click(screen.getByRole('link', { name: 'Practice' }))
 
     const reviewButton = screen.getByRole('button', { name: 'Review Routing Orders' })
     expect(screen.getByText('BEST MATCH · MISSION 02')).toBeTruthy()
@@ -136,7 +136,7 @@ describe('beginner lesson interactions', () => {
     expect(await screen.findByRole('heading', { name: 'Ask a routing question' })).toBeTruthy()
     expect(screen.getByText('FOCUSED REVIEW · 1 OF 1')).toBeTruthy()
 
-    fireEvent.click(screen.getByRole('button', { name: /^A true and falseJava writes/iu }))
+    fireEvent.click(screen.getByRole('radio', { name: /true and falseJava writes/iu }))
     fireEvent.click(screen.getByRole('button', { name: 'Check answer' }))
     fireEvent.click(screen.getByRole('button', { name: 'Finish practice' }))
 
@@ -177,7 +177,7 @@ describe('beginner lesson interactions', () => {
     })
 
     expect(await screen.findByText(/Progress restored from the backup created/iu)).toBeTruthy()
-    fireEvent.click(screen.getByRole('link', { name: 'Cadet record' }))
+    fireEvent.click(screen.getByRole('link', { name: 'Learner record' }))
     expect(await screen.findByRole('heading', { name: 'Restored Cadet' })).toBeTruthy()
     expect(screen.getAllByText('140').length).toBeGreaterThan(0)
     await waitFor(() => {
@@ -185,7 +185,7 @@ describe('beginner lesson interactions', () => {
     })
   })
 
-  it('shows separate station records and opens another language without erasing progress', async () => {
+  it('shows separate course records and opens another language without erasing progress', async () => {
     window.localStorage.setItem(progressKey, JSON.stringify({
       ...initialProgress('python'),
       callsign: 'Route Cadet',
@@ -194,14 +194,14 @@ describe('beginner lesson interactions', () => {
     }))
 
     render(<App />)
-    fireEvent.click(screen.getByRole('link', { name: 'Cadet record' }))
+    fireEvent.click(screen.getByRole('link', { name: 'Learner record' }))
 
-    expect(screen.getByRole('heading', { name: 'Station records' })).toBeTruthy()
+    expect(screen.getByRole('heading', { name: 'Course records' })).toBeTruthy()
     expect(screen.getByLabelText('Python 17% complete')).toBeTruthy()
     expect(screen.getByLabelText('Java 17% complete')).toBeTruthy()
-    fireEvent.click(screen.getByRole('button', { name: 'Open C++ mission path' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Open C++ Foundations' }))
 
-    expect(await screen.findByRole('heading', { name: 'C++ Engineering Corps' })).toBeTruthy()
+    expect(await screen.findByRole('heading', { name: 'C++ Foundations' })).toBeTruthy()
     await waitFor(() => {
       const stored = JSON.parse(window.localStorage.getItem(progressKey) ?? '{}')
       expect(stored.activeLanguage).toBe('cpp')
@@ -307,7 +307,7 @@ describe('beginner lesson interactions', () => {
     render(<App />)
     expect(await screen.findByRole('heading', { name: 'Choose which progress to continue' })).toBeTruthy()
     fireEvent.click(screen.getByRole('button', { name: 'Use saved account' }))
-    fireEvent.click(screen.getByRole('link', { name: 'Cadet record' }))
+    fireEvent.click(screen.getByRole('link', { name: /Learner record for cloud-cadet/iu }))
 
     expect(await screen.findByRole('heading', { name: 'Cloud Cadet' })).toBeTruthy()
     expect(screen.getAllByText('160').length).toBeGreaterThan(0)
@@ -357,8 +357,49 @@ describe('beginner lesson interactions', () => {
     render(<App />)
 
     expect(screen.getByRole('heading', { name: 'The code academy for absolute beginners' })).toBeTruthy()
-    expect(screen.getByRole('link', { name: 'Continue as Test Cadet' }).getAttribute('href')).toBe('/academy/python')
-    expect(screen.queryByRole('heading', { name: 'Python Flight School' })).toBeNull()
+    expect(screen.getByRole('link', { name: 'Continue as Test Cadet' }).getAttribute('href')).toBe('/home')
+    expect(screen.queryByRole('heading', { name: 'Welcome back, Test Cadet.' })).toBeNull()
+    expect(document.title).toBe('SeePoundCoffeePie | Programming from the beginning.')
+  })
+
+  it('loads the learner home at its own bookmarkable URL', () => {
+    window.history.replaceState({}, '', '/home')
+
+    render(<App />)
+
+    expect(screen.getByRole('heading', { name: 'Welcome back, Test Cadet.' })).toBeTruthy()
+    expect(screen.getByRole('link', { name: /Browse all courses/iu }).getAttribute('href')).toBe('/courses')
+    expect(document.title).toBe('Learning Home | SeePoundCoffeePie')
+  })
+
+  it('lists all four foundation courses with canonical course links', () => {
+    window.history.replaceState({}, '', '/courses')
+
+    render(<App />)
+
+    expect(screen.getByRole('heading', { name: 'Python Foundations' })).toBeTruthy()
+    expect(screen.getByRole('heading', { name: 'C++ Foundations' })).toBeTruthy()
+    expect(screen.getByRole('heading', { name: 'C# Foundations' })).toBeTruthy()
+    expect(screen.getByRole('heading', { name: 'Java Foundations' })).toBeTruthy()
+    expect(screen.getAllByRole('link', { name: /^Start course/iu }).map((link) => link.getAttribute('href'))).toEqual([
+      '/courses/python-foundations',
+      '/courses/cpp-foundations',
+      '/courses/csharp-foundations',
+      '/courses/java-foundations',
+    ])
+    expect(document.title).toBe('Courses | SeePoundCoffeePie')
+  })
+
+  it('does not change the active language when merely browsing another course', async () => {
+    window.history.replaceState({}, '', '/courses/java-foundations')
+
+    render(<App />)
+
+    expect(screen.getByRole('heading', { name: 'Java Foundations' })).toBeTruthy()
+    expect(window.location.pathname).toBe('/courses/java-foundations')
+    await waitFor(() => {
+      expect(JSON.parse(window.localStorage.getItem(progressKey) ?? '{}').activeLanguage).toBe('python')
+    })
   })
 
   it('loads Settings directly and gives every main section a real URL', () => {
@@ -368,10 +409,11 @@ describe('beginner lesson interactions', () => {
 
     expect(screen.getByRole('heading', { name: 'Academy settings' })).toBeTruthy()
     expect(document.title).toBe('Settings | SeePoundCoffeePie')
-    expect(screen.getByRole('link', { name: 'Mission path' }).getAttribute('href')).toBe('/academy/python')
-    expect(screen.getByRole('link', { name: 'Practice bay' }).getAttribute('href')).toBe('/practice/python')
+    expect(screen.getByRole('link', { name: 'Home' }).getAttribute('href')).toBe('/home')
+    expect(screen.getByRole('link', { name: 'Courses' }).getAttribute('href')).toBe('/courses')
+    expect(screen.getByRole('link', { name: 'Practice' }).getAttribute('href')).toBe('/practice/python')
     expect(screen.getByRole('link', { name: 'Codebook' }).getAttribute('href')).toBe('/codebook/python')
-    expect(screen.getByRole('link', { name: 'Cadet record' }).getAttribute('href')).toBe('/profile')
+    expect(screen.getByRole('link', { name: 'Learner record' }).getAttribute('href')).toBe('/profile')
     expect(screen.getByRole('link', { name: 'Settings' }).getAttribute('href')).toBe('/settings')
   })
 
@@ -380,19 +422,34 @@ describe('beginner lesson interactions', () => {
 
     render(<App />)
 
-    expect(screen.getByRole('heading', { name: 'Java Systems Guild' })).toBeTruthy()
+    expect(screen.getByRole('heading', { name: 'Java Foundations' })).toBeTruthy()
     await waitFor(() => {
       expect(JSON.parse(window.localStorage.getItem(progressKey) ?? '{}').activeLanguage).toBe('java')
     })
   })
 
-  it('opens an available lesson from its bookmarkable URL', () => {
-    window.history.replaceState({}, '', '/academy/python/missions/py-first-spark')
+  it('opens an exact lesson from its canonical bookmarkable URL', () => {
+    window.history.replaceState({}, '', '/learn/python-foundations/py-first-spark/py-console')
 
     render(<App />)
 
     expect(screen.getByRole('heading', { name: 'Meet the console' })).toBeTruthy()
-    expect(window.location.pathname).toBe('/academy/python/missions/py-first-spark')
-    expect(document.title).toBe('First Spark | SeePoundCoffeePie')
+    expect(window.location.pathname).toBe('/learn/python-foundations/py-first-spark/py-console')
+    expect(document.title).toBe('Meet the console | SeePoundCoffeePie')
+  })
+
+  it('updates the canonical lesson URL and title when continuing to the next lesson', async () => {
+    window.history.replaceState({}, '', '/learn/python-foundations/py-first-spark/py-console')
+
+    render(<App />)
+    fireEvent.click(screen.getByRole('radio', { name: /Shows text from the program/iu }))
+    fireEvent.click(screen.getByRole('button', { name: 'Check answer' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Continue' }))
+
+    expect(await screen.findByRole('heading', { name: 'Send your first signal' })).toBeTruthy()
+    expect(window.location.pathname).toBe('/learn/python-foundations/py-first-spark/py-print')
+    await waitFor(() => {
+      expect(document.title).toBe('Send your first signal | SeePoundCoffeePie')
+    })
   })
 })

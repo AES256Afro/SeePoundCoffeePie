@@ -187,6 +187,15 @@ Every authored lesson must:
 - The validated JSON backup and restore flow works with account synchronization, while settings provide separate server-data deletion and learning-progress reset controls.
 - The [Phase 3 release record](PHASE_3_RELEASE.md) defines the data contract, retention, privacy boundary, child-safety gate, deployment order, verification, and recovery requirements.
 
+### Open Learning Workshop interface milestone (release candidate)
+
+- The compact top navigation, learner home, course catalog, four foundation-course outlines, beginner intake, and split lesson workspace implement the approved [Open Learning Workshop direction](UI_REDESIGN_MOCKUPS.md).
+- The presentation model maps existing tracks to courses, missions to modules, and exercises to lessons without changing persisted mission IDs, completed progress, runner assignments, backup records, or evaluation behavior.
+- `/home`, `/courses`, each `/courses/:course-slug` outline, and exact `/learn/:course-slug/:module-id/:lesson-id` pages can be opened, refreshed, shared, and bookmarked.
+- Legacy `/academy/:language` and mission URLs remain available for existing bookmarks while the new pages provide the canonical learning flow.
+- The release candidate uses open document layouts, a readable light palette, normal sentence-case labels, modest corners, and the eye, `#`, coffee cup, and `π` symbols. It does not rely on space scenes, gradients, glows, glass effects, or a permanent sidebar.
+- Production status remains pending until the release gate, keyboard and assistive-technology review, deployment with the runner paused, live canonical-route smoke checks, and post-deployment runner regressions all pass.
+
 ### Phase 4: Projects and adaptive practice
 
 - Add guided projects after each sector.

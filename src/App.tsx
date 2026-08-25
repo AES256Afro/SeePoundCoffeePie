@@ -15,7 +15,6 @@ import {
   ArrowRight,
   ArrowUp,
   BookOpen,
-  Box,
   Check,
   CheckCircle2,
   ChevronDown,
@@ -23,24 +22,22 @@ import {
   Clock3,
   Cloud,
   Code2,
+  Coffee,
   Compass,
-  Crown,
   Download,
+  Eye,
   Flame,
   Gem,
   GitFork as Github,
-  Keyboard,
+  Home,
   LibraryBig,
   LockKeyhole,
   LogOut,
   Menu,
   MessageCircleQuestion,
   Orbit,
-  Play,
-  Radio,
   RefreshCw,
   RotateCcw,
-  Satellite,
   Search,
   Settings,
   Shield,
@@ -55,6 +52,7 @@ import {
 } from 'lucide-react'
 import { codebookEntries, codebookExampleState, codebookMatches } from './data/codebook'
 import { trackById, tracks } from './data/curriculum'
+import { buildCourseCards, buildCourseModel, type CourseCardModel } from './lib/course-model'
 import { evaluateExercise } from './lib/evaluator'
 import { missionAvailability } from './lib/missions'
 import { buildPracticeExercises, conceptDisplayName, recommendPractice } from './lib/practice'
@@ -82,9 +80,11 @@ import {
 import { runExercise, type RunnerClientStatus } from './lib/runner-client'
 import type { RunnerResult } from './lib/runner-contract'
 import {
-  academyPath,
   codebookPath,
-  missionPath,
+  coursePath,
+  coursesPath,
+  homePath,
+  lessonPath,
   pagePath,
   parseAppRoute,
   practiceMissionPath,
@@ -98,16 +98,7 @@ import type {
   Mission,
 } from './types'
 
-type ViewId = 'path' | 'practice' | 'spellbook' | 'profile' | 'settings'
-
-const missionIcons = {
-  signal: Radio,
-  terminal: TerminalSquare,
-  satellite: Satellite,
-  shield: Shield,
-  package: Box,
-  crown: Crown,
-}
+type ViewId = 'home' | 'courses' | 'path' | 'practice' | 'spellbook' | 'profile' | 'settings'
 
 const languageSnippets: Record<LanguageId, string> = {
   python: 'print("Hello, cosmos!")',
@@ -154,19 +145,33 @@ function AppLink({ children, onClick, target, to, ...props }: AppLinkProps) {
   return <a {...props} href={to} onClick={followLink} target={target}>{children}</a>
 }
 
-function BrandMark({ compact = false }: { compact?: boolean }) {
+function LanguageSymbol({ language, size = 'medium' }: { language: LanguageId; size?: 'small' | 'medium' | 'large' }) {
+  const className = `language-symbol language-symbol--${language} language-symbol--${size}`
+  if (language === 'cpp') return <span className={className} aria-label="C++"><Eye aria-hidden="true" /></span>
+  if (language === 'csharp') return <span className={className} aria-label="C#">#</span>
+  if (language === 'java') return <span className={className} aria-label="Java"><Coffee aria-hidden="true" /></span>
+  return <span className={className} aria-label="Python">π</span>
+}
+
+function SymbolStrip({ compact = false }: { compact?: boolean }) {
   return (
-    <AppLink className={`brand ${compact ? 'brand--compact' : ''}`} aria-label="SeePoundCoffeePie home" to="/">
-      <img
-        className={`brand__mark ${compact ? 'brand__mark--compact' : ''}`}
-        src={compact ? '/favicon.svg' : '/logo-mark.svg'}
-        alt=""
-        aria-hidden="true"
-      />
+    <span className={`symbol-strip ${compact ? 'symbol-strip--compact' : ''}`} aria-label="C++, C#, Java, and Python">
+      <LanguageSymbol language="cpp" size="small" />
+      <LanguageSymbol language="csharp" size="small" />
+      <LanguageSymbol language="java" size="small" />
+      <LanguageSymbol language="python" size="small" />
+    </span>
+  )
+}
+
+function BrandMark({ compact = false, to = '/' }: { compact?: boolean; to?: string }) {
+  return (
+    <AppLink className={`brand ${compact ? 'brand--compact' : ''}`} aria-label="SeePoundCoffeePie home" to={to}>
+      <SymbolStrip compact={compact} />
       {!compact && (
         <span className="brand__name">
           <b>SeePoundCoffeePie</b>
-          <small>CODE ACADEMY</small>
+          <small>Learn programming from the beginning</small>
         </span>
       )}
     </AppLink>
@@ -174,30 +179,31 @@ function BrandMark({ compact = false }: { compact?: boolean }) {
 }
 
 function LaunchStory({ language }: { language: LanguageId }) {
+  const track = trackById(language)
   return (
     <section className="onboarding__story">
-      <div className="starfield" aria-hidden="true" />
       <BrandMark />
       <div className="hero-copy">
-        <p className="kicker"><Sparkles size={15} /> No experience required</p>
-        <h1>Learn code.<br /><span>Run the ship.</span></h1>
+        <p className="kicker"><BookOpen size={15} /> No experience required</p>
+        <h1>Programming starts with one small idea.</h1>
         <p>
-          Your first programming lesson starts with one clear instruction. No jargon dumps.
-          No setup maze. Just small missions, patient explanations, and lots of practice.
+          We explain the words, symbols, punctuation, and hidden assumptions that most courses skip.
+          Then you use each idea in a short lesson and meet it again before it fades.
         </p>
-        <div className="hero-console" aria-label="Example code">
-          <div className="console-dots"><i /><i /><i /></div>
+        <div className="hero-console" aria-label={`${track.shortName} example code`}>
+          <span className="hero-console__label"><LanguageSymbol language={language} size="small" /> A first line in {track.shortName}</span>
           <code>{languageSnippets[language]}</code>
-          <span className="console-result">› Hello, cosmos!</span>
+          <span className="console-result">Hello, cosmos!</span>
         </div>
       </div>
-      <div className="orbit-illustration" aria-hidden="true">
-        <div className="orbit-ring orbit-ring--one" />
-        <div className="orbit-ring orbit-ring--two" />
-        <div className="orbit-planet" />
-        <div className="orbit-ship"><span /><i /></div>
+      <div className="brand-meaning" aria-label="What the name means">
+        <p>The name is the course list.</p>
+        <div><LanguageSymbol language="cpp" /><span><b>See</b><small>C++</small></span></div>
+        <div><LanguageSymbol language="csharp" /><span><b>Pound</b><small>C#</small></span></div>
+        <div><LanguageSymbol language="java" /><span><b>Coffee</b><small>Java</small></span></div>
+        <div><LanguageSymbol language="python" /><span><b>Pie</b><small>Python</small></span></div>
       </div>
-      <p className="story-note">An original space-fantasy learning adventure</p>
+      <p className="story-note">Four beginner courses. One patient way to learn.</p>
     </section>
   )
 }
@@ -211,10 +217,10 @@ interface LandingPageProps {
 
 function LandingPage({ authReady, authUser, progress, onSignIn }: LandingPageProps) {
   const [previewLanguage, setPreviewLanguage] = useState<LanguageId>(progress.activeLanguage)
-  const continuePath = academyPath(progress.activeLanguage)
+  const continuePath = homePath()
 
   return (
-    <main className="onboarding landing-page">
+    <main className="onboarding landing-page" id="main-content" tabIndex={-1}>
       <LaunchStory language={previewLanguage} />
       <section className="onboarding__form landing-page__overview">
         <div className="landing-card">
@@ -244,7 +250,7 @@ function LandingPage({ authReady, authUser, progress, onSignIn }: LandingPagePro
                 onFocus={() => setPreviewLanguage(track.id)}
                 onMouseEnter={() => setPreviewLanguage(track.id)}
                 style={{ '--track-accent': track.accent } as React.CSSProperties}
-                to={academyPath(track.id)}
+                to={coursePath(track.id)}
               >
                 <Code2 size={18} />
                 <span><b>{track.shortName}</b><small>{track.role}</small></span>
@@ -288,7 +294,33 @@ function Onboarding({ authReady, authUser, initialLanguage, onComplete, onSignIn
   const [language, setLanguage] = useState<LanguageId>(initialLanguage)
   const [callsign, setCallsign] = useState('')
   const [goal, setGoal] = useState(10)
+  const [step, setStep] = useState(0)
+  const [experience, setExperience] = useState('new')
+  const [interest, setInterest] = useState('understand')
+  const intakeCardRef = useRef<HTMLDivElement>(null)
   const selectedTrack = trackById(language)
+  const recommendation: LanguageId = interest === 'games'
+    ? 'csharp'
+    : interest === 'apps'
+      ? 'java'
+      : interest === 'systems'
+        ? 'cpp'
+        : 'python'
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      const heading = intakeCardRef.current?.querySelector<HTMLElement>('.intake-question legend, .intake-question h2')
+      if (!heading) return
+      heading.tabIndex = -1
+      heading.focus({ preventScroll: true })
+    }, 0)
+    return () => window.clearTimeout(timer)
+  }, [step])
+
+  const nextStep = () => {
+    if (step === 1) setLanguage(recommendation)
+    setStep((current) => Math.min(3, current + 1))
+  }
 
   const finish = () => {
     onComplete({
@@ -300,83 +332,98 @@ function Onboarding({ authReady, authUser, initialLanguage, onComplete, onSignIn
   }
 
   return (
-    <main className="onboarding">
+    <main className="onboarding intake-page" id="main-content" tabIndex={-1}>
       <LaunchStory language={language} />
 
-      <section className="onboarding__form">
-        <div className="setup-card">
-          <div className="step-count">CADET INTAKE · 3 QUICK CHOICES</div>
-          <h2>Choose your first station</h2>
-          <p className="setup-intro">You can explore every path later. Python is our gentlest starting point.</p>
+      <section className="onboarding__form intake-form">
+        <div className="setup-card intake-card" ref={intakeCardRef}>
+          <div className="intake-progress" aria-label={`Question ${step + 1} of 4`}>
+            <span>Question {step + 1} of 4</span>
+            <div aria-hidden="true">{[0, 1, 2, 3].map((item) => <i className={item <= step ? 'is-filled' : ''} key={item} />)}</div>
+          </div>
 
-          <div className={`github-intake ${authUser ? 'is-connected' : ''}`}>
-            <span><Github size={21} /></span>
-            <div>
-              <b>{authUser ? `Signed in as ${authUser.login}` : 'Optional GitHub sign-in'}</b>
-              <p>{authUser ? 'GitHub verified your identity. You will choose how to synchronize existing progress.' : 'Sign in to synchronize later, or begin as a guest without an account.'}</p>
+          {step === 0 && (
+            <fieldset className="intake-question">
+              <legend>How familiar does programming feel right now?</legend>
+              <p>There is no placement test. This only helps us choose how much context to give you.</p>
+              {[
+                ['new', 'Completely new', 'I do not know what code is yet.'],
+                ['tried', 'I have tried a little', 'I have copied or changed a few lines before.'],
+                ['built', 'I have built something small', 'I know a few basics but want a careful foundation.'],
+                ['unsure', "I am not sure yet", 'Start gently and let the lessons adjust.'],
+              ].map(([value, label, detail]) => (
+                <label className={`intake-option ${experience === value ? 'is-selected' : ''}`} key={value}>
+                  <input type="radio" name="experience" value={value} checked={experience === value} onChange={() => setExperience(value)} />
+                  <span><b>{label}</b><small>{detail}</small></span><i>{experience === value && <Check size={16} />}</i>
+                </label>
+              ))}
+            </fieldset>
+          )}
+
+          {step === 1 && (
+            <fieldset className="intake-question">
+              <legend>What sounds most interesting to you?</legend>
+              <p>You can learn every language later. This answer only shapes the first recommendation.</p>
+              {[
+                ['understand', 'Understand how programming works', 'Learn the shared ideas with the gentlest syntax.'],
+                ['games', 'Make games and interactive things', 'Build structured programs that can grow into game logic.'],
+                ['apps', 'Build apps and useful services', 'Learn a portable language used in many large systems.'],
+                ['systems', 'Understand computers more deeply', 'See types, memory, and compiled programs more explicitly.'],
+                ['unsure', "I am not sure yet", 'Begin with the clearest general-purpose path.'],
+              ].map(([value, label, detail]) => (
+                <label className={`intake-option ${interest === value ? 'is-selected' : ''}`} key={value}>
+                  <input type="radio" name="interest" value={value} checked={interest === value} onChange={() => setInterest(value)} />
+                  <span><b>{label}</b><small>{detail}</small></span><i>{interest === value && <Check size={16} />}</i>
+                </label>
+              ))}
+            </fieldset>
+          )}
+
+          {step === 2 && (
+            <fieldset className="intake-question">
+              <legend>Choose your first foundation course</legend>
+              <p><b>{trackById(recommendation).shortName} is our suggestion.</b> It matches your answer, but it does not lock you in.</p>
+              <div className="intake-course-options">
+                {tracks.map((track) => (
+                  <label className={`intake-course-option ${language === track.id ? 'is-selected' : ''}`} key={track.id}>
+                    <input type="radio" name="language" value={track.id} checked={language === track.id} onChange={() => setLanguage(track.id)} />
+                    <LanguageSymbol language={track.id} />
+                    <span><b>{track.shortName} Foundations</b><small>{track.description}</small></span>
+                    {track.id === recommendation && <em>Recommended</em>}
+                  </label>
+                ))}
+              </div>
+              <div className="selection-description"><BookOpen size={19} /><span><b>{selectedTrack.shortName} Foundations</b>{selectedTrack.description}</span></div>
+            </fieldset>
+          )}
+
+          {step === 3 && (
+            <div className="intake-question intake-finish">
+              <h2>Make the learning space yours</h2>
+              <p>Choose a name and a small daily XP target. Neither choice changes what you are allowed to learn.</p>
+              <div className={`github-intake ${authUser ? 'is-connected' : ''}`}>
+                <span><Github size={21} /></span>
+                <div><b>{authUser ? `Signed in as ${authUser.login}` : 'GitHub sign-in is optional'}</b><p>{authUser ? 'You will choose how existing progress is synchronized.' : 'Stay a guest, or sign in to carry progress between devices.'}</p></div>
+                {!authUser && <button type="button" onClick={onSignIn} disabled={!authReady}><Github size={16} /> {authReady ? 'Sign in' : 'Checking'}</button>}
+              </div>
+              <label className="field-label" htmlFor="callsign">What should we call you?</label>
+              <input id="callsign" className="text-input" value={callsign} onChange={(event) => setCallsign(event.target.value)} placeholder={authUser ? authUser.name || authUser.login : 'Your name or nickname'} maxLength={24} />
+              <fieldset className="goal-picker">
+                <legend>Daily XP goal</legend>
+                <div>
+                  {[5, 10, 15].map((xp) => (
+                    <button key={xp} className={goal === xp ? 'is-selected' : ''} aria-pressed={goal === xp} onClick={() => setGoal(xp)} type="button"><Clock3 size={16} /><b>{xp} XP</b><span>{xp === 5 ? 'Gentle' : xp === 10 ? 'Steady' : 'Focused'}</span></button>
+                  ))}
+                </div>
+              </fieldset>
             </div>
-            {!authUser && (
-              <button type="button" onClick={onSignIn} disabled={!authReady}>
-                <Github size={16} /> {authReady ? 'Sign in' : 'Checking'}
-              </button>
-            )}
+          )}
+
+          <div className="intake-actions">
+            <div>{step > 0 && <button className="secondary-action" type="button" onClick={() => setStep((current) => current - 1)}><ArrowLeft size={17} /> Back</button>}<AppLink className="text-action" to={coursesPath()}>Browse courses instead</AppLink></div>
+            {step < 3 ? <button className="primary-action" type="button" onClick={nextStep}>Continue <ArrowRight size={17} /></button> : <button className="primary-action" type="button" onClick={finish}>Start learning <ArrowRight size={17} /></button>}
           </div>
-
-          <div className="track-picker" role="radiogroup" aria-label="Programming language">
-            {tracks.map((track) => (
-              <button
-                className={`track-option ${language === track.id ? 'is-selected' : ''}`}
-                key={track.id}
-                onClick={() => setLanguage(track.id)}
-                role="radio"
-                aria-checked={language === track.id}
-                style={{ '--track-accent': track.accent } as React.CSSProperties}
-              >
-                <span className="track-option__radio">{language === track.id && <Check size={14} />}</span>
-                <span className="track-option__text">
-                  <b>{track.shortName}</b>
-                  <small>{track.role}</small>
-                </span>
-                {track.id === 'python' && <span className="recommended">BEST FIRST STEP</span>}
-              </button>
-            ))}
-          </div>
-
-          <div className="selection-description">
-            <Code2 size={19} />
-            <span><b>{selectedTrack.name}</b>{selectedTrack.description}</span>
-          </div>
-
-          <label className="field-label" htmlFor="callsign">What should the crew call you?</label>
-          <input
-            id="callsign"
-            className="text-input"
-            value={callsign}
-            onChange={(event) => setCallsign(event.target.value)}
-            placeholder={authUser ? authUser.name || authUser.login : 'Cadet name or callsign'}
-            maxLength={24}
-          />
-
-          <fieldset className="goal-picker">
-            <legend>Daily training goal</legend>
-            {[5, 10, 15].map((minutes) => (
-              <button
-                key={minutes}
-                className={goal === minutes ? 'is-selected' : ''}
-                onClick={() => setGoal(minutes)}
-                type="button"
-              >
-                <Clock3 size={16} />
-                <b>{minutes} min</b>
-                <span>{minutes === 5 ? 'Gentle' : minutes === 10 ? 'Steady' : 'Focused'}</span>
-              </button>
-            ))}
-          </fieldset>
-
-          <button className="primary-action primary-action--wide" onClick={finish}>
-            Begin your commission <ArrowRight size={18} />
-          </button>
-          <p className="fine-print"><Shield size={13} /> Guest progress stays here. Signed-in learners choose when the first account copy is created.</p>
+          <p className="fine-print"><Shield size={13} /> Guest progress stays in this browser. Sign-in remains optional.</p>
         </div>
       </section>
     </main>
@@ -395,175 +442,282 @@ interface ShellProps {
 
 function AppShell({ authReady, authUser, progress, view, onLanguageChange, onSignIn, children }: ShellProps) {
   const [mobileNavOpen, setMobileNavOpen] = useState(false)
+  const mobileMenuRef = useRef<HTMLButtonElement>(null)
   const track = trackById(progress.activeLanguage)
   const navItems: Array<{ id: ViewId; label: string; icon: typeof Compass; to: string }> = [
-    { id: 'path', label: 'Mission path', icon: Compass, to: academyPath(progress.activeLanguage) },
-    { id: 'practice', label: 'Practice bay', icon: Orbit, to: practicePath(progress.activeLanguage) },
+    { id: 'home', label: 'Home', icon: Home, to: homePath() },
+    { id: 'courses', label: 'Courses', icon: BookOpen, to: coursesPath() },
+    { id: 'practice', label: 'Practice', icon: RotateCcw, to: practicePath(progress.activeLanguage) },
     { id: 'spellbook', label: 'Codebook', icon: LibraryBig, to: codebookPath(progress.activeLanguage) },
-    { id: 'profile', label: 'Cadet record', icon: UserRound, to: '/profile' },
   ]
 
+  useEffect(() => {
+    if (!mobileNavOpen) return
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key !== 'Escape') return
+      setMobileNavOpen(false)
+      mobileMenuRef.current?.focus()
+    }
+    document.addEventListener('keydown', closeOnEscape)
+    return () => document.removeEventListener('keydown', closeOnEscape)
+  }, [mobileNavOpen])
+
   return (
-    <div className="app-shell" style={{ '--accent': track.accent, '--accent-soft': track.accentSoft } as React.CSSProperties}>
-      <aside className={`sidebar ${mobileNavOpen ? 'is-open' : ''}`}>
-        <div className="sidebar__top">
-          <BrandMark />
-          <button className="mobile-close" onClick={() => setMobileNavOpen(false)} aria-label="Close navigation"><X /></button>
-        </div>
-        <nav>
+    <div className="app-shell workshop-shell" style={{ '--accent': track.accent, '--accent-soft': track.accentSoft } as React.CSSProperties}>
+      <a className="skip-link" href="#main-content">Skip to main content</a>
+      <header className="workshop-topbar">
+        <div className="workshop-topbar__inner">
+          <BrandMark to={homePath()} />
+          <button
+            aria-controls="primary-navigation"
+            aria-expanded={mobileNavOpen}
+            aria-label={mobileNavOpen ? 'Close navigation' : 'Open navigation'}
+            className="mobile-menu"
+            onClick={() => setMobileNavOpen((open) => !open)}
+            ref={mobileMenuRef}
+          ><Menu /></button>
+          <nav className={`workshop-nav ${mobileNavOpen ? 'is-open' : ''}`} id="primary-navigation" aria-label="Primary navigation">
           {navItems.map((item) => {
             const Icon = item.icon
             return (
-              <AppLink key={item.id} className={view === item.id ? 'is-active' : ''} onClick={() => setMobileNavOpen(false)} to={item.to}>
-                <Icon size={20} /><span>{item.label}</span>
+              <AppLink
+                key={item.id}
+                aria-current={view === item.id ? 'page' : undefined}
+                className={view === item.id ? 'is-active' : ''}
+                onClick={() => setMobileNavOpen(false)}
+                to={item.to}
+              >
+                <Icon size={17} aria-hidden="true" /><span>{item.label}</span>
               </AppLink>
             )
           })}
-        </nav>
-        <div className="mentor-mini">
-          <span className="mentor-avatar"><b>π</b><i /></span>
-          <div><small>YOUR GUIDE</small><b>PIE-314</b><p>Confused is a normal stop on the route.</p></div>
-        </div>
-        <AppLink className={`sidebar-settings ${view === 'settings' ? 'is-active' : ''}`} onClick={() => setMobileNavOpen(false)} to="/settings"><Settings size={18} /> Settings</AppLink>
-      </aside>
-
-      <div className="app-frame">
-        <header className="topbar">
-          <button className="mobile-menu" onClick={() => setMobileNavOpen(true)} aria-label="Open navigation"><Menu /></button>
-          <div className="track-switcher">
-            <span style={{ background: track.accent }}><Code2 size={17} /></span>
-            <label>
-              <small>ACTIVE STATION</small>
+          </nav>
+          <div className="workshop-topbar__tools">
+            <label className="track-switcher">
+              <LanguageSymbol language={track.id} size="small" />
+              <span className="sr-only">Active course</span>
               <select value={progress.activeLanguage} onChange={(event) => onLanguageChange(event.target.value as LanguageId)}>
-                {tracks.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}
+                {tracks.map((item) => <option key={item.id} value={item.id}>{item.shortName}</option>)}
               </select>
+              <ChevronDown size={14} aria-hidden="true" />
             </label>
-            <ChevronDown size={16} />
-          </div>
-          <div className="top-stats">
-            <span title="Study streak"><Flame size={19} /><b>{progress.streak}</b><small>day streak</small></span>
-            <span title="Experience points"><Zap size={19} /><b>{progress.xp}</b><small>XP</small></span>
-            <span title="Star shards"><Gem size={19} /><b>{progress.starShards}</b><small>shards</small></span>
-          </div>
-          {authUser ? (
-            <AppLink className="identity-chip" to="/profile" title={`Signed in as ${authUser.login}`}>
-              <Github size={15} /><span>{authUser.login}</span>
+            <span aria-label={`${progress.streak} day study streak`} className="workshop-stat"><Flame size={16} aria-hidden="true" /><b>{progress.streak}</b></span>
+            <span aria-label={`${progress.xp} experience points`} className="workshop-stat"><Zap size={16} aria-hidden="true" /><b>{progress.xp} XP</b></span>
+            {authUser ? (
+            <AppLink aria-current={view === 'profile' ? 'page' : undefined} className={`identity-chip ${view === 'profile' ? 'is-active' : ''}`} to="/profile" aria-label={`Learner record for ${authUser.login}`} title={`Signed in as ${authUser.login}`}>
+              <Github size={15} aria-hidden="true" /><span>{authUser.login}</span>
             </AppLink>
           ) : (
             <button className="github-topbar" onClick={onSignIn} disabled={!authReady}>
-              <Github size={16} /><span>{authReady ? 'Sign in' : 'Checking'}</span>
+              <Github size={16} aria-hidden="true" /><span>{authReady ? 'Sign in' : 'Checking'}</span>
             </button>
           )}
-          <AppLink className="profile-chip" to="/profile" aria-label="Open cadet record">{progress.callsign.slice(0, 1).toUpperCase()}</AppLink>
-        </header>
+            {!authUser && <AppLink
+              aria-current={view === 'profile' ? 'page' : undefined}
+              className={`workshop-profile-link ${view === 'profile' ? 'is-active' : ''}`}
+              to="/profile"
+              aria-label="Learner record"
+            ><UserRound size={18} /></AppLink>}
+            <AppLink
+              aria-current={view === 'settings' ? 'page' : undefined}
+              className={`workshop-settings-link ${view === 'settings' ? 'is-active' : ''}`}
+              to="/settings"
+              aria-label="Settings"
+            ><Settings size={18} /></AppLink>
+          </div>
+        </div>
+      </header>
+      <div className="app-frame" id="main-content" tabIndex={-1}>
         {children}
       </div>
-      {mobileNavOpen && <button className="nav-scrim" onClick={() => setMobileNavOpen(false)} aria-label="Close navigation" />}
     </div>
   )
 }
 
-function ProgressRing({ value, label }: { value: number; label: string }) {
-  const safe = Math.min(100, Math.max(0, value))
+function CourseSymbol({ course, size = 'medium' }: { course: Pick<CourseCardModel, 'id' | 'title'>; size?: 'small' | 'medium' | 'large' }) {
+  return <LanguageSymbol language={course.id} size={size} />
+}
+
+function CourseCard({ course }: { course: CourseCardModel }) {
+  const status = course.status === 'complete'
+    ? 'Course complete'
+    : course.status === 'in-progress'
+      ? `${course.completedModuleCount} of ${course.moduleCount} modules complete`
+      : 'Ready when you are'
   return (
-    <div className="progress-ring" style={{ '--ring-value': `${safe * 3.6}deg` } as React.CSSProperties}>
-      <div><b>{safe}%</b><span>{label}</span></div>
-    </div>
+    <article className={`course-card course-card--${course.id}`}>
+      <div className="course-card__heading">
+        <CourseSymbol course={course} size="large" />
+        <div><span>{course.level} course</span><h2>{course.title}</h2></div>
+      </div>
+      <p>{course.description}</p>
+      <dl>
+        <div><dt>What you will make</dt><dd>{course.outcome}</dd></div>
+        <div><dt>Course size</dt><dd>{course.moduleCount} modules, {course.lessonCount} short lessons</dd></div>
+      </dl>
+      <div className="course-card__progress">
+        <span><b>{status}</b><small>{course.progressPercent}%</small></span>
+        <i aria-label={`${course.title} progress`} aria-valuemax={100} aria-valuemin={0} aria-valuenow={course.progressPercent} role="progressbar"><b style={{ width: `${course.progressPercent}%` }} /></i>
+      </div>
+      <AppLink className="primary-action" to={coursePath(course.id)}>{course.actionLabel} <ArrowRight size={17} /></AppLink>
+    </article>
   )
 }
 
-function MissionPath({ progress, onStart }: { progress: LearnerProgress; onStart: (mission: Mission) => void }) {
-  const track = trackById(progress.activeLanguage)
-  const completedCount = track.missions.filter((item) => progress.completedMissions.includes(item.id)).length
-  const trackPercent = Math.round((completedCount / track.missions.length) * 100)
-
+function CourseCatalog({ progress }: { progress: LearnerProgress }) {
+  const courses = buildCourseCards(progress)
+  const [filter, setFilter] = useState<'all' | 'foundations' | 'projects'>('all')
+  const showFoundations = filter !== 'projects'
+  const showProjects = filter !== 'foundations'
   return (
-    <div className="dashboard-grid">
-      <main className="path-column">
-        <div className="page-heading">
-          <div>
-            <p className="kicker"><Radio size={14} /> LIVE TRAINING ROUTE</p>
-            <h1>{track.name}</h1>
-            <p>{track.description}</p>
-          </div>
-          <ProgressRing value={trackPercent} label="charted" />
+    <main className="workshop-page course-catalog">
+      <header className="workshop-page-heading">
+        <p className="eyebrow">Course catalog</p>
+        <h1>Choose a foundation. Explore every course.</h1>
+        <p>Each course begins at the beginning. You can switch languages whenever you like without losing work in another course.</p>
+      </header>
+      <nav className="catalog-filters" aria-label="Course filters">
+        <button aria-pressed={filter === 'all'} className={filter === 'all' ? 'is-active' : ''} onClick={() => setFilter('all')} type="button">All courses</button>
+        <button aria-pressed={filter === 'foundations'} className={filter === 'foundations' ? 'is-active' : ''} onClick={() => setFilter('foundations')} type="button">Foundations</button>
+        <button aria-pressed={filter === 'projects'} className={filter === 'projects' ? 'is-active' : ''} onClick={() => setFilter('projects')} type="button">Guided projects</button>
+      </nav>
+      {showFoundations && <section className="course-grid" aria-label="Foundation courses">
+        {courses.map((course) => <CourseCard course={course} key={course.id} />)}
+      </section>}
+      {showProjects && <section className="guided-project-list" aria-labelledby="guided-projects-title">
+        <div className="section-heading-open">
+          <div><p className="eyebrow">Included capstones</p><h2 id="guided-projects-title">Guided projects</h2></div>
+          <p>Each foundations course ends with a project that combines its earlier ideas.</p>
         </div>
+        {tracks.map((track) => {
+          const project = track.missions.at(-1)
+          if (!project) return null
+          return (
+            <AppLink className="guided-project-row" key={project.id} to={coursePath(track.id)}>
+              <LanguageSymbol language={track.id} />
+              <span><small>{track.shortName} guided project</small><b>{project.title}</b><p>{project.description}</p></span>
+              <strong>{project.exercises.length} lessons <ArrowRight size={16} /></strong>
+            </AppLink>
+          )
+        })}
+      </section>}
+    </main>
+  )
+}
 
-        <section className="sector-card">
-          <div className="sector-card__heading">
-            <div><small>SECTOR 01</small><h2>Launch fundamentals</h2><p>Learn the pieces every program is built from.</p></div>
-            <span>6 MISSIONS</span>
+function LearnerHome({ progress }: { progress: LearnerProgress }) {
+  const courses = buildCourseCards(progress)
+  const activeCourse = buildCourseModel(trackById(progress.activeLanguage), progress)
+  const reviewsDue = Object.values(progress.conceptProgress).filter((concept) => isDue(concept)).length
+  const continueTo = activeCourse.currentModuleId && activeCourse.currentLessonId
+    ? lessonPath(activeCourse.id, activeCourse.currentModuleId, activeCourse.currentLessonId)
+    : coursePath(activeCourse.id)
+  const today = new Date()
+  const days = Array.from({ length: 7 }, (_, offset) => {
+    const date = new Date(today)
+    date.setDate(today.getDate() - (6 - offset))
+    return {
+      key: dateKey(date),
+      label: date.toLocaleDateString(undefined, { weekday: 'short' }).slice(0, 2),
+      today: offset === 6,
+    }
+  })
+
+  return (
+    <main className="workshop-page learner-home">
+      <header className="learner-welcome">
+        <div><p className="eyebrow">Your learning home</p><h1>Welcome back, {progress.callsign}.</h1><p>One short lesson is enough to keep moving.</p></div>
+        <div className="daily-goal-open"><span>{Math.min(progress.dailyXp, progress.dailyGoal)} / {progress.dailyGoal} XP today</span><i aria-label="Daily XP goal" aria-valuemax={progress.dailyGoal} aria-valuemin={0} aria-valuenow={Math.min(progress.dailyXp, progress.dailyGoal)} role="progressbar"><b style={{ width: `${Math.min(100, (progress.dailyXp / progress.dailyGoal) * 100)}%` }} /></i></div>
+      </header>
+
+      <section className={`continue-panel continue-panel--${activeCourse.id}`}>
+        <CourseSymbol course={activeCourse} size="large" />
+        <div>
+          <p className="eyebrow">Continue learning</p>
+          <h2>{activeCourse.currentLessonTitle ?? activeCourse.title}</h2>
+          <p>{activeCourse.currentModuleTitle ? `${activeCourse.title}, Module ${activeCourse.modules.find((item) => item.id === activeCourse.currentModuleId)?.number}: ${activeCourse.currentModuleTitle}` : activeCourse.outcome}</p>
+        </div>
+        <AppLink className="primary-action" to={continueTo}>{activeCourse.status === 'complete' ? 'Review course' : 'Continue lesson'} <ArrowRight size={17} /></AppLink>
+      </section>
+
+      <div className="learner-home-grid">
+        <section className="activity-panel" aria-labelledby="activity-title">
+          <div className="section-heading-open"><div><p className="eyebrow">This week</p><h2 id="activity-title">A small, steady practice</h2></div><b>{progress.streak} day streak</b></div>
+          <div className="activity-days">
+            {days.map((day) => <div className={day.today && progress.dailyXp > 0 ? 'has-study' : ''} key={day.key}><span>{day.label}</span><i>{day.today && progress.dailyXp > 0 ? <Check size={15} /> : ''}</i></div>)}
           </div>
-          <div className="mission-path">
-            <div className="path-line" aria-hidden="true" />
-            {track.missions.map((item, index) => {
-              const Icon = missionIcons[item.icon]
-              const complete = progress.completedMissions.includes(item.id)
-              const availability = missionAvailability(track, index, progress.completedMissions)
-              const available = availability === 'available'
-              const prerequisite = track.missions[index - 1]
-              const lockedMessage = availability === 'coming-soon'
-                ? 'Coming soon'
-                : `Complete ${prerequisite?.title ?? 'earlier training'} to unlock`
-              return (
-                <article className={`mission-row ${available ? 'is-available' : 'is-locked'} ${complete ? 'is-complete' : ''}`} key={item.id}>
-                  <div className="mission-node">
-                    {complete ? <Check size={24} /> : available ? <Icon size={23} /> : <LockKeyhole size={18} />}
-                  </div>
-                  <div className="mission-card">
-                    <div className="mission-card__content">
-                      <div className="mission-number">MISSION {String(index + 1).padStart(2, '0')}</div>
-                      <h3>{item.title}</h3>
-                      <b className="mission-subtitle">{item.subtitle}</b>
-                      <p>{item.description}</p>
-                      <div className="mission-meta">
-                        <span><Clock3 size={14} /> {item.duration}</span>
-                        {available && <span><Trophy size={14} /> {item.exercises.reduce((sum, exercise) => sum + exercise.xp, 0)} XP</span>}
-                        {!available && <span>{lockedMessage}</span>}
-                      </div>
-                    </div>
-                    <button
-                      className={available ? 'mission-play' : 'mission-lock'}
-                      onClick={() => available && onStart(item)}
-                      disabled={!available}
-                      aria-label={available ? `${complete ? 'Replay' : 'Start'} ${item.title}` : `${item.title} ${availability === 'coming-soon' ? 'coming soon' : 'locked'}`}
-                    >
-                      {available ? (complete ? <RotateCcw /> : <Play fill="currentColor" />) : <LockKeyhole />}
-                    </button>
-                  </div>
-                </article>
-              )
-            })}
-          </div>
+          <p>Only today is shown because earlier daily activity is not stored in your current learning record.</p>
         </section>
-      </main>
+        <section className="review-open" aria-labelledby="review-title">
+          <div><RotateCcw size={22} /><span><p className="eyebrow">Practice</p><h2 id="review-title">{reviewsDue === 0 ? 'Nothing is due yet' : `${reviewsDue} ${reviewsDue === 1 ? 'concept is' : 'concepts are'} ready`}</h2></span></div>
+          <p>{reviewsDue === 0 ? 'Reviews appear after you learn a concept.' : 'Bring these ideas back before they become fuzzy.'}</p>
+          <AppLink to={practicePath(progress.activeLanguage)}>{reviewsDue === 0 ? 'See how practice works' : 'Start a short review'} <ArrowRight size={16} /></AppLink>
+        </section>
+      </div>
 
-      <aside className="dashboard-rail">
-        <section className="brief-card">
-          <div className="brief-card__top"><span className="mentor-avatar mentor-avatar--large"><b>π</b><i /></span><div><small>CAPTAIN’S BRIEF</small><h3>Welcome, {progress.callsign}</h3></div></div>
-          <p>One mission is enough for today. I’ll explain every new symbol before you need it.</p>
-          <div className="guide-quote"><MessageCircleQuestion size={17} /> “Questions are diagnostics, not failures.”</div>
-        </section>
+      <section className="home-course-list" aria-labelledby="my-courses-title">
+        <div className="section-heading-open"><div><p className="eyebrow">Your courses</p><h2 id="my-courses-title">Four ways to learn the same foundations</h2></div><AppLink to={coursesPath()}>Browse all courses <ArrowRight size={16} /></AppLink></div>
+        {courses.map((course) => (
+          <AppLink className="home-course-row" key={course.id} to={coursePath(course.id)}>
+            <CourseSymbol course={course} />
+            <span><b>{course.title}</b><small>{course.status === 'not-started' ? 'Not started' : `${course.completedModuleCount} of ${course.moduleCount} modules complete`}</small></span>
+            <i aria-label={`${course.title} progress`} aria-valuemax={100} aria-valuemin={0} aria-valuenow={course.progressPercent} role="progressbar"><b style={{ width: `${course.progressPercent}%` }} /></i>
+            <strong>{course.actionLabel} <ArrowRight size={15} /></strong>
+          </AppLink>
+        ))}
+      </section>
+    </main>
+  )
+}
 
-        <section className="daily-card">
-          <div className="rail-title"><span><Zap size={17} /> DAILY SYSTEMS</span><b>{Math.min(progress.dailyXp, progress.dailyGoal)} / {progress.dailyGoal} XP</b></div>
-          <div className="daily-progress"><i style={{ width: `${Math.min(100, (progress.dailyXp / progress.dailyGoal) * 100)}%` }} /></div>
-          <p>{progress.dailyXp >= progress.dailyGoal ? 'Daily goal complete. Nicely flown.' : `${progress.dailyGoal - progress.dailyXp} XP until today’s goal is complete.`}</p>
-        </section>
+function MissionPath({ progress }: { progress: LearnerProgress }) {
+  const track = trackById(progress.activeLanguage)
+  const course = buildCourseModel(track, progress)
+  const [expandedModule, setExpandedModule] = useState(course.currentModuleId ?? course.modules[0]?.id ?? '')
+  const currentModule = course.modules.find((module) => module.id === course.currentModuleId)
+  const currentLesson = currentModule?.lessons.find((lesson) => lesson.id === course.currentLessonId)
+  const continueTo = currentModule && currentLesson
+    ? lessonPath(track.id, currentModule.id, currentLesson.id)
+    : coursePath(track.id)
 
-        <section className="review-card">
-          <div className="rail-title"><span><Orbit size={17} /> MEMORY ORBIT</span><span className="status-dot">READY</span></div>
-          <div className="review-visual"><Orbit size={44} /><span>{Object.values(progress.conceptProgress).filter((concept) => isDue(concept)).length}</span></div>
-          <h3>Reviews waiting</h3>
-          <p>Concepts return just before they drift out of memory.</p>
-        </section>
+  return (
+    <main className="workshop-page course-outline">
+      <AppLink className="back-link" to={coursesPath()}><ArrowLeft size={16} /> All courses</AppLink>
+      <header className={`course-hero course-hero--${track.id}`}>
+        <CourseSymbol course={course} size="large" />
+        <div><p className="eyebrow">Beginner course</p><h1>{course.title}</h1><p>{course.description}</p><span>{course.moduleCount} modules · {course.lessonCount} short lessons · {course.level}</span></div>
+        <div className="course-hero__action"><b>{course.progressPercent}% complete</b><i aria-label={`${course.title} progress`} aria-valuemax={100} aria-valuemin={0} aria-valuenow={course.progressPercent} role="progressbar"><span style={{ width: `${course.progressPercent}%` }} /></i><AppLink className="primary-action" to={continueTo}>{course.actionLabel} <ArrowRight size={17} /></AppLink></div>
+      </header>
 
-        <section className="principle-card">
-          <BookOpen size={19} />
-          <div><b>Today’s rule</b><p>Read a little. Type a little. Explain it back. Repeat later.</p></div>
-        </section>
-      </aside>
-    </div>
+      <section className="course-modules" aria-labelledby="course-content-title">
+        <div className="section-heading-open"><div><p className="eyebrow">Course outline</p><h2 id="course-content-title">What you will learn</h2></div><p>Open a module to see its five short lessons.</p></div>
+        {course.modules.map((module) => {
+          const expanded = expandedModule === module.id
+          return (
+            <article className={`module-row ${module.completed ? 'is-complete' : ''} ${module.current ? 'is-current' : ''}`} key={module.id}>
+              <button className="module-row__summary" aria-controls={`module-${module.id}-lessons`} aria-expanded={expanded} onClick={() => setExpandedModule(expanded ? '' : module.id)}>
+                <span className="module-number">{module.completed ? <Check size={17} /> : module.availability === 'available' ? module.number : <LockKeyhole size={15} />}</span>
+                <span><small>{module.kind === 'guided-project' ? 'Guided project' : `Module ${module.number}`}</small><b>{module.title}</b><p>{module.description}</p></span>
+                <strong>{module.completedLessonCount} / {module.lessonCount} lessons</strong>
+                <ChevronDown size={19} />
+              </button>
+              <div className="module-lessons" hidden={!expanded} id={`module-${module.id}-lessons`}>
+                  {module.lessons.map((lesson) => {
+                    const canOpen = module.availability === 'available'
+                    return canOpen ? (
+                      <AppLink aria-current={lesson.current ? 'step' : undefined} className={lesson.current ? 'is-current' : ''} key={lesson.id} to={lessonPath(track.id, module.id, lesson.id)}>
+                        <span>{lesson.completed ? <Check size={15} /> : lesson.number}</span><b>{lesson.title}</b><small>{lesson.type === 'bugfix' ? 'Debugging' : lesson.type === 'choice' ? 'Guided check' : lesson.type === 'prediction' ? 'Prediction' : lesson.type === 'ordering' ? 'Ordering' : 'Code exercise'}</small><ArrowRight size={15} />
+                      </AppLink>
+                    ) : (
+                      <div className="is-locked" key={lesson.id}><span><LockKeyhole size={13} /></span><b>{lesson.title}</b><small>{module.availability === 'available' ? 'Complete this module in order' : 'Complete the previous module first'}</small></div>
+                    )
+                  })}
+              </div>
+            </article>
+          )
+        })}
+      </section>
+    </main>
   )
 }
 
@@ -697,17 +851,17 @@ function CadetRecord({ onOpenTrack, progress, recordLocation }: CadetRecordProps
 
   return (
     <main className="content-page">
-      <div className="page-heading page-heading--simple"><div><p className="kicker"><UserRound size={14} /> CADET RECORD</p><h1>{progress.callsign}</h1><p>{recordLocation}</p></div></div>
+      <div className="page-heading page-heading--simple"><div><p className="kicker"><UserRound size={14} /> LEARNER RECORD</p><h1>{progress.callsign}</h1><p>{recordLocation}</p></div></div>
       <div className="record-grid">
         <article><Zap /><span><b>{progress.xp}</b><small>Total XP</small></span></article>
         <article><Flame /><span><b>{progress.streak}</b><small>Day streak</small></span></article>
         <article><Trophy /><span><b>{progress.completedMissions.length}</b><small>Missions</small></span></article>
         <article><CheckCircle2 /><span><b>{accuracy}%</b><small>Accuracy</small></span></article>
       </div>
-      <section className="station-records" aria-labelledby="station-records-title">
+      <section className="station-records" aria-labelledby="course-records-title">
         <div className="station-records__heading">
-          <div><small>FOUR LEARNING ROUTES</small><h2 id="station-records-title">Station records</h2></div>
-          <p>Each language keeps its own ordered mission path. Open any station without erasing progress in the others.</p>
+          <div><small>FOUR FOUNDATION COURSES</small><h2 id="course-records-title">Course records</h2></div>
+          <p>Each language keeps its own ordered course record. Open any foundation without erasing progress in the others.</p>
         </div>
         <div className="station-records__grid">
           {tracks.map((track) => {
@@ -716,11 +870,11 @@ function CadetRecord({ onOpenTrack, progress, recordLocation }: CadetRecordProps
             const active = progress.activeLanguage === track.id
             return (
               <article key={track.id} style={{ '--station-accent': track.accent } as React.CSSProperties}>
-                <div className="station-records__name"><Code2 size={18} /><span><b>{track.shortName}</b><small>{track.role}</small></span></div>
+                <div className="station-records__name"><LanguageSymbol language={track.id} size="small" /><span><b>{track.shortName} Foundations</b><small>{track.role}</small></span></div>
                 <div className="station-records__count"><b>{completed} / {track.missions.length}</b><small>missions complete</small></div>
-                <div className="station-records__bar" aria-label={`${track.shortName} ${percent}% complete`}><span style={{ width: `${percent}%` }} /></div>
+                <div className="station-records__bar" aria-label={`${track.shortName} ${percent}% complete`} aria-valuemax={100} aria-valuemin={0} aria-valuenow={percent} role="progressbar"><span style={{ width: `${percent}%` }} /></div>
                 <button className="secondary-action" onClick={() => onOpenTrack(track.id)}>
-                  {active ? 'View active mission path' : `Open ${track.shortName} mission path`} <ArrowRight size={15} />
+                  {active ? 'View active course' : `Open ${track.shortName} Foundations`} <ArrowRight size={15} />
                 </button>
               </article>
             )
@@ -917,9 +1071,29 @@ interface SyncChoiceDialogProps {
 }
 
 function SyncChoiceDialog({ busy, local, onChoose, onLater, remote }: SyncChoiceDialogProps) {
+  const dialogRef = useRef<HTMLDialogElement>(null)
+
+  useEffect(() => {
+    const dialog = dialogRef.current
+    if (!dialog) return
+    if (typeof dialog.showModal === 'function') dialog.showModal()
+    else dialog.setAttribute('open', '')
+    return () => {
+      if (typeof dialog.close === 'function' && dialog.open) dialog.close()
+    }
+  }, [])
+
   return (
-    <div className="sync-dialog-backdrop">
-      <section className="sync-dialog" role="dialog" aria-modal="true" aria-labelledby="sync-dialog-title">
+    <dialog
+      aria-labelledby="sync-dialog-title"
+      className="sync-dialog-backdrop"
+      onCancel={(event) => {
+        event.preventDefault()
+        if (!busy) onLater()
+      }}
+      ref={dialogRef}
+    >
+      <section className="sync-dialog">
         <div className="sync-dialog__icon"><Cloud size={26} /></div>
         <div>
           <p className="kicker">PRIVATE CADET RECORD</p>
@@ -939,12 +1113,12 @@ function SyncChoiceDialog({ busy, local, onChoose, onLater, remote }: SyncChoice
         <div className="sync-dialog__actions">
           {remote ? (
             <>
-              <button className="primary-action" onClick={() => onChoose('combine')} disabled={busy}>Combine safely</button>
+              <button autoFocus className="primary-action" onClick={() => onChoose('combine')} disabled={busy}>Combine safely</button>
               <button className="secondary-action" onClick={() => onChoose('local')} disabled={busy}>Use this browser</button>
               <button className="secondary-action" onClick={() => onChoose('remote')} disabled={busy}>Use saved account</button>
             </>
           ) : (
-            <button className="primary-action" onClick={() => onChoose('local')} disabled={busy}>Save progress to account</button>
+            <button autoFocus className="primary-action" onClick={() => onChoose('local')} disabled={busy}>Save progress to account</button>
           )}
           <button className="text-action" onClick={onLater} disabled={busy}>Decide later</button>
         </div>
@@ -952,45 +1126,67 @@ function SyncChoiceDialog({ busy, local, onChoose, onLater, remote }: SyncChoice
           <Shield size={14} /> The academy stores the learning record only. It does not retain submitted code, GitHub tokens, email, or raw IP addresses here.
         </p>
       </section>
-    </div>
+    </dialog>
   )
 }
 
 interface LessonPlayerProps {
+  initialExerciseId?: string
   mission: Mission
+  onExerciseChange?: (exerciseId: string) => void
   practiceConceptIds?: string[]
   progress: LearnerProgress
   onProgress: (progress: LearnerProgress) => void
   onExit: () => void
 }
 
-function LessonPlayer({ mission, practiceConceptIds, progress, onProgress, onExit }: LessonPlayerProps) {
-  const [step, setStep] = useState(0)
+function LessonPlayer({ initialExerciseId, mission, onExerciseChange, practiceConceptIds, progress, onProgress, onExit }: LessonPlayerProps) {
+  const initialStep = Math.max(0, mission.exercises.findIndex((item) => item.id === initialExerciseId))
+  const [step, setStep] = useState(initialStep)
   const [answers, setAnswers] = useState<Record<string, string>>({})
   const [feedback, setFeedback] = useState<EvaluationResult | null>(null)
   const [runnerBusy, setRunnerBusy] = useState(false)
   const [runnerStatus, setRunnerStatus] = useState<RunnerClientStatus | null>(null)
   const [runnerResult, setRunnerResult] = useState<RunnerResult | null>(null)
+  const [runnerFailure, setRunnerFailure] = useState(false)
   const [credited, setCredited] = useState<string[]>([])
   const [hintOpen, setHintOpen] = useState(false)
   const [finished, setFinished] = useState(false)
   const [mistakes, setMistakes] = useState<string[]>([])
   const [reviewQueue, setReviewQueue] = useState<string[]>([])
   const [reviewIndex, setReviewIndex] = useState(0)
+  const [orderingAnnouncement, setOrderingAnnouncement] = useState('')
+  const lessonHeadingRef = useRef<HTMLHeadingElement>(null)
+  const completionHeadingRef = useRef<HTMLHeadingElement>(null)
   const [missionAlreadyComplete] = useState(() => progress.completedMissions.includes(mission.id))
   const practiceMode = practiceConceptIds !== undefined
   const sessionExercises = practiceMode
     ? buildPracticeExercises(mission, practiceConceptIds)
     : mission.exercises
   const reviewing = reviewQueue.length > 0
+  const routeStep = !practiceMode && initialExerciseId
+    ? sessionExercises.findIndex((item) => item.id === initialExerciseId)
+    : -1
+  const activeStep = !reviewing && routeStep >= 0 ? routeStep : step
   const exercise = reviewing
     ? sessionExercises.find((item) => item.id === reviewQueue[reviewIndex])
-    : sessionExercises[step]
+    : sessionExercises[activeStep]
   const totalXp = sessionExercises.reduce((sum, item) => sum + item.xp, 0)
   const earnedXp = sessionExercises.filter((item) => credited.includes(item.id)).reduce((sum, item) => sum + item.xp, 0)
   const progressPercent = reviewing
     ? ((reviewIndex + 1) / reviewQueue.length) * 100
-    : ((step + 1) / sessionExercises.length) * 100
+    : ((activeStep + 1) / sessionExercises.length) * 100
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => lessonHeadingRef.current?.focus({ preventScroll: true }), 0)
+    return () => window.clearTimeout(timer)
+  }, [exercise?.id, reviewIndex, reviewing])
+
+  useEffect(() => {
+    if (!finished) return
+    const timer = window.setTimeout(() => completionHeadingRef.current?.focus({ preventScroll: true }), 0)
+    return () => window.clearTimeout(timer)
+  }, [finished])
 
   if (!exercise) return null
 
@@ -1017,13 +1213,16 @@ function LessonPlayer({ mission, practiceConceptIds, progress, onProgress, onExi
             : 'YOUR TASK'
   const checkActionLabel = editableExercise
     ? 'Run check'
-    : exercise.type === 'ordering' ? 'Check order' : 'Check answer'
+      : exercise.type === 'ordering' ? 'Check order' : 'Check answer'
+  const hasUnfinishedLessons = !missionAlreadyComplete
+    && sessionExercises.some((item) => !credited.includes(item.id))
 
   const setAnswer = (value: string) => {
     setAnswers((current) => ({ ...current, [exercise.id]: value }))
     if (feedback && !feedback.correct) setFeedback(null)
     setRunnerResult(null)
     setRunnerStatus(null)
+    setRunnerFailure(false)
   }
 
   const moveOrderItem = (index: number, direction: -1 | 1) => {
@@ -1032,6 +1231,8 @@ function LessonPlayer({ mission, practiceConceptIds, progress, onProgress, onExi
     const reordered = [...orderedIds]
     ;[reordered[index], reordered[destination]] = [reordered[destination], reordered[index]]
     setAnswer(reordered.join('|'))
+    const movedItem = exercise.orderItems?.find((item) => item.id === reordered[destination])
+    setOrderingAnnouncement(`${movedItem?.code ?? 'Code line'} moved to position ${destination + 1} of ${reordered.length}.`)
   }
 
   const recordEvaluation = (result: EvaluationResult, countFailure = true) => {
@@ -1053,6 +1254,7 @@ function LessonPlayer({ mission, practiceConceptIds, progress, onProgress, onExi
   }
 
   const checkAnswer = async () => {
+    setRunnerFailure(false)
     if (!editableExercise) {
       recordEvaluation(evaluateExercise(exercise, answer))
       return
@@ -1072,6 +1274,7 @@ function LessonPlayer({ mission, practiceConceptIds, progress, onProgress, onExi
       const correct = result.outcome === 'completed'
         && result.tests.length > 0
         && result.tests.every((test) => test.passed)
+      setRunnerFailure(result.outcome === 'system_error')
       recordEvaluation({
         correct,
         message: correct
@@ -1083,6 +1286,7 @@ function LessonPlayer({ mission, practiceConceptIds, progress, onProgress, onExi
       const message = error instanceof Error
         ? error.message
         : 'The isolated runner could not be reached. Your code was not marked wrong.'
+      setRunnerFailure(true)
       setFeedback({ correct: false, message })
     } finally {
       setRunnerBusy(false)
@@ -1105,11 +1309,12 @@ function LessonPlayer({ mission, practiceConceptIds, progress, onProgress, onExi
       setFeedback(null)
       setRunnerResult(null)
       setRunnerStatus(null)
+      setRunnerFailure(false)
       setHintOpen(false)
       return
     }
 
-    if (step === sessionExercises.length - 1) {
+    if (activeStep === sessionExercises.length - 1) {
       const queue = buildReviewQueue(mistakes, sessionExercises.map((item) => item.id))
       if (queue.length > 0) {
         setAnswers((current) => resetReviewAnswers(current, queue))
@@ -1118,13 +1323,30 @@ function LessonPlayer({ mission, practiceConceptIds, progress, onProgress, onExi
         setFeedback(null)
         setRunnerResult(null)
         setRunnerStatus(null)
+        setRunnerFailure(false)
         setHintOpen(false)
         return
+      }
+      if (!practiceMode && hasUnfinishedLessons) {
+        const nextUnfinished = sessionExercises.find((item) => !credited.includes(item.id))
+        const nextStep = nextUnfinished ? sessionExercises.findIndex((item) => item.id === nextUnfinished.id) : -1
+        if (nextUnfinished && nextStep >= 0) {
+          setStep(nextStep)
+          onExerciseChange?.(nextUnfinished.id)
+          setFeedback(null)
+          setRunnerResult(null)
+          setRunnerStatus(null)
+          setRunnerFailure(false)
+          setHintOpen(false)
+          return
+        }
       }
       finishSession()
       return
     }
-    setStep((current) => current + 1)
+    const nextExercise = sessionExercises[activeStep + 1]
+    setStep(activeStep + 1)
+    if (nextExercise) onExerciseChange?.(nextExercise.id)
     setFeedback(null)
     setRunnerResult(null)
     setRunnerStatus(null)
@@ -1143,10 +1365,10 @@ function LessonPlayer({ mission, practiceConceptIds, progress, onProgress, onExi
     const awardedShards = practiceMode || missionAlreadyComplete ? 0 : 25
     return (
       <div className="lesson-overlay">
-        <main className="mission-complete">
+        <main className="mission-complete" id="main-content" tabIndex={-1}>
           <div className="completion-burst" aria-hidden="true"><Sparkles /><span><Check /></span></div>
           <p className="kicker">{practiceMode ? 'PRACTICE COMPLETE' : 'MISSION COMPLETE'}</p>
-          <h1>{mission.title}</h1>
+          <h1 ref={completionHeadingRef} tabIndex={-1}>{mission.title}</h1>
           <p>{practiceMode ? 'You brought the idea back from memory and strengthened it for next time.' : 'You turned unfamiliar symbols into a working report. That is programming.'}</p>
           <div className="completion-stats">
             <div><Zap /><b>{earnedXp || totalXp}</b><span>XP earned</span></div>
@@ -1166,17 +1388,17 @@ function LessonPlayer({ mission, practiceConceptIds, progress, onProgress, onExi
     <div className="lesson-overlay">
       <header className="lesson-header">
         <button onClick={onExit} className="icon-button" aria-label="Exit lesson"><X /></button>
-        <div className="lesson-progress"><i style={{ width: `${progressPercent}%` }} /></div>
-        <div className="lesson-step"><b>{reviewing ? reviewIndex + 1 : step + 1}</b><span>/ {reviewing ? reviewQueue.length : sessionExercises.length}</span></div>
+        <div className="lesson-progress" aria-label="Lesson progress" aria-valuemax={100} aria-valuemin={0} aria-valuenow={Math.round(progressPercent)} role="progressbar"><i style={{ width: `${progressPercent}%` }} /></div>
+        <div className="lesson-step"><b>{reviewing ? reviewIndex + 1 : activeStep + 1}</b><span>/ {reviewing ? reviewQueue.length : sessionExercises.length}</span></div>
         <div className="lesson-xp"><Zap size={17} /> {earnedXp} XP</div>
       </header>
 
-      <main className="lesson-layout">
+      <main className="lesson-layout" id="main-content" tabIndex={-1}>
         {practiceMode && !reviewing && (
           <section className="memory-repair" aria-label="Focused practice round">
             <Orbit size={22} />
             <div>
-              <small>FOCUSED REVIEW · {step + 1} OF {sessionExercises.length}</small>
+              <small>FOCUSED REVIEW · {activeStep + 1} OF {sessionExercises.length}</small>
               <h2>Only the concepts that need another pass.</h2>
               <p>This short session uses exercises from {mission.title}. Correct answers strengthen the next review interval.</p>
             </div>
@@ -1196,13 +1418,13 @@ function LessonPlayer({ mission, practiceConceptIds, progress, onProgress, onExi
         )}
         <section className="lesson-briefing">
           <p className="kicker">{exercise.eyebrow}</p>
-          <h1>{exercise.title}</h1>
+          <h1 ref={lessonHeadingRef} tabIndex={-1}>{exercise.title}</h1>
           <p className="lesson-explanation">{exercise.explanation}</p>
           <div className="analogy-card">
             <span className="mentor-avatar"><b>π</b><i /></span>
             <div><small>PIE-314 · SHIPBOARD VERSION</small><p>{exercise.analogy}</p></div>
           </div>
-          <div className="micro-rule"><BookOpen size={18} /><div><b>New words are never a test</b><p>Hover, reread, and use the codebook whenever you need it.</p></div></div>
+          <div className="micro-rule"><BookOpen size={18} /><div><b>New words are never a test</b><p>Reread the explanation or open the codebook whenever you need it.</p></div></div>
         </section>
 
         <section className="exercise-panel">
@@ -1223,20 +1445,28 @@ function LessonPlayer({ mission, practiceConceptIds, progress, onProgress, onExi
                 <BookOpen size={17} />
                 <p><b>This is not a prior-knowledge test.</b> {exercise.type === 'prediction' ? 'Read the code from top to bottom and use the explanation on the left.' : 'The answer was just explained on the left.'} Reread it as often as you need, then choose the sentence that matches.</p>
               </div>
-              <div className="choice-list">
+              <fieldset className="choice-list">
+                <legend className="sr-only">{exercise.prompt}</legend>
                 {exercise.choices?.map((choice, index) => (
-                  <button
+                  <label
                     className={answer === choice.id ? 'is-selected' : ''}
                     key={choice.id}
-                    onClick={() => setAnswer(choice.id)}
-                    disabled={feedback?.correct}
                   >
-                    <span>{String.fromCharCode(65 + index)}</span>
+                    <input
+                      checked={answer === choice.id}
+                      className="sr-only"
+                      disabled={feedback?.correct}
+                      name={`answer-${exercise.id}`}
+                      onChange={() => setAnswer(choice.id)}
+                      type="radio"
+                      value={choice.id}
+                    />
+                    <span aria-hidden="true">{String.fromCharCode(65 + index)}</span>
                     <div><b>{choice.label}</b><small>{choice.detail}</small></div>
-                    <i>{answer === choice.id && <Check size={16} />}</i>
-                  </button>
+                    <i aria-hidden="true">{answer === choice.id && <Check size={16} />}</i>
+                  </label>
                 ))}
-              </div>
+              </fieldset>
               {feedback?.correct && exercise.output && <div className="exercise-result"><TerminalSquare size={15} /><span><b>RESULT</b><code>{exercise.output}</code></span></div>}
             </div>
           ) : exercise.type === 'ordering' ? (
@@ -1245,22 +1475,23 @@ function LessonPlayer({ mission, practiceConceptIds, progress, onProgress, onExi
                 <BookOpen size={17} />
                 <p><b>The computer reads from top to bottom.</b> Use the arrow buttons to place each piece where the computer should meet it. You can change the order as often as you need.</p>
               </div>
-              <div className="ordering-list" aria-label="Code pieces to order">
+              <ol className="ordering-list" aria-label="Code pieces to order">
                 {orderedIds.map((id, index) => {
                   const item = exercise.orderItems?.find((candidate) => candidate.id === id)
                   if (!item) return null
                   return (
-                    <article key={item.id}>
+                    <li key={item.id}>
                       <span>{index + 1}</span>
                       <code>{item.code}</code>
                       <div>
                         <button onClick={() => moveOrderItem(index, -1)} disabled={index === 0} aria-label={`Move ${item.code} up`}><ArrowUp size={16} /></button>
                         <button onClick={() => moveOrderItem(index, 1)} disabled={index === orderedIds.length - 1} aria-label={`Move ${item.code} down`}><ArrowDown size={16} /></button>
                       </div>
-                    </article>
+                    </li>
                   )
                 })}
-              </div>
+              </ol>
+              <p aria-live="polite" className="sr-only" role="status">{orderingAnnouncement}</p>
               {feedback?.correct && exercise.output && <div className="exercise-result"><TerminalSquare size={15} /><span><b>RESULT</b><code>{exercise.output}</code></span></div>}
             </div>
           ) : editableExercise ? (
@@ -1294,7 +1525,7 @@ function LessonPlayer({ mission, practiceConceptIds, progress, onProgress, onExi
               <div className="code-workspace">
                 <div className="editor-bar"><span><Code2 size={15} /> {mission.language === 'python' ? 'mission.py' : mission.language === 'cpp' ? 'mission.cpp' : mission.language === 'java' ? 'Mission.java' : 'Mission.cs'}</span><small>LIVE ISOLATED RUNNER</small></div>
                 <div className="editor-body">
-                  <div className="line-numbers">{answer.split('\n').map((_, index) => <span key={index}>{index + 1}</span>)}</div>
+                  <div className="line-numbers" aria-hidden="true">{answer.split('\n').map((_, index) => <span key={index}>{index + 1}</span>)}</div>
                   <textarea
                     aria-label="Code editor"
                     aria-keyshortcuts="Control+Enter Meta+Enter"
@@ -1305,7 +1536,7 @@ function LessonPlayer({ mission, practiceConceptIds, progress, onProgress, onExi
                     disabled={feedback?.correct || runnerBusy}
                   />
                 </div>
-                <div className="console-pane">
+                <div className="console-pane" aria-live="polite">
                   <div><TerminalSquare size={14} /> REAL CONSOLE OUTPUT</div>
                   <pre>{runnerBusy
                     ? runnerStatus === 'running' ? 'Your program is running inside a fresh isolated sandbox...' : 'Preparing a fresh isolated sandbox...'
@@ -1339,36 +1570,42 @@ function LessonPlayer({ mission, practiceConceptIds, progress, onProgress, onExi
                   </section>
                 )}
                 <div className="editor-shortcuts" aria-label="Code editor keyboard controls">
-                  <span><Keyboard size={14} /> KEYBOARD</span>
+                  <span>KEYBOARD</span>
                   <p><kbd>Ctrl</kbd> or <kbd>⌘</kbd> + <kbd>Enter</kbd> runs the check. <kbd>Tab</kbd> moves out of the editor normally.</p>
                 </div>
               </div>
             </div>
           ) : null}
 
-          <button className="hint-toggle" aria-expanded={hintOpen} onClick={() => setHintOpen((open) => !open)}><CircleHelp size={17} /> {hintOpen ? 'Hide hint' : 'I need a hint'}</button>
-          {hintOpen && <div className="hint-box"><Sparkles size={16} /><span><b>Small nudge</b>{exercise.hint}</span></div>}
+          <button className="hint-toggle" aria-controls="lesson-hint" aria-expanded={hintOpen} onClick={() => setHintOpen((open) => !open)}><CircleHelp size={17} /> {hintOpen ? 'Hide hint' : 'I need a hint'}</button>
+          {hintOpen && <div className="hint-box" id="lesson-hint"><Sparkles size={16} /><span><b>Small nudge</b>{exercise.hint}</span></div>}
 
           {feedback && (
-            <div className={`feedback-box ${feedback.correct ? 'is-correct' : 'is-wrong'}`}>
-              {feedback.correct ? <CheckCircle2 /> : <MessageCircleQuestion />}
-              <div><b>{feedback.correct ? 'System online' : 'Let’s inspect that'}</b><p>{feedback.message}</p></div>
+            <div aria-live="polite" className={`feedback-box ${runnerFailure ? 'is-neutral' : feedback.correct ? 'is-correct' : 'is-wrong'}`} role="status">
+              {feedback.correct ? <CheckCircle2 /> : runnerFailure ? <CircleHelp /> : <MessageCircleQuestion />}
+              <div><b>{feedback.correct ? 'System online' : runnerFailure ? 'Runner unavailable' : 'Let’s inspect that'}</b><p>{feedback.message}</p></div>
             </div>
           )}
 
           <div className="exercise-actions">
-            {!reviewing && step > 0 && !feedback?.correct && <button className="secondary-action" onClick={() => { setStep((current) => current - 1); setFeedback(null) }}><ArrowLeft size={17} /> Back</button>}
+            {!reviewing && activeStep > 0 && !feedback?.correct && <button className="secondary-action" onClick={() => { const previous = sessionExercises[activeStep - 1]; setStep(activeStep - 1); setFeedback(null); setRunnerFailure(false); if (previous) onExerciseChange?.(previous.id) }}><ArrowLeft size={17} /> Back</button>}
             <button className="primary-action" disabled={runnerBusy} onClick={feedback?.correct ? continueLesson : () => { void checkAnswer() }}>
               {feedback?.correct
                 ? reviewing
                   ? reviewIndex === reviewQueue.length - 1 ? 'Complete memory repair' : 'Next review'
-                  : step === sessionExercises.length - 1
-                    ? mistakes.length > 0 ? 'Repair missed concepts' : practiceMode ? 'Finish practice' : 'Finish mission'
+                  : activeStep === sessionExercises.length - 1
+                    ? mistakes.length > 0
+                      ? 'Repair missed concepts'
+                      : practiceMode
+                        ? 'Finish practice'
+                        : hasUnfinishedLessons
+                          ? 'Complete remaining lessons'
+                          : 'Finish mission'
                     : 'Continue'
                 : runnerBusy
                   ? runnerStatus === 'running' ? 'Running your code...' : 'Launching sandbox...'
                   : checkActionLabel}
-              {feedback?.correct ? <ArrowRight size={18} /> : <Play size={16} fill="currentColor" />}
+              {feedback?.correct && <ArrowRight size={18} />}
             </button>
           </div>
           <p className="simulator-note">Editable code runs on the server in a new network-blocked sandbox. The sandbox is destroyed after every check. Choice and ordering questions stay in your browser because they do not execute code.</p>
@@ -1380,7 +1617,7 @@ function LessonPlayer({ mission, practiceConceptIds, progress, onProgress, onExi
 
 function NotFoundPage({ progress }: { progress: LearnerProgress }) {
   return (
-    <main className="route-message-page">
+    <main className="route-message-page" id="main-content" tabIndex={-1}>
       <BrandMark />
       <section className="route-message-card">
         <p className="kicker"><Compass size={15} /> Uncharted route</p>
@@ -1388,7 +1625,7 @@ function NotFoundPage({ progress }: { progress: LearnerProgress }) {
         <p>The address may be incomplete, outdated, or mistyped. The public introduction and your current academy route are still available.</p>
         <div className="landing-actions">
           <AppLink className="primary-action" to="/">Visit the launch page <ArrowRight size={17} /></AppLink>
-          {progress.onboardingComplete && <AppLink className="secondary-action" to={academyPath(progress.activeLanguage)}>Return to the academy</AppLink>}
+          {progress.onboardingComplete && <AppLink className="secondary-action" to={homePath()}>Return to your learning home</AppLink>}
         </div>
       </section>
     </main>
@@ -1401,7 +1638,10 @@ function AppContent() {
   const [progress, setProgress] = useState<LearnerProgress>(() => {
     const loaded = loadProgress()
     const initialRoute = parseAppRoute(window.location.pathname, window.location.search)
-    return initialRoute.language ? { ...loaded, activeLanguage: initialRoute.language } : loaded
+    if (initialRoute.language && ['academy', 'practice', 'codebook', 'lesson'].includes(initialRoute.page)) {
+      return { ...loaded, activeLanguage: initialRoute.language }
+    }
+    return loaded
   })
   const [authUser, setAuthUser] = useState<AuthUser | null>(null)
   const [authReady, setAuthReady] = useState(false)
@@ -1417,7 +1657,11 @@ function AppContent() {
   const syncRevisionRef = useRef(0)
   const syncedSnapshotRef = useRef<string | null>(null)
 
-  const view: ViewId = route.page === 'practice' || (route.page === 'lesson' && route.practice)
+  const view: ViewId = route.page === 'home'
+    ? 'home'
+    : route.page === 'courses' || route.page === 'course' || route.page === 'academy'
+      ? 'courses'
+      : route.page === 'practice' || (route.page === 'lesson' && route.practice)
     ? 'practice'
     : route.page === 'codebook'
       ? 'spellbook'
@@ -1434,40 +1678,53 @@ function AppContent() {
 
   useEffect(() => {
     window.scrollTo({ top: 0, left: 0 })
+    const timer = window.setTimeout(() => {
+      const main = document.getElementById('main-content')
+      const heading = main?.querySelector<HTMLElement>('h1')
+      if (!heading) return
+      heading.tabIndex = -1
+      heading.focus({ preventScroll: true })
+    }, 0)
+    return () => window.clearTimeout(timer)
   }, [location.pathname, location.search])
 
   useEffect(() => {
-    if (route.page === 'home') {
-      document.title = 'SeePoundCoffeePie | Learn code. Run the ship.'
+    if (route.page === 'landing') {
+      document.title = 'SeePoundCoffeePie | Programming from the beginning.'
       return
     }
 
     const track = route.language ? trackById(route.language) : null
     const mission = track?.missions.find((item) => item.id === route.missionId)
-    const pageTitle = route.page === 'start'
-      ? 'Cadet Intake'
-      : route.page === 'academy'
-        ? track?.name
+    const exercise = mission?.exercises.find((item) => item.id === route.exerciseId)
+    const pageTitle = route.page === 'home'
+      ? 'Learning Home'
+      : route.page === 'start'
+        ? 'Beginner Intake'
+        : route.page === 'courses'
+          ? 'Courses'
+          : route.page === 'course' || route.page === 'academy'
+            ? track ? `${track.shortName} Foundations` : 'Course'
         : route.page === 'practice'
           ? `${track?.shortName} Practice Bay`
           : route.page === 'codebook'
             ? `${track?.shortName} Codebook`
             : route.page === 'profile'
-              ? 'Cadet Record'
+              ? 'Learner Record'
               : route.page === 'settings'
                 ? 'Settings'
                 : route.page === 'lesson'
-                  ? mission?.title
+                  ? exercise?.title ?? mission?.title
                   : 'Page not found'
     document.title = `${pageTitle ?? 'Academy'} | SeePoundCoffeePie`
-  }, [route.language, route.missionId, route.page])
+  }, [route.exerciseId, route.language, route.missionId, route.page])
 
   useEffect(() => {
     const handleNavigation = () => {
       const nextLocation = readBrowserLocation()
       const nextRoute = parseAppRoute(nextLocation.pathname, nextLocation.search)
       setLocation(nextLocation)
-      if (nextRoute.language) {
+      if (nextRoute.language && ['academy', 'practice', 'codebook', 'lesson'].includes(nextRoute.page)) {
         setProgress((current) => current.activeLanguage === nextRoute.language
           ? current
           : { ...current, activeLanguage: nextRoute.language ?? current.activeLanguage })
@@ -1620,8 +1877,11 @@ function AppContent() {
 
   const normalizedProgress = useMemo(() => {
     const dailyProgress = progress.dailyXpDate === dateKey(new Date()) ? progress : { ...progress, dailyXp: 0 }
-    return route.language ? { ...dailyProgress, activeLanguage: route.language } : dailyProgress
-  }, [progress, route.language])
+    if (route.language && ['academy', 'practice', 'codebook', 'lesson'].includes(route.page)) {
+      return { ...dailyProgress, activeLanguage: route.language }
+    }
+    return dailyProgress
+  }, [progress, route.language, route.page])
 
   const updateProgress = (nextProgress: LearnerProgress) => setProgress(nextProgress)
 
@@ -1701,7 +1961,7 @@ function AppContent() {
           dailyGoal: nextProgress.dailyGoal,
         }
       : nextProgress)
-    navigateTo(academyPath(nextProgress.activeLanguage))
+    navigateTo(homePath())
   }
 
   const chooseSyncRecord = async (choice: 'combine' | 'local' | 'remote') => {
@@ -1773,7 +2033,7 @@ function AppContent() {
       ? 'Your Cadet Record is stored in this browser. Account synchronization needs attention.'
       : 'Your Cadet Record is stored only in this browser until you choose to sign in.'
 
-  if (route.page === 'home') {
+  if (route.page === 'landing') {
     return (
       <>
         {authNotice && <AuthNotice message={authNotice} onDismiss={() => setAuthNotice(null)} />}
@@ -1787,7 +2047,8 @@ function AppContent() {
     return <NotFoundPage progress={normalizedProgress} />
   }
 
-  if (!progress.onboardingComplete || route.page === 'start') {
+  const publicCoursePage = route.page === 'courses' || route.page === 'course'
+  if (route.page === 'start' || (!progress.onboardingComplete && !publicCoursePage)) {
     return (
       <>
         {authNotice && <AuthNotice message={authNotice} onDismiss={() => setAuthNotice(null)} />}
@@ -1810,7 +2071,12 @@ function AppContent() {
     const available = mission && mission.language === track.id
       && missionAvailability(track, missionIndex, progress.completedMissions) === 'available'
 
-    if (!mission || mission.language !== track.id) return <NotFoundPage progress={normalizedProgress} />
+    const routeExercise = route.exerciseId
+      ? mission?.exercises.find((exercise) => exercise.id === route.exerciseId)
+      : undefined
+    if (!mission || mission.language !== track.id || (route.exerciseId && !routeExercise)) {
+      return <NotFoundPage progress={normalizedProgress} />
+    }
 
     const practiceConceptIds = route.conceptIds.filter((conceptId) => (
       mission.exercises.some((exercise) => exercise.conceptId === conceptId)
@@ -1829,16 +2095,16 @@ function AppContent() {
             view={view}
             onLanguageChange={(language) => {
               setProgress((current) => ({ ...current, activeLanguage: language }))
-              navigateTo(academyPath(language))
+              navigateTo(coursePath(language))
             }}
             onSignIn={signIn}
           >
             <main className="content-page">
               <section className="route-message-card route-message-card--inside">
-                <p className="kicker"><LockKeyhole size={15} /> Mission locked</p>
+                <p className="kicker"><LockKeyhole size={15} /> Module locked</p>
                 <h1>{mission.title} is still ahead</h1>
-                <p>Complete {prerequisite?.title ?? 'the earlier training'} first. The academy keeps the steps in order so each new idea has a foundation.</p>
-                <AppLink className="primary-action" to={academyPath(track.id)}>Return to {track.shortName} mission path</AppLink>
+                <p>Complete {prerequisite?.title ?? 'the earlier course work'} first. The course keeps the steps in order so each new idea has a foundation.</p>
+                <AppLink className="primary-action" to={coursePath(track.id)}>Return to {track.shortName} Foundations</AppLink>
               </section>
             </main>
           </AppShell>
@@ -1852,11 +2118,13 @@ function AppContent() {
         {syncDialog}
         <LessonPlayer
           key={`${route.practice ? 'practice' : 'academy'}-${mission.id}-${practiceConceptIds.join('-')}`}
+          initialExerciseId={route.practice ? undefined : routeExercise?.id}
           mission={mission}
+          onExerciseChange={route.practice ? undefined : (exerciseId) => navigateTo(lessonPath(track.id, mission.id, exerciseId))}
           practiceConceptIds={route.practice ? practiceConceptIds : undefined}
           progress={progress}
           onProgress={updateProgress}
-          onExit={() => navigateTo(route.practice ? practicePath(track.id) : academyPath(track.id))}
+          onExit={() => navigateTo(route.practice ? practicePath(track.id) : coursePath(track.id))}
         />
       </>
     )
@@ -1873,20 +2141,28 @@ function AppContent() {
         view={view}
         onLanguageChange={(language) => {
           setProgress((current) => ({ ...current, activeLanguage: language }))
-          if (route.page === 'academy' || route.page === 'practice' || route.page === 'codebook') {
+          if (route.page === 'course' || route.page === 'academy') {
+            navigateTo(coursePath(language))
+          } else if (route.page === 'practice' || route.page === 'codebook') {
             navigateTo(pagePath(route.page, language))
           }
         }}
         onSignIn={signIn}
       >
-        {route.page === 'academy' && <MissionPath progress={normalizedProgress} onStart={(mission) => navigateTo(missionPath(mission.language, mission.id))} />}
+        {route.page === 'home' && <LearnerHome progress={normalizedProgress} />}
+        {route.page === 'courses' && <CourseCatalog progress={normalizedProgress} />}
+        {(route.page === 'course' || route.page === 'academy') && (
+          <MissionPath
+            progress={route.language ? { ...normalizedProgress, activeLanguage: route.language } : normalizedProgress}
+          />
+        )}
         {route.page === 'practice' && <PracticeBay progress={normalizedProgress} onStart={(mission, practiceConceptIds) => navigateTo(practiceMissionPath(mission.language, mission.id, practiceConceptIds))} />}
         {route.page === 'codebook' && <Codebook progress={normalizedProgress} />}
         {route.page === 'profile' && (
           <CadetRecord
             onOpenTrack={(language) => {
               setProgress((current) => ({ ...current, activeLanguage: language }))
-              navigateTo(academyPath(language))
+              navigateTo(coursePath(language))
             }}
             progress={normalizedProgress}
             recordLocation={recordLocation}

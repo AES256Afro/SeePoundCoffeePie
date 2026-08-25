@@ -2,6 +2,10 @@ import { describe, expect, it } from 'vitest'
 import {
   academyPath,
   codebookPath,
+  coursePath,
+  coursesPath,
+  homePath,
+  lessonPath,
   missionPath,
   parseAppRoute,
   practiceMissionPath,
@@ -11,6 +15,12 @@ import {
 describe('bookmarkable application routes', () => {
   it('builds stable clean URLs for every learner area', () => {
     expect(academyPath('cpp')).toBe('/academy/cpp')
+    expect(homePath()).toBe('/home')
+    expect(coursesPath()).toBe('/courses')
+    expect(coursePath('cpp')).toBe('/courses/cpp-foundations')
+    expect(lessonPath('python', 'py-first-spark', 'py-print')).toBe(
+      '/learn/python-foundations/py-first-spark/py-print',
+    )
     expect(practicePath('csharp')).toBe('/practice/csharp')
     expect(codebookPath('java')).toBe('/codebook/java')
     expect(missionPath('python', 'py-first-spark')).toBe('/academy/python/missions/py-first-spark')
@@ -20,8 +30,22 @@ describe('bookmarkable application routes', () => {
   })
 
   it('keeps the public home page separate from cadet intake', () => {
-    expect(parseAppRoute('/').page).toBe('home')
+    expect(parseAppRoute('/').page).toBe('landing')
+    expect(parseAppRoute('/home').page).toBe('home')
     expect(parseAppRoute('/start').page).toBe('start')
+  })
+
+  it('parses course catalog, course outline, and individual lesson URLs', () => {
+    expect(parseAppRoute('/courses')).toEqual({ page: 'courses', conceptIds: [] })
+    expect(parseAppRoute('/courses/java-foundations')).toMatchObject({ page: 'course', language: 'java' })
+    expect(parseAppRoute('/learn/csharp-foundations/cs-shield/cs-output')).toEqual({
+      page: 'lesson',
+      language: 'csharp',
+      missionId: 'cs-shield',
+      exerciseId: 'cs-output',
+      practice: false,
+      conceptIds: [],
+    })
   })
 
   it('parses academy pages and focused practice lessons', () => {

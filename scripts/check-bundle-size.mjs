@@ -4,7 +4,8 @@ import path from 'node:path'
 
 const root = new URL('../dist/', import.meta.url)
 const budgets = {
-  javascript: { raw: 460_000, gzip: 125_000 },
+  // Semantic labels and focus management compress well. Keep transfer size as the tighter gate.
+  javascript: { raw: 465_000, gzip: 125_000 },
   css: { raw: 58_000, gzip: 12_500 },
   html: { raw: 5_000, gzip: 2_000 },
 }
