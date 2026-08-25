@@ -147,4 +147,33 @@ The real runner still has its independent KV kill switch. Pause it during a prod
 
 ## Release evidence
 
-Release evidence is added after the exact tested tree is published and the staging and production checks finish. It must include the test count, migration status for both D1 databases, source commit, Worker version, live API behavior, browser synchronization check, runner regression check, and live-site check.
+### Local and publication gate
+
+- `npm run check:release`: 17 test files and 175 tests passed; lint, social-preview verification, TypeScript, production build, and bundle budgets passed.
+- `npm run deploy:dry-run`: the Worker, assets, D1, KV, Durable Objects, and all four container bindings validated before publication.
+- `npm run d1:migrate:local`: migration `0001_learner_progress.sql` applied successfully.
+- Published source commit: `e8f37357f5828d8d360749031dd70cf82739fa18` on `main`.
+- GitHub Actions CI run `32859579411` passed for the published commit.
+
+### Isolated staging gate
+
+- Staging D1 database `see-pound-coffee-pie-learners-staging` applied migration `0001_learner_progress.sql`; a direct query returned zero learner records before testing.
+- A separate staging `LEARNER_DATA_SECRET` was installed without exposing its value.
+- Staging Worker version: `9f055860-49c8-4e4d-8eae-a7fe47c9757f`.
+- A signed-out live `GET /api/progress` returned HTTP 401, proving the deployed route, D1 binding, and fail-closed authentication boundary were active without creating a row.
+- `npm run check:runner:staging` passed Python, C++, C#, Java, network denial, CPU, memory, allocated storage, output caps, cross-run filesystem and secret isolation, sanitized diagnostics, per-learner pending saturation, and cross-user authorization.
+- The staging runner switch was returned to `enabled=false` after the regression gate.
+
+### Production gate
+
+- Production D1 database `see-pound-coffee-pie-learners` applied migration `0001_learner_progress.sql`; a direct query returned zero learner records before the first learner choice.
+- Production secrets list contained `GITHUB_CLIENT_SECRET`, `SESSION_SECRET`, and the new dedicated `LEARNER_DATA_SECRET`; no secret value was read or recorded.
+- The production runner was paused before Worker deployment and its public status returned `enabled=false` during the rollout.
+- Production Worker version: `aee06b92-4623-45bc-8470-7469977c2bc8`.
+- The production signed-out account endpoint returned HTTP 401 instead of an exception. The normal session endpoint remained healthy.
+- `npm run check:live` passed the apex domain, `www` redirect, security headers, social preview, and all bookmarkable SPA routes.
+- The runner was re-enabled after site and account checks. `npm run check:runner:production` then passed the complete four-language and isolation regression gate, and `npm run check:runner:smoke` passed a separate production run in 24 ms.
+- A real production Chrome session loaded `/settings` while signed in as the existing learner. It showed the first-sync permission dialog over the learner's intact 34 XP browser record, offered both `Save progress to account` and `Decide later`, rendered the storage and deletion explanations, and produced no browser console errors.
+- The browser save was deliberately not selected as part of automated release work because it would transmit the learner's personal progress into the production account. That final learner choice remains explicit by product design.
+
+The deployed application bundle comes from source commit `e8f37357f5828d8d360749031dd70cf82739fa18`. A later documentation-only evidence commit does not change that Worker bundle.
