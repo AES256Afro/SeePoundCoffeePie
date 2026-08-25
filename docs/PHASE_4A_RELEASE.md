@@ -160,4 +160,17 @@ If multi-case grading fails while the rest of the academy is healthy, disable th
 
 ## Release evidence
 
-Final publication evidence is recorded after the source commit, staging gate, production Worker deployment, live route checks, and production runner regression complete.
+Phase 4A source commit `008b3ae2955d18a695adfbf83b3a519474c4ba6c` was published to `main` after the complete local and staging gates passed. GitHub CI run `32901475235` then passed tests, lint, production build, and bundle budgets.
+
+The controlled staging release used Worker version `843c121d-dea0-46df-8cc4-814ba17019b7`. The staging runner stayed paused during deployment, was enabled only for the test window, passed the four-language platform gate and the complete project-security probe, then returned to `enabled: false`.
+
+Production Worker version `7aa76bb5-b421-403b-81c8-381e4a06319e` was deployed with new execution paused. The final container applications reported `ready` on these reviewed images:
+
+- Python: `sha256:23dd12f3cf2a7755503dd5fafa448223fb73ae21983aff868a3053ca2068f20d`
+- C++: `sha256:31713701bff59b15efe60d39a4f6b9be9ae92941d578e868c4a8c66683ab362b`
+- C#: `sha256:d13b7702eba2c4eed379898082b6dfae9f9e6212b526476da4115f9342a38a7b`
+- Java: `sha256:ef20124667fb996348ab5b978fc920bdd35bf8fa644154f07f2ed4312b116077`
+
+The first production probe ran before every container application had finished provisioning. The new coordinator rejected the older Python supervisor response as a `system_error`, and the safety trap immediately paused execution. After all four applications reported `ready` on version 2 and the expected digests, the complete production gate passed: four-language execution, seccomp network denial, CPU, memory, output, and storage ceilings, case isolation, authorization, project practice mode, protected behavioral cases, unreachable-code regressions, exact-byte source-encoding regression, the valid ten-check Coffee Counter assessment, and the final smoke probe. Production execution was then restored to `enabled: true` and a final smoke probe passed.
+
+The production browser pass verified the public project overview at normal desktop size and at a 390 by 844 CSS-pixel viewport. The mobile page retained a 16-pixel body font, a distinct 42.9-pixel project heading, no horizontal overflow, an accessible expandable navigation menu, and no browser console warnings or errors. Live verification also passed the social preview, apex domain, `www` redirect, security headers, 17 canonical routes, and two legacy routes.
