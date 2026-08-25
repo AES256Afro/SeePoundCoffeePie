@@ -1,12 +1,12 @@
 # Open Learning Workshop UI Direction
 
-Status: approved direction, implemented in the current release candidate, pending publication and live verification
+Status: live and verified in production on 2026-08-25
 
 Mockup set: [open-learning-workshop](mockups/open-learning-workshop)
 
 ## Milestone status
 
-The Open Learning Workshop redesign now has a working implementation in the application checkout:
+The Open Learning Workshop redesign is live at [seepoundcoffeepie.com](https://seepoundcoffeepie.com):
 
 - a compact top navigation replaces the permanent course sidebar;
 - the learner home, course catalog, four course outlines, intake, Practice, Codebook, learner record, and Settings share one readable visual system;
@@ -16,7 +16,16 @@ The Open Learning Workshop redesign now has a working implementation in the appl
 - legacy academy and mission URLs remain supported for saved bookmarks and compatibility;
 - desktop and 390-pixel layouts are implemented, with reduced-motion and keyboard behavior retained.
 
-The remaining release work is verification rather than another structural redesign: finish the automated release gate, complete keyboard and assistive-technology review, publish the Worker with the runner paused, exercise the new live route set, re-enable the runner, and run the production runner regression checks. This document does not claim the redesign is live until that evidence is recorded.
+Release evidence:
+
+- source commit `6cbba1d` is published on `main`;
+- Cloudflare Worker version `658fcb18-970c-41e4-a614-839998d7c23e` serves the production domain;
+- 18 test files and 191 tests passed with lint, social-preview, production-build, and bundle-budget checks;
+- the independent keyboard and assistive-technology review found no release blocker;
+- isolated staging passed all four languages, network denial, resource limits, cross-run isolation, diagnostics, queue saturation, and cross-user authorization;
+- production was deployed while the execution kill switch was off, then passed the same full runner regression gate after execution was re-enabled;
+- the live-site check passed the apex domain, `www` redirect, security headers, social preview, 15 canonical routes, and two legacy routes;
+- browser verification rendered the public launch page, all four course choices, a direct lesson bookmark, and a successful real Python exercise with the fresh sandbox destroyed after the run.
 
 ## Why this direction
 
@@ -157,8 +166,8 @@ This mapping lets the interface change first while preserving learner progress. 
 4. The course outline, catalog, and learner home are implemented as separate bookmarkable pages.
 5. Intake uses four short recommendation questions and keeps course browsing optional.
 6. Practice, Codebook, Settings, and the learner record use the shared visual system.
-7. Desktop and 390-pixel browser layouts have been reviewed in the release candidate.
-8. The complete automated, keyboard, assistive-technology, deployment, and production smoke gates remain required before the status changes to live.
+7. Desktop and 390-pixel browser layouts were reviewed before publication.
+8. The automated, keyboard, assistive-technology, deployment, live-route, and production runner gates passed before the status changed to live.
 
 ## Prompt set used for the mockups
 
