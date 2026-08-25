@@ -117,6 +117,8 @@ const canonicalRoutes = [
   '/courses/java-foundations',
   '/projects/python/first-interactive-program',
   '/projects/python/first-interactive-program/project-py-final',
+  '/projects/cpp/first-compiled-program',
+  '/projects/cpp/first-compiled-program/project-cpp-final',
   '/learn/python-foundations/py-first-spark/py-console',
   '/learn/cpp-foundations/cpp-reactor/cpp-compiler',
   '/learn/csharp-foundations/cs-shield/cs-dotnet',

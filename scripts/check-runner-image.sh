@@ -8,6 +8,16 @@ python3 "$project_dir/runner/test_supervisor_analysis.py"
 
 docker build --platform linux/amd64 -t "$image_prefix-python:worker" -f "$project_dir/Dockerfile.runner.python" "$project_dir"
 docker build --platform linux/amd64 -t "$image_prefix-cpp:worker" -f "$project_dir/Dockerfile.runner.cpp" "$project_dir"
+docker run --rm \
+  --platform linux/amd64 \
+  --network none \
+  --memory 1g \
+  --pids-limit 256 \
+  --entrypoint /usr/bin/python3 \
+  -e PYTHONPATH=/opt/runner \
+  -v "$project_dir/runner/test_supervisor_cpp_analysis.py:/fixture/test_supervisor_cpp_analysis.py:ro" \
+  "$image_prefix-cpp:worker" \
+  /fixture/test_supervisor_cpp_analysis.py
 docker build --platform linux/amd64 -t "$image_prefix-java:worker" -f "$project_dir/Dockerfile.runner.java" "$project_dir"
 docker build --platform linux/amd64 -t "$image_prefix-csharp:worker" -f "$project_dir/Dockerfile.runner.csharp" "$project_dir"
 
@@ -47,6 +57,30 @@ run_fixture() {
       }
     } else if ("python_analysis" in result) {
       throw new Error(`${process.env.FIXTURE}: non-Python result exposed Python analysis`)
+    }
+    if (process.env.LANGUAGE === "cpp") {
+      const analysis = result.cpp_analysis
+      if (
+        !analysis ||
+        analysis.version !== 1 ||
+        analysis.analyzed !== false ||
+        analysis.parsed !== false ||
+        analysis.straight_line !== false ||
+        analysis.main_signature !== false ||
+        analysis.returns_zero !== false
+      ) {
+        throw new Error(`${process.env.FIXTURE}: malformed ordinary C++ analysis sentinel`)
+      }
+      if (
+        !Array.isArray(analysis.headers) || analysis.headers.length !== 0 ||
+        !Array.isArray(analysis.declarations) || analysis.declarations.length !== 0 ||
+        !Array.isArray(analysis.inputs) || analysis.inputs.length !== 0 ||
+        !Array.isArray(analysis.cout_chains) || analysis.cout_chains.length !== 0
+      ) {
+        throw new Error(`${process.env.FIXTURE}: ordinary C++ result exposed protected facts`)
+      }
+    } else if ("cpp_analysis" in result) {
+      throw new Error(`${process.env.FIXTURE}: non-C++ result exposed C++ analysis`)
     }
     process.stdout.write(`pass ${process.env.FIXTURE}: ${result.outcome}${result.limit ? ` (${result.limit})` : ""}\n`)
   '

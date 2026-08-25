@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 import { pythonInteractiveProject } from '../data/python-interactive-project'
+import { cppCompiledProject } from '../data/cpp-compiled-project'
 import { initialProgress } from './progress'
 import {
   deleteRemoteProgress,
@@ -77,6 +78,27 @@ describe('durable progress synchronization', () => {
         'python-print': { strength: 2, correct: 5, incorrect: 1, dueAt: '2026-08-28' },
         'java-output': { strength: 1, correct: 1, incorrect: 0, dueAt: '2026-08-26' },
       },
+    })
+  })
+
+  it('merges C++ and Python project records without dropping either language', () => {
+    const local = {
+      ...initialProgress('cpp'),
+      completedProjectCheckpoints: [cppCompiledProject.checkpoints[0].id],
+      completedProjects: [cppCompiledProject.id],
+    }
+    const remote = {
+      ...initialProgress('python'),
+      completedProjectCheckpoints: [pythonInteractiveProject.checkpoints[0].id],
+      completedProjects: [pythonInteractiveProject.id],
+    }
+
+    expect(mergeLearnerProgress(local, remote)).toMatchObject({
+      completedProjectCheckpoints: [
+        cppCompiledProject.checkpoints[0].id,
+        pythonInteractiveProject.checkpoints[0].id,
+      ],
+      completedProjects: [cppCompiledProject.id, pythonInteractiveProject.id],
     })
   })
 

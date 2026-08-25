@@ -34,6 +34,9 @@ describe('bookmarkable application routes', () => {
     expect(projectPath('python', 'first-interactive-program', 'read-the-plan')).toBe(
       '/projects/python/first-interactive-program/read-the-plan',
     )
+    expect(projectPath('cpp', 'first-compiled-program', 'project-cpp-final')).toBe(
+      '/projects/cpp/first-compiled-program/project-cpp-final',
+    )
   })
 
   it('keeps the public home page separate from cadet intake', () => {
@@ -83,9 +86,28 @@ describe('bookmarkable application routes', () => {
     })
   })
 
+  it('parses the C++ project and checkpoint deep links', () => {
+    expect(parseAppRoute('/projects/cpp/first-compiled-program')).toEqual({
+      page: 'project',
+      language: 'cpp',
+      projectId: 'first-compiled-program',
+      checkpointId: undefined,
+      conceptIds: [],
+    })
+    expect(parseAppRoute('/projects/cpp/first-compiled-program/project-cpp-final')).toEqual({
+      page: 'project',
+      language: 'cpp',
+      projectId: 'first-compiled-program',
+      checkpointId: 'project-cpp-final',
+      conceptIds: [],
+    })
+  })
+
   it('rejects misspelled languages and unknown paths', () => {
     expect(parseAppRoute('/academy/ruby').page).toBe('not-found')
     expect(parseAppRoute('/projects/java/first-interactive-program').page).toBe('not-found')
+    expect(parseAppRoute('/projects/python/first-compiled-program').page).toBe('not-found')
+    expect(parseAppRoute('/projects/cpp/first-interactive-program').page).toBe('not-found')
     expect(parseAppRoute('/projects/python/not-a-project').page).toBe('not-found')
     expect(parseAppRoute('/projects/python/first-interactive-program/checkpoint/extra').page).toBe('not-found')
     expect(parseAppRoute('/anything-else').page).toBe('not-found')

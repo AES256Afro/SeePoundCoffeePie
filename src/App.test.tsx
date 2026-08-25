@@ -3,11 +3,13 @@
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import App from './App'
+import { cppCompiledProject } from './data/cpp-compiled-project'
 import { trackById } from './data/curriculum'
 import { pythonInteractiveProject } from './data/python-interactive-project'
 import { saveProjectDraft } from './lib/project-drafts'
 import { dateKey, initialProgress } from './lib/progress'
 import { serializeProgressBackup } from './lib/progress-backup'
+import { runExercise } from './lib/runner-client'
 
 vi.mock('./lib/runner-client', () => ({
   runExercise: vi.fn(async () => ({
@@ -30,6 +32,7 @@ vi.mock('./lib/runner-client', () => ({
 
 const progressKey = 'see-pound-coffee-pie-progress'
 const pythonMissionIds = trackById('python').missions.map((mission) => mission.id)
+const cppMissionIds = trackById('cpp').missions.map((mission) => mission.id)
 
 function createMemoryStorage(): Storage {
   const values = new Map<string, string>()
@@ -411,6 +414,24 @@ describe('beginner lesson interactions', () => {
     )
   })
 
+  it('hands a C++ graduate from the learning home into the compiled project', () => {
+    window.localStorage.setItem(progressKey, JSON.stringify({
+      ...initialProgress('cpp'),
+      callsign: 'C++ Cadet',
+      onboardingComplete: true,
+      completedMissions: cppMissionIds,
+    }))
+    window.history.replaceState({}, '', '/home')
+
+    render(<App />)
+
+    expect(screen.getByText('Your next step')).toBeTruthy()
+    expect(screen.getByRole('heading', { name: cppCompiledProject.title })).toBeTruthy()
+    expect(screen.getByRole('link', { name: /Start project/iu }).getAttribute('href')).toBe(
+      '/projects/cpp/first-compiled-program',
+    )
+  })
+
   it('lists all four foundation courses with canonical course links', () => {
     window.history.replaceState({}, '', '/courses')
 
@@ -429,7 +450,7 @@ describe('beginner lesson interactions', () => {
     expect(document.title).toBe('Courses | SeePoundCoffeePie')
   })
 
-  it('lists the featured Python project with its canonical catalog link', () => {
+  it('lists the released Python and C++ projects with canonical catalog links', () => {
     window.history.replaceState({}, '', '/courses')
 
     render(<App />)
@@ -441,6 +462,22 @@ describe('beginner lesson interactions', () => {
     expect(screen.getByRole('button', { name: 'Guided projects' })).toBeTruthy()
     expect(screen.getByRole('link', { name: /Your First Interactive Program/iu }).getAttribute('href')).toBe(
       '/projects/python/first-interactive-program',
+    )
+    expect(screen.getByRole('link', { name: /Your First Compiled Program/iu }).getAttribute('href')).toBe(
+      '/projects/cpp/first-compiled-program',
+    )
+  })
+
+  it('shows the compiled project after the C++ course outline', () => {
+    window.history.replaceState({}, '', '/courses/cpp-foundations')
+
+    render(<App />)
+
+    expect(screen.getByRole('heading', { name: 'C++ Foundations' })).toBeTruthy()
+    expect(screen.getByRole('heading', { name: cppCompiledProject.title })).toBeTruthy()
+    expect(screen.getByText(/downloadable C\+\+ source file/iu)).toBeTruthy()
+    expect(screen.getByRole('link', { name: /Preview project/iu }).getAttribute('href')).toBe(
+      '/projects/cpp/first-compiled-program',
     )
   })
 
@@ -459,6 +496,22 @@ describe('beginner lesson interactions', () => {
       '/courses/python-foundations',
     )
     expect(document.title).toBe('Your First Interactive Program | SeePoundCoffeePie')
+  })
+
+  it('keeps the C++ project overview locked until C++ Foundations is complete', async () => {
+    window.history.replaceState({}, '', '/projects/cpp/first-compiled-program')
+
+    render(<App />)
+
+    expect(await screen.findByRole('heading', { name: cppCompiledProject.title })).toBeTruthy()
+    expect(screen.getByRole('heading', {
+      name: 'Finish C++ Foundations, then build a complete compiled program.',
+    })).toBeTruthy()
+    expect(screen.queryByRole('textbox', { name: 'Project code editor' })).toBeNull()
+    expect(screen.getByRole('link', { name: /Continue C\+\+ Foundations/iu }).getAttribute('href')).toBe(
+      '/courses/cpp-foundations',
+    )
+    expect(document.title).toBe('Your First Compiled Program | SeePoundCoffeePie')
   })
 
   it('opens an unlocked project checkpoint at its canonical deep link with accessible controls', async () => {
@@ -493,6 +546,69 @@ describe('beginner lesson interactions', () => {
     expect(screen.getByRole('button', { name: /Check checkpoint/iu })).toBeTruthy()
     expect(screen.getByLabelText('Program console')).toBeTruthy()
     expect(screen.getByText('I need a hint', { selector: 'summary' })).toBeTruthy()
+  })
+
+  it('opens an unlocked C++ checkpoint with a C++ editor and download', async () => {
+    window.localStorage.setItem(progressKey, JSON.stringify({
+      ...initialProgress('cpp'),
+      callsign: 'C++ Cadet',
+      onboardingComplete: true,
+      completedMissions: cppMissionIds,
+      completedProjectCheckpoints: cppCompiledProject.checkpoints.slice(0, 2).map((checkpoint) => checkpoint.id),
+    }))
+    window.history.replaceState({}, '', '/projects/cpp/first-compiled-program/project-cpp-output')
+
+    render(<App />)
+
+    expect(await screen.findByRole('heading', { level: 1, name: 'Send one clear line' })).toBeTruthy()
+    expect(screen.getByText('C++ project studio')).toBeTruthy()
+    expect(screen.getByText('observation-desk.cpp')).toBeTruthy()
+    expect(screen.getByRole('button', { name: 'Download .cpp' })).toBeTruthy()
+    expect(screen.getByRole('link', { name: 'Back to project overview' }).getAttribute('href')).toBe(
+      '/projects/cpp/first-compiled-program',
+    )
+    expect(document.title).toBe('Send one clear line | SeePoundCoffeePie')
+  })
+
+  it('explains a C++ compiler failure before offering the exact compiler text', async () => {
+    vi.mocked(runExercise).mockResolvedValueOnce({
+      version: 1,
+      runId: 'run_cpp_compile_error_123456',
+      outcome: 'compile_error',
+      stdout: '',
+      stderr: 'mission.cpp:4:48: error: expected semicolon before return',
+      exitCode: 1,
+      durationMs: 42,
+      truncated: false,
+      limit: null,
+      tests: [],
+      diagnostic: {
+        title: 'C++ expected a semicolon',
+        explanation: 'One statement does not have a clear ending yet.',
+        suggestion: 'Look at the end of the output statement and add one semicolon.',
+        line: 4,
+      },
+    })
+    window.localStorage.setItem(progressKey, JSON.stringify({
+      ...initialProgress('cpp'),
+      callsign: 'C++ Cadet',
+      onboardingComplete: true,
+      completedMissions: cppMissionIds,
+      completedProjectCheckpoints: cppCompiledProject.checkpoints.slice(0, 3).map((checkpoint) => checkpoint.id),
+    }))
+    window.history.replaceState({}, '', '/projects/cpp/first-compiled-program/project-cpp-semicolon')
+
+    render(<App />)
+
+    expect(await screen.findByRole('heading', { level: 1, name: 'Read your first compiler message' })).toBeTruthy()
+    fireEvent.click(screen.getByRole('button', { name: 'Run' }))
+
+    expect(await screen.findByText('C++ expected a semicolon')).toBeTruthy()
+    expect(screen.getByText('One statement does not have a clear ending yet.')).toBeTruthy()
+    expect(screen.getByText(/Look at the end of the output statement and add one semicolon\./u)).toBeTruthy()
+    expect(screen.getByText('Look near line 4')).toBeTruthy()
+    expect(screen.getByText("Show the language's exact message", { selector: 'summary' })).toBeTruthy()
+    expect(screen.getByLabelText('Program console').textContent).not.toContain('mission.cpp')
   })
 
   it('falls back to the project overview when a known checkpoint is not available yet', async () => {

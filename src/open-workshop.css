@@ -2302,6 +2302,13 @@ button:disabled,
   margin-block: 2rem;
 }
 
+.route-message-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.7rem;
+  margin-top: 1.25rem;
+}
+
 /* Lesson workspace */
 .lesson-overlay {
   min-height: 100dvh;
@@ -2826,6 +2833,24 @@ button:disabled,
 
 .runner-report__summary small {
   color: #9caaa5;
+}
+
+.project-run-report__guidance {
+  display: grid;
+  gap: 0.55rem;
+  padding: 0.8rem 0.9rem;
+  color: #c5d2cd;
+  border-top: 1px solid #40504b;
+  font-size: var(--text-small);
+  line-height: 1.6;
+}
+
+.project-run-report__guidance p {
+  margin: 0;
+}
+
+.project-run-report__guidance b {
+  color: #f0c9a6;
 }
 
 .runner-tests article {

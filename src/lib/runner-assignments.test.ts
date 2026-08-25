@@ -4,10 +4,11 @@ import { evaluateRunnerAssignment, findRunnerAssignment, runnerAssignmentCount }
 
 describe('server-owned runner assignments', () => {
   it('covers every authored editable exercise with real output', () => {
-    expect(runnerAssignmentCount()).toBe(58)
+    expect(runnerAssignmentCount()).toBe(68)
     expect(findRunnerAssignment('py-print')).toMatchObject({ language: 'python', expectedOutput: 'Signal online' })
     expect(findRunnerAssignment('java-galley-report')).toMatchObject({ language: 'java' })
     expect(findRunnerAssignment('project-py-final')).toMatchObject({ language: 'python', kind: 'project' })
+    expect(findRunnerAssignment('project-cpp-final')).toMatchObject({ language: 'cpp', kind: 'project' })
   })
 
   it('keeps hidden checks within requirements stated by the lesson', () => {

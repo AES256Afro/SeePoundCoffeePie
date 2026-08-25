@@ -1,4 +1,4 @@
-import { pythonInteractiveProjectManifest as pythonInteractiveProject } from '../data/python-interactive-project-manifest'
+import { projectManifests } from '../data/project-manifests'
 import type { ConceptProgress, LearnerProgress } from '../types'
 import { parseLearnerProgress } from './progress-backup'
 
@@ -25,8 +25,10 @@ export type SaveProgressResult =
   | { ok: true; record: RemoteProgressRecord }
   | { ok: false; conflicted: boolean; conflict: RemoteProgressRecord | null; message: string }
 
-const projectIds = new Set([pythonInteractiveProject.id])
-const projectCheckpointIds = new Set(pythonInteractiveProject.checkpoints.map((checkpoint) => checkpoint.id))
+const projectIds = new Set(projectManifests.map((project) => project.id))
+const projectCheckpointIds = new Set(projectManifests.flatMap((project) => (
+  project.checkpoints.map((checkpoint) => checkpoint.id)
+)))
 
 const dateValue = (value: string | null): number => value ? Date.parse(`${value}T00:00:00Z`) : 0
 

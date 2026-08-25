@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { pythonInteractiveProject } from '../data/python-interactive-project'
+import { cppCompiledProject } from '../data/cpp-compiled-project'
 import { initialProgress } from './progress'
 import {
   PROGRESS_BACKUP_FORMAT,
@@ -118,6 +119,32 @@ describe('local progress backups', () => {
     const unknownProject = JSON.parse(serializeProgressBackup(completedProgress(), exportedAt))
     unknownProject.progress.completedProjects = ['unknown-project']
     expect(parseProgressBackup(JSON.stringify(unknownProject))).toMatchObject({ ok: false })
+  })
+
+  it('round-trips C++ and Python project completion in the existing version 1 format', () => {
+    const progress = {
+      ...completedProgress(),
+      completedProjectCheckpoints: [
+        pythonInteractiveProject.checkpoints[0].id,
+        cppCompiledProject.checkpoints[0].id,
+      ],
+      completedProjects: [pythonInteractiveProject.id, cppCompiledProject.id],
+      conceptProgress: {
+        ...completedProgress().conceptProgress,
+        [cppCompiledProject.checkpoints[0].exercise.conceptId]: {
+          strength: 1,
+          correct: 1,
+          incorrect: 0,
+          dueAt: '2026-08-25',
+        },
+      },
+    }
+
+    expect(parseProgressBackup(serializeProgressBackup(progress, exportedAt))).toEqual({
+      ok: true,
+      progress,
+      exportedAt: exportedAt.toISOString(),
+    })
   })
 
   it('rejects files above the fixed backup byte limit', () => {

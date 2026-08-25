@@ -1,59 +1,9 @@
-import type { Exercise, LanguageId } from '../types'
 import { pythonInteractiveProjectManifest } from './python-interactive-project-manifest'
+import type { GuidedProject, GuidedProjectCheckpoint, ProjectTestCase } from './project-types'
 
-export type ProjectScaffoldingLevel = 'guided' | 'supported' | 'independent'
-
-export interface ProjectTerm {
-  term: string
-  meaning: string
-}
-
-export interface ProjectTestCase {
-  id: string
-  name: string
-  visibility: 'visible' | 'hidden'
-  stdin: string
-  expectedStdout: string
-  purpose: string
-}
-
-export interface ExpectedFirstRun {
-  outcome: 'runtime_error'
-  diagnosticTitle: string
-  explanation: string
-}
-
-export interface ProjectAssessmentSummary {
-  visibleTestCase: ProjectTestCase
-  hiddenTestCount: number
-  structuralCheckCount: number
-}
-
-export interface PythonProjectCheckpoint {
-  id: string
-  order: number
-  title: string
-  objective: string
-  scaffolding: ProjectScaffoldingLevel
-  newTerms: ProjectTerm[]
-  exercise: Exercise
-  practiceStdin?: string
-  requirements?: string[]
-  expectedFirstRun?: ExpectedFirstRun
-  assessmentSummary?: ProjectAssessmentSummary
-}
-
-export interface PythonInteractiveProject {
-  id: 'first-interactive-program'
-  language: LanguageId
-  title: string
-  subtitle: string
-  description: string
-  outcome: string
-  duration: string
-  route: string
-  checkpoints: PythonProjectCheckpoint[]
-}
+export type PythonProjectCheckpoint = GuidedProjectCheckpoint
+export type PythonInteractiveProject = GuidedProject
+export type { ProjectScaffoldingLevel } from './project-types'
 
 const finalProjectVisibleTestCase: ProjectTestCase = {
   id: 'final-visible-two-cups',
@@ -69,7 +19,7 @@ const finalProjectVisibleTestCase: ProjectTestCase = {
   purpose: 'Shows the learner one complete example before the official check.',
 }
 
-export const pythonInteractiveProject = {
+export const pythonInteractiveProject: PythonInteractiveProject = {
   ...pythonInteractiveProjectManifest,
   checkpoints: [
     {

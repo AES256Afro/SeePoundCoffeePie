@@ -11,7 +11,10 @@ const budgets = {
     html: { raw: 5_000, gzip: 2_000 },
   },
   total: {
-    javascript: { raw: 525_000, gzip: 145_000 },
+    // Phase 4B adds a second complete route-loaded curriculum. The initial
+    // page budget remains unchanged, and each language project is emitted as
+    // its own on-demand chunk instead of making learners download both.
+    javascript: { raw: 575_000, gzip: 160_000 },
     css: { raw: 70_000, gzip: 13_000 },
     html: { raw: 5_000, gzip: 2_000 },
   },

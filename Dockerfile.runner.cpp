@@ -12,6 +12,7 @@ RUN apt-get update \
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
         g++=4:11.2.0-1ubuntu1 \
+        clang-14=1:14.0.0-1ubuntu1.1 \
     && rm -rf /var/lib/apt/lists/*
 
 RUN useradd --uid 10001 --no-create-home --home-dir /nonexistent --shell /usr/sbin/nologin cadet \
@@ -24,4 +25,5 @@ COPY runner/supervisor.py /opt/runner/supervisor.py
 
 RUN chmod 0555 /opt/runner/supervisor.py \
     && find /opt/runner -type d -exec chmod 0555 {} + \
-    && g++ --version | head -1
+    && g++ --version | head -1 \
+    && clang++-14 --version | head -1

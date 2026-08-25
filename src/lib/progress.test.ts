@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 import { pythonInteractiveProject } from '../data/python-interactive-project'
+import { cppCompiledProject } from '../data/cpp-compiled-project'
 import {
   completeMission,
   completeProject,
@@ -113,6 +114,36 @@ describe('progress helpers', () => {
     expect(completeProjectCheckpoint(first, pythonInteractiveProject.id, 'unknown-checkpoint', now)).toBe(first)
   })
 
+  it('tracks C++ project progress independently without changing Python completion', () => {
+    const now = new Date(2026, 7, 26)
+    const cppCheckpoint = cppCompiledProject.checkpoints[0]
+    const pythonCheckpoint = pythonInteractiveProject.checkpoints[0]
+    const withPython = completeProjectCheckpoint(
+      initialProgress('cpp'),
+      pythonInteractiveProject.id,
+      pythonCheckpoint.id,
+      now,
+    )
+    const withCpp = completeProjectCheckpoint(
+      withPython,
+      cppCompiledProject.id,
+      cppCheckpoint.id,
+      now,
+    )
+    const replay = completeProjectCheckpoint(
+      withCpp,
+      cppCompiledProject.id,
+      cppCheckpoint.id,
+      now,
+    )
+
+    expect(withCpp.completedProjectCheckpoints).toEqual([pythonCheckpoint.id, cppCheckpoint.id])
+    expect(withCpp.conceptProgress[pythonCheckpoint.exercise.conceptId]).toBeDefined()
+    expect(withCpp.conceptProgress[cppCheckpoint.exercise.conceptId]).toBeDefined()
+    expect(withCpp.xp).toBe(pythonCheckpoint.exercise.xp + cppCheckpoint.exercise.xp)
+    expect(replay).toBe(withCpp)
+  })
+
   it('awards 50 shards and advances the study streak only on first project completion', () => {
     const starting = {
       ...initialProgress(),
@@ -128,6 +159,19 @@ describe('progress helpers', () => {
     expect(first.lastStudyDate).toBe('2026-08-26')
     expect(replay).toBe(first)
     expect(completeProject(starting, 'unknown-project', new Date(2026, 7, 26))).toBe(starting)
+  })
+
+  it('preserves separate Python and C++ project completion rewards', () => {
+    const now = new Date(2026, 7, 26)
+    const pythonComplete = completeProject(initialProgress(), pythonInteractiveProject.id, now)
+    const bothComplete = completeProject(pythonComplete, cppCompiledProject.id, now)
+
+    expect(bothComplete.completedProjects).toEqual([
+      pythonInteractiveProject.id,
+      cppCompiledProject.id,
+    ])
+    expect(bothComplete.starShards).toBe(100)
+    expect(completeProject(bothComplete, cppCompiledProject.id, now)).toBe(bothComplete)
   })
 
   it('migrates old browser records without project arrays to empty completion lists', () => {

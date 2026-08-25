@@ -54,7 +54,11 @@ import {
 } from 'lucide-react'
 import { codebookEntries, codebookExampleState, codebookMatches } from './data/codebook'
 import { trackById, tracks } from './data/curriculum'
-import { pythonInteractiveProjectManifest as pythonInteractiveProject } from './data/python-interactive-project-manifest'
+import {
+  projectManifestByRoute,
+  projectManifestForLanguage,
+  projectManifests,
+} from './data/project-manifests'
 import { buildCourseCards, buildCourseModel, type CourseCardModel } from './lib/course-model'
 import { orderedChoices } from './lib/choice-order'
 import { evaluateExercise } from './lib/evaluator'
@@ -599,11 +603,17 @@ function CourseCatalog({ progress }: { progress: LearnerProgress }) {
           <div><p className="eyebrow">Build something complete</p><h2 id="guided-projects-title">Guided projects</h2></div>
           <p>Start with small checkpoints, then finish with a program you can download and keep.</p>
         </div>
-        <AppLink className="guided-project-row guided-project-row--featured" to={projectPath('python', pythonInteractiveProject.id)}>
-          <LanguageSymbol language="python" />
-          <span><small>Python project studio · 12 checkpoints</small><b>{pythonInteractiveProject.title}</b><p>{pythonInteractiveProject.subtitle}</p></span>
-          <strong>Open project <ArrowRight size={16} /></strong>
-        </AppLink>
+        {projectManifests.map((project) => (
+          <AppLink
+            className="guided-project-row guided-project-row--featured"
+            key={`${project.language}-${project.id}`}
+            to={projectPath(project.language, project.id)}
+          >
+            <LanguageSymbol language={project.language} />
+            <span><small>{project.studioLabel} · {project.checkpoints.length} checkpoints</small><b>{project.title}</b><p>{project.subtitle}</p></span>
+            <strong>Open project <ArrowRight size={16} /></strong>
+          </AppLink>
+        ))}
         {tracks.map((track) => {
           const project = track.missions.at(-1)
           if (!project) return null
@@ -624,37 +634,39 @@ function LearnerHome({ progress }: { progress: LearnerProgress }) {
   const courses = buildCourseCards(progress)
   const activeCourse = buildCourseModel(trackById(progress.activeLanguage), progress)
   const reviewsDue = Object.values(progress.conceptProgress).filter((concept) => isDue(concept)).length
-  const projectReady = activeCourse.id === 'python' && activeCourse.status === 'complete'
-  const completedProjectCheckpointCount = pythonInteractiveProject.checkpoints.filter((checkpoint) => (
+  const readyProject = activeCourse.status === 'complete'
+    ? projectManifestForLanguage(activeCourse.id)
+    : undefined
+  const completedProjectCheckpointCount = readyProject?.checkpoints.filter((checkpoint) => (
     progress.completedProjectCheckpoints.includes(checkpoint.id)
-  )).length
-  const nextProjectCheckpoint = pythonInteractiveProject.checkpoints.find((checkpoint) => (
+  )).length ?? 0
+  const nextProjectCheckpoint = readyProject?.checkpoints.find((checkpoint) => (
     !progress.completedProjectCheckpoints.includes(checkpoint.id)
   ))
-  const projectComplete = progress.completedProjects.includes(pythonInteractiveProject.id)
-  const continueTo = projectReady
+  const projectComplete = readyProject ? progress.completedProjects.includes(readyProject.id) : false
+  const continueTo = readyProject
     ? completedProjectCheckpointCount > 0 && nextProjectCheckpoint && !projectComplete
-      ? projectPath('python', pythonInteractiveProject.id, nextProjectCheckpoint.id)
-      : projectPath('python', pythonInteractiveProject.id)
+      ? projectPath(readyProject.language, readyProject.id, nextProjectCheckpoint.id)
+      : projectPath(readyProject.language, readyProject.id)
     : activeCourse.currentModuleId && activeCourse.currentLessonId
       ? lessonPath(activeCourse.id, activeCourse.currentModuleId, activeCourse.currentLessonId)
       : coursePath(activeCourse.id)
-  const continueEyebrow = projectReady
+  const continueEyebrow = readyProject
     ? projectComplete ? 'Project complete' : completedProjectCheckpointCount > 0 ? 'Continue your project' : 'Your next step'
     : 'Continue learning'
-  const continueTitle = projectReady
-    ? pythonInteractiveProject.title
+  const continueTitle = readyProject
+    ? readyProject.title
     : activeCourse.currentLessonTitle ?? activeCourse.title
-  const continueDescription = projectReady
+  const continueDescription = readyProject
     ? projectComplete
-      ? 'Your Coffee Counter is complete. Reopen any checkpoint, download the program again, or explain how each piece works.'
+      ? readyProject.completionDescription
       : completedProjectCheckpointCount > 0
-        ? `${completedProjectCheckpointCount} of ${pythonInteractiveProject.checkpoints.length} checkpoints complete. Your browser saved the code for your next small step.`
-        : pythonInteractiveProject.subtitle
+        ? `${completedProjectCheckpointCount} of ${readyProject.checkpoints.length} checkpoints complete. Your browser saved the code for your next small step.`
+        : readyProject.subtitle
     : activeCourse.currentModuleTitle
       ? `${activeCourse.title}, Module ${activeCourse.modules.find((item) => item.id === activeCourse.currentModuleId)?.number}: ${activeCourse.currentModuleTitle}`
       : activeCourse.outcome
-  const continueAction = projectReady
+  const continueAction = readyProject
     ? projectComplete ? 'Review project' : completedProjectCheckpointCount > 0 ? 'Continue project' : 'Start project'
     : activeCourse.status === 'complete' ? 'Review course' : 'Continue lesson'
   const today = new Date()
@@ -724,6 +736,7 @@ function MissionPath({ progress }: { progress: LearnerProgress }) {
   const continueTo = currentModule && currentLesson
     ? lessonPath(track.id, currentModule.id, currentLesson.id)
     : coursePath(track.id)
+  const guidedProject = projectManifestForLanguage(track.id)
 
   return (
     <main className="workshop-page course-outline">
@@ -762,17 +775,17 @@ function MissionPath({ progress }: { progress: LearnerProgress }) {
           )
         })}
       </section>
-      {track.id === 'python' && (
+      {guidedProject && (
         <section className="course-project-next" aria-labelledby="course-project-next-title">
-          <LanguageSymbol language="python" size="large" />
+          <LanguageSymbol language={guidedProject.language} size="large" />
           <div>
             <p className="eyebrow">After the foundations</p>
-            <h2 id="course-project-next-title">{pythonInteractiveProject.title}</h2>
-            <p>{pythonInteractiveProject.subtitle}</p>
-            <span>{pythonInteractiveProject.checkpoints.length} checkpoints · {pythonInteractiveProject.duration} · downloadable Python file</span>
+            <h2 id="course-project-next-title">{guidedProject.title}</h2>
+            <p>{guidedProject.subtitle}</p>
+            <span>{guidedProject.checkpoints.length} checkpoints · {guidedProject.duration} · {guidedProject.downloadLabel}</span>
           </div>
-          <AppLink className="primary-action" to={projectPath('python', pythonInteractiveProject.id)}>
-            {progress.completedProjects.includes(pythonInteractiveProject.id)
+          <AppLink className="primary-action" to={projectPath(guidedProject.language, guidedProject.id)}>
+            {progress.completedProjects.includes(guidedProject.id)
               ? 'Review project'
               : course.status === 'complete' ? 'Open project' : 'Preview project'} <ArrowRight size={17} />
           </AppLink>
@@ -1759,9 +1772,10 @@ function AppContent() {
     const track = route.language ? trackById(route.language) : null
     const mission = track?.missions.find((item) => item.id === route.missionId)
     const exercise = mission?.exercises.find((item) => item.id === route.exerciseId)
-    const projectCheckpoint = route.page === 'project'
-      ? pythonInteractiveProject.checkpoints.find((item) => item.id === route.checkpointId)
+    const routeProject = route.page === 'project' && route.language && route.projectId
+      ? projectManifestByRoute(route.language, route.projectId)
       : undefined
+    const projectCheckpoint = routeProject?.checkpoints.find((item) => item.id === route.checkpointId)
     const pageTitle = route.page === 'home'
       ? 'Learning Home'
       : route.page === 'start'
@@ -1779,12 +1793,12 @@ function AppContent() {
               : route.page === 'settings'
                 ? 'Settings'
                 : route.page === 'project'
-                  ? projectCheckpoint?.title ?? pythonInteractiveProject.title
+                  ? projectCheckpoint?.title ?? routeProject?.title ?? 'Project'
                 : route.page === 'lesson'
                   ? exercise?.title ?? mission?.title
                   : 'Page not found'
     document.title = `${pageTitle ?? 'Academy'} | SeePoundCoffeePie`
-  }, [route.checkpointId, route.exerciseId, route.language, route.missionId, route.page])
+  }, [route.checkpointId, route.exerciseId, route.language, route.missionId, route.page, route.projectId])
 
   useEffect(() => {
     const handleNavigation = () => {
@@ -2198,14 +2212,13 @@ function AppContent() {
   }
 
   if (route.page === 'project') {
-    const checkpointExists = !route.checkpointId || pythonInteractiveProject.checkpoints.some((checkpoint) => (
+    const routeProject = route.language && route.projectId
+      ? projectManifestByRoute(route.language, route.projectId)
+      : undefined
+    const checkpointExists = !route.checkpointId || routeProject?.checkpoints.some((checkpoint) => (
       checkpoint.id === route.checkpointId
     ))
-    if (
-      route.language !== pythonInteractiveProject.language
-      || route.projectId !== pythonInteractiveProject.id
-      || !checkpointExists
-    ) {
+    if (!routeProject || !checkpointExists) {
       return <NotFoundPage progress={normalizedProgress} />
     }
 
@@ -2220,9 +2233,7 @@ function AppContent() {
           view={view}
           onLanguageChange={(language) => {
             setProgress((current) => ({ ...current, activeLanguage: language }))
-            navigateTo(language === 'python'
-              ? projectPath('python', pythonInteractiveProject.id)
-              : coursePath(language))
+            navigateTo(coursePath(language))
           }}
           onSignIn={signIn}
         >
@@ -2237,9 +2248,11 @@ function AppContent() {
           )}>
             <ProjectStudio
               checkpointId={route.checkpointId}
+              language={routeProject.language}
               onNavigate={navigateTo}
               onProgress={updateProgress}
               progress={normalizedProgress}
+              projectId={routeProject.id}
             />
           </Suspense>
         </AppShell>

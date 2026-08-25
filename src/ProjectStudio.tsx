@@ -27,10 +27,8 @@ import {
   type KeyboardEvent as ReactKeyboardEvent,
   type MouseEvent as ReactMouseEvent,
 } from 'react'
-import {
-  pythonInteractiveProject,
-  type PythonProjectCheckpoint,
-} from './data/python-interactive-project'
+import { loadGuidedProject } from './data/project-registry'
+import type { GuidedProject, GuidedProjectCheckpoint } from './data/project-types'
 import { trackById } from './data/curriculum'
 import { orderedChoices } from './lib/choice-order'
 import { evaluateExercise } from './lib/evaluator'
@@ -53,12 +51,19 @@ import { coursePath, projectPath } from './lib/routes'
 import { runExercise, type RunnerClientStatus } from './lib/runner-client'
 import type { RunnerResult } from './lib/runner-contract'
 import type { EvaluationResult, LearnerProgress } from './types'
+import type { LanguageId } from './types'
 
 interface ProjectStudioProps {
   checkpointId?: string
+  language: LanguageId
   onNavigate: (path: string) => void
   onProgress: (progress: LearnerProgress) => void
   progress: LearnerProgress
+  projectId: string
+}
+
+interface ProjectContentProps extends Omit<ProjectStudioProps, 'checkpointId' | 'language' | 'projectId'> {
+  project: GuidedProject
 }
 
 interface StudioLinkProps extends AnchorHTMLAttributes<HTMLAnchorElement> {
@@ -84,62 +89,65 @@ function StudioLink({ children, onClick, onNavigate, target, to, ...props }: Stu
   return <a {...props} href={to} onClick={follow} target={target}>{children}</a>
 }
 
-function projectUnlocked(progress: LearnerProgress): boolean {
-  return trackById('python').missions.every((mission) => progress.completedMissions.includes(mission.id))
+function projectUnlocked(progress: LearnerProgress, project: GuidedProject): boolean {
+  return trackById(project.language).missions.every((mission) => progress.completedMissions.includes(mission.id))
 }
 
 function checkpointAvailable(
-  checkpoint: PythonProjectCheckpoint,
+  project: GuidedProject,
+  checkpoint: GuidedProjectCheckpoint,
   completedCheckpointIds: string[],
 ): boolean {
   if (checkpoint.order === 1) return true
-  const previous = pythonInteractiveProject.checkpoints[checkpoint.order - 2]
+  const previous = project.checkpoints[checkpoint.order - 2]
   return Boolean(previous && completedCheckpointIds.includes(previous.id))
 }
 
-function nextProjectCheckpoint(progress: LearnerProgress): PythonProjectCheckpoint {
-  return pythonInteractiveProject.checkpoints.find((checkpoint) => (
+function nextProjectCheckpoint(project: GuidedProject, progress: LearnerProgress): GuidedProjectCheckpoint {
+  return project.checkpoints.find((checkpoint) => (
     !progress.completedProjectCheckpoints.includes(checkpoint.id)
-  )) ?? pythonInteractiveProject.checkpoints[0]
+  )) ?? project.checkpoints[0]
 }
 
-function downloadSource(source: string) {
-  const url = URL.createObjectURL(new Blob([`${source.trimEnd()}\n`], { type: 'text/x-python;charset=utf-8' }))
+function downloadSource(project: GuidedProject, source: string) {
+  const type = project.language === 'cpp' ? 'text/x-c++src;charset=utf-8' : 'text/x-python;charset=utf-8'
+  const url = URL.createObjectURL(new Blob([`${source.trimEnd()}\n`], { type }))
   const link = document.createElement('a')
   link.href = url
-  link.download = 'coffee-counter.py'
+  link.download = project.downloadFileName
   document.body.append(link)
   link.click()
   link.remove()
   window.setTimeout(() => URL.revokeObjectURL(url), 0)
 }
 
-function ProjectOverview({ onNavigate, progress }: Pick<ProjectStudioProps, 'onNavigate' | 'progress'>) {
-  const unlocked = projectUnlocked(progress)
-  const completedCount = pythonInteractiveProject.checkpoints.filter((checkpoint) => (
+function ProjectOverview({ onNavigate, progress, project }: Pick<ProjectContentProps, 'onNavigate' | 'progress' | 'project'>) {
+  const unlocked = projectUnlocked(progress, project)
+  const completedCount = project.checkpoints.filter((checkpoint) => (
     progress.completedProjectCheckpoints.includes(checkpoint.id)
   )).length
-  const completed = progress.completedProjects.includes(pythonInteractiveProject.id)
-  const nextCheckpoint = nextProjectCheckpoint(progress)
-  const finalDraft = loadProjectDraft(pythonInteractiveProject.id, 'project-py-final')
-  const percent = Math.round((completedCount / pythonInteractiveProject.checkpoints.length) * 100)
+  const completed = progress.completedProjects.includes(project.id)
+  const nextCheckpoint = nextProjectCheckpoint(project, progress)
+  const finalCheckpoint = project.checkpoints.at(-1)
+  const finalDraft = finalCheckpoint ? loadProjectDraft(project.id, finalCheckpoint.id) : null
+  const percent = Math.round((completedCount / project.checkpoints.length) * 100)
 
   return (
     <main className="project-overview workshop-page">
-      <StudioLink className="back-link" onNavigate={onNavigate} to={coursePath('python')}>
-        <ArrowLeft size={16} /> Python Foundations
+      <StudioLink className="back-link" onNavigate={onNavigate} to={coursePath(project.language)}>
+        <ArrowLeft size={16} /> {trackById(project.language).shortName} Foundations
       </StudioLink>
 
       <header className="project-overview__hero">
-        <div className="project-overview__mark"><Code2 aria-hidden="true" /></div>
+        <div className="project-overview__mark">{project.language === 'cpp' ? <Eye aria-hidden="true" /> : <Code2 aria-hidden="true" />}</div>
         <div>
-          <p className="eyebrow">Python project studio</p>
-          <h1>{pythonInteractiveProject.title}</h1>
-          <p>{pythonInteractiveProject.subtitle}</p>
+          <p className="eyebrow">{project.studioLabel}</p>
+          <h1>{project.title}</h1>
+          <p>{project.subtitle}</p>
           <div className="project-overview__facts">
-            <span><Clock3 size={15} /> {pythonInteractiveProject.duration}</span>
-            <span><BookOpen size={15} /> {pythonInteractiveProject.checkpoints.length} checkpoints</span>
-            <span><Eye size={15} /> Source stays in this browser</span>
+            <span><Clock3 size={15} /> {project.duration}</span>
+            <span><BookOpen size={15} /> {project.checkpoints.length} checkpoints</span>
+            <span><Eye size={15} /> {project.sourcePrivacyLabel}</span>
           </div>
         </div>
         <div className="project-overview__action">
@@ -149,7 +157,7 @@ function ProjectOverview({ onNavigate, progress }: Pick<ProjectStudioProps, 'onN
             aria-valuemax={100}
             aria-valuemin={0}
             aria-valuenow={percent}
-            aria-valuetext={`${completedCount} of ${pythonInteractiveProject.checkpoints.length} checkpoints complete`}
+            aria-valuetext={`${completedCount} of ${project.checkpoints.length} checkpoints complete`}
             role="progressbar"
           >
             <i style={{ width: `${percent}%` }} />
@@ -158,17 +166,17 @@ function ProjectOverview({ onNavigate, progress }: Pick<ProjectStudioProps, 'onN
             <StudioLink
               className="primary-action"
               onNavigate={onNavigate}
-              to={projectPath('python', pythonInteractiveProject.id, nextCheckpoint.id)}
+              to={projectPath(project.language, project.id, nextCheckpoint.id)}
             >
               {completedCount > 0 ? 'Continue project' : 'Start project'} <ArrowRight size={17} />
             </StudioLink>
           ) : (
-            <StudioLink className="primary-action" onNavigate={onNavigate} to={coursePath('python')}>
-              Continue Python Foundations <ArrowRight size={17} />
+            <StudioLink className="primary-action" onNavigate={onNavigate} to={coursePath(project.language)}>
+              Continue {trackById(project.language).shortName} Foundations <ArrowRight size={17} />
             </StudioLink>
           )}
           {completed && finalDraft && (
-            <button className="secondary-action" onClick={() => downloadSource(finalDraft)} type="button">
+            <button className="secondary-action" onClick={() => downloadSource(project, finalDraft)} type="button">
               <Download size={16} /> Download your program
             </button>
           )}
@@ -180,8 +188,8 @@ function ProjectOverview({ onNavigate, progress }: Pick<ProjectStudioProps, 'onN
           <LockKeyhole aria-hidden="true" />
           <div>
             <p className="eyebrow">One foundation first</p>
-            <h2 id="project-prerequisite-title">Finish Python Foundations, then build without training wheels.</h2>
-            <p>You can preview every checkpoint below now. The editor unlocks after the six foundation modules introduce the code this project expects you to recognize.</p>
+            <h2 id="project-prerequisite-title">{project.prerequisiteTitle}</h2>
+            <p>{project.prerequisiteDescription}</p>
           </div>
         </section>
       )}
@@ -189,13 +197,12 @@ function ProjectOverview({ onNavigate, progress }: Pick<ProjectStudioProps, 'onN
       <div className="project-overview__body">
         <section aria-labelledby="project-outcome-title" className="project-outcome">
           <p className="eyebrow">What you will make</p>
-          <h2 id="project-outcome-title">A coffee counter that listens and calculates</h2>
-          <p>{pythonInteractiveProject.description}</p>
+          <h2 id="project-outcome-title">{project.overviewTitle}</h2>
+          <p>{project.description}</p>
           <ol>
-            <li><b>Ask</b><span>Collect a customer name and cup count with input.</span></li>
-            <li><b>Remember</b><span>Store those answers in clearly named variables.</span></li>
-            <li><b>Calculate</b><span>Convert the count and multiply it by the price.</span></li>
-            <li><b>Reply</b><span>Build a personal receipt with an f-string.</span></li>
+            {project.overviewSteps.map((step) => (
+              <li key={step.title}><b>{step.title}</b><span>{step.description}</span></li>
+            ))}
           </ol>
         </section>
 
@@ -205,9 +212,9 @@ function ProjectOverview({ onNavigate, progress }: Pick<ProjectStudioProps, 'onN
             <p>Each checkpoint introduces its words before asking you to use them.</p>
           </div>
           <ol>
-            {pythonInteractiveProject.checkpoints.map((checkpoint) => {
+            {project.checkpoints.map((checkpoint) => {
               const done = progress.completedProjectCheckpoints.includes(checkpoint.id)
-              const available = unlocked && checkpointAvailable(checkpoint, progress.completedProjectCheckpoints)
+              const available = unlocked && checkpointAvailable(project, checkpoint, progress.completedProjectCheckpoints)
               const body = (
                 <>
                   <span className="project-checkpoint-list__number" aria-hidden="true">
@@ -220,7 +227,7 @@ function ProjectOverview({ onNavigate, progress }: Pick<ProjectStudioProps, 'onN
               return (
                 <li className={done ? 'is-complete' : ''} key={checkpoint.id}>
                   {available ? (
-                    <StudioLink onNavigate={onNavigate} to={projectPath('python', pythonInteractiveProject.id, checkpoint.id)}>
+                    <StudioLink onNavigate={onNavigate} to={projectPath(project.language, project.id, checkpoint.id)}>
                       {body}
                     </StudioLink>
                   ) : <div>{body}</div>}
@@ -234,16 +241,16 @@ function ProjectOverview({ onNavigate, progress }: Pick<ProjectStudioProps, 'onN
   )
 }
 
-interface CheckpointWorkspaceProps extends ProjectStudioProps {
-  checkpoint: PythonProjectCheckpoint
+interface CheckpointWorkspaceProps extends ProjectContentProps {
+  checkpoint: GuidedProjectCheckpoint
 }
 
-function CheckpointWorkspace({ checkpoint, onNavigate, onProgress, progress }: CheckpointWorkspaceProps) {
+function CheckpointWorkspace({ checkpoint, onNavigate, onProgress, progress, project }: CheckpointWorkspaceProps) {
   const exercise = checkpoint.exercise
   const editable = exercise.type === 'code' || exercise.type === 'bugfix'
   const choices = useMemo(() => orderedChoices(exercise), [exercise])
   const initialAnswer = editable
-    ? loadProjectDraft(pythonInteractiveProject.id, checkpoint.id) ?? exercise.starterCode ?? ''
+    ? loadProjectDraft(project.id, checkpoint.id) ?? exercise.starterCode ?? ''
     : ''
   const [answer, setAnswer] = useState(initialAnswer)
   const [practiceInput, setPracticeInput] = useState(checkpoint.practiceStdin ?? '')
@@ -253,13 +260,13 @@ function CheckpointWorkspace({ checkpoint, onNavigate, onProgress, progress }: C
   const [runnerBusy, setRunnerBusy] = useState(false)
   const [runnerPurpose, setRunnerPurpose] = useState<'run' | 'check' | null>(null)
   const [runnerAnnouncement, setRunnerAnnouncement] = useState('')
-  const [history, setHistory] = useState<ProjectCheckSummary[]>(() => loadProjectHistory(pythonInteractiveProject.id))
+  const [history, setHistory] = useState<ProjectCheckSummary[]>(() => loadProjectHistory(project.id))
   const failedRecorded = useRef(false)
   const stepperRef = useRef<HTMLElement>(null)
   const alreadyComplete = progress.completedProjectCheckpoints.includes(checkpoint.id)
-  const finalCheckpoint = checkpoint.order === pythonInteractiveProject.checkpoints.length
-  const nextCheckpoint = pythonInteractiveProject.checkpoints[checkpoint.order]
-  const percent = Math.round((checkpoint.order / pythonInteractiveProject.checkpoints.length) * 100)
+  const finalCheckpoint = checkpoint.order === project.checkpoints.length
+  const nextCheckpoint = project.checkpoints[checkpoint.order]
+  const percent = Math.round((checkpoint.order / project.checkpoints.length) * 100)
 
   useEffect(() => {
     const currentStep = stepperRef.current?.querySelector<HTMLElement>('[aria-current="step"]')
@@ -270,7 +277,7 @@ function CheckpointWorkspace({ checkpoint, onNavigate, onProgress, progress }: C
 
   const updateAnswer = (value: string) => {
     setAnswer(value)
-    if (editable) saveProjectDraft(pythonInteractiveProject.id, checkpoint.id, value)
+    if (editable) saveProjectDraft(project.id, checkpoint.id, value)
     if (feedback && !feedback.correct) setFeedback(null)
     setRunnerResult(null)
     setRunnerPurpose(null)
@@ -284,8 +291,8 @@ function CheckpointWorkspace({ checkpoint, onNavigate, onProgress, progress }: C
   }
 
   const awardCheckpoint = () => {
-    let next = completeProjectCheckpoint(progress, pythonInteractiveProject.id, checkpoint.id)
-    if (finalCheckpoint) next = completeProject(next, pythonInteractiveProject.id)
+    let next = completeProjectCheckpoint(progress, project.id, checkpoint.id)
+    if (finalCheckpoint) next = completeProject(next, project.id)
     onProgress(next)
   }
 
@@ -313,7 +320,7 @@ function CheckpointWorkspace({ checkpoint, onNavigate, onProgress, progress }: C
     try {
       const result = await runExercise(
         exercise.id,
-        'python',
+        project.language,
         answer,
         setRunnerStatus,
         { purpose: 'check' },
@@ -330,8 +337,8 @@ function CheckpointWorkspace({ checkpoint, onNavigate, onProgress, progress }: C
         totalChecks: Math.max(1, result.tests.length),
       }
       if (result.outcome !== 'system_error') {
-        recordProjectCheck(pythonInteractiveProject.id, summary)
-        setHistory(loadProjectHistory(pythonInteractiveProject.id))
+        recordProjectCheck(project.id, summary)
+        setHistory(loadProjectHistory(project.id))
       }
       const failedCheck = result.tests.find((test) => !test.passed)
       setFeedback({
@@ -375,7 +382,7 @@ function CheckpointWorkspace({ checkpoint, onNavigate, onProgress, progress }: C
     try {
       const result = await runExercise(
         exercise.id,
-        'python',
+        project.language,
         answer,
         setRunnerStatus,
         { purpose: 'run', stdin: practiceInput },
@@ -399,7 +406,7 @@ function CheckpointWorkspace({ checkpoint, onNavigate, onProgress, progress }: C
   const resetDraft = () => {
     if (runnerBusy) return
     if (!window.confirm('Reset only this checkpoint to its starting code? Other project drafts and completed checkpoints will stay unchanged.')) return
-    resetProjectDraft(pythonInteractiveProject.id, checkpoint.id)
+    resetProjectDraft(project.id, checkpoint.id)
     setAnswer(exercise.starterCode ?? '')
     setFeedback(null)
     setRunnerResult(null)
@@ -408,10 +415,10 @@ function CheckpointWorkspace({ checkpoint, onNavigate, onProgress, progress }: C
 
   const continueProject = () => {
     if (nextCheckpoint) {
-      onNavigate(projectPath('python', pythonInteractiveProject.id, nextCheckpoint.id))
+      onNavigate(projectPath(project.language, project.id, nextCheckpoint.id))
       return
     }
-    onNavigate(projectPath('python', pythonInteractiveProject.id))
+    onNavigate(projectPath(project.language, project.id))
   }
 
   const handleEditorKeyDown = (event: ReactKeyboardEvent<HTMLTextAreaElement>) => {
@@ -423,32 +430,32 @@ function CheckpointWorkspace({ checkpoint, onNavigate, onProgress, progress }: C
   return (
     <main className="project-workspace">
       <header className="project-workspace__header">
-        <StudioLink aria-label="Back to project overview" className="icon-button" onNavigate={onNavigate} to={projectPath('python', pythonInteractiveProject.id)}>
+        <StudioLink aria-label="Back to project overview" className="icon-button" onNavigate={onNavigate} to={projectPath(project.language, project.id)}>
           <ArrowLeft />
         </StudioLink>
         <div>
-          <small>Python project studio</small>
-          <b>{pythonInteractiveProject.title}</b>
+          <small>{project.studioLabel}</small>
+          <b>{project.title}</b>
         </div>
         <span
           aria-label="Checkpoint progress"
           aria-valuemax={100}
           aria-valuemin={0}
           aria-valuenow={percent}
-          aria-valuetext={`Checkpoint ${checkpoint.order} of ${pythonInteractiveProject.checkpoints.length}`}
+          aria-valuetext={`Checkpoint ${checkpoint.order} of ${project.checkpoints.length}`}
           className="project-workspace__progress"
           role="progressbar"
         >
           <i style={{ width: `${percent}%` }} />
         </span>
-        <strong>{checkpoint.order} / {pythonInteractiveProject.checkpoints.length}</strong>
+        <strong>{checkpoint.order} / {project.checkpoints.length}</strong>
         <span><Zap size={15} /> {checkpoint.exercise.xp} XP</span>
       </header>
 
       <nav aria-label="Project checkpoints" className="project-stepper" ref={stepperRef}>
-        {pythonInteractiveProject.checkpoints.map((step) => {
+        {project.checkpoints.map((step) => {
           const done = progress.completedProjectCheckpoints.includes(step.id)
-          const available = checkpointAvailable(step, progress.completedProjectCheckpoints) || done
+          const available = checkpointAvailable(project, step, progress.completedProjectCheckpoints) || done
           return available ? (
             <StudioLink
               aria-current={step.id === checkpoint.id ? 'step' : undefined}
@@ -456,7 +463,7 @@ function CheckpointWorkspace({ checkpoint, onNavigate, onProgress, progress }: C
               className={`${step.id === checkpoint.id ? 'is-current' : ''} ${done ? 'is-complete' : ''}`}
               key={step.id}
               onNavigate={onNavigate}
-              to={projectPath('python', pythonInteractiveProject.id, step.id)}
+              to={projectPath(project.language, project.id, step.id)}
             >
               {done ? <Check size={13} /> : step.order}
             </StudioLink>
@@ -548,7 +555,7 @@ function CheckpointWorkspace({ checkpoint, onNavigate, onProgress, progress }: C
               </div>
 
               <div aria-busy={runnerBusy} className="project-code-workspace">
-                <div className="project-editor-bar"><span><Code2 size={15} /> coffee_counter.py</span><small>Saved in this browser</small></div>
+                <div className="project-editor-bar"><span><Code2 size={15} /> {project.downloadFileName}</span><small>Saved in this browser</small></div>
                 <textarea
                   aria-keyshortcuts="Control+Enter Meta+Enter"
                   aria-label="Project code editor"
@@ -580,9 +587,32 @@ function CheckpointWorkspace({ checkpoint, onNavigate, onProgress, progress }: C
                   <pre>{runnerBusy
                     ? runnerStatus === 'running' ? 'Running inside a fresh isolated sandbox...' : 'Preparing a fresh isolated sandbox...'
                     : runnerResult
-                      ? runnerResult.stdout || runnerResult.stderr || '(The program finished without displaying text.)'
+                      ? runnerResult.stdout
+                        || (runnerResult.outcome === 'completed'
+                          ? '(The program finished without displaying text.)'
+                          : 'The program stopped before it produced ordinary console output. Read the friendly explanation below.')
                       : 'Nothing has run yet. Use Run to experiment, or Check checkpoint when you are ready.'}</pre>
                 </section>
+                {runnerResult && runnerResult.outcome !== 'completed' && (
+                  <section aria-label="Friendly language diagnostic" className="runner-report project-run-report">
+                    <div className="runner-report__summary">
+                      <span className="is-alert">{runnerResult.diagnostic.title}</span>
+                      <small>{runnerResult.diagnostic.line
+                        ? `Look near line ${runnerResult.diagnostic.line}`
+                        : `${runnerResult.durationMs} ms in a fresh sandbox`}</small>
+                    </div>
+                    <div className="project-run-report__guidance">
+                      <p>{runnerResult.diagnostic.explanation}</p>
+                      <p><b>Try next:</b> {runnerResult.diagnostic.suggestion}</p>
+                    </div>
+                    {runnerResult.stderr && (
+                      <details>
+                        <summary>Show the language's exact message</summary>
+                        <pre>{runnerResult.stderr}</pre>
+                      </details>
+                    )}
+                  </section>
+                )}
               </div>
 
               <div className="project-run-actions">
@@ -592,8 +622,8 @@ function CheckpointWorkspace({ checkpoint, onNavigate, onProgress, progress }: C
                 <button aria-disabled={runnerBusy} className="secondary-action" onClick={resetDraft} type="button">
                   <RefreshCw size={16} /> Reset checkpoint
                 </button>
-                <button className="secondary-action" disabled={!answer.trim()} onClick={() => downloadSource(answer)} type="button">
-                  <Download size={16} /> Download .py
+                <button className="secondary-action" disabled={!answer.trim()} onClick={() => downloadSource(project, answer)} type="button">
+                  <Download size={16} /> Download {project.downloadFileName.slice(project.downloadFileName.lastIndexOf('.'))}
                 </button>
               </div>
             </>
@@ -646,7 +676,7 @@ function CheckpointWorkspace({ checkpoint, onNavigate, onProgress, progress }: C
               <ol>
                 {history.slice(0, 5).map((entry, index) => (
                   <li key={`${entry.checkedAt}-${entry.checkpointId}-${index}`}>
-                    <span>{entry.passed ? <Check size={14} /> : <Circle size={14} />}{entry.checkpointId.replace('project-py-', '')}</span>
+                    <span>{entry.passed ? <Check size={14} /> : <Circle size={14} />}{entry.checkpointId.replace(/^project-(?:py|cpp)-/u, '')}</span>
                     <b>{entry.passedChecks} / {entry.totalChecks}</b>
                     <time dateTime={entry.checkedAt}>{new Date(entry.checkedAt).toLocaleString()}</time>
                   </li>
@@ -660,7 +690,29 @@ function CheckpointWorkspace({ checkpoint, onNavigate, onProgress, progress }: C
   )
 }
 
-export function ProjectStudio({ checkpointId, onNavigate, onProgress, progress }: ProjectStudioProps) {
+export function ProjectStudio({ checkpointId, language, onNavigate, onProgress, progress, projectId }: ProjectStudioProps) {
+  const projectKey = `${language}:${projectId}`
+  const [loadedProject, setLoadedProject] = useState<{
+    failed: boolean
+    key: string
+    project: GuidedProject | null
+  } | null>(null)
+  const [loadAttempt, setLoadAttempt] = useState(0)
+  const project = loadedProject?.key === projectKey ? loadedProject.project : null
+  const loadFailed = loadedProject?.key === projectKey && loadedProject.failed
+
+  useEffect(() => {
+    let current = true
+    void loadGuidedProject(language, projectId).then((loaded) => {
+      if (current) setLoadedProject({ failed: false, key: `${language}:${projectId}`, project: loaded ?? null })
+    }).catch(() => {
+      if (current) setLoadedProject({ failed: true, key: `${language}:${projectId}`, project: null })
+    })
+    return () => {
+      current = false
+    }
+  }, [language, loadAttempt, projectId])
+
   useEffect(() => {
     const timer = window.setTimeout(() => {
       const heading = document.getElementById('main-content')?.querySelector<HTMLElement>('h1')
@@ -669,24 +721,55 @@ export function ProjectStudio({ checkpointId, onNavigate, onProgress, progress }
       heading.focus({ preventScroll: true })
     }, 0)
     return () => window.clearTimeout(timer)
-  }, [checkpointId])
+  }, [checkpointId, project])
 
-  if (!checkpointId) return <ProjectOverview onNavigate={onNavigate} progress={progress} />
-  const checkpoint = pythonInteractiveProject.checkpoints.find((item) => item.id === checkpointId)
+  if (loadFailed) {
+    return (
+      <main className="content-page">
+        <section className="route-message-card route-message-card--inside" role="alert">
+          <p className="kicker"><CircleHelp size={15} /> Project studio</p>
+          <h1>The project notes did not finish loading</h1>
+          <p>Your saved progress and code are still in this browser. Check the connection, then try opening the project again.</p>
+          <div className="route-message-actions">
+            <button className="primary-action" onClick={() => setLoadAttempt((attempt) => attempt + 1)} type="button">
+              Try again <RefreshCw size={16} />
+            </button>
+            <StudioLink className="secondary-action" onNavigate={onNavigate} to={coursePath(language)}>
+              Back to {trackById(language).shortName} Foundations
+            </StudioLink>
+          </div>
+        </section>
+      </main>
+    )
+  }
+
+  if (!project) {
+    return (
+      <main aria-busy="true" className="content-page">
+        <section className="route-message-card route-message-card--inside">
+          <p className="kicker"><Code2 size={15} /> Project studio</p>
+          <h1>Opening your project</h1>
+          <p>Loading the lesson notes, editor, and your browser-saved draft.</p>
+        </section>
+      </main>
+    )
+  }
+  if (!checkpointId) return <ProjectOverview onNavigate={onNavigate} progress={progress} project={project} />
+  const checkpoint = project.checkpoints.find((item) => item.id === checkpointId)
   if (!checkpoint) return null
-  const unlocked = projectUnlocked(progress)
-  const available = checkpointAvailable(checkpoint, progress.completedProjectCheckpoints)
+  const unlocked = projectUnlocked(progress, project)
+  const available = checkpointAvailable(project, checkpoint, progress.completedProjectCheckpoints)
     || progress.completedProjectCheckpoints.includes(checkpoint.id)
 
-  if (!unlocked || !available) return <ProjectOverview onNavigate={onNavigate} progress={progress} />
+  if (!unlocked || !available) return <ProjectOverview onNavigate={onNavigate} progress={progress} project={project} />
   return (
     <CheckpointWorkspace
       checkpoint={checkpoint}
-      checkpointId={checkpointId}
       key={checkpoint.id}
       onNavigate={onNavigate}
       onProgress={onProgress}
       progress={progress}
+      project={project}
     />
   )
 }

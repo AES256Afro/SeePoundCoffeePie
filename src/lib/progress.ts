@@ -1,9 +1,11 @@
-import { pythonInteractiveProjectManifest as pythonInteractiveProject } from '../data/python-interactive-project-manifest'
+import { projectManifests } from '../data/project-manifests'
 import type { ConceptProgress, LanguageId, LearnerProgress } from '../types'
 
 const REVIEW_INTERVALS = [0, 1, 3, 7, 14, 30]
-const projectCheckpointIds = new Set(pythonInteractiveProject.checkpoints.map((checkpoint) => checkpoint.id))
-const projectIds: ReadonlySet<string> = new Set([pythonInteractiveProject.id])
+const projectCheckpointIds = new Set(projectManifests.flatMap((project) => (
+  project.checkpoints.map((checkpoint) => checkpoint.id)
+)))
+const projectIds: ReadonlySet<string> = new Set(projectManifests.map((project) => project.id))
 
 function knownIds(value: unknown, allowed: ReadonlySet<string>): string[] {
   if (!Array.isArray(value)) return []
@@ -124,8 +126,8 @@ export function completeProjectCheckpoint(
   checkpointId: string,
   now = new Date(),
 ): LearnerProgress {
-  if (projectId !== pythonInteractiveProject.id) return current
-  const checkpoint = pythonInteractiveProject.checkpoints.find((candidate) => candidate.id === checkpointId)
+  const project = projectManifests.find((candidate) => candidate.id === projectId)
+  const checkpoint = project?.checkpoints.find((candidate) => candidate.id === checkpointId)
   const completedCheckpoints = knownIds(current.completedProjectCheckpoints, projectCheckpointIds)
   if (!checkpoint || completedCheckpoints.includes(checkpointId)) return current
 

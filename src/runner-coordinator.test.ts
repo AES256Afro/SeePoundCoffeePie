@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { cppCompiledProjectServerAssessment } from './data/cpp-compiled-project.server'
 import { pythonInteractiveProjectServerAssessment } from './data/python-interactive-project.server'
-import type { PythonAnalysis } from './lib/runner-assignments'
+import type { CppAnalysis, PythonAnalysis } from './lib/runner-assignments'
 import type { RunnerPurpose, RunnerResult } from './lib/runner-contract'
 
 const sandboxMocks = vi.hoisted(() => ({
@@ -19,7 +20,7 @@ interface TestQueuedRun {
   ownerId: string
   ipHash: string
   exerciseId: string
-  language: 'python'
+  language: 'python' | 'cpp'
   source: string
   stdin: string
   purpose: RunnerPurpose
@@ -55,6 +56,7 @@ function supervisorResult(
   stderr = '',
   durationMs = 5,
   pythonAnalysis: unknown = emptyPythonAnalysis(),
+  cppAnalysis: unknown = undefined,
 ) {
   return JSON.stringify({
     outcome,
@@ -65,6 +67,7 @@ function supervisorResult(
     truncated: false,
     limit: null,
     ...(pythonAnalysis === null ? {} : { python_analysis: pythonAnalysis }),
+    ...(cppAnalysis === undefined ? {} : { cpp_analysis: cppAnalysis }),
   })
 }
 
@@ -94,6 +97,65 @@ function referencePythonAnalysis(): PythonAnalysis {
   }
 }
 
+function emptyCppAnalysis(): CppAnalysis {
+  return {
+    version: 1,
+    analyzed: false,
+    parsed: false,
+    straight_line: false,
+    headers: [],
+    main_signature: false,
+    returns_zero: false,
+    declarations: [],
+    inputs: [],
+    cout_chains: [],
+  }
+}
+
+function referenceCppAnalysis(): CppAnalysis {
+  return {
+    version: 1,
+    analyzed: true,
+    parsed: true,
+    straight_line: true,
+    headers: ['iostream', 'string'],
+    main_signature: true,
+    returns_zero: true,
+    declarations: [
+      { target: 'points_per_detail', occurrence: 1, statement: 1, kind: 'integer', value: 5 },
+      { target: 'observer_name', occurrence: 1, statement: 4, kind: 'string' },
+      { target: 'details', occurrence: 1, statement: 7, kind: 'integer', value: 0 },
+      {
+        target: 'focus_points',
+        occurrence: 1,
+        statement: 9,
+        kind: 'multiply_names',
+        names: ['details', 'points_per_detail'],
+      },
+    ],
+    inputs: [
+      { occurrence: 1, statement: 5, kind: 'getline_cin', target: 'observer_name' },
+      { occurrence: 2, statement: 8, kind: 'cin_extract', target: 'details' },
+    ],
+    cout_chains: [
+      { occurrence: 1, statement: 2, fields: [] },
+      { occurrence: 2, statement: 3, fields: [] },
+      { occurrence: 3, statement: 6, fields: [] },
+      { occurrence: 4, statement: 10, fields: ['observer_name', 'details', 'focus_points'] },
+    ],
+  }
+}
+
+function cppSupervisorResult(
+  outcome: RunnerResult['outcome'],
+  stdout: string,
+  cppAnalysis: unknown,
+  stderr = '',
+  durationMs = 5,
+) {
+  return supervisorResult(outcome, stdout, stderr, durationMs, null, cppAnalysis)
+}
+
 function queuedRun(source: string, purpose: RunnerPurpose, stdin = ''): TestQueuedRun {
   return {
     id: 'projectrunnercase000000000001',
@@ -108,6 +170,15 @@ function queuedRun(source: string, purpose: RunnerPurpose, stdin = ''): TestQueu
     createdAt: 1,
     startedAt: 2,
     attempts: 1,
+  }
+}
+
+function queuedCppRun(source: string, purpose: RunnerPurpose, stdin = ''): TestQueuedRun {
+  return {
+    ...queuedRun(source, purpose, stdin),
+    id: 'cppprojectrunnercase00000000001',
+    exerciseId: 'project-cpp-final',
+    language: 'cpp',
   }
 }
 
@@ -345,5 +416,220 @@ describe('project multi-case sandbox execution', () => {
     expect(result.tests).toHaveLength(10)
     expect(result.tests.every((test) => !test.passed)).toBe(true)
     expect(JSON.stringify(result)).not.toContain('python_analysis')
+  })
+})
+
+describe('trusted C++ project analysis coordination', () => {
+  it('requests analysis only for the first official case and passes all twelve checks', async () => {
+    const storage = new MemoryStorage()
+    const files = new Map<string, string>()
+    const sandbox = {
+      writeFile: vi.fn(async (path: string, value: string) => {
+        files.set(path, value)
+      }),
+      exec: vi.fn(async (command: string) => {
+        const stdin = files.get('/workspace/stdin.txt') ?? ''
+        const testCase = cppCompiledProjectServerAssessment.testCases.find((candidate) => (
+          candidate.stdin === stdin
+        ))
+        const analysis = command.endsWith(' --project-analysis')
+          ? referenceCppAnalysis()
+          : emptyCppAnalysis()
+        return {
+          success: true,
+          stdout: cppSupervisorResult(
+            'completed',
+            testCase?.expectedStdout ?? 'wrong case',
+            analysis,
+          ),
+        }
+      }),
+      destroy: vi.fn(async () => undefined),
+    }
+    sandboxMocks.getSandbox.mockReturnValue(sandbox)
+    const record = queuedCppRun(cppCompiledProjectServerAssessment.referenceSolution, 'check')
+
+    await coordinatorWith(storage).execute(record)
+
+    expect(sandbox.exec.mock.calls.map(([command]) => command)).toEqual([
+      '/opt/runner/supervisor.py cpp --project-analysis',
+      '/opt/runner/supervisor.py cpp',
+      '/opt/runner/supervisor.py cpp',
+      '/opt/runner/supervisor.py cpp',
+    ])
+    expect(sandboxMocks.getSandbox).toHaveBeenCalledTimes(4)
+    expect(sandbox.destroy).toHaveBeenCalledTimes(4)
+    const result = storedResult(storage, record.id)
+    expect(result.outcome).toBe('completed')
+    expect(result.tests).toHaveLength(12)
+    expect(result.tests.every((test) => test.passed)).toBe(true)
+    expect(result.stdout).toBe(cppCompiledProjectServerAssessment.testCases[0].expectedStdout)
+    const serialized = JSON.stringify(result)
+    expect(serialized).not.toContain('cpp_analysis')
+    expect(serialized).not.toContain('cout_chains')
+    expect(serialized).not.toMatch(/Morgan|Riley|Sam Lee|35 focus points/u)
+  })
+
+  it('uses the non-analyzed envelope for an ordinary C++ practice run', async () => {
+    const storage = new MemoryStorage()
+    const sandbox = {
+      writeFile: vi.fn(async () => undefined),
+      exec: vi.fn(async () => ({
+        success: true,
+        stdout: cppSupervisorResult('completed', 'Practice output', emptyCppAnalysis()),
+      })),
+      destroy: vi.fn(async () => undefined),
+    }
+    sandboxMocks.getSandbox.mockReturnValue(sandbox)
+    const record = queuedCppRun('int main() { return 0; }', 'run')
+
+    await coordinatorWith(storage).execute(record)
+
+    expect(sandbox.exec).toHaveBeenCalledWith('/opt/runner/supervisor.py cpp', {
+      timeout: 20_000,
+    })
+    const result = storedResult(storage, record.id)
+    expect(result.outcome).toBe('completed')
+    expect(result.stdout).toBe('Practice output')
+    expect(result.tests).toEqual([])
+    expect(JSON.stringify(result)).not.toContain('cpp_analysis')
+  })
+
+  it.each([
+    ['missing', undefined],
+    ['not analyzed when requested', emptyCppAnalysis()],
+    ['wrong version', { ...referenceCppAnalysis(), version: 2 }],
+    ['duplicate header', { ...referenceCppAnalysis(), headers: ['iostream', 'iostream'] }],
+    ['nonsequential declaration occurrence', {
+      ...referenceCppAnalysis(),
+      declarations: [{
+        target: 'details', occurrence: 2, statement: 7, kind: 'integer', value: 0,
+      }],
+    }],
+    ['nonsequential input occurrence', {
+      ...referenceCppAnalysis(),
+      inputs: [{ occurrence: 2, statement: 8, kind: 'cin_extract', target: 'details' }],
+    }],
+    ['missing declaration statement', {
+      ...referenceCppAnalysis(),
+      declarations: [{ target: 'details', occurrence: 1, kind: 'integer', value: 0 }],
+    }],
+    ['zero input statement', {
+      ...referenceCppAnalysis(),
+      inputs: [{ occurrence: 1, statement: 0, kind: 'getline_cin', target: 'observer_name' }],
+    }],
+    ['unsafe output statement', {
+      ...referenceCppAnalysis(),
+      cout_chains: [{
+        occurrence: 1, statement: Number.MAX_SAFE_INTEGER + 1, fields: [],
+      }],
+    }],
+    ['unknown root property', {
+      ...referenceCppAnalysis(),
+      unexpected: true,
+    }],
+    ['unknown declaration property', {
+      ...referenceCppAnalysis(),
+      declarations: [{
+        target: 'details', occurrence: 1, statement: 7, kind: 'integer', value: 0, unexpected: true,
+      }],
+    }],
+    ['oversized cout fact list', {
+      ...referenceCppAnalysis(),
+      cout_chains: Array.from({ length: 17 }, (_, index) => ({
+        occurrence: index + 1,
+        statement: index + 1,
+        fields: [],
+      })),
+    }],
+    ['oversized identifier budget', {
+      ...referenceCppAnalysis(),
+      cout_chains: Array.from({ length: 16 }, (_, index) => ({
+        occurrence: index + 1,
+        statement: index + 1,
+        fields: Array.from({ length: 16 }, (_unused, fieldIndex) => (
+          `field_${'x'.repeat(16)}_${index}_${fieldIndex}`
+        )),
+      })),
+    }],
+    ['facts in a non-analyzed envelope', {
+      ...emptyCppAnalysis(),
+      headers: ['iostream'],
+    }],
+  ])('fails closed when requested C++ analysis is %s', async (_name, cppAnalysis) => {
+    const storage = new MemoryStorage()
+    const sandbox = {
+      writeFile: vi.fn(async () => undefined),
+      exec: vi.fn(async () => ({
+        success: true,
+        stdout: cppSupervisorResult('completed', 'Behavior output', cppAnalysis),
+      })),
+      destroy: vi.fn(async () => undefined),
+    }
+    sandboxMocks.getSandbox.mockReturnValue(sandbox)
+    const record = queuedCppRun('int main() { return 0; }', 'check')
+
+    await coordinatorWith(storage).execute(record)
+
+    const result = storedResult(storage, record.id)
+    expect(sandbox.exec).toHaveBeenCalledOnce()
+    expect(result.outcome).toBe('system_error')
+    expect(result.tests).toHaveLength(12)
+    expect(result.tests.every((test) => !test.passed)).toBe(true)
+    expect(JSON.stringify(result)).not.toContain('cpp_analysis')
+  })
+
+  it('keeps an analyzed but unparsed C++ result as a compiler failure', async () => {
+    const storage = new MemoryStorage()
+    const analysis: CppAnalysis = {
+      ...emptyCppAnalysis(),
+      analyzed: true,
+    }
+    const sandbox = {
+      writeFile: vi.fn(async () => undefined),
+      exec: vi.fn(async () => ({
+        success: true,
+        stdout: cppSupervisorResult('compile_error', '', analysis, 'expected a semicolon'),
+      })),
+      destroy: vi.fn(async () => undefined),
+    }
+    sandboxMocks.getSandbox.mockReturnValue(sandbox)
+    const record = queuedCppRun('int main( {', 'check')
+
+    await coordinatorWith(storage).execute(record)
+
+    const result = storedResult(storage, record.id)
+    expect(result.outcome).toBe('compile_error')
+    expect(result.tests).toHaveLength(12)
+    expect(result.tests.every((test) => !test.passed)).toBe(true)
+    expect(result.stderr).toContain('expected a semicolon')
+  })
+
+  it('rejects an analyzed envelope returned by a later hidden case', async () => {
+    const storage = new MemoryStorage()
+    const visibleCase = cppCompiledProjectServerAssessment.testCases[0]
+    const sandbox = {
+      writeFile: vi.fn(async () => undefined),
+      exec: vi.fn()
+        .mockResolvedValueOnce({
+          success: true,
+          stdout: cppSupervisorResult('completed', visibleCase.expectedStdout, referenceCppAnalysis()),
+        })
+        .mockResolvedValueOnce({
+          success: true,
+          stdout: cppSupervisorResult('completed', 'hidden output', referenceCppAnalysis()),
+        }),
+      destroy: vi.fn(async () => undefined),
+    }
+    sandboxMocks.getSandbox.mockReturnValue(sandbox)
+    const record = queuedCppRun(cppCompiledProjectServerAssessment.referenceSolution, 'check')
+
+    await coordinatorWith(storage).execute(record)
+
+    const result = storedResult(storage, record.id)
+    expect(sandbox.exec).toHaveBeenCalledTimes(2)
+    expect(result.outcome).toBe('system_error')
+    expect(result.tests.slice(0, 4).map((test) => test.passed)).toEqual([true, false, false, false])
+    expect(result.tests.slice(4).every((test) => test.passed)).toBe(true)
   })
 })

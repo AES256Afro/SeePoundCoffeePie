@@ -1,12 +1,6 @@
-import type { LanguageId } from '../types'
+import type { GuidedProjectCheckpointManifest, GuidedProjectManifest } from './project-types'
 
-export interface PythonProjectCheckpointManifest {
-  id: string
-  order: number
-  title: string
-  conceptId: string
-  xp: number
-}
+export type PythonProjectCheckpointManifest = GuidedProjectCheckpointManifest
 
 /**
  * Small, public project index used by navigation and learner records.
@@ -14,7 +8,7 @@ export interface PythonProjectCheckpointManifest {
  */
 export const pythonInteractiveProjectManifest = {
   id: 'first-interactive-program',
-  language: 'python' as LanguageId,
+  language: 'python',
   title: 'Your First Interactive Program',
   subtitle: 'Build a coffee order calculator that listens, remembers, calculates, and replies.',
   description:
@@ -23,6 +17,22 @@ export const pythonInteractiveProjectManifest = {
     'By the end, the learner can explain how input becomes stored text, convert that text to an integer, calculate a total, and report the result with an f-string.',
   duration: '35-50 minutes',
   route: '/projects/python/first-interactive-program',
+  studioLabel: 'Python project studio',
+  sourcePrivacyLabel: 'Source stays in this browser',
+  downloadFileName: 'coffee-counter.py',
+  downloadLabel: 'downloadable Python file',
+  prerequisiteTitle: 'Finish Python Foundations, then build without training wheels.',
+  prerequisiteDescription:
+    'You can preview every checkpoint below now. The editor unlocks after the six foundation modules introduce the code this project expects you to recognize.',
+  overviewTitle: 'A coffee counter that listens and calculates',
+  overviewSteps: [
+    { title: 'Ask', description: 'Collect a customer name and cup count with input.' },
+    { title: 'Remember', description: 'Store those answers in clearly named variables.' },
+    { title: 'Calculate', description: 'Convert the count and multiply it by the price.' },
+    { title: 'Reply', description: 'Build a personal receipt with an f-string.' },
+  ],
+  completionDescription:
+    'Your Coffee Counter is complete. Reopen any checkpoint, download the program again, or explain how each piece works.',
   checkpoints: [
     { id: 'project-py-print', order: 1, title: 'Let the program speak', conceptId: 'project-python-print', xp: 8 },
     { id: 'project-py-string', order: 2, title: 'Recognize the text', conceptId: 'project-python-strings', xp: 8 },
@@ -36,5 +46,5 @@ export const pythonInteractiveProjectManifest = {
     { id: 'project-py-traceback', order: 10, title: 'Read your first traceback', conceptId: 'project-python-traceback', xp: 20 },
     { id: 'project-py-assembly', order: 11, title: 'Connect the pieces', conceptId: 'project-python-assembly', xp: 24 },
     { id: 'project-py-final', order: 12, title: 'Build the Coffee Counter', conceptId: 'project-python-final-interactive-program', xp: 40 },
-  ] satisfies PythonProjectCheckpointManifest[],
-} as const
+  ] satisfies GuidedProjectCheckpointManifest[],
+} as const satisfies GuidedProjectManifest

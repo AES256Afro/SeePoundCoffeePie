@@ -209,9 +209,18 @@ Phase 4A establishes the project system with one complete Python path:
 - Official check history keeps at most 20 local summaries. The completed `.py` file can be downloaded directly from the project workspace.
 - The workspace uses the approved open split layout on desktop and a single readable flow at 390 CSS pixels, with distinct text scale, keyboard access, runner announcements, and concrete progress labels.
 
+Phase 4B proves that the project system is genuinely multi-language with one complete C++ path:
+
+- `Your First Compiled Program` follows C++ Foundations with 12 ordered checkpoints that build an Observation Desk program.
+- The project begins before syntax by explaining source code, compilation, executables, and running. It then opens the `main` frame, console output, semicolons, explicit types, full-line text input, typed integer input, arithmetic, output chains, and assembly.
+- A deliberate missing-semicolon exercise invites the learner to run broken source first. The project workspace shows the friendly diagnostic before placing exact compiler text in an optional disclosure.
+- The public application loads only small Python and C++ manifests. The shared studio and each complete curriculum are separate route-loaded chunks, so opening one language does not download the other language's teaching copy.
+- Project drafts and history remain keyed by project and checkpoint. Existing version 1 local, backup, synchronization, and remote progress records accept both projects without a migration and preserve Phase 4A identifiers.
+- The final Observation Desk uses changing name and detail-count cases, including a spaced name and zero, plus trusted compiler-derived structural facts for the exact straight-line grammar taught by the project.
+
 The remaining Phase 4 work is to:
 
-- add one comparable guided project after C++, C#, and Java Foundations;
+- add one comparable guided project after C# and Java Foundations;
 - generate adaptive practice from mastered and weak concepts under strict curriculum constraints;
 - define a deliberate portfolio export instead of treating a raw source download as a public portfolio;
 - evaluate cooperative learning only after a separate privacy, child-safety, and moderation review, and before considering competitive leaderboards.

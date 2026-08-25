@@ -1,4 +1,5 @@
 import type { LanguageId } from '../types'
+import { projectManifests } from '../data/project-manifests'
 
 export type RoutePage =
   | 'landing'
@@ -39,9 +40,15 @@ const languagesByCourseSlug = Object.fromEntries(
   Object.entries(courseSlugs).map(([language, slug]) => [slug, language]),
 ) as Record<string, LanguageId>
 
-const projectIdsByLanguage: Partial<Record<LanguageId, readonly string[]>> = {
-  python: ['first-interactive-program'],
-}
+const projectIdsByLanguage = projectManifests.reduce<Partial<Record<LanguageId, string[]>>>(
+  (projects, project) => {
+    const ids = projects[project.language] ?? []
+    ids.push(project.id)
+    projects[project.language] = ids
+    return projects
+  },
+  {},
+)
 
 function languageFromSegment(value: string | undefined): LanguageId | undefined {
   return languageIds.find((language) => language === value)

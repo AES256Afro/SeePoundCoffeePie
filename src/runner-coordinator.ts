@@ -6,6 +6,8 @@ import {
   evaluateRunnerAssignment,
   findRunnerAssignment,
   runnerInputCases,
+  type CppAnalysis,
+  type CppDeclarationFact,
   type PythonAnalysis,
   type PythonAssignmentFact,
 } from './lib/runner-assignments'
@@ -91,6 +93,7 @@ interface SupervisorResult {
   phase?: 'compile' | 'runtime'
   allocated_bytes?: number
   python_analysis?: PythonAnalysis
+  cpp_analysis?: CppAnalysis
 }
 
 function json(body: unknown, status = 200): Response {
@@ -124,6 +127,12 @@ function isBoundedAnalysisName(value: unknown): value is string {
 
 function isPositiveBoundedInteger(value: unknown, maximum: number): value is number {
   return Number.isInteger(value) && Number(value) >= 1 && Number(value) <= maximum
+}
+
+function hasExactKeys(value: object, expectedKeys: readonly string[]): boolean {
+  const keys = Object.keys(value)
+  return keys.length === expectedKeys.length
+    && expectedKeys.every((key) => Object.prototype.hasOwnProperty.call(value, key))
 }
 
 function isPythonAssignmentFact(value: unknown): value is PythonAssignmentFact {
@@ -196,7 +205,181 @@ function parsePythonAnalysis(value: unknown): PythonAnalysis | null {
   return analysis as PythonAnalysis
 }
 
-function parseSupervisorResult(value: string, language: LanguageId): SupervisorResult | null {
+function isCppAnalysisName(value: unknown): value is string {
+  return isBoundedAnalysisName(value) && /^[A-Za-z_][A-Za-z0-9_]*$/u.test(value)
+}
+
+function isCppDeclarationFact(value: unknown): value is CppDeclarationFact {
+  if (!value || typeof value !== 'object') return false
+  const fact = value as Partial<CppDeclarationFact>
+  if (
+    !isCppAnalysisName(fact.target)
+    || !isPositiveBoundedInteger(fact.occurrence, 32)
+    || !isPositiveBoundedInteger(fact.statement, Number.MAX_SAFE_INTEGER)
+    || !['integer', 'string', 'multiply_names', 'unsupported'].includes(fact.kind ?? '')
+  ) return false
+
+  switch (fact.kind) {
+    case 'integer':
+      return hasExactKeys(value, ['target', 'occurrence', 'statement', 'kind', 'value'])
+        && Number.isSafeInteger(fact.value)
+    case 'multiply_names':
+      return hasExactKeys(value, ['target', 'occurrence', 'statement', 'kind', 'names'])
+        && Array.isArray(fact.names)
+        && fact.names.length === 2
+        && fact.names.every(isCppAnalysisName)
+        && fact.names[0] <= fact.names[1]
+    case 'string':
+    case 'unsupported':
+      return hasExactKeys(value, ['target', 'occurrence', 'statement', 'kind'])
+    default:
+      return false
+  }
+}
+
+function parseCppAnalysis(value: unknown): CppAnalysis | null {
+  if (!value || typeof value !== 'object') return null
+  if (!hasExactKeys(value, [
+    'version',
+    'analyzed',
+    'parsed',
+    'straight_line',
+    'headers',
+    'main_signature',
+    'returns_zero',
+    'declarations',
+    'inputs',
+    'cout_chains',
+  ])) return null
+  const analysis = value as Partial<CppAnalysis>
+  if (
+    analysis.version !== 1
+    || typeof analysis.analyzed !== 'boolean'
+    || typeof analysis.parsed !== 'boolean'
+    || typeof analysis.straight_line !== 'boolean'
+    || !Array.isArray(analysis.headers)
+    || analysis.headers.length > 2
+    || !analysis.headers.every((header) => header === 'iostream' || header === 'string')
+    || new Set(analysis.headers).size !== analysis.headers.length
+    || typeof analysis.main_signature !== 'boolean'
+    || typeof analysis.returns_zero !== 'boolean'
+    || !Array.isArray(analysis.declarations)
+    || analysis.declarations.length > 32
+    || !analysis.declarations.every(isCppDeclarationFact)
+    || !Array.isArray(analysis.inputs)
+    || analysis.inputs.length > 16
+    || !Array.isArray(analysis.cout_chains)
+    || analysis.cout_chains.length > 16
+  ) return null
+
+  const targetOccurrences = new Map<string, number>()
+  for (const fact of analysis.declarations) {
+    const expectedOccurrence = (targetOccurrences.get(fact.target) ?? 0) + 1
+    if (fact.occurrence !== expectedOccurrence) return null
+    targetOccurrences.set(fact.target, expectedOccurrence)
+  }
+
+  for (const [index, fact] of analysis.inputs.entries()) {
+    if (
+      !fact
+      || typeof fact !== 'object'
+      || !hasExactKeys(fact, ['occurrence', 'statement', 'kind', 'target'])
+      || fact.occurrence !== index + 1
+      || !isPositiveBoundedInteger(fact.statement, Number.MAX_SAFE_INTEGER)
+      || !['getline_cin', 'cin_extract'].includes(fact.kind)
+      || !isCppAnalysisName(fact.target)
+    ) return null
+  }
+
+  for (const [index, fact] of analysis.cout_chains.entries()) {
+    if (
+      !fact
+      || typeof fact !== 'object'
+      || !hasExactKeys(fact, ['occurrence', 'statement', 'fields'])
+      || fact.occurrence !== index + 1
+      || !isPositiveBoundedInteger(fact.statement, Number.MAX_SAFE_INTEGER)
+      || !Array.isArray(fact.fields)
+      || fact.fields.length > 16
+      || !fact.fields.every(isCppAnalysisName)
+    ) return null
+  }
+
+  const identifierBudget = analysis.declarations.reduce((total, fact) => (
+    total
+      + fact.target.length
+      + (fact.kind === 'multiply_names' ? fact.names[0].length + fact.names[1].length : 0)
+  ), 0)
+    + analysis.inputs.reduce((total, fact) => total + fact.target.length, 0)
+    + analysis.cout_chains.reduce((total, fact) => (
+      total + fact.fields.reduce((fieldTotal, field) => fieldTotal + field.length, 0)
+    ), 0)
+  if (identifierBudget > 4096) return null
+
+  const hasFacts = analysis.headers.length > 0
+    || analysis.main_signature
+    || analysis.returns_zero
+    || analysis.declarations.length > 0
+    || analysis.inputs.length > 0
+    || analysis.cout_chains.length > 0
+  if (!analysis.analyzed && (analysis.parsed || analysis.straight_line || hasFacts)) return null
+  if (!analysis.parsed && (analysis.straight_line || hasFacts)) return null
+  if (analysis.straight_line && (!analysis.main_signature || !analysis.returns_zero)) return null
+
+  const declarations = analysis.declarations.map((fact): CppDeclarationFact => {
+    if (fact.kind === 'integer') {
+      return {
+        target: fact.target,
+        occurrence: fact.occurrence,
+        statement: fact.statement,
+        kind: fact.kind,
+        value: fact.value,
+      }
+    }
+    if (fact.kind === 'multiply_names') {
+      return {
+        target: fact.target,
+        occurrence: fact.occurrence,
+        statement: fact.statement,
+        kind: fact.kind,
+        names: [fact.names[0], fact.names[1]],
+      }
+    }
+    return {
+      target: fact.target,
+      occurrence: fact.occurrence,
+      statement: fact.statement,
+      kind: fact.kind,
+    }
+  })
+
+  return {
+    version: 1,
+    analyzed: analysis.analyzed,
+    parsed: analysis.parsed,
+    straight_line: analysis.straight_line,
+    headers: [...analysis.headers],
+    main_signature: analysis.main_signature,
+    returns_zero: analysis.returns_zero,
+    declarations,
+    inputs: analysis.inputs.map((fact) => ({
+      occurrence: fact.occurrence,
+      statement: fact.statement,
+      kind: fact.kind,
+      target: fact.target,
+    })),
+    cout_chains: analysis.cout_chains.map((fact) => ({
+      occurrence: fact.occurrence,
+      statement: fact.statement,
+      fields: [...fact.fields],
+    })),
+  }
+}
+
+function parseSupervisorResult(
+  value: string,
+  language: LanguageId,
+  cppAnalysisRequested = false,
+): SupervisorResult | null {
   try {
     const result = JSON.parse(value) as Partial<SupervisorResult>
     if (
@@ -213,9 +396,17 @@ function parseSupervisorResult(value: string, language: LanguageId): SupervisorR
       : parsePythonAnalysis(result.python_analysis)
     if (result.python_analysis !== undefined && !pythonAnalysis) return null
     if (language === 'python' && !pythonAnalysis) return null
+    if (language !== 'python' && result.python_analysis !== undefined) return null
+    const cppAnalysis = result.cpp_analysis === undefined
+      ? null
+      : parseCppAnalysis(result.cpp_analysis)
+    if (result.cpp_analysis !== undefined && !cppAnalysis) return null
+    if (language === 'cpp' && (!cppAnalysis || cppAnalysis.analyzed !== cppAnalysisRequested)) return null
+    if (language !== 'cpp' && result.cpp_analysis !== undefined) return null
     return {
       ...result as SupervisorResult,
       ...(pythonAnalysis ? { python_analysis: pythonAnalysis } : {}),
+      ...(cppAnalysis ? { cpp_analysis: cppAnalysis } : {}),
     }
   } catch {
     return null
@@ -464,11 +655,15 @@ export class RunnerCoordinator {
       try {
         await sandbox.writeFile('/workspace/source.txt', record.source)
         await sandbox.writeFile('/workspace/stdin.txt', stdin)
-        const execution = await sandbox.exec(`/opt/runner/supervisor.py ${record.language}`, {
+        const cppAnalysisRequested = officialProjectAssessment?.language === 'cpp' && caseIndex === 0
+        const supervisorCommand = `/opt/runner/supervisor.py ${record.language}${
+          cppAnalysisRequested ? ' --project-analysis' : ''
+        }`
+        const execution = await sandbox.exec(supervisorCommand, {
           timeout: SUPERVISOR_TIMEOUT_MS,
         })
         const supervisor = execution.success
-          ? parseSupervisorResult(execution.stdout, record.language)
+          ? parseSupervisorResult(execution.stdout, record.language, cppAnalysisRequested)
           : null
         const safeSupervisor = supervisor ?? supervisorSystemError()
         supervisorRuns.push(safeSupervisor)
@@ -507,7 +702,9 @@ export class RunnerCoordinator {
             outcome: supervisor.outcome,
             stdout: supervisor.stdout,
           })),
-          sanitizedRuns[0]?.python_analysis,
+          officialProjectAssessment.language === 'cpp'
+            ? sanitizedRuns[0]?.cpp_analysis
+            : sanitizedRuns[0]?.python_analysis,
         )
       : null
     const projectPracticeRun = assignment?.kind === 'project' && purpose === 'run'

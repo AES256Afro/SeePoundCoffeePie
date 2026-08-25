@@ -1,5 +1,5 @@
 import { tracks } from '../data/curriculum'
-import { pythonInteractiveProjectManifest as pythonInteractiveProject } from '../data/python-interactive-project-manifest'
+import { projectManifests } from '../data/project-manifests'
 import type { ConceptProgress, LanguageId, LearnerProgress } from '../types'
 
 export const PROGRESS_BACKUP_FORMAT = 'seepoundcoffeepie-progress' as const
@@ -19,13 +19,15 @@ export type ProgressBackupParseResult =
 
 const languages = new Set<LanguageId>(tracks.map((track) => track.id))
 const missionIds = new Set(tracks.flatMap((track) => track.missions.map((mission) => mission.id)))
-const projectIds = new Set([pythonInteractiveProject.id])
-const projectCheckpointIds = new Set(pythonInteractiveProject.checkpoints.map((checkpoint) => checkpoint.id))
+const projectIds = new Set(projectManifests.map((project) => project.id))
+const projectCheckpointIds = new Set(projectManifests.flatMap((project) => (
+  project.checkpoints.map((checkpoint) => checkpoint.id)
+)))
 const conceptIds = new Set([
   ...tracks.flatMap((track) => (
     track.missions.flatMap((mission) => mission.exercises.map((exercise) => exercise.conceptId))
   )),
-  ...pythonInteractiveProject.checkpoints.map((checkpoint) => checkpoint.conceptId),
+  ...projectManifests.flatMap((project) => project.checkpoints.map((checkpoint) => checkpoint.conceptId)),
 ])
 const encoder = new TextEncoder()
 const datePattern = /^\d{4}-\d{2}-\d{2}$/u

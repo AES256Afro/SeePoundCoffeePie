@@ -1,42 +1,8 @@
 import {
   pythonInteractiveProject,
-  type ProjectTestCase,
 } from './python-interactive-project'
-
-export interface ServerOwnedProjectAssessment {
-  referenceSolution: string
-  structuralChecks: ServerOwnedProjectStructuralCheck[]
-  testCases: ProjectTestCase[]
-}
-
-interface ServerOwnedProjectStructuralCheckBase {
-  message: string
-}
-
-export type ServerOwnedProjectStructuralCheck =
-  | ServerOwnedProjectStructuralCheckBase & {
-      validation: 'python-assignment-integer'
-      target: string
-      value: number
-    }
-  | ServerOwnedProjectStructuralCheckBase & {
-      validation: 'python-assignment-input'
-      target: string
-    }
-  | ServerOwnedProjectStructuralCheckBase & {
-      validation: 'python-assignment-int-name'
-      target: string
-      name: string
-    }
-  | ServerOwnedProjectStructuralCheckBase & {
-      validation: 'python-assignment-multiply-names'
-      target: string
-      names: [string, string]
-    }
-  | ServerOwnedProjectStructuralCheckBase & {
-      validation: 'python-print-f-string'
-      requiredFields: string[]
-    }
+import type { ProjectTestCase } from './project-types'
+import type { ServerOwnedProjectAssessment, ServerOwnedProjectStructuralCheck } from './project-assessment'
 
 const finalCheckpoint = pythonInteractiveProject.checkpoints.find((checkpoint) => (
   checkpoint.id === 'project-py-final'
@@ -137,6 +103,7 @@ const referenceSolution = [
 
 // Import this value only from Worker-owned runner code and server-side tests.
 export const pythonInteractiveProjectServerAssessment: ServerOwnedProjectAssessment = {
+  language: 'python',
   referenceSolution,
   structuralChecks,
   testCases: [visibleTestCase, ...hiddenTestCases],
