@@ -1,4 +1,5 @@
 import {
+  useCallback,
   useEffect,
   useMemo,
   useRef,
@@ -20,6 +21,7 @@ import {
   ChevronDown,
   CircleHelp,
   Clock3,
+  Cloud,
   Code2,
   Compass,
   Crown,
@@ -36,6 +38,7 @@ import {
   Orbit,
   Play,
   Radio,
+  RefreshCw,
   RotateCcw,
   Satellite,
   Search,
@@ -44,6 +47,7 @@ import {
   Sparkles,
   TerminalSquare,
   Trophy,
+  Trash2,
   Upload,
   UserRound,
   X,
@@ -65,6 +69,16 @@ import {
   saveProgress,
 } from './lib/progress'
 import { buildReviewQueue, resetReviewAnswers } from './lib/review'
+import {
+  deleteRemoteProgress,
+  fetchRemoteProgress,
+  hasMeaningfulProgress,
+  mergeLearnerProgress,
+  progressRecordsMatch,
+  saveRemoteProgress,
+  type ProgressSyncState,
+  type RemoteProgressRecord,
+} from './lib/progress-sync'
 import { runExercise, type RunnerClientStatus } from './lib/runner-client'
 import type { RunnerResult } from './lib/runner-contract'
 import {
@@ -252,7 +266,7 @@ function LandingPage({ authReady, authUser, progress, onSignIn }: LandingPagePro
             <span><Github size={21} /></span>
             <div>
               <b>{authUser ? `Signed in as ${authUser.login}` : 'GitHub sign-in is optional'}</b>
-              <p>{authUser ? 'Your identity is verified.' : 'Start without an account, or use GitHub to verify your cadet identity.'}</p>
+              <p>{authUser ? 'Your identity is verified and your Cadet Record can synchronize.' : 'Start as a guest, or sign in to carry progress between devices.'}</p>
             </div>
             {!authUser && <button type="button" onClick={onSignIn} disabled={!authReady}><Github size={16} /> {authReady ? 'Sign in' : 'Checking'}</button>}
           </div>
@@ -299,7 +313,7 @@ function Onboarding({ authReady, authUser, initialLanguage, onComplete, onSignIn
             <span><Github size={21} /></span>
             <div>
               <b>{authUser ? `Signed in as ${authUser.login}` : 'Optional GitHub sign-in'}</b>
-              <p>{authUser ? 'GitHub verified your cadet identity.' : 'Verify your identity now. You can also begin without an account.'}</p>
+              <p>{authUser ? 'GitHub verified your identity. You will choose how to synchronize existing progress.' : 'Sign in to synchronize later, or begin as a guest without an account.'}</p>
             </div>
             {!authUser && (
               <button type="button" onClick={onSignIn} disabled={!authReady}>
@@ -362,7 +376,7 @@ function Onboarding({ authReady, authUser, initialLanguage, onComplete, onSignIn
           <button className="primary-action primary-action--wide" onClick={finish}>
             Begin your commission <ArrowRight size={18} />
           </button>
-          <p className="fine-print"><Shield size={13} /> Course progress stays in this browser. GitHub only verifies identity for now.</p>
+          <p className="fine-print"><Shield size={13} /> Guest progress stays here. Signed-in learners choose when the first account copy is created.</p>
         </div>
       </section>
     </main>
@@ -673,16 +687,17 @@ function Codebook({ progress }: { progress: LearnerProgress }) {
 interface CadetRecordProps {
   onOpenTrack: (language: LanguageId) => void
   progress: LearnerProgress
+  recordLocation: string
 }
 
-function CadetRecord({ onOpenTrack, progress }: CadetRecordProps) {
+function CadetRecord({ onOpenTrack, progress, recordLocation }: CadetRecordProps) {
   const concepts = Object.values(progress.conceptProgress)
   const answers = concepts.reduce((sum, item) => sum + item.correct + item.incorrect, 0)
   const accuracy = answers ? Math.round((concepts.reduce((sum, item) => sum + item.correct, 0) / answers) * 100) : 0
 
   return (
     <main className="content-page">
-      <div className="page-heading page-heading--simple"><div><p className="kicker"><UserRound size={14} /> CADET RECORD</p><h1>{progress.callsign}</h1><p>Commission progress stored on this device.</p></div></div>
+      <div className="page-heading page-heading--simple"><div><p className="kicker"><UserRound size={14} /> CADET RECORD</p><h1>{progress.callsign}</h1><p>{recordLocation}</p></div></div>
       <div className="record-grid">
         <article><Zap /><span><b>{progress.xp}</b><small>Total XP</small></span></article>
         <article><Flame /><span><b>{progress.streak}</b><small>Day streak</small></span></article>
@@ -719,16 +734,38 @@ function CadetRecord({ onOpenTrack, progress }: CadetRecordProps) {
 interface SettingsPageProps {
   authBusy: boolean
   authUser: AuthUser | null
+  onDeleteAccountData: () => void
   onDailyGoalChange: (goal: number) => void
   onLogout: () => void
   onDownloadBackup: () => string
   onReset: () => void
   onRestoreBackup: (text: string) => string
   onSignIn: () => void
+  onSyncNow: () => void
   progress: LearnerProgress
+  syncBusy: boolean
+  syncMessage: string
+  syncState: ProgressSyncState
+  syncUpdatedAt: string | null
 }
 
-function SettingsPage({ authBusy, authUser, onDailyGoalChange, onDownloadBackup, onLogout, onReset, onRestoreBackup, onSignIn, progress }: SettingsPageProps) {
+function SettingsPage({
+  authBusy,
+  authUser,
+  onDailyGoalChange,
+  onDeleteAccountData,
+  onDownloadBackup,
+  onLogout,
+  onReset,
+  onRestoreBackup,
+  onSignIn,
+  onSyncNow,
+  progress,
+  syncBusy,
+  syncMessage,
+  syncState,
+  syncUpdatedAt,
+}: SettingsPageProps) {
   const restoreInput = useRef<HTMLInputElement>(null)
   const [backupMessage, setBackupMessage] = useState('')
 
@@ -744,26 +781,42 @@ function SettingsPage({ authBusy, authUser, onDailyGoalChange, onDownloadBackup,
     }
   }
 
+  const accountDescription = !authUser
+    ? 'Sign in to create a private Cadet Record that can continue on another device.'
+    : syncState === 'synced'
+      ? `Your Cadet Record is synchronized${syncUpdatedAt ? ` as of ${new Date(syncUpdatedAt).toLocaleString()}` : ''}.`
+      : syncState === 'needs-choice'
+        ? 'Choose how this browser and the saved account record should be combined.'
+        : syncState === 'offline'
+          ? 'The account could not be reached. This browser copy is safe and can retry later.'
+          : syncState === 'local-only'
+            ? 'This browser copy is not currently synchronizing. You can start synchronization whenever you are ready.'
+            : syncState === 'saving' || syncState === 'checking'
+              ? 'Checking and saving your private Cadet Record.'
+              : 'The account record needs attention. This browser copy has not been removed.'
+
   return (
     <main className="content-page">
       <div className="page-heading page-heading--simple">
-        <div><p className="kicker"><Settings size={14} /> SETTINGS</p><h1>Academy settings</h1><p>Identity, training pace, local backups, and this browser’s stored progress.</p></div>
+        <div><p className="kicker"><Settings size={14} /> SETTINGS</p><h1>Academy settings</h1><p>Identity, synchronization, training pace, backups, and your stored learning data.</p></div>
       </div>
       <section className="account-panel">
         <span className="account-panel__icon"><Github size={24} /></span>
         <div>
-          <small>GITHUB IDENTITY</small>
+          <small>{authUser ? 'ACCOUNT AND SYNC' : 'GITHUB ACCOUNT'}</small>
           <h2>{authUser ? `Signed in as ${authUser.login}` : 'No account connected'}</h2>
-          <p>
-            {authUser
-              ? 'Your identity is verified. Lessons, XP, and review history still stay only in this browser.'
-              : 'Sign in to verify your identity. This phase does not upload or synchronize course progress.'}
-          </p>
+          <p>{accountDescription}</p>
+          {authUser && syncMessage && <p className="account-panel__status" role="status">{syncMessage}</p>}
         </div>
         {authUser ? (
-          <button className="secondary-action" onClick={onLogout} disabled={authBusy}>
-            <LogOut size={16} /> {authBusy ? 'Signing out' : 'Sign out'}
-          </button>
+          <div className="account-panel__actions">
+            <button className="secondary-action" onClick={onSyncNow} disabled={syncBusy || syncState === 'needs-choice'}>
+              <RefreshCw size={16} /> {syncBusy ? 'Synchronizing' : 'Sync now'}
+            </button>
+            <button className="secondary-action" onClick={onLogout} disabled={authBusy}>
+              <LogOut size={16} /> {authBusy ? 'Signing out' : 'Sign out'}
+            </button>
+          </div>
         ) : (
           <button className="secondary-action" onClick={onSignIn} disabled={authBusy}>
             <Github size={16} /> Sign in with GitHub
@@ -792,9 +845,9 @@ function SettingsPage({ authBusy, authUser, onDailyGoalChange, onDownloadBackup,
       <section className="backup-panel">
         <span className="account-panel__icon"><Download size={24} /></span>
         <div>
-          <small>LOCAL PROGRESS BACKUP</small>
-          <h2>Keep a copy before changing browsers</h2>
-          <p>Download your callsign, XP, missions, streak, and review schedule as a JSON file. Restoring validates every value before replacing anything on this device. No course data is uploaded.</p>
+          <small>PORTABLE PROGRESS BACKUP</small>
+          <h2>Keep a copy that you control</h2>
+          <p>Download your callsign, XP, missions, streak, and review schedule as a JSON file. Restoring validates every value before replacing this browser copy. If synchronization is active, the restored copy is then saved to the account.</p>
           {backupMessage && <p className="backup-panel__status" role="status">{backupMessage}</p>}
         </div>
         <div className="backup-panel__actions">
@@ -814,9 +867,21 @@ function SettingsPage({ authBusy, authUser, onDailyGoalChange, onDownloadBackup,
           />
         </div>
       </section>
+      {authUser && (
+        <section className="settings-panel settings-panel--danger">
+          <div>
+            <small>ACCOUNT DATA CONTROL</small>
+            <h2>Delete synchronized learning data</h2>
+            <p>This permanently removes the server copy of your Cadet Record. It does not delete the copy in this browser, your GitHub account, or your GitHub authorization.</p>
+          </div>
+          <button className="danger-button" onClick={onDeleteAccountData} disabled={syncBusy}>
+            <Trash2 size={16} /> Delete account learning data
+          </button>
+        </section>
+      )}
       <section className="settings-panel">
-        <div><small>THIS BROWSER</small><h2>Reset local progress</h2><p>Resetting removes the learner name, XP, mission completion, and review history from this browser.</p></div>
-        <button className="danger-button" onClick={onReset}><RotateCcw size={16} /> Reset local progress</button>
+        <div><small>LEARNING PROGRESS</small><h2>Reset learning progress</h2><p>Resetting removes the learner name, XP, mission completion, and review history from this browser. When account synchronization is active, the reset becomes the new synchronized copy too.</p></div>
+        <button className="danger-button" onClick={onReset}><RotateCcw size={16} /> Reset learning progress</button>
       </section>
     </main>
   )
@@ -839,6 +904,54 @@ function AuthNotice({ message, onDismiss }: { message: string; onDismiss: () => 
       <Github size={18} />
       <span>{message}</span>
       <button onClick={onDismiss} aria-label="Dismiss sign-in message"><X size={16} /></button>
+    </div>
+  )
+}
+
+interface SyncChoiceDialogProps {
+  busy: boolean
+  local: LearnerProgress
+  onChoose: (choice: 'combine' | 'local' | 'remote') => void
+  onLater: () => void
+  remote: RemoteProgressRecord | null
+}
+
+function SyncChoiceDialog({ busy, local, onChoose, onLater, remote }: SyncChoiceDialogProps) {
+  return (
+    <div className="sync-dialog-backdrop">
+      <section className="sync-dialog" role="dialog" aria-modal="true" aria-labelledby="sync-dialog-title">
+        <div className="sync-dialog__icon"><Cloud size={26} /></div>
+        <div>
+          <p className="kicker">PRIVATE CADET RECORD</p>
+          <h2 id="sync-dialog-title">{remote ? 'Choose which progress to continue' : 'Save this browser’s progress to your account?'}</h2>
+          <p>
+            {remote
+              ? 'This browser and your account contain different learning records. Nothing will be overwritten until you choose.'
+              : 'Your current missions, XP, streak, settings, and review schedule can follow you to another signed-in device.'}
+          </p>
+        </div>
+        {remote && (
+          <div className="sync-dialog__records">
+            <article><small>THIS BROWSER</small><b>{local.xp} XP · {local.completedMissions.length} missions</b><span>{local.callsign || 'Unnamed cadet'}</span></article>
+            <article><small>SAVED ACCOUNT</small><b>{remote.progress.xp} XP · {remote.progress.completedMissions.length} missions</b><span>Updated {new Date(remote.updatedAt).toLocaleString()}</span></article>
+          </div>
+        )}
+        <div className="sync-dialog__actions">
+          {remote ? (
+            <>
+              <button className="primary-action" onClick={() => onChoose('combine')} disabled={busy}>Combine safely</button>
+              <button className="secondary-action" onClick={() => onChoose('local')} disabled={busy}>Use this browser</button>
+              <button className="secondary-action" onClick={() => onChoose('remote')} disabled={busy}>Use saved account</button>
+            </>
+          ) : (
+            <button className="primary-action" onClick={() => onChoose('local')} disabled={busy}>Save progress to account</button>
+          )}
+          <button className="text-action" onClick={onLater} disabled={busy}>Decide later</button>
+        </div>
+        <p className="sync-dialog__fine-print">
+          <Shield size={14} /> The academy stores the learning record only. It does not retain submitted code, GitHub tokens, email, or raw IP addresses here.
+        </p>
+      </section>
     </div>
   )
 }
@@ -1294,6 +1407,15 @@ function AppContent() {
   const [authReady, setAuthReady] = useState(false)
   const [authBusy, setAuthBusy] = useState(false)
   const [authNotice, setAuthNotice] = useState<string | null>(() => authNoticeFromLocation())
+  const [syncBusy, setSyncBusy] = useState(false)
+  const [syncChoice, setSyncChoice] = useState<RemoteProgressRecord | null | undefined>(undefined)
+  const [syncMessage, setSyncMessage] = useState('')
+  const [syncRecord, setSyncRecord] = useState<RemoteProgressRecord | null>(null)
+  const [syncState, setSyncState] = useState<ProgressSyncState>('guest')
+  const progressRef = useRef(progress)
+  const syncEnabledRef = useRef(false)
+  const syncRevisionRef = useRef(0)
+  const syncedSnapshotRef = useRef<string | null>(null)
 
   const view: ViewId = route.page === 'practice' || (route.page === 'lesson' && route.practice)
     ? 'practice'
@@ -1306,6 +1428,7 @@ function AppContent() {
           : 'path'
 
   useEffect(() => {
+    progressRef.current = progress
     saveProgress(progress)
   }, [progress])
 
@@ -1355,6 +1478,112 @@ function AppContent() {
     return () => window.removeEventListener('popstate', handleNavigation)
   }, [])
 
+  const markSynced = useCallback((record: RemoteProgressRecord) => {
+    syncEnabledRef.current = true
+    syncRevisionRef.current = record.revision
+    syncedSnapshotRef.current = JSON.stringify(record.progress)
+    setSyncRecord(record)
+    setSyncChoice(undefined)
+    setSyncState('synced')
+    setSyncMessage(`Cadet Record synchronized at ${new Date(record.updatedAt).toLocaleTimeString()}.`)
+  }, [])
+
+  const saveAccountProgress = useCallback(async (
+    nextProgress: LearnerProgress,
+    revision: number,
+  ) => {
+    setSyncBusy(true)
+    setSyncState('saving')
+    setSyncMessage('Saving the latest Cadet Record to your account.')
+    try {
+      const result = await saveRemoteProgress(nextProgress, revision)
+      if (result.ok) {
+        markSynced(result.record)
+        return true
+      }
+      if (result.conflicted) {
+        syncEnabledRef.current = false
+        setSyncChoice(result.conflict)
+        setSyncState('needs-choice')
+        setSyncMessage('Another device saved a newer record. Choose how to continue before anything is replaced.')
+        return false
+      }
+      throw new Error(result.message)
+    } catch (error) {
+      setSyncState(navigator.onLine ? 'error' : 'offline')
+      setSyncMessage(error instanceof Error ? error.message : 'This browser copy is safe, but it could not synchronize yet.')
+      return false
+    } finally {
+      setSyncBusy(false)
+    }
+  }, [markSynced])
+
+  useEffect(() => {
+    if (!authUser) return
+
+    const controller = new AbortController()
+    fetchRemoteProgress(controller.signal)
+      .then((remote) => {
+        if (controller.signal.aborted) return
+        const local = progressRef.current
+        if (!remote) {
+          syncRevisionRef.current = 0
+          if (hasMeaningfulProgress(local)) {
+            syncEnabledRef.current = false
+            setSyncChoice(null)
+            setSyncState('needs-choice')
+            setSyncMessage('Choose when to save this browser’s progress to the account.')
+          } else {
+            syncEnabledRef.current = true
+            syncedSnapshotRef.current = JSON.stringify(local)
+            setSyncRecord(null)
+            setSyncState('synced')
+            setSyncMessage('Account connected. New learning progress will synchronize automatically.')
+          }
+          return
+        }
+        if (!hasMeaningfulProgress(local)) {
+          setProgress(remote.progress)
+          markSynced(remote)
+          return
+        }
+        if (progressRecordsMatch(local, remote.progress)) {
+          markSynced(remote)
+          return
+        }
+        syncEnabledRef.current = false
+        setSyncRecord(remote)
+        setSyncChoice(remote)
+        setSyncState('needs-choice')
+        setSyncMessage('This browser and the account have different progress. Choose how to continue.')
+      })
+      .catch((error: unknown) => {
+        if (controller.signal.aborted) return
+        setSyncState(navigator.onLine ? 'error' : 'offline')
+        setSyncMessage(error instanceof Error ? error.message : 'The account record could not be checked. This browser copy is safe.')
+      })
+
+    return () => controller.abort()
+  }, [authUser, markSynced])
+
+  useEffect(() => {
+    if (!authUser || syncState !== 'synced' || !syncEnabledRef.current) return
+    const serialized = JSON.stringify(progress)
+    if (serialized === syncedSnapshotRef.current) return
+    const timer = window.setTimeout(() => {
+      void saveAccountProgress(progress, syncRevisionRef.current)
+    }, 800)
+    return () => window.clearTimeout(timer)
+  }, [authUser, progress, saveAccountProgress, syncState])
+
+  useEffect(() => {
+    const retryWhenOnline = () => {
+      if (authUser && syncEnabledRef.current && syncState === 'offline') setSyncState('synced')
+    }
+    window.addEventListener('online', retryWhenOnline)
+    return () => window.removeEventListener('online', retryWhenOnline)
+  }, [authUser, syncState])
+
   useEffect(() => {
     const url = new URL(window.location.href)
     if (url.searchParams.has('auth') || url.searchParams.has('reason')) {
@@ -1375,7 +1604,11 @@ function AppContent() {
         return response.json() as Promise<{ authenticated: boolean; user: AuthUser | null }>
       })
       .then((session) => {
-        if (active && session?.authenticated) setAuthUser(session.user)
+        if (active && session?.authenticated) {
+          setSyncState('checking')
+          setSyncMessage('Checking for an existing Cadet Record.')
+          setAuthUser(session.user)
+        }
       })
       .catch(() => undefined)
       .finally(() => {
@@ -1405,8 +1638,15 @@ function AppContent() {
         headers: { Accept: 'application/json' },
       })
       if (!response.ok) throw new Error('Logout failed')
+      syncEnabledRef.current = false
+      syncRevisionRef.current = 0
+      syncedSnapshotRef.current = null
+      setSyncChoice(undefined)
+      setSyncRecord(null)
+      setSyncMessage('')
+      setSyncState('guest')
       setAuthUser(null)
-      setAuthNotice('Signed out. Your local course progress is still here.')
+      setAuthNotice('Signed out. This browser copy of your Cadet Record is still here.')
     } catch {
       setAuthNotice('Sign-out could not be completed. Please try again.')
     } finally {
@@ -1415,7 +1655,10 @@ function AppContent() {
   }
 
   const reset = () => {
-    if (window.confirm('Reset all local SeePoundCoffeePie progress and return to cadet intake?')) {
+    const message = syncEnabledRef.current
+      ? 'Reset all SeePoundCoffeePie progress? The empty record will replace the synchronized account copy and return this browser to cadet intake.'
+      : 'Reset all local SeePoundCoffeePie progress and return to cadet intake?'
+    if (window.confirm(message)) {
       setProgress(initialProgress())
       navigateTo('/start')
     }
@@ -1437,7 +1680,10 @@ function AppContent() {
   const restoreProgressBackup = (text: string) => {
     const result = parseProgressBackup(text)
     if (!result.ok) return result.message
-    if (!window.confirm('Replace this browser’s current SeePoundCoffeePie progress with the selected backup?')) {
+    const restoreQuestion = syncEnabledRef.current
+      ? 'Replace the current SeePoundCoffeePie progress with this backup and synchronize the restored record to the account?'
+      : 'Replace this browser’s current SeePoundCoffeePie progress with the selected backup?'
+    if (!window.confirm(restoreQuestion)) {
       return 'Restore cancelled. Your current progress was not changed.'
     }
 
@@ -1458,10 +1704,80 @@ function AppContent() {
     navigateTo(academyPath(nextProgress.activeLanguage))
   }
 
+  const chooseSyncRecord = async (choice: 'combine' | 'local' | 'remote') => {
+    const remote = syncChoice ?? null
+    if (choice === 'remote' && remote) {
+      setProgress(remote.progress)
+      markSynced(remote)
+      setAuthNotice('This browser now uses the Cadet Record saved in your account.')
+      return
+    }
+    const selected = choice === 'combine' && remote
+      ? mergeLearnerProgress(progressRef.current, remote.progress)
+      : progressRef.current
+    if (choice === 'combine') setProgress(selected)
+    const saved = await saveAccountProgress(selected, remote?.revision ?? 0)
+    if (saved) {
+      setAuthNotice(choice === 'combine'
+        ? 'The browser and account records were combined and synchronized.'
+        : 'This browser’s Cadet Record is now saved to your account.')
+    }
+  }
+
+  const deferSyncChoice = () => {
+    syncEnabledRef.current = false
+    setSyncChoice(undefined)
+    setSyncState('local-only')
+    setSyncMessage('Synchronization is paused by your choice. This browser copy remains available.')
+  }
+
+  const syncNow = () => {
+    if (syncState === 'needs-choice') return
+    void saveAccountProgress(progressRef.current, syncRevisionRef.current)
+  }
+
+  const deleteAccountData = async () => {
+    if (!window.confirm('Permanently delete the synchronized Cadet Record from your account? The copy in this browser will remain.')) return
+    setSyncBusy(true)
+    try {
+      await deleteRemoteProgress()
+      syncEnabledRef.current = false
+      syncRevisionRef.current = 0
+      syncedSnapshotRef.current = null
+      setSyncRecord(null)
+      setSyncChoice(undefined)
+      setSyncState('local-only')
+      setSyncMessage('The synchronized learning record was deleted. This browser copy remains local.')
+      setAuthNotice('Account learning data deleted. Your browser copy was not removed.')
+    } catch (error) {
+      setSyncState(navigator.onLine ? 'error' : 'offline')
+      setSyncMessage(error instanceof Error ? error.message : 'Account learning data could not be deleted.')
+    } finally {
+      setSyncBusy(false)
+    }
+  }
+
+  const syncDialog = syncChoice !== undefined ? (
+    <SyncChoiceDialog
+      busy={syncBusy}
+      local={progress}
+      onChoose={(choice) => { void chooseSyncRecord(choice) }}
+      onLater={deferSyncChoice}
+      remote={syncChoice}
+    />
+  ) : null
+
+  const recordLocation = authUser && (syncState === 'synced' || syncState === 'saving')
+    ? 'Your private Cadet Record is stored in this browser and synchronized to your account.'
+    : authUser
+      ? 'Your Cadet Record is stored in this browser. Account synchronization needs attention.'
+      : 'Your Cadet Record is stored only in this browser until you choose to sign in.'
+
   if (route.page === 'home') {
     return (
       <>
         {authNotice && <AuthNotice message={authNotice} onDismiss={() => setAuthNotice(null)} />}
+        {syncDialog}
         <LandingPage authReady={authReady} authUser={authUser} onSignIn={signIn} progress={normalizedProgress} />
       </>
     )
@@ -1475,6 +1791,7 @@ function AppContent() {
     return (
       <>
         {authNotice && <AuthNotice message={authNotice} onDismiss={() => setAuthNotice(null)} />}
+        {syncDialog}
         <Onboarding
           authReady={authReady}
           authUser={authUser}
@@ -1504,6 +1821,7 @@ function AppContent() {
       return (
         <>
           {authNotice && <AuthNotice message={authNotice} onDismiss={() => setAuthNotice(null)} />}
+          {syncDialog}
           <AppShell
             authReady={authReady}
             authUser={authUser}
@@ -1531,6 +1849,7 @@ function AppContent() {
     return (
       <>
         {authNotice && <AuthNotice message={authNotice} onDismiss={() => setAuthNotice(null)} />}
+        {syncDialog}
         <LessonPlayer
           key={`${route.practice ? 'practice' : 'academy'}-${mission.id}-${practiceConceptIds.join('-')}`}
           mission={mission}
@@ -1546,6 +1865,7 @@ function AppContent() {
   return (
     <>
       {authNotice && <AuthNotice message={authNotice} onDismiss={() => setAuthNotice(null)} />}
+      {syncDialog}
       <AppShell
         authReady={authReady}
         authUser={authUser}
@@ -1569,19 +1889,26 @@ function AppContent() {
               navigateTo(academyPath(language))
             }}
             progress={normalizedProgress}
+            recordLocation={recordLocation}
           />
         )}
         {route.page === 'settings' && (
           <SettingsPage
             authBusy={authBusy}
             authUser={authUser}
+            onDeleteAccountData={() => { void deleteAccountData() }}
             onDailyGoalChange={(dailyGoal) => setProgress((current) => ({ ...current, dailyGoal }))}
             onDownloadBackup={downloadProgressBackup}
             onLogout={logout}
             onReset={reset}
             onRestoreBackup={restoreProgressBackup}
             onSignIn={signIn}
+            onSyncNow={syncNow}
             progress={normalizedProgress}
+            syncBusy={syncBusy}
+            syncMessage={syncMessage}
+            syncState={syncState}
+            syncUpdatedAt={syncRecord?.updatedAt ?? null}
           />
         )}
       </AppShell>

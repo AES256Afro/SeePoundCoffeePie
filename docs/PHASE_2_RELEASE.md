@@ -180,6 +180,6 @@ If a release fails, set the KV switch to `false` first. Then roll the Worker bac
 
 - The runner supports academy exercises, not arbitrary packages, package installation, user-selected command flags, long jobs, servers, graphics, or network programs.
 - Each run is stateless. A program cannot save a file for its next attempt.
-- Course progress still lives in the browser. GitHub verifies identity but does not yet synchronize learning data.
+- At the Phase 2 release boundary, course progress still lived only in the browser. Phase 3 adds optional private synchronization without changing the runner boundary documented here.
 - Choice, prediction, and ordering exercises do not invoke a server runner.
 - Toolchain upgrades require a reviewed image change and a complete local, staging, and production rerun.

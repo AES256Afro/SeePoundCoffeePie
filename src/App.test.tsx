@@ -238,6 +238,119 @@ describe('beginner lesson interactions', () => {
     })
   })
 
+  it('asks before migrating guest progress and then synchronizes the chosen browser record', async () => {
+    window.history.replaceState({}, '', '/settings')
+    let savedBody: { revision: number; progress: ReturnType<typeof initialProgress> } | null = null
+    const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input)
+      if (url === '/api/auth/session') {
+        return Response.json({ authenticated: true, user: { id: '314', login: 'sync-cadet', name: 'Sync Cadet' } })
+      }
+      if (url === '/api/progress' && (!init?.method || init.method === 'GET')) {
+        return Response.json({ version: 1, record: null })
+      }
+      if (url === '/api/progress' && init?.method === 'PUT') {
+        savedBody = JSON.parse(String(init.body))
+        return Response.json({
+          version: 1,
+          record: {
+            version: 1,
+            revision: 1,
+            updatedAt: '2026-08-25T14:00:00.000Z',
+            progress: savedBody?.progress,
+          },
+        })
+      }
+      throw new Error(`Unexpected request: ${url}`)
+    })
+    vi.stubGlobal('fetch', fetchMock)
+
+    render(<App />)
+
+    expect(await screen.findByRole('heading', { name: /Save this browser’s progress to your account/iu })).toBeTruthy()
+    expect(screen.queryByText(/Nothing will be overwritten/iu)).toBeNull()
+    fireEvent.click(screen.getByRole('button', { name: 'Save progress to account' }))
+
+    expect(await screen.findByText(/Cadet Record synchronized at/iu)).toBeTruthy()
+    expect(savedBody).toMatchObject({
+      revision: 0,
+      progress: { callsign: 'Test Cadet', onboardingComplete: true },
+    })
+    expect(screen.queryByRole('dialog')).toBeNull()
+  })
+
+  it('can use an existing account record on this browser without overwriting it', async () => {
+    window.history.replaceState({}, '', '/settings')
+    const remoteProgress = {
+      ...initialProgress('java'),
+      callsign: 'Cloud Cadet',
+      xp: 160,
+      starShards: 50,
+      completedMissions: ['java-coffee-protocol'],
+      onboardingComplete: true,
+    }
+    const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input)
+      if (url === '/api/auth/session') {
+        return Response.json({ authenticated: true, user: { id: '314', login: 'cloud-cadet', name: null } })
+      }
+      if (url === '/api/progress' && (!init?.method || init.method === 'GET')) {
+        return Response.json({
+          version: 1,
+          record: { version: 1, revision: 4, updatedAt: '2026-08-25T13:00:00.000Z', progress: remoteProgress },
+        })
+      }
+      throw new Error(`Unexpected request: ${url}`)
+    })
+    vi.stubGlobal('fetch', fetchMock)
+
+    render(<App />)
+    expect(await screen.findByRole('heading', { name: 'Choose which progress to continue' })).toBeTruthy()
+    fireEvent.click(screen.getByRole('button', { name: 'Use saved account' }))
+    fireEvent.click(screen.getByRole('link', { name: 'Cadet record' }))
+
+    expect(await screen.findByRole('heading', { name: 'Cloud Cadet' })).toBeTruthy()
+    expect(screen.getAllByText('160').length).toBeGreaterThan(0)
+    expect(fetchMock.mock.calls.filter(([, init]) => init?.method === 'PUT')).toHaveLength(0)
+  })
+
+  it('deletes only the synchronized account record and keeps the browser copy', async () => {
+    window.history.replaceState({}, '', '/settings')
+    const localProgress = {
+      ...initialProgress('python'),
+      callsign: 'Test Cadet',
+      onboardingComplete: true,
+    }
+    const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input)
+      if (url === '/api/auth/session') {
+        return Response.json({ authenticated: true, user: { id: '314', login: 'delete-cadet', name: null } })
+      }
+      if (url === '/api/progress' && (!init?.method || init.method === 'GET')) {
+        return Response.json({
+          version: 1,
+          record: { version: 1, revision: 2, updatedAt: '2026-08-25T13:00:00.000Z', progress: localProgress },
+        })
+      }
+      if (url === '/api/progress' && init?.method === 'DELETE') {
+        return Response.json({ deleted: true })
+      }
+      throw new Error(`Unexpected request: ${url}`)
+    })
+    vi.stubGlobal('fetch', fetchMock)
+    vi.spyOn(window, 'confirm').mockReturnValue(true)
+
+    render(<App />)
+    expect(await screen.findByText(/Cadet Record synchronized at/iu)).toBeTruthy()
+    fireEvent.click(screen.getByRole('button', { name: 'Delete account learning data' }))
+
+    expect(await screen.findByText(/Account learning data deleted/iu)).toBeTruthy()
+    const deleteCall = fetchMock.mock.calls.find(([, init]) => init?.method === 'DELETE')
+    expect(deleteCall?.[1]).toMatchObject({ method: 'DELETE', credentials: 'same-origin' })
+    expect(String(deleteCall?.[1]?.body)).toContain('DELETE MY LEARNING DATA')
+    expect(JSON.parse(window.localStorage.getItem(progressKey) ?? '{}')).toMatchObject({ callsign: 'Test Cadet' })
+  })
+
   it('always shows the public launch page at the root, even with saved progress', () => {
     window.history.replaceState({}, '', '/')
 

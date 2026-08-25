@@ -54,7 +54,7 @@ function readConceptProgress(value: unknown): ConceptProgress | null {
   }
 }
 
-function readProgress(value: unknown): LearnerProgress | null {
+export function parseLearnerProgress(value: unknown): LearnerProgress | null {
   if (!isRecord(value)) return null
   if (typeof value.callsign !== 'string' || value.callsign.length > 80) return null
   if (typeof value.activeLanguage !== 'string' || !languages.has(value.activeLanguage as LanguageId)) return null
@@ -126,7 +126,7 @@ export function parseProgressBackup(text: string): ProgressBackupParseResult {
     return { ok: false, message: 'The backup is missing a valid export date.' }
   }
 
-  const progress = readProgress(parsed.progress)
+  const progress = parseLearnerProgress(parsed.progress)
   if (!progress) {
     return { ok: false, message: 'The backup contains missing, unknown, or unsafe progress values and was not restored.' }
   }

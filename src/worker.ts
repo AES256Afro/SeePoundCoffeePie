@@ -1,5 +1,7 @@
 import { findRunnerAssignment } from './lib/runner-assignments'
 import { RUNNER_API_VERSION, validateRunnerRequest } from './lib/runner-contract'
+import { parseLearnerProgress, PROGRESS_BACKUP_MAX_BYTES } from './lib/progress-backup'
+import { PROGRESS_RECORD_VERSION } from './lib/progress-sync'
 
 interface AssetFetcher {
   fetch(request: Request): Promise<Response>
@@ -10,6 +12,8 @@ interface WorkerEnv {
   GITHUB_CLIENT_ID?: string
   GITHUB_CLIENT_SECRET?: string
   SESSION_SECRET?: string
+  LEARNER_DATA_SECRET?: string
+  LEARNER_DB?: D1Database
   RUNNER_CONTROL?: Pick<DurableObjectNamespace, 'getByName'>
   RUNNER_CONFIG?: KVNamespace
   RUNNER_ENABLED?: string
@@ -39,6 +43,12 @@ interface RunnerGrantPayload {
   language: 'python' | 'cpp' | 'csharp' | 'java'
   expiresAt: number
   nonce: string
+}
+
+interface ProgressRow {
+  revision: number
+  progress_json: string
+  updated_at: string
 }
 
 type ExternalFetch = (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>
@@ -417,6 +427,155 @@ async function authRequest(
   return json({ error: 'Auth endpoint not found.' }, 404)
 }
 
+async function progressOwner(request: Request, env: WorkerEnv): Promise<string | null> {
+  if (!env.SESSION_SECRET || env.SESSION_SECRET.length < 32 || !env.LEARNER_DATA_SECRET || env.LEARNER_DATA_SECRET.length < 32) return null
+  const session = await readSession(parseCookies(request).get(SESSION_COOKIE), env.SESSION_SECRET)
+  return session ? hmacTag(`learning:${session.user.id}`, env.LEARNER_DATA_SECRET) : null
+}
+
+function progressRecord(row: ProgressRow): {
+  version: typeof PROGRESS_RECORD_VERSION
+  revision: number
+  updatedAt: string
+  progress: ReturnType<typeof parseLearnerProgress>
+} | null {
+  let value: unknown
+  try {
+    value = JSON.parse(row.progress_json)
+  } catch {
+    return null
+  }
+  const progress = parseLearnerProgress(value)
+  if (!progress || !Number.isInteger(row.revision) || row.revision < 1) return null
+  return {
+    version: PROGRESS_RECORD_VERSION,
+    revision: row.revision,
+    updatedAt: row.updated_at,
+    progress,
+  }
+}
+
+async function readProgressRow(env: WorkerEnv, ownerId: string): Promise<ProgressRow | null> {
+  if (!env.LEARNER_DB) return null
+  return env.LEARNER_DB.prepare(
+    'SELECT revision, progress_json, updated_at FROM learner_progress WHERE owner_id = ?',
+  ).bind(ownerId).first<ProgressRow>()
+}
+
+async function getProgress(env: WorkerEnv, ownerId: string): Promise<Response> {
+  const row = await readProgressRow(env, ownerId)
+  if (!row) return json({ version: PROGRESS_RECORD_VERSION, record: null })
+  const record = progressRecord(row)
+  if (!record) return json({ error: 'The saved learning record could not be read safely.' }, 500)
+  return json({ version: PROGRESS_RECORD_VERSION, record })
+}
+
+async function writeProgress(request: Request, env: WorkerEnv, ownerId: string): Promise<Response> {
+  if (!sameOrigin(request, env)) return json({ error: 'Progress changes require a same-origin request.' }, 403)
+  const contentLength = Number(request.headers.get('Content-Length') ?? '0')
+  if (Number.isFinite(contentLength) && contentLength > PROGRESS_BACKUP_MAX_BYTES) {
+    return json({ error: 'The learning record is too large.' }, 413)
+  }
+
+  let body: unknown
+  try {
+    body = await request.json()
+  } catch {
+    return json({ error: 'Send the learning record as JSON.' }, 400)
+  }
+  if (!body || typeof body !== 'object') return json({ error: 'Send one versioned learning record.' }, 400)
+  const input = body as { version?: unknown; revision?: unknown; progress?: unknown }
+  if (input.version !== PROGRESS_RECORD_VERSION) {
+    return json({ error: `This server supports learning record version ${PROGRESS_RECORD_VERSION}.` }, 400)
+  }
+  if (!Number.isInteger(input.revision) || Number(input.revision) < 0) {
+    return json({ error: 'The learning record revision is missing or invalid.' }, 400)
+  }
+  const progress = parseLearnerProgress(input.progress)
+  if (!progress) return json({ error: 'The learning record contains missing, unknown, or unsafe values.' }, 400)
+
+  const expectedRevision = Number(input.revision)
+  const current = await readProgressRow(env, ownerId)
+  if (current && current.revision !== expectedRevision) {
+    return json({
+      error: 'This account changed on another device. Review the newer saved record before trying again.',
+      record: progressRecord(current),
+    }, 409)
+  }
+  if (!current && expectedRevision !== 0) {
+    return json({
+      error: 'The saved learning record no longer exists. Review this browser copy before creating it again.',
+      record: null,
+    }, 409)
+  }
+
+  const now = new Date().toISOString()
+  const serialized = JSON.stringify(progress)
+  if (new TextEncoder().encode(serialized).byteLength > PROGRESS_BACKUP_MAX_BYTES) {
+    return json({ error: 'The learning record is too large.' }, 413)
+  }
+  const nextRevision = expectedRevision + 1
+  const result = current
+    ? await env.LEARNER_DB!.prepare(
+        'UPDATE learner_progress SET revision = ?, progress_json = ?, updated_at = ? WHERE owner_id = ? AND revision = ?',
+      ).bind(nextRevision, serialized, now, ownerId, expectedRevision).run()
+    : await env.LEARNER_DB!.prepare(
+        'INSERT OR IGNORE INTO learner_progress (owner_id, schema_version, revision, progress_json, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)',
+      ).bind(ownerId, PROGRESS_RECORD_VERSION, nextRevision, serialized, now, now).run()
+
+  if (result.meta.changes !== 1) {
+    const latest = await readProgressRow(env, ownerId)
+    return json({
+      error: 'This account changed on another device. Review the newer saved record before trying again.',
+      record: latest ? progressRecord(latest) : null,
+    }, 409)
+  }
+
+  return json({
+    version: PROGRESS_RECORD_VERSION,
+    record: {
+      version: PROGRESS_RECORD_VERSION,
+      revision: nextRevision,
+      updatedAt: now,
+      progress,
+    },
+  })
+}
+
+async function deleteProgress(request: Request, env: WorkerEnv, ownerId: string): Promise<Response> {
+  if (!sameOrigin(request, env)) return json({ error: 'Progress deletion requires a same-origin request.' }, 403)
+  let body: unknown
+  try {
+    body = await request.json()
+  } catch {
+    return json({ error: 'Confirm learning-data deletion explicitly.' }, 400)
+  }
+  if (
+    !body
+    || typeof body !== 'object'
+    || (body as { confirmation?: unknown }).confirmation !== 'DELETE MY LEARNING DATA'
+  ) {
+    return json({ error: 'Confirm learning-data deletion explicitly.' }, 400)
+  }
+  const result = await env.LEARNER_DB!.prepare(
+    'DELETE FROM learner_progress WHERE owner_id = ?',
+  ).bind(ownerId).run()
+  return json({ deleted: true, recordsRemoved: result.meta.changes })
+}
+
+async function progressRequest(request: Request, env: WorkerEnv): Promise<Response> {
+  if (!env.LEARNER_DB) return json({ error: 'Account progress storage is not configured.' }, 503)
+  if (!env.LEARNER_DATA_SECRET || env.LEARNER_DATA_SECRET.length < 32) {
+    return json({ error: 'Account progress identity is not configured.' }, 503)
+  }
+  const ownerId = await progressOwner(request, env)
+  if (!ownerId) return json({ error: 'Sign in to access saved learning progress.' }, 401)
+  if (request.method === 'GET') return getProgress(env, ownerId)
+  if (request.method === 'PUT') return writeProgress(request, env, ownerId)
+  if (request.method === 'DELETE') return deleteProgress(request, env, ownerId)
+  return methodNotAllowed('GET, PUT, DELETE')
+}
+
 function runnerOrigin(env: WorkerEnv): string {
   if (!env.RUNNER_ORIGIN) return CANONICAL_ORIGIN
   try {
@@ -681,6 +840,20 @@ export async function handleRequest(
       return Response.redirect(url.toString(), 308)
     }
     return authRequest(request, env, externalFetch)
+  }
+
+  if (url.pathname === '/api/progress') {
+    const expectedOrigin = new URL(runnerOrigin(env))
+    if (url.origin !== expectedOrigin.origin) {
+      url.protocol = expectedOrigin.protocol
+      url.host = expectedOrigin.host
+      return Response.redirect(url.toString(), 308)
+    }
+    try {
+      return await progressRequest(request, env)
+    } catch {
+      return json({ error: 'Saved learning progress is temporarily unavailable. The browser copy was not changed.' }, 500)
+    }
   }
 
   if (url.pathname.startsWith('/api/runner/')) {

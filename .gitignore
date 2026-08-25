@@ -8,6 +8,7 @@ dist/
 !.env.example
 coverage/
 .vite/
+.wrangler/
 *.tsbuildinfo
 __pycache__/
 *.py[cod]

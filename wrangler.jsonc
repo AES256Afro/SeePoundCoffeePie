@@ -12,7 +12,8 @@
   "secrets": {
     "required": [
       "GITHUB_CLIENT_SECRET",
-      "SESSION_SECRET"
+      "SESSION_SECRET",
+      "LEARNER_DATA_SECRET"
     ]
   },
   "assets": {
@@ -25,6 +26,14 @@
     {
       "binding": "RUNNER_CONFIG",
       "id": "2aeb513663da4186a9aba4dec27790de"
+    }
+  ],
+  "d1_databases": [
+    {
+      "binding": "LEARNER_DB",
+      "database_name": "see-pound-coffee-pie-learners",
+      "database_id": "60065626-54cf-4990-a544-313e1e74b499",
+      "migrations_dir": "migrations"
     }
   ],
   "containers": [

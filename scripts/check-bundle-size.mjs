@@ -4,8 +4,8 @@ import path from 'node:path'
 
 const root = new URL('../dist/', import.meta.url)
 const budgets = {
-  javascript: { raw: 450_000, gzip: 120_000 },
-  css: { raw: 55_000, gzip: 12_000 },
+  javascript: { raw: 460_000, gzip: 125_000 },
+  css: { raw: 58_000, gzip: 12_500 },
   html: { raw: 5_000, gzip: 2_000 },
 }
 

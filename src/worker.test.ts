@@ -6,6 +6,7 @@ vi.mock('@cloudflare/sandbox', () => ({
 }))
 
 import worker, { handleRequest } from './worker'
+import { initialProgress } from './lib/progress'
 
 const htmlEnv = {
   ASSETS: {
@@ -16,6 +17,7 @@ const htmlEnv = {
   GITHUB_CLIENT_ID: 'test-client-id',
   GITHUB_CLIENT_SECRET: 'test-client-secret',
   SESSION_SECRET: 'a-test-session-secret-that-is-long-enough-for-hmac',
+  LEARNER_DATA_SECRET: 'a-separate-learning-data-secret-for-stable-owner-ids',
 }
 const testVerifier = 'v'.repeat(43)
 
@@ -27,6 +29,110 @@ function setCookies(response: Response): string[] {
 function cookieValue(response: Response, name: string): string | null {
   const cookie = setCookies(response).find((value) => value.startsWith(`${name}=`))
   return cookie?.slice(name.length + 1).split(';', 1)[0] ?? null
+}
+
+class MemoryD1 implements D1Database {
+  row: {
+    owner_id: string
+    schema_version: number
+    revision: number
+    progress_json: string
+    created_at: string
+    updated_at: string
+  } | null = null
+
+  prepare(query: string): D1PreparedStatement {
+    let values: unknown[] = []
+    return {
+      bind: (...nextValues: unknown[]) => {
+        values = nextValues
+        return this.prepareWithValues(query, values)
+      },
+      first: async () => null,
+      run: async () => ({ success: true, meta: { changes: 0 } }),
+    }
+  }
+
+  private prepareWithValues(query: string, values: unknown[]): D1PreparedStatement {
+    return {
+      bind: () => this.prepareWithValues(query, values),
+      first: async <T>() => {
+        if (!query.startsWith('SELECT') || !this.row || this.row.owner_id !== values[0]) return null
+        return {
+          revision: this.row.revision,
+          progress_json: this.row.progress_json,
+          updated_at: this.row.updated_at,
+        } as T
+      },
+      run: async () => {
+        let changes = 0
+        if (query.startsWith('INSERT')) {
+          if (!this.row) {
+            this.row = {
+              owner_id: String(values[0]),
+              schema_version: Number(values[1]),
+              revision: Number(values[2]),
+              progress_json: String(values[3]),
+              created_at: String(values[4]),
+              updated_at: String(values[5]),
+            }
+            changes = 1
+          }
+        } else if (query.startsWith('UPDATE')) {
+          const ownerId = String(values[3])
+          const revision = Number(values[4])
+          if (this.row?.owner_id === ownerId && this.row.revision === revision) {
+            this.row.revision = Number(values[0])
+            this.row.progress_json = String(values[1])
+            this.row.updated_at = String(values[2])
+            changes = 1
+          }
+        } else if (query.startsWith('DELETE')) {
+          if (this.row?.owner_id === values[0]) {
+            this.row = null
+            changes = 1
+          }
+        }
+        return { success: true, meta: { changes } }
+      },
+    }
+  }
+}
+
+async function sessionCookieFor(userId = 314): Promise<string> {
+  const externalFetch = vi.fn(async (input: RequestInfo | URL) => {
+    const url = String(input)
+    if (url.endsWith('/login/oauth/access_token')) return Response.json({ access_token: `token-${userId}` })
+    if (url === 'https://api.github.com/user') {
+      return Response.json({ id: userId, login: `cadet-${userId}`, name: `Cadet ${userId}` })
+    }
+    if (url.endsWith('/applications/test-client-id/grant')) return new Response(null, { status: 204 })
+    throw new Error(`Unexpected GitHub request: ${url}`)
+  })
+  const response = await handleRequest(
+    new Request('https://seepoundcoffeepie.com/api/auth/github/callback?code=abc&state=test-state', {
+      headers: {
+        Cookie: `__Host-spp_oauth_state=test-state; __Host-spp_oauth_pkce=${testVerifier}`,
+      },
+    }),
+    htmlEnv,
+    externalFetch,
+  )
+  return cookieValue(response, '__Host-spp_session') ?? ''
+}
+
+function progressFixture() {
+  return {
+    ...initialProgress('python'),
+    callsign: 'Synced Cadet',
+    onboardingComplete: true,
+    xp: 25,
+    starShards: 25,
+    completedMissions: ['py-first-spark'],
+    conceptProgress: {
+      'python-print': { strength: 1, correct: 1, incorrect: 0, dueAt: '2026-08-26' },
+    },
+  }
 }
 
 describe('production Worker', () => {
@@ -304,6 +410,121 @@ describe('production Worker', () => {
 
     expect(response.status).toBe(503)
     await expect(response.json()).resolves.toEqual({ error: 'GitHub sign-in is not configured.' })
+  })
+
+  it('creates, reads, updates, and deletes one authenticated learning record', async () => {
+    const sessionCookie = await sessionCookieFor()
+    const database = new MemoryD1()
+    const progressEnv = { ...htmlEnv, LEARNER_DB: database }
+    const headers = {
+      Cookie: `__Host-spp_session=${sessionCookie}`,
+      Origin: 'https://seepoundcoffeepie.com',
+      'Content-Type': 'application/json',
+    }
+    const created = await handleRequest(
+      new Request('https://seepoundcoffeepie.com/api/progress', {
+        method: 'PUT',
+        headers,
+        body: JSON.stringify({ version: 1, revision: 0, progress: { ...progressFixture(), ignored: 'removed' } }),
+      }),
+      progressEnv,
+    )
+    expect(created.status).toBe(200)
+    await expect(created.json()).resolves.toMatchObject({
+      record: { version: 1, revision: 1, progress: { callsign: 'Synced Cadet', xp: 25 } },
+    })
+    expect(database.row?.progress_json).not.toContain('ignored')
+
+    const loaded = await handleRequest(
+      new Request('https://seepoundcoffeepie.com/api/progress', {
+        headers: { Cookie: `__Host-spp_session=${sessionCookie}` },
+      }),
+      progressEnv,
+    )
+    await expect(loaded.json()).resolves.toMatchObject({ record: { revision: 1, progress: { xp: 25 } } })
+
+    const updated = await handleRequest(
+      new Request('https://seepoundcoffeepie.com/api/progress', {
+        method: 'PUT',
+        headers,
+        body: JSON.stringify({ version: 1, revision: 1, progress: { ...progressFixture(), xp: 40 } }),
+      }),
+      progressEnv,
+    )
+    await expect(updated.json()).resolves.toMatchObject({ record: { revision: 2, progress: { xp: 40 } } })
+
+    const deleted = await handleRequest(
+      new Request('https://seepoundcoffeepie.com/api/progress', {
+        method: 'DELETE',
+        headers,
+        body: JSON.stringify({ confirmation: 'DELETE MY LEARNING DATA' }),
+      }),
+      progressEnv,
+    )
+    await expect(deleted.json()).resolves.toEqual({ deleted: true, recordsRemoved: 1 })
+  })
+
+  it('requires authentication and same-origin confirmation for account progress changes', async () => {
+    const database = new MemoryD1()
+    const unauthenticated = await handleRequest(
+      new Request('https://seepoundcoffeepie.com/api/progress'),
+      { ...htmlEnv, LEARNER_DB: database },
+    )
+    expect(unauthenticated.status).toBe(401)
+
+    const sessionCookie = await sessionCookieFor()
+    const rejected = await handleRequest(
+      new Request('https://seepoundcoffeepie.com/api/progress', {
+        method: 'PUT',
+        headers: {
+          Cookie: `__Host-spp_session=${sessionCookie}`,
+          Origin: 'https://malicious.example',
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ version: 1, revision: 0, progress: progressFixture() }),
+      }),
+      { ...htmlEnv, LEARNER_DB: database },
+    )
+    expect(rejected.status).toBe(403)
+    expect(database.row).toBeNull()
+  })
+
+  it('returns the newer account revision on conflict and isolates records between users', async () => {
+    const database = new MemoryD1()
+    const firstSession = await sessionCookieFor(314)
+    const secondSession = await sessionCookieFor(2718)
+    const progressEnv = { ...htmlEnv, LEARNER_DB: database }
+    const writeHeaders = {
+      Cookie: `__Host-spp_session=${firstSession}`,
+      Origin: 'https://seepoundcoffeepie.com',
+      'Content-Type': 'application/json',
+    }
+    await handleRequest(
+      new Request('https://seepoundcoffeepie.com/api/progress', {
+        method: 'PUT',
+        headers: writeHeaders,
+        body: JSON.stringify({ version: 1, revision: 0, progress: progressFixture() }),
+      }),
+      progressEnv,
+    )
+    const conflict = await handleRequest(
+      new Request('https://seepoundcoffeepie.com/api/progress', {
+        method: 'PUT',
+        headers: writeHeaders,
+        body: JSON.stringify({ version: 1, revision: 0, progress: { ...progressFixture(), xp: 999 } }),
+      }),
+      progressEnv,
+    )
+    expect(conflict.status).toBe(409)
+    await expect(conflict.json()).resolves.toMatchObject({ record: { revision: 1, progress: { xp: 25 } } })
+
+    const otherLearner = await handleRequest(
+      new Request('https://seepoundcoffeepie.com/api/progress', {
+        headers: { Cookie: `__Host-spp_session=${secondSession}` },
+      }),
+      progressEnv,
+    )
+    await expect(otherLearner.json()).resolves.toEqual({ version: 1, record: null })
   })
 
   it('reports the runner kill switch without creating a learner identity', async () => {

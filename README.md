@@ -29,7 +29,8 @@ The current vertical slice includes:
 - a Practice Bay that recommends the completed mission covering the most due concepts, then builds one focused exercise per due concept;
 - a searchable 50-term beginner Codebook and a Cadet Record with progression-unlocked examples and separate progress for all four stations;
 - validated local JSON backup and restore for course progress;
-- local browser persistence with a visible reset control;
+- offline-safe browser persistence with a visible reset control;
+- optional private cross-device progress synchronization, conflict choices, and account-data deletion;
 - responsive layouts for desktop, tablet, and mobile;
 - keyboard focus states, reduced-motion support, and a documented Ctrl or Command plus Enter editor shortcut;
 - optional GitHub identity verification with a secure, server-side OAuth flow.
@@ -44,7 +45,7 @@ The academy uses clean application URLs instead of separate `.html` files. Cloud
 - `/practice/:language` is the selected school’s Practice Bay;
 - `/codebook/:language` is the selected school’s Codebook;
 - `/profile` is the Cadet Record;
-- `/settings` contains GitHub identity, training-goal, local-backup, and reset controls;
+- `/settings` contains GitHub identity, synchronization state, training-goal, backup, restore, account-data deletion, and reset controls;
 - `/academy/:language/missions/:mission-id` is an individual lesson;
 - focused Practice Bay lessons use `/practice/:language/missions/:mission-id` and preserve the review concepts in the query string.
 
@@ -133,13 +134,26 @@ The GitHub client ID is a public identifier, so it is stored as the `GITHUB_CLIE
 ```bash
 npx wrangler secret put GITHUB_CLIENT_SECRET
 openssl rand -base64 48 | npx wrangler secret put SESSION_SECRET
+openssl rand -base64 48 | npx wrangler secret put LEARNER_DATA_SECRET
 ```
 
 For local Worker testing, copy `.dev.vars.example` to `.dev.vars` and fill in local values. The real `.dev.vars` file is ignored by Git.
 
 The authorization flow uses an exact callback, a cryptographic state value, PKCE with SHA-256, short-lived secure cookies, and a signed seven-day `HttpOnly` session. It requests no private GitHub scopes. After GitHub returns the public account ID and login, the Worker revokes the temporary GitHub grant and does not store the access token. Logging out clears the signed site session and requires a same-origin request.
 
-GitHub sign-in currently verifies identity only. Course progress, XP, streaks, and review history remain in the learner's browser and are neither uploaded nor synchronized. The Cadet Record can download that local data as a versioned JSON backup and restore it after validating every mission, concept, count, date, and language value.
+GitHub sign-in verifies identity and can synchronize one private Cadet Record after the learner explicitly chooses how to handle existing browser and account progress. Guests keep the complete browser-only experience. Signed-in learners can save or combine a browser record, use an existing account record, continue safely while offline, resolve revision conflicts, and delete the server copy without deleting the browser copy.
+
+The synchronized record includes learning settings, XP, streak, mission achievements, aggregate answer counts, memory strength, and review dates. It does not retain submitted code, raw attempts, GitHub access tokens, email, raw IP addresses, or social data. A dedicated `LEARNER_DATA_SECRET` pseudonymizes the GitHub account ID and must remain stable across normal `SESSION_SECRET` rotations.
+
+Apply the versioned D1 schema before deploying Worker code that uses it:
+
+```bash
+npm run d1:migrate:local
+npm run d1:migrate:staging
+npm run d1:migrate:production
+```
+
+The Cadet Record can also download a versioned JSON backup and restore it after validating every mission, concept, count, date, and language value. The complete storage contract, migration choices, conflict policy, deletion behavior, privacy boundary, retention policy, and recovery procedure are in the [Phase 3 release record](docs/PHASE_3_RELEASE.md).
 
 ## How editable code runs
 
@@ -166,6 +180,8 @@ SeePoundCoffeePie keeps its own interface, narrative, mentor, terminology, missi
 
 Read the full [product and curriculum blueprint](docs/PRODUCT_BLUEPRINT.md).
 The verified Phase 1 scope and handoff are recorded in the [Phase 1 learning foundation release](docs/PHASE_1_RELEASE.md).
+The verified Phase 2 execution boundary is recorded in the [Phase 2 real execution release](docs/PHASE_2_RELEASE.md).
+The Phase 3 account and durable-learning-data contract is recorded in the [Phase 3 release](docs/PHASE_3_RELEASE.md).
 
 ## Research references
 

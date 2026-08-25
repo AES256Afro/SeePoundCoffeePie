@@ -10,7 +10,7 @@
     "RUNNER_ORIGIN": "https://see-pound-coffee-pie-phase2-staging.chris-c39.workers.dev"
   },
   "secrets": {
-    "required": ["SESSION_SECRET"]
+    "required": ["SESSION_SECRET", "LEARNER_DATA_SECRET"]
   },
   "assets": {
     "directory": "./dist",
@@ -22,6 +22,14 @@
     {
       "binding": "RUNNER_CONFIG",
       "id": "6bf969696f1a4b39b87fc074d16ab233"
+    }
+  ],
+  "d1_databases": [
+    {
+      "binding": "LEARNER_DB",
+      "database_name": "see-pound-coffee-pie-learners-staging",
+      "database_id": "f8bc1ecb-a820-4308-a1d1-02f09e366d2b",
+      "migrations_dir": "migrations"
     }
   ],
   "containers": [

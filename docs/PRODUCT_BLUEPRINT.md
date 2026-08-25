@@ -179,13 +179,13 @@ Every authored lesson must:
 - Every editable exercise has a visible output check and hidden checks that restate requirements already shown to the learner.
 - The release evidence and operations guide are recorded in [the Phase 2 release](PHASE_2_RELEASE.md).
 
-### Phase 3: Accounts and durable learning data
+### Phase 3: Accounts and durable learning data (complete)
 
-- Add authentication with a guest-to-account migration path.
-- Store progress, attempts, review schedules, settings, and achievements server-side.
-- Sync between desktop and mobile.
-- Carry the completed local progress backup and restore flow into server-side accounts, then add account deletion controls.
-- Define privacy retention and child-safety requirements before collecting social data.
+- Optional GitHub authentication now offers an explicit guest-to-account migration choice without making an account necessary for learning.
+- One versioned private Cadet Record stores progress, aggregate answer counts, review schedules, settings, and achievements in D1 without retaining source code, GitHub tokens, email, raw IP addresses, or social data.
+- Revisioned automatic saves, offline-safe browser storage, conservative merging, and visible conflict choices synchronize progress across signed-in desktop and mobile browsers.
+- The validated JSON backup and restore flow works with account synchronization, while settings provide separate server-data deletion and learning-progress reset controls.
+- The [Phase 3 release record](PHASE_3_RELEASE.md) defines the data contract, retention, privacy boundary, child-safety gate, deployment order, verification, and recovery requirements.
 
 ### Phase 4: Projects and adaptive practice
 

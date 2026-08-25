@@ -2,3 +2,4 @@
 # Copy this file to .dev.vars and replace every value. Never commit .dev.vars.
 GITHUB_CLIENT_SECRET="your-github-oauth-client-secret"
 SESSION_SECRET="generate-a-long-random-value"
+LEARNER_DATA_SECRET="generate-a-separate-long-random-value-and-keep-it-stable"
