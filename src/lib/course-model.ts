@@ -1,5 +1,18 @@
 import { tracks } from '../data/curriculum'
+import {
+  courseDefinition,
+  courseDefinitionForSlug,
+  courseDefinitions,
+  courseIsAvailable,
+  foundationCourseId,
+  missingCoursePrerequisites,
+  type CourseKind,
+  type CourseModuleKind,
+  type CoursePrerequisite,
+  type CourseSymbol,
+} from '../data/course-registry'
 import type {
+  CourseId,
   ExerciseType,
   LanguageId,
   LanguageTrack,
@@ -7,10 +20,8 @@ import type {
 } from '../types'
 import { missionAvailability } from './missions'
 
-export type CourseSymbol = 'pi' | 'eye' | 'hash' | 'coffee'
 export type CourseStatus = 'not-started' | 'in-progress' | 'complete'
 export type CourseAvailability = 'available' | 'locked' | 'coming-soon'
-export type CourseModuleKind = 'lessons' | 'guided-project'
 
 export interface CourseLessonModel {
   id: string
@@ -28,7 +39,7 @@ export interface CourseLessonModel {
 
 export interface CourseModuleModel {
   id: string
-  courseId: LanguageId
+  courseId: CourseId
   number: number
   title: string
   sourceTitle: string
@@ -47,7 +58,8 @@ export interface CourseModuleModel {
 }
 
 export interface CourseCardModel {
-  id: LanguageId
+  id: CourseId
+  language: LanguageId
   slug: string
   title: string
   shortName: string
@@ -55,7 +67,10 @@ export interface CourseCardModel {
   symbolLabel: string
   description: string
   outcome: string
-  level: 'Beginner'
+  kind: CourseKind
+  level: string
+  availability: 'available' | 'locked'
+  missingPrerequisites: CoursePrerequisite[]
   moduleCount: number
   lessonCount: number
   completedModuleCount: number
@@ -67,78 +82,11 @@ export interface CourseCardModel {
   currentModuleTitle: string | null
   currentLessonId: string | null
   currentLessonTitle: string | null
-  actionLabel: 'Start course' | 'Continue course' | 'Review course'
+  actionLabel: 'Start course' | 'Continue course' | 'Review course' | 'View prerequisites'
 }
 
 export interface CourseModel extends CourseCardModel {
   modules: CourseModuleModel[]
-}
-
-interface CourseCopy {
-  slug: string
-  title: string
-  symbol: CourseSymbol
-  symbolLabel: string
-  outcome: string
-  moduleTitles: readonly [string, string, string, string, string, string]
-}
-
-const SHARED_MODULE_TITLES = [
-  'Reading code and variables',
-  'Decisions',
-  'Collections',
-  'Loops',
-  'Functions',
-  'Guided project',
-] as const
-
-const COURSE_COPY: Record<LanguageId, CourseCopy> = {
-  python: {
-    slug: 'python-foundations',
-    title: 'Python Foundations',
-    symbol: 'pi',
-    symbolLabel: 'Pi',
-    outcome: 'Write readable scripts and build a small text adventure.',
-    moduleTitles: SHARED_MODULE_TITLES,
-  },
-  cpp: {
-    slug: 'cpp-foundations',
-    title: 'C++ Foundations',
-    symbol: 'eye',
-    symbolLabel: 'Eye',
-    outcome: 'Understand compiled programs and build a tactical simulator.',
-    moduleTitles: SHARED_MODULE_TITLES,
-  },
-  csharp: {
-    slug: 'csharp-foundations',
-    title: 'C# Foundations',
-    symbol: 'hash',
-    symbolLabel: 'Hash mark',
-    outcome: 'Build structured console programs and a small encounter system.',
-    moduleTitles: [
-      'Reading code and variables',
-      'Decisions',
-      'Collections',
-      'Loops',
-      'Methods',
-      'Guided project',
-    ],
-  },
-  java: {
-    slug: 'java-foundations',
-    title: 'Java Foundations',
-    symbol: 'coffee',
-    symbolLabel: 'Coffee cup',
-    outcome: 'Build portable console programs and an expedition planner.',
-    moduleTitles: [
-      'Reading code and variables',
-      'Decisions',
-      'Collections',
-      'Loops',
-      'Methods',
-      'Guided project',
-    ],
-  },
 }
 
 function percentage(completed: number, total: number): number {
@@ -231,7 +179,7 @@ export function buildCourseModel(
   progress: LearnerProgress,
   activeExerciseId?: string,
 ): CourseModel {
-  const copy = COURSE_COPY[track.id]
+  const definition = courseDefinition(foundationCourseId(track.id))
   const completedLessons = completedLessonIds(progress)
   const currentLocation = resolveCurrentLocation(track, progress, activeExerciseId)
   const completedModuleCount = track.missions.filter((mission) => (
@@ -265,14 +213,14 @@ export function buildCourseModel(
 
     return {
       id: mission.id,
-      courseId: track.id,
+      courseId: definition.id,
       number: moduleIndex + 1,
-      title: copy.moduleTitles[moduleIndex] ?? mission.title,
+      title: definition.moduleTitles[moduleIndex] ?? mission.title,
       sourceTitle: mission.title,
       subtitle: mission.subtitle,
       description: mission.description,
       duration: mission.duration,
-      kind: moduleIndex === track.missions.length - 1 ? 'guided-project' : 'lessons',
+      kind: definition.moduleKinds[moduleIndex] ?? 'lessons',
       lessonCount: mission.exercises.length,
       completedLessonCount: completedLessonCountForModule,
       progressPercent: percentage(completedLessonCountForModule, mission.exercises.length),
@@ -295,15 +243,19 @@ export function buildCourseModel(
   const status: CourseStatus = complete ? 'complete' : hasActivity ? 'in-progress' : 'not-started'
 
   return {
-    id: track.id,
-    slug: copy.slug,
-    title: copy.title,
+    id: definition.id,
+    language: track.id,
+    slug: definition.slug,
+    title: definition.title,
     shortName: track.shortName,
-    symbol: copy.symbol,
-    symbolLabel: copy.symbolLabel,
+    symbol: definition.symbol,
+    symbolLabel: definition.symbolLabel,
     description: track.description,
-    outcome: copy.outcome,
-    level: 'Beginner',
+    outcome: definition.outcome,
+    kind: definition.kind,
+    level: definition.level,
+    availability: 'available',
+    missingPrerequisites: [],
     moduleCount: track.missions.length,
     lessonCount,
     completedModuleCount,
@@ -331,15 +283,21 @@ export function buildCourseCards(
   progress: LearnerProgress,
   activeExerciseId?: string,
 ): CourseCardModel[] {
-  return buildCourseModels(progress, activeExerciseId).map((course) => {
+  const foundationCards = buildCourseModels(progress, activeExerciseId).map((course) => {
     const { modules, ...card } = course
     void modules
     return card
   })
+  return [
+    ...foundationCards,
+    ...courseDefinitions
+      .filter((definition) => definition.kind === 'continuing')
+      .map((definition) => buildRegisteredCourseCard(definition.id, progress)),
+  ]
 }
 
 export function courseSlugFor(language: LanguageId): string {
-  return COURSE_COPY[language].slug
+  return courseDefinition(foundationCourseId(language)).slug
 }
 
 export function coursePath(language: LanguageId): string {
@@ -347,7 +305,7 @@ export function coursePath(language: LanguageId): string {
 }
 
 export function languageForCourseSlug(slug: string): LanguageId | undefined {
-  return tracks.find((candidate) => COURSE_COPY[candidate.id].slug === slug)?.id
+  return courseDefinitionForSlug(slug)?.language
 }
 
 export function courseBySlug(
@@ -356,6 +314,65 @@ export function courseBySlug(
   activeExerciseId?: string,
 ): CourseModel | undefined {
   const language = languageForCourseSlug(slug)
+  const definition = courseDefinitionForSlug(slug)
+  if (definition?.kind !== 'foundation') return undefined
   const track = language ? tracks.find((candidate) => candidate.id === language) : undefined
   return track ? buildCourseModel(track, progress, activeExerciseId) : undefined
+}
+
+export function buildRegisteredCourseCard(
+  courseId: CourseId,
+  progress: LearnerProgress,
+): CourseCardModel {
+  const definition = courseDefinition(courseId)
+  const completedMissionIds = new Set(progress.completedMissions)
+  const completedLessonIds = new Set(progress.completedLessons)
+  const completedModuleCount = definition.missionIds.filter((missionId) => completedMissionIds.has(missionId)).length
+  const completedLessonCount = definition.lessonIds.filter((lessonId) => completedLessonIds.has(lessonId)).length
+  const complete = completedModuleCount === definition.missionIds.length && definition.missionIds.length > 0
+  const hasActivity = completedModuleCount > 0 || completedLessonCount > 0
+  const available = courseIsAvailable(courseId, progress)
+  const currentModuleIndex = complete
+    ? -1
+    : definition.missionIds.findIndex((missionId) => !completedMissionIds.has(missionId))
+  const currentModuleId = currentModuleIndex >= 0 ? definition.missionIds[currentModuleIndex] : null
+  const currentLessonId = currentModuleIndex >= 0
+    ? definition.lessonIds.slice(currentModuleIndex * 5, (currentModuleIndex + 1) * 5)
+      .find((lessonId) => !completedLessonIds.has(lessonId)) ?? definition.lessonIds[(currentModuleIndex + 1) * 5 - 1] ?? null
+    : null
+  const status: CourseStatus = complete ? 'complete' : hasActivity ? 'in-progress' : 'not-started'
+
+  return {
+    id: definition.id,
+    language: definition.language,
+    slug: definition.slug,
+    title: definition.title,
+    shortName: definition.shortName,
+    symbol: definition.symbol,
+    symbolLabel: definition.symbolLabel,
+    description: definition.description,
+    outcome: definition.outcome,
+    kind: definition.kind,
+    level: definition.level,
+    availability: available ? 'available' : 'locked',
+    missingPrerequisites: missingCoursePrerequisites(courseId, progress),
+    moduleCount: definition.missionIds.length,
+    lessonCount: definition.lessonIds.length,
+    completedModuleCount,
+    completedLessonCount,
+    progressPercent: percentage(completedLessonCount, definition.lessonIds.length),
+    status,
+    active: progress.activeLanguage === definition.language,
+    currentModuleId,
+    currentModuleTitle: currentModuleIndex >= 0 ? definition.moduleTitles[currentModuleIndex] ?? null : null,
+    currentLessonId,
+    currentLessonTitle: null,
+    actionLabel: !available
+      ? 'View prerequisites'
+      : complete
+        ? 'Review course'
+        : hasActivity
+          ? 'Continue course'
+          : 'Start course',
+  }
 }

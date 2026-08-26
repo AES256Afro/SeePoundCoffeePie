@@ -7,6 +7,7 @@ export interface CodebookEntry {
   keywords: string[]
   examples?: Partial<Record<LanguageId, string>>
   unlockAfter?: 1 | 2 | 3 | 4 | 5
+  unlockAfterMissionId?: string
 }
 
 export type ExampleState = 'unavailable' | 'locked' | 'unlocked'
@@ -577,6 +578,116 @@ export const codebookEntries: CodebookEntry[] = [
       java: 'report(droid);',
     },
   },
+  {
+    term: 'Return value',
+    plain: 'A result a function sends back to the line that called it, so the program can store that result or use it in another calculation.',
+    ship: 'A workshop control finishes its job and sends one useful reading back to the console that activated it.',
+    keywords: ['return', 'result', 'function output', 'send back', 'calculation'],
+    unlockAfterMissionId: 'py-data-return-values',
+    examples: {
+      python: 'def subtotal(price, quantity):\n    return price * quantity\n\ntotal = subtotal(4, 3)',
+    },
+  },
+  {
+    term: 'String method',
+    plain: 'An operation attached to a text value with a dot, such as strip() or lower(), that produces a new text result.',
+    ship: 'A cleanup control attached to a label can trim its extra spacing or make its lettering consistent.',
+    keywords: ['text operation', 'dot', 'strip', 'lower', 'method call'],
+    unlockAfterMissionId: 'py-data-text-cleanup',
+    examples: {
+      python: 'item_name = " Markers "\nclean_name = item_name.strip()',
+    },
+  },
+  {
+    term: 'Text normalization',
+    plain: 'Changing text into one consistent form before comparing it or using it as a stored name, such as trimming spaces and using lowercase.',
+    ship: 'The supply desk rewrites MARKERS, markers, and padded labels in one standard logbook format.',
+    keywords: ['normalize', 'clean text', 'consistent', 'strip', 'lowercase'],
+    unlockAfterMissionId: 'py-data-text-cleanup',
+    examples: {
+      python: 'clean_name = item_name.strip().lower()',
+    },
+  },
+  {
+    term: 'List mutation',
+    plain: 'A change made to an existing list, such as adding an item with append(), so that list now contains updated items.',
+    ship: 'A clerk adds another task to the same checklist instead of replacing the entire checklist.',
+    keywords: ['change list', 'append', 'add item', 'update', 'mutable'],
+    unlockAfterMissionId: 'py-data-list-tools',
+    examples: {
+      python: 'tasks = ["email"]\ntasks.append("backup")',
+    },
+  },
+  {
+    term: 'Length',
+    plain: 'The number of items in a collection. Python uses len() to count the current items in a list, dictionary, string, or other collection.',
+    ship: 'The manifest computer counts how many labeled entries are currently on the supply list.',
+    keywords: ['len', 'count', 'number of items', 'size', 'collection'],
+    unlockAfterMissionId: 'py-data-list-tools',
+    examples: {
+      python: 'task_count = len(tasks)',
+    },
+  },
+  {
+    term: 'Membership test',
+    plain: 'A true-or-false check that asks whether a value is already inside a collection. Python commonly writes this check with in or not in.',
+    ship: 'The clerk checks whether backup already appears on the task manifest before adding another copy.',
+    keywords: ['in', 'not in', 'contains', 'already listed', 'boolean'],
+    unlockAfterMissionId: 'py-data-list-tools',
+    examples: {
+      python: 'if "backup" in tasks:\n    print("Already listed")',
+    },
+  },
+  {
+    term: 'Dictionary',
+    plain: 'A Python collection that stores values under named keys, so a program can find information by a useful label instead of a numbered position.',
+    ship: 'A supply ledger pairs each item name with its current quantity, such as paper with 12 units.',
+    keywords: ['dict', 'mapping', 'key', 'value', 'named data'],
+    unlockAfterMissionId: 'py-data-dictionaries',
+    examples: {
+      python: 'inventory = {"paper": 12, "markers": 5}',
+    },
+  },
+  {
+    term: 'Key and value',
+    plain: 'A dictionary entry has a key used to find it and a value stored under that key. In inventory["paper"], paper is the key and its quantity is the value.',
+    ship: 'The ledger label identifies one supply, while the number beside that label records how many are available.',
+    keywords: ['dictionary entry', 'lookup', 'mapping', 'label', 'stored amount'],
+    unlockAfterMissionId: 'py-data-dictionaries',
+    examples: {
+      python: 'amount = inventory["paper"]  # key: "paper", value: 12',
+    },
+  },
+  {
+    term: 'Default value',
+    plain: 'A fallback result used when requested data is missing. A dictionary get() call can return that fallback instead of stopping with a missing-key error.',
+    ship: 'If the supply ledger has no markers entry yet, the clerk begins from the agreed quantity of zero.',
+    keywords: ['fallback', 'get', 'missing key', 'starting value', 'zero'],
+    unlockAfterMissionId: 'py-data-dictionaries',
+    examples: {
+      python: 'current = inventory.get("markers", 0)',
+    },
+  },
+  {
+    term: 'Accumulator',
+    plain: 'A variable that keeps a running result while a loop works through several values. It is initialized before the loop and updated during each pass.',
+    ship: 'A tally display starts at zero and adds each storage-bin quantity as the inspection moves along.',
+    keywords: ['running total', 'total', 'loop', 'add up', 'initialize'],
+    unlockAfterMissionId: 'py-data-summaries',
+    examples: {
+      python: 'total = 0\nfor amount in inventory.values():\n    total += amount',
+    },
+  },
+  {
+    term: 'Filter',
+    plain: 'A rule that selects only the collection items that match a condition, leaving unrelated items out of the result.',
+    ship: 'A supply report includes only bins below the restock limit instead of copying every bin into the alert list.',
+    keywords: ['select', 'condition', 'matching items', 'subset', 'low stock'],
+    unlockAfterMissionId: 'py-data-summaries',
+    examples: {
+      python: 'low = []\nfor name in inventory:\n    if inventory[name] < 6:\n        low.append(name)',
+    },
+  },
 ]
 
 export function codebookExampleState(
@@ -585,6 +696,11 @@ export function codebookExampleState(
   completedMissionIds: string[],
 ): ExampleState {
   if (!entry.examples?.[track.id]) return 'unavailable'
+  if (entry.unlockAfterMissionId) {
+    return completedMissionIds.includes(entry.unlockAfterMissionId)
+      ? 'unlocked'
+      : 'locked'
+  }
   if (!entry.unlockAfter) return 'unlocked'
 
   const requiredMission = track.missions[entry.unlockAfter - 1]

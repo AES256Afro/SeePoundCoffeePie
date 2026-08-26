@@ -26,6 +26,9 @@ const privateMarkers = [
   'final-hidden-one-guest',
   'final-hidden-below-large-table',
   'final-hidden-large-table-boundary',
+  'python-data-tools-supply-tracker-v1',
+  'supply-tracker-visible-report',
+  'Keep the four supplied functions and report steps in their taught order without extra or unreachable statements.',
 ]
 const teachingMarkers = [
   'A sequence of instructions that a computer follows.',
@@ -33,6 +36,7 @@ const teachingMarkers = [
   'Modern C# also permits top-level instructions',
   'Java begins as readable source saved in Main.java.',
 ]
+const dataToolsTeachingMarker = 'A normalization function applies the same cleanup rule every time.'
 
 const index = await readFile(new URL('index.html', dist), 'utf8')
 const entryMatch = /<script[^>]+src="[^"]*\/([^/"?]+\.js)(?:\?[^" ]*)?"/iu.exec(index)
@@ -61,4 +65,15 @@ for (const teachingMarker of teachingMarkers) {
   }
 }
 
-console.log(`Project bundle boundary passed across ${emittedAssets.length} emitted JavaScript and CSS assets.`)
+const dataToolsAssets = emittedAssets.filter(({ contents }) => contents.includes(dataToolsTeachingMarker))
+if (entry.contents.includes(dataToolsTeachingMarker)) {
+  throw new Error('Practical Python teaching content leaked into the first-load JavaScript asset.')
+}
+if (
+  dataToolsAssets.length !== 1
+  || !/^python-data-tools-course-.*\.js$/u.test(dataToolsAssets[0]?.name ?? '')
+) {
+  throw new Error('Practical Python teaching content must appear in exactly one reviewed lazy course asset.')
+}
+
+console.log(`Server-owned assessment bundle boundary passed across ${emittedAssets.length} emitted JavaScript and CSS assets.`)

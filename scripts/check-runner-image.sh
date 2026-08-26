@@ -5,8 +5,44 @@ image_prefix="${1:-spp-runner}"
 project_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
 python3 "$project_dir/runner/test_supervisor_analysis.py"
+PYTHONDONTWRITEBYTECODE=1 python3 "$project_dir/runner/test_python_data_tools_analyzer.py"
 
 docker build --platform linux/amd64 -t "$image_prefix-python:worker" -f "$project_dir/Dockerfile.runner.python" "$project_dir"
+docker run --rm \
+  --platform linux/amd64 \
+  --network none \
+  --memory 1g \
+  --pids-limit 256 \
+  --entrypoint /usr/bin/python3 \
+  -e PYTHONDONTWRITEBYTECODE=1 \
+  -e PYTHONPATH=/opt/runner \
+  -v "$project_dir/runner/test_python_data_tools_analyzer.py:/fixture/test_python_data_tools_analyzer.py:ro" \
+  -v "$project_dir/runner/fixtures:/fixture/fixtures:ro" \
+  "$image_prefix-python:worker" \
+  /fixture/test_python_data_tools_analyzer.py
+
+python_data_tools_analysis="$(docker run --rm \
+  --platform linux/amd64 \
+  --network none \
+  --memory 1g \
+  --pids-limit 256 \
+  --entrypoint /usr/bin/python3 \
+  -v "$project_dir/runner/fixtures/python-data-tools-reference.python.txt:/workspace/source.txt:ro" \
+  "$image_prefix-python:worker" \
+  -I -B /opt/runner/PythonDataToolsAnalyzer.py /workspace/source.txt)"
+ANALYSIS="$python_data_tools_analysis" node --input-type=module -e '
+  const analysis = JSON.parse(process.env.ANALYSIS)
+  const facts = ["authored_frame", "normalize_name", "add_stock", "total_stock", "low_stock", "harness"]
+  if (
+    analysis.version !== 1 ||
+    analysis.profile !== "python-data-tools-supply-tracker-v1" ||
+    analysis.analyzed !== true ||
+    analysis.parsed !== true ||
+    !facts.every((fact) => analysis[fact] === true)
+  ) {
+    throw new Error("Python Data Tools image analyzer rejected the authentic fixture")
+  }
+'
 docker build --platform linux/amd64 -t "$image_prefix-cpp:worker" -f "$project_dir/Dockerfile.runner.cpp" "$project_dir"
 docker run --rm \
   --platform linux/amd64 \
@@ -40,6 +76,37 @@ docker run --rm \
   -v "$project_dir/runner/test_supervisor_csharp_analysis.py:/fixture/test_supervisor_csharp_analysis.py:ro" \
   "$image_prefix-csharp:worker" \
   /fixture/test_supervisor_csharp_analysis.py
+
+python_analyzer_mode="$(docker run --rm \
+  --platform linux/amd64 \
+  --network none \
+  --entrypoint /usr/bin/stat \
+  "$image_prefix-python:worker" \
+  -c '%a' /opt/runner/PythonDataToolsAnalyzer.py)"
+if [[ "$python_analyzer_mode" != "500" ]]; then
+  echo "Python Data Tools analyzer must be installed root-only with mode 500, received $python_analyzer_mode." >&2
+  exit 1
+fi
+
+if docker run --rm \
+  --platform linux/amd64 \
+  --network none \
+  --user 10001:10001 \
+  --entrypoint /bin/sh \
+  "$image_prefix-python:worker" \
+  -c 'test -r /opt/runner/PythonDataToolsAnalyzer.py || test -x /opt/runner/PythonDataToolsAnalyzer.py'; then
+  echo "Python Data Tools analyzer must not be readable or executable by the learner identity." >&2
+  exit 1
+fi
+
+for language in cpp csharp java; do
+  docker run --rm \
+    --platform linux/amd64 \
+    --network none \
+    --entrypoint /bin/sh \
+    "$image_prefix-$language:worker" \
+    -c 'test ! -e /opt/runner/PythonDataToolsAnalyzer.py'
+done
 
 run_fixture() {
   local language="$1"

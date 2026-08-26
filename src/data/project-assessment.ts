@@ -1,18 +1,42 @@
 import type { ProjectTestCase } from './project-types'
 import type { LanguageId } from '../types'
 
-export interface ServerOwnedProjectAssessment {
+export type ServerOwnedAssessmentProfile = 'python-data-tools-supply-tracker-v1'
+
+export interface ServerOwnedRunnerAssessment {
   language: LanguageId
-  referenceSolution: string
-  structuralChecks: ServerOwnedProjectStructuralCheck[]
+  structuralChecks: ServerOwnedRunnerStructuralCheck[]
   testCases: ProjectTestCase[]
+  analysisProfile?: ServerOwnedAssessmentProfile
+}
+
+export interface ServerOwnedProjectAssessment extends ServerOwnedRunnerAssessment {
+  referenceSolution: string
 }
 
 interface ServerOwnedProjectStructuralCheckBase {
   message: string
 }
 
-export type ServerOwnedProjectStructuralCheck =
+export type ServerOwnedRunnerStructuralCheck =
+  | ServerOwnedProjectStructuralCheckBase & {
+      validation: 'python-data-tools-authored-frame'
+    }
+  | ServerOwnedProjectStructuralCheckBase & {
+      validation: 'python-data-tools-normalize-name'
+    }
+  | ServerOwnedProjectStructuralCheckBase & {
+      validation: 'python-data-tools-add-stock'
+    }
+  | ServerOwnedProjectStructuralCheckBase & {
+      validation: 'python-data-tools-total-stock'
+    }
+  | ServerOwnedProjectStructuralCheckBase & {
+      validation: 'python-data-tools-low-stock'
+    }
+  | ServerOwnedProjectStructuralCheckBase & {
+      validation: 'python-data-tools-harness'
+    }
   | ServerOwnedProjectStructuralCheckBase & {
       validation: 'python-assignment-integer'
       target: string
@@ -128,3 +152,5 @@ export type ServerOwnedProjectStructuralCheck =
   | ServerOwnedProjectStructuralCheckBase & {
       validation: 'java-main-statement-order'
     }
+
+export type ServerOwnedProjectStructuralCheck = ServerOwnedRunnerStructuralCheck

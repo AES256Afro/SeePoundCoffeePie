@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { trackById } from '../data/curriculum'
+import { pythonDataToolsCourse } from '../data/python-data-tools-course'
+import type { LanguageTrack } from '../types'
 import { initialProgress } from './progress'
 import { clearPracticeSession, loadOrCreatePracticeSession } from './practice-session'
 
@@ -14,6 +16,14 @@ function memoryStorage(): Storage {
     key(index) { return [...records.keys()][index] ?? null },
     removeItem(key) { records.delete(key) },
     setItem(key, value) { records.set(key, String(value)) },
+  }
+}
+
+function mergedPythonTrack(): LanguageTrack {
+  const foundation = trackById('python')
+  return {
+    ...foundation,
+    missions: [...foundation.missions, ...pythonDataToolsCourse.missions],
   }
 }
 
@@ -72,6 +82,46 @@ describe('ephemeral adaptive practice session', () => {
     expect(restored.items.map((item) => item.exercise.id)).toEqual(
       first.items.map((item) => item.exercise.id),
     )
+  })
+
+  it('restores a saved Data Tools exercise through the merged Python track', () => {
+    const track = mergedPythonTrack()
+    const mission = pythonDataToolsCourse.missions[0]
+    const exercise = mission.exercises.find((item) => item.id === 'pydata1-subtotal')
+    if (!exercise) throw new Error('Expected the authored Data Tools subtotal exercise.')
+    const progress = {
+      ...initialProgress('python'),
+      completedMissions: [mission.id],
+      conceptProgress: {
+        [exercise.conceptId]: {
+          strength: 1,
+          correct: 1,
+          incorrect: 0,
+          dueAt: '2026-08-24',
+        },
+      },
+    }
+    const storage = memoryStorage()
+    const stored = {
+      version: 1,
+      language: 'python',
+      exerciseIds: [exercise.id],
+    }
+    storage.setItem(
+      'see-pound-coffee-pie-practice-session:python',
+      JSON.stringify(stored),
+    )
+
+    const restored = loadOrCreatePracticeSession(track, progress, storage, now)
+
+    expect(restored.items).toMatchObject([{
+      conceptId: exercise.conceptId,
+      missionId: mission.id,
+      exercise: { id: exercise.id },
+    }])
+    expect(JSON.parse(
+      storage.getItem('see-pound-coffee-pie-practice-session:python') ?? '{}',
+    )).toEqual(stored)
   })
 
   it('discards a tampered or no-longer-eligible queue and builds a safe replacement', () => {

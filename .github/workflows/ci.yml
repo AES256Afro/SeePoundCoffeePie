@@ -30,8 +30,17 @@ jobs:
       - name: Run lint
         run: npm run lint
 
+      - name: Verify text style
+        run: npm run check:text-style
+
+      - name: Verify social preview
+        run: npm run check:social-preview
+
       - name: Build production bundle
         run: npm run build
+
+      - name: Verify server-owned assessment privacy
+        run: npm run check:project-bundle
 
       - name: Verify bundle budgets
         run: npm run check:bundle

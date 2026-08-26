@@ -7,9 +7,12 @@ import { javaPicnicProject } from '../data/java-picnic-project'
 import { javaPicnicProjectServerAssessment } from '../data/java-picnic-project.server'
 import { pythonInteractiveProject } from '../data/python-interactive-project'
 import { pythonInteractiveProjectServerAssessment } from '../data/python-interactive-project.server'
+import { pythonDataToolsCourse } from '../data/python-data-tools-course'
+import { pythonDataToolsServerAssessment } from '../data/python-data-tools.server'
 import type {
   ServerOwnedProjectAssessment,
-  ServerOwnedProjectStructuralCheck,
+  ServerOwnedRunnerAssessment,
+  ServerOwnedRunnerStructuralCheck,
 } from '../data/project-assessment'
 import type { Exercise, LanguageId } from '../types'
 import { evaluateExerciseChecks } from './evaluator'
@@ -24,6 +27,7 @@ export interface RunnerAssignment {
   exercise: Exercise
   kind: RunnerAssignmentKind
   projectCheckStdin?: string
+  assessment?: ServerOwnedRunnerAssessment
   projectAssessment?: ServerOwnedProjectAssessment
 }
 
@@ -52,6 +56,19 @@ export interface PythonAnalysis {
   straight_line: boolean
   assignments: PythonAssignmentFact[]
   print_fstrings: PythonPrintFStringFact[]
+}
+
+export interface PythonDataToolsAnalysis {
+  version: 1
+  profile: 'python-data-tools-supply-tracker-v1'
+  analyzed: boolean
+  parsed: boolean
+  authored_frame: boolean
+  normalize_name: boolean
+  add_stock: boolean
+  total_stock: boolean
+  low_stock: boolean
+  harness: boolean
 }
 
 export type CppDeclarationFact =
@@ -267,7 +284,14 @@ export interface JavaAnalysis {
   calls: JavaCallFact[]
 }
 
-export type ProjectStructuralAnalysis = PythonAnalysis | CppAnalysis | CsharpAnalysis | JavaAnalysis
+export type RunnerStructuralAnalysis =
+  | PythonAnalysis
+  | PythonDataToolsAnalysis
+  | CppAnalysis
+  | CsharpAnalysis
+  | JavaAnalysis
+
+export type ProjectStructuralAnalysis = RunnerStructuralAnalysis
 
 export interface RunnerProjectEvaluation {
   tests: RunnerTestResult[]
@@ -276,11 +300,42 @@ export interface RunnerProjectEvaluation {
 
 const assignments = new Map<string, RunnerAssignment>()
 
+export function registerRunnerAssignment(
+  registry: Map<string, RunnerAssignment>,
+  assignment: RunnerAssignment,
+): void {
+  if (assignment.assessment && assignment.projectAssessment) {
+    throw new Error(`Runner assignment ${assignment.exerciseId} declares two protected assessments.`)
+  }
+  const assessment = runnerAssessment(assignment)
+  if (assessment?.language !== undefined && assessment.language !== assignment.language) {
+    throw new Error(`Runner assignment ${assignment.exerciseId} has a mismatched assessment language.`)
+  }
+  if (assessment?.analysisProfile !== undefined && assignment.language !== 'python') {
+    throw new Error(`Runner assignment ${assignment.exerciseId} has a Python-only assessment profile.`)
+  }
+  if (assessment) {
+    const visibleCaseCount = assessment.testCases.filter((testCase) => (
+      testCase.visibility === 'visible'
+    )).length
+    if (visibleCaseCount !== 1) {
+      throw new Error(`Runner assignment ${assignment.exerciseId} needs exactly one visible assessment case.`)
+    }
+  }
+  const existing = registry.get(assignment.exerciseId)
+  if (existing) {
+    throw new Error(
+      `Duplicate runner assignment ${assignment.exerciseId} (${existing.kind} and ${assignment.kind}).`,
+    )
+  }
+  registry.set(assignment.exerciseId, assignment)
+}
+
 for (const track of tracks) {
   for (const mission of track.missions) {
     for (const exercise of mission.exercises) {
       if ((exercise.type !== 'code' && exercise.type !== 'bugfix') || exercise.output === undefined) continue
-      assignments.set(exercise.id, {
+      registerRunnerAssignment(assignments, {
         exerciseId: exercise.id,
         language: track.id,
         expectedOutput: exercise.output,
@@ -291,10 +346,26 @@ for (const track of tracks) {
   }
 }
 
+for (const mission of pythonDataToolsCourse.missions) {
+  for (const exercise of mission.exercises) {
+    if ((exercise.type !== 'code' && exercise.type !== 'bugfix') || exercise.output === undefined) continue
+    registerRunnerAssignment(assignments, {
+      exerciseId: exercise.id,
+      language: pythonDataToolsCourse.language,
+      expectedOutput: exercise.output,
+      exercise,
+      kind: 'academy',
+      ...(exercise.id === 'pydata6-supply-tracker'
+        ? { assessment: pythonDataToolsServerAssessment }
+        : {}),
+    })
+  }
+}
+
 for (const checkpoint of pythonInteractiveProject.checkpoints) {
   const { exercise } = checkpoint
   if ((exercise.type !== 'code' && exercise.type !== 'bugfix') || exercise.output === undefined) continue
-  assignments.set(exercise.id, {
+  registerRunnerAssignment(assignments, {
     exerciseId: exercise.id,
     language: pythonInteractiveProject.language,
     expectedOutput: exercise.output,
@@ -310,7 +381,7 @@ for (const checkpoint of pythonInteractiveProject.checkpoints) {
 for (const checkpoint of cppCompiledProject.checkpoints) {
   const { exercise } = checkpoint
   if ((exercise.type !== 'code' && exercise.type !== 'bugfix') || exercise.output === undefined) continue
-  assignments.set(exercise.id, {
+  registerRunnerAssignment(assignments, {
     exerciseId: exercise.id,
     language: cppCompiledProject.language,
     expectedOutput: exercise.output,
@@ -326,7 +397,7 @@ for (const checkpoint of cppCompiledProject.checkpoints) {
 for (const checkpoint of csharpWorkshopProject.checkpoints) {
   const { exercise } = checkpoint
   if ((exercise.type !== 'code' && exercise.type !== 'bugfix') || exercise.output === undefined) continue
-  assignments.set(exercise.id, {
+  registerRunnerAssignment(assignments, {
     exerciseId: exercise.id,
     language: csharpWorkshopProject.language,
     expectedOutput: exercise.output,
@@ -342,7 +413,7 @@ for (const checkpoint of csharpWorkshopProject.checkpoints) {
 for (const checkpoint of javaPicnicProject.checkpoints) {
   const { exercise } = checkpoint
   if ((exercise.type !== 'code' && exercise.type !== 'bugfix') || exercise.output === undefined) continue
-  assignments.set(exercise.id, {
+  registerRunnerAssignment(assignments, {
     exerciseId: exercise.id,
     language: javaPicnicProject.language,
     expectedOutput: exercise.output,
@@ -369,7 +440,7 @@ function normalizedOutput(value: string): string {
 
 function checkPythonAnalysisFact(
   analysis: PythonAnalysis,
-  check: ServerOwnedProjectStructuralCheck,
+  check: ServerOwnedRunnerStructuralCheck,
 ): boolean {
   switch (check.validation) {
     case 'python-print-f-string':
@@ -396,6 +467,21 @@ function checkPythonAnalysisFact(
     }
     default:
       return false
+  }
+}
+
+function checkPythonDataToolsAnalysisFact(
+  analysis: PythonDataToolsAnalysis,
+  check: ServerOwnedRunnerStructuralCheck,
+): boolean {
+  switch (check.validation) {
+    case 'python-data-tools-authored-frame': return analysis.authored_frame
+    case 'python-data-tools-normalize-name': return analysis.normalize_name
+    case 'python-data-tools-add-stock': return analysis.add_stock
+    case 'python-data-tools-total-stock': return analysis.total_stock
+    case 'python-data-tools-low-stock': return analysis.low_stock
+    case 'python-data-tools-harness': return analysis.harness
+    default: return false
   }
 }
 
@@ -439,7 +525,7 @@ function hasAuthoredCppFactFrame(analysis: CppAnalysis): boolean {
 
 function checkCppAnalysisFact(
   analysis: CppAnalysis,
-  check: ServerOwnedProjectStructuralCheck,
+  check: ServerOwnedRunnerStructuralCheck,
 ): boolean {
   switch (check.validation) {
     case 'cpp-required-headers':
@@ -524,7 +610,7 @@ function hasAuthoredCsharpFactFrame(analysis: CsharpAnalysis): boolean {
 
 function checkCsharpAnalysisFact(
   analysis: CsharpAnalysis,
-  check: ServerOwnedProjectStructuralCheck,
+  check: ServerOwnedRunnerStructuralCheck,
 ): boolean {
   switch (check.validation) {
     case 'csharp-using-system':
@@ -629,7 +715,7 @@ function hasAuthoredJavaFactFrame(analysis: JavaAnalysis): boolean {
 
 function checkJavaAnalysisFact(
   analysis: JavaAnalysis,
-  check: ServerOwnedProjectStructuralCheck,
+  check: ServerOwnedRunnerStructuralCheck,
 ): boolean {
   switch (check.validation) {
     case 'java-scanner-import':
@@ -712,11 +798,21 @@ function checkJavaAnalysisFact(
   }
 }
 
-export function evaluateProjectStructuralChecks(
-  assessment: ServerOwnedProjectAssessment,
-  analysis: ProjectStructuralAnalysis | null | undefined,
+export function evaluateRunnerStructuralChecks(
+  assessment: ServerOwnedRunnerAssessment,
+  analysis: RunnerStructuralAnalysis | null | undefined,
 ): Array<{ passed: boolean; message: string }> {
+  const trustedPythonDataTools = assessment.language === 'python'
+    && assessment.analysisProfile === 'python-data-tools-supply-tracker-v1'
+    && analysis !== null
+    && analysis !== undefined
+    && 'profile' in analysis
+    && analysis.version === 1
+    && analysis.profile === assessment.analysisProfile
+    && analysis.analyzed
+    && analysis.parsed
   const trustedPython = assessment.language === 'python'
+    && assessment.analysisProfile === undefined
     && analysis !== null
     && analysis !== undefined
     && !('analyzed' in analysis)
@@ -754,8 +850,10 @@ export function evaluateProjectStructuralChecks(
     && analysis.straight_line
     && hasAuthoredJavaFactFrame(analysis)
   return assessment.structuralChecks.map((check) => ({
-    passed: trustedPython
-      ? checkPythonAnalysisFact(analysis, check)
+    passed: trustedPythonDataTools
+      ? checkPythonDataToolsAnalysisFact(analysis, check)
+      : trustedPython
+        ? checkPythonAnalysisFact(analysis, check)
       : trustedCpp
         ? checkCppAnalysisFact(analysis, check)
         : trustedCsharp
@@ -767,17 +865,29 @@ export function evaluateProjectStructuralChecks(
   }))
 }
 
+export function evaluateProjectStructuralChecks(
+  assessment: ServerOwnedRunnerAssessment,
+  analysis: RunnerStructuralAnalysis | null | undefined,
+): Array<{ passed: boolean; message: string }> {
+  return evaluateRunnerStructuralChecks(assessment, analysis)
+}
+
 export function runnerInputCases(
   assignment: RunnerAssignment,
   purpose: RunnerPurpose,
   callerStdin: string,
 ): string[] {
-  if (assignment.kind !== 'project') return [callerStdin]
   if (purpose === 'run') return [callerStdin]
-  if (assignment.projectAssessment) {
-    return assignment.projectAssessment.testCases.map((testCase) => testCase.stdin)
+  const assessment = runnerAssessment(assignment)
+  if (assessment) {
+    return assessment.testCases.map((testCase) => testCase.stdin)
   }
+  if (assignment.kind !== 'project') return [callerStdin]
   return [assignment.projectCheckStdin ?? '']
+}
+
+export function runnerAssessment(assignment: RunnerAssignment): ServerOwnedRunnerAssessment | undefined {
+  return assignment.assessment ?? assignment.projectAssessment
 }
 
 export function aggregateRunnerDurationMs(durations: number[]): number {
@@ -792,9 +902,17 @@ export function aggregateRunnerDurationMs(durations: number[]): number {
 export function evaluateProjectRunnerAssignment(
   assignment: RunnerAssignment,
   executions: RunnerProjectCaseExecution[],
-  analysis: ProjectStructuralAnalysis | null | undefined,
+  analysis: RunnerStructuralAnalysis | null | undefined,
 ): RunnerProjectEvaluation {
-  const assessment = assignment.projectAssessment
+  return evaluateProtectedRunnerAssignment(assignment, executions, analysis)
+}
+
+export function evaluateProtectedRunnerAssignment(
+  assignment: RunnerAssignment,
+  executions: RunnerProjectCaseExecution[],
+  analysis: RunnerStructuralAnalysis | null | undefined,
+): RunnerProjectEvaluation {
+  const assessment = runnerAssessment(assignment)
   if (!assessment) return { tests: [], visibleStdout: '' }
 
   let hiddenCaseNumber = 0
@@ -804,9 +922,13 @@ export function evaluateProjectRunnerAssignment(
     const outputMatches = completed
       && normalizedOutput(execution.stdout) === normalizedOutput(testCase.expectedStdout)
     const hiddenNumber = testCase.visibility === 'hidden' ? ++hiddenCaseNumber : 0
-    const name = testCase.visibility === 'visible'
-      ? 'Visible project example'
-      : `Hidden project case ${hiddenNumber}`
+    const name = assignment.kind === 'project'
+      ? testCase.visibility === 'visible'
+        ? 'Visible project example'
+        : `Hidden project case ${hiddenNumber}`
+      : testCase.visibility === 'visible'
+        ? 'Visible lesson example'
+        : `Hidden lesson case ${hiddenNumber}`
 
     return {
       name,
@@ -823,13 +945,13 @@ export function evaluateProjectRunnerAssignment(
           : 'This case could not run because an earlier case did not finish.',
     }
   })
-  const structuralResults = evaluateProjectStructuralChecks(assessment, analysis)
+  const structuralResults = evaluateRunnerStructuralChecks(assessment, analysis)
   const structuralTests: RunnerTestResult[] = structuralResults.map((check, index) => ({
-    name: `Required project code ${index + 1} of ${structuralResults.length}`,
+    name: `Required ${assignment.kind === 'project' ? 'project' : 'lesson'} code ${index + 1} of ${structuralResults.length}`,
     visibility: 'hidden',
     passed: check.passed,
     message: check.passed
-      ? 'This required part of the project is present in your code.'
+      ? `This required part of the ${assignment.kind === 'project' ? 'project' : 'lesson'} is present in your code.`
       : check.message,
   }))
   const visibleIndex = assessment.testCases.findIndex((testCase) => testCase.visibility === 'visible')

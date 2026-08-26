@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { trackById } from '../data/curriculum'
+import { pythonDataToolsCourse } from '../data/python-data-tools-course'
 import type { ConceptProgress, LanguageTrack } from '../types'
 import { initialProgress } from './progress'
 import {
@@ -37,10 +38,19 @@ function progressForMissions(track: LanguageTrack, missionIndexes: number[]) {
   }
 }
 
-describe('adaptive practice sessions', () => {
-  const python = trackById('python')
+function mergedPythonTrack(): LanguageTrack {
+  const foundation = trackById('python')
+  return {
+    ...foundation,
+    missions: [...foundation.missions, ...pythonDataToolsCourse.missions],
+  }
+}
 
-  it('starts with the canonical first mission before any material is complete', () => {
+describe('adaptive practice sessions', () => {
+  const pythonFoundations = trackById('python')
+  const python = mergedPythonTrack()
+
+  it('starts new learners in Python Foundations across the merged Python track', () => {
     const session = buildAdaptivePracticeSession(python, initialProgress('python'), now)
 
     expect(session).toMatchObject({
@@ -51,6 +61,7 @@ describe('adaptive practice sessions', () => {
       items: [],
       dueConcepts: [],
     })
+    expect(session.starterMission).toBe(pythonFoundations.missions[0])
     expect(session.starterMission.id).toBe('py-first-spark')
   })
 
@@ -74,6 +85,92 @@ describe('adaptive practice sessions', () => {
       ok: false,
       reason: 'unknown-item',
     })
+  })
+
+  it('admits Data Tools exercises only after their exact mission is complete', () => {
+    const completedDataMission = pythonDataToolsCourse.missions[0]
+    const incompleteDataMission = pythonDataToolsCourse.missions[1]
+    const incompleteFoundationMission = pythonFoundations.missions[1]
+    const seededMissions = [
+      ...pythonDataToolsCourse.missions,
+      incompleteFoundationMission,
+    ]
+    const seededConceptIds = [...new Set(seededMissions.flatMap((mission) => (
+      mission.exercises.map((exercise) => exercise.conceptId)
+    )))]
+    const beforeMissionCompletion = {
+      ...initialProgress('python'),
+      completedLessons: seededMissions.flatMap((mission) => (
+        mission.exercises.map((exercise) => exercise.id)
+      )),
+      conceptProgress: Object.fromEntries(seededConceptIds.map((id) => (
+        [id, concept(0)]
+      ))),
+    }
+
+    const before = buildAdaptivePracticeSession(python, beforeMissionCompletion, now)
+
+    expect(before.items).toEqual([])
+    for (const mission of pythonDataToolsCourse.missions) {
+      for (const exercise of mission.exercises) {
+        expect(resolveAdaptivePracticeSession(
+          python,
+          beforeMissionCompletion,
+          [exercise.id],
+          now,
+        )).toEqual({ ok: false, reason: 'unknown-item' })
+      }
+    }
+
+    const afterMissionCompletion = {
+      ...beforeMissionCompletion,
+      completedMissions: [completedDataMission.id],
+    }
+    const after = buildAdaptivePracticeSession(python, afterMissionCompletion, now)
+    const completedConceptIds = new Set(
+      completedDataMission.exercises.map((exercise) => exercise.conceptId),
+    )
+
+    expect(incompleteDataMission.status).toBe('locked')
+    expect(incompleteFoundationMission.status).toBe('locked')
+    expect(countEligibleDueConcepts(python, afterMissionCompletion, now)).toBe(
+      completedConceptIds.size,
+    )
+    expect(after.items.length).toBeGreaterThan(0)
+    expect(new Set(after.items.map((item) => item.missionId))).toEqual(
+      new Set([completedDataMission.id]),
+    )
+    expect(after.items.some((item) => item.missionId === incompleteDataMission.id)).toBe(false)
+    expect(after.items.some((item) => item.missionId === incompleteFoundationMission.id)).toBe(false)
+
+    for (const exercise of completedDataMission.exercises) {
+      expect(resolveAdaptivePracticeSession(
+        python,
+        afterMissionCompletion,
+        [exercise.id],
+        now,
+      )).toMatchObject({
+        ok: true,
+        session: {
+          items: [{
+            missionId: completedDataMission.id,
+            exercise: { id: exercise.id },
+          }],
+        },
+      })
+    }
+    expect(resolveAdaptivePracticeSession(
+      python,
+      afterMissionCompletion,
+      [incompleteDataMission.exercises[0].id],
+      now,
+    )).toEqual({ ok: false, reason: 'unknown-item' })
+    expect(resolveAdaptivePracticeSession(
+      python,
+      afterMissionCompletion,
+      [incompleteFoundationMission.exercises[0].id],
+      now,
+    )).toEqual({ ok: false, reason: 'unknown-item' })
   })
 
   it('builds one bounded review across several completed missions', () => {

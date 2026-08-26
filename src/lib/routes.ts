@@ -1,5 +1,12 @@
 import type { LanguageId } from '../types'
+import type { CourseId } from '../types'
 import { projectManifests } from '../data/project-manifests'
+import {
+  courseDefinition,
+  courseDefinitionForSlug,
+  courseMissionOwnsLesson,
+  foundationCourseId,
+} from '../data/course-registry'
 
 export type RoutePage =
   | 'landing'
@@ -21,6 +28,7 @@ export type RoutePage =
 export interface AppRoute {
   page: RoutePage
   language?: LanguageId
+  courseId?: CourseId
   missionId?: string
   exerciseId?: string
   projectId?: string
@@ -31,17 +39,6 @@ export interface AppRoute {
 }
 
 const languageIds: LanguageId[] = ['python', 'cpp', 'csharp', 'java']
-
-const courseSlugs: Record<LanguageId, string> = {
-  python: 'python-foundations',
-  cpp: 'cpp-foundations',
-  csharp: 'csharp-foundations',
-  java: 'java-foundations',
-}
-
-const languagesByCourseSlug = Object.fromEntries(
-  Object.entries(courseSlugs).map(([language, slug]) => [slug, language]),
-) as Record<string, LanguageId>
 
 const projectIdsByLanguage = projectManifests.reduce<Partial<Record<LanguageId, string[]>>>(
   (projects, project) => {
@@ -77,16 +74,26 @@ export function coursesPath(): string {
   return '/courses'
 }
 
-export function courseSlug(language: LanguageId): string {
-  return courseSlugs[language]
+function courseIdFor(value: CourseId | LanguageId): CourseId {
+  return languageIds.includes(value as LanguageId)
+    ? foundationCourseId(value as LanguageId)
+    : value as CourseId
 }
 
-export function coursePath(language: LanguageId): string {
-  return `${coursesPath()}/${courseSlug(language)}`
+export function courseSlug(course: CourseId | LanguageId): string {
+  return courseDefinition(courseIdFor(course)).slug
 }
 
-export function lessonPath(language: LanguageId, missionId: string, exerciseId: string): string {
-  return `/learn/${courseSlug(language)}/${encodeURIComponent(missionId)}/${encodeURIComponent(exerciseId)}`
+export function coursePath(course: CourseId | LanguageId): string {
+  return `${coursesPath()}/${courseSlug(course)}`
+}
+
+export function foundationCoursePath(language: LanguageId): string {
+  return coursePath(foundationCourseId(language))
+}
+
+export function lessonPath(course: CourseId | LanguageId, missionId: string, exerciseId: string): string {
+  return `/learn/${courseSlug(course)}/${encodeURIComponent(missionId)}/${encodeURIComponent(exerciseId)}`
 }
 
 export function projectPath(language: LanguageId, projectId: string, checkpointId?: string): string {
@@ -141,18 +148,21 @@ export function parseAppRoute(pathname: string, search = ''): AppRoute {
   if (segments.length === 1 && segments[0] === 'settings') return { page: 'settings', conceptIds: emptyConcepts }
 
   if (segments.length === 2 && segments[0] === 'courses') {
-    const courseLanguage = languagesByCourseSlug[segments[1]]
-    return courseLanguage
-      ? { page: 'course', language: courseLanguage, conceptIds: emptyConcepts }
+    const course = courseDefinitionForSlug(segments[1])
+    return course
+      ? { page: 'course', language: course.language, courseId: course.id, conceptIds: emptyConcepts }
       : { page: 'not-found', conceptIds: emptyConcepts }
   }
 
   if (segments.length === 4 && segments[0] === 'learn') {
-    const courseLanguage = languagesByCourseSlug[segments[1]]
-    if (!courseLanguage) return { page: 'not-found', conceptIds: emptyConcepts }
+    const course = courseDefinitionForSlug(segments[1])
+    if (!course || !courseMissionOwnsLesson(course.id, segments[2], segments[3])) {
+      return { page: 'not-found', conceptIds: emptyConcepts }
+    }
     return {
       page: 'lesson',
-      language: courseLanguage,
+      language: course.language,
+      courseId: course.id,
       missionId: segments[2],
       exerciseId: segments[3],
       practice: false,

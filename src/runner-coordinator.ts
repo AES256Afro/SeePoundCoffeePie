@@ -2,9 +2,10 @@ import { getSandbox, Sandbox } from '@cloudflare/sandbox'
 import type { LanguageId } from './types'
 import {
   aggregateRunnerDurationMs,
-  evaluateProjectRunnerAssignment,
+  evaluateProtectedRunnerAssignment,
   evaluateRunnerAssignment,
   findRunnerAssignment,
+  runnerAssessment,
   runnerInputCases,
   type CsharpAnalysis,
   type CsharpArrayFact,
@@ -32,6 +33,7 @@ import {
   type JavaWriteFact,
   type PythonAnalysis,
   type PythonAssignmentFact,
+  type PythonDataToolsAnalysis,
 } from './lib/runner-assignments'
 import {
   RUNNER_API_VERSION,
@@ -56,8 +58,11 @@ const RATE_WINDOW_MS = 60_000
 const RATE_LIMITS = { global: 60, owner: 10, ip: 20 } as const
 const POLL_AFTER_MS = 650
 const SUPERVISOR_TIMEOUT_MS = 20_000
+const TRUSTED_ANALYZER_TIMEOUT_MS = 5_000
 const DESTROY_TIMEOUT_MS = 8_000
 const STALE_RUN_MS = 2 * 60_000
+const PYTHON_DATA_TOOLS_ANALYZER_COMMAND = '/usr/bin/python3 -I -B /opt/runner/PythonDataToolsAnalyzer.py /workspace/source.txt'
+const PYTHON_DATA_TOOLS_ASSESSMENT_PROFILE = 'python-data-tools-supply-tracker-v1'
 const textEncoder = new TextEncoder()
 
 interface RunnerCoordinatorEnv {
@@ -227,6 +232,49 @@ function parsePythonAnalysis(value: unknown): PythonAnalysis | null {
   }
 
   return analysis as PythonAnalysis
+}
+
+function parsePythonDataToolsAnalysis(value: string): PythonDataToolsAnalysis | null {
+  if (value.length > 2_048) return null
+  try {
+    const parsed = JSON.parse(value) as Partial<PythonDataToolsAnalysis>
+    if (!parsed || typeof parsed !== 'object' || !hasExactKeys(parsed, [
+      'version',
+      'profile',
+      'analyzed',
+      'parsed',
+      'authored_frame',
+      'normalize_name',
+      'add_stock',
+      'total_stock',
+      'low_stock',
+      'harness',
+    ])) return null
+    if (
+      parsed.version !== 1
+      || parsed.profile !== PYTHON_DATA_TOOLS_ASSESSMENT_PROFILE
+      || typeof parsed.analyzed !== 'boolean'
+      || typeof parsed.parsed !== 'boolean'
+      || typeof parsed.authored_frame !== 'boolean'
+      || typeof parsed.normalize_name !== 'boolean'
+      || typeof parsed.add_stock !== 'boolean'
+      || typeof parsed.total_stock !== 'boolean'
+      || typeof parsed.low_stock !== 'boolean'
+      || typeof parsed.harness !== 'boolean'
+    ) return null
+    if ((!parsed.analyzed || !parsed.parsed) && (
+      parsed.authored_frame
+      || parsed.normalize_name
+      || parsed.add_stock
+      || parsed.total_stock
+      || parsed.low_stock
+      || parsed.harness
+    )) return null
+    if (!parsed.analyzed && parsed.parsed) return null
+    return parsed as PythonDataToolsAnalysis
+  } catch {
+    return null
+  }
 }
 
 function isCppAnalysisName(value: unknown): value is string {
@@ -1324,12 +1372,11 @@ export class RunnerCoordinator {
     const inputs = assignment
       ? runnerInputCases(assignment, purpose, record.stdin)
       : [record.stdin]
-    const officialProjectAssessment = assignment?.kind === 'project'
-      && purpose === 'check'
-      && assignment.projectAssessment
-      ? assignment.projectAssessment
+    const officialAssessment = assignment && purpose === 'check'
+      ? runnerAssessment(assignment) ?? null
       : null
     let supervisorRuns: SupervisorResult[] = []
+    let pythonDataToolsAnalysis: PythonDataToolsAnalysis | null = null
     let cleanupSucceeded = true
     for (const [caseIndex, stdin] of inputs.entries()) {
       // Every protected case gets a different VM. Learner-created processes,
@@ -1347,21 +1394,41 @@ export class RunnerCoordinator {
         await sandbox.writeFile('/workspace/source.txt', record.source)
         await sandbox.writeFile('/workspace/stdin.txt', stdin)
         const projectAnalysisRequested = (
-          officialProjectAssessment?.language === 'cpp'
-          || officialProjectAssessment?.language === 'csharp'
-          || officialProjectAssessment?.language === 'java'
+          officialAssessment?.language === 'cpp'
+          || officialAssessment?.language === 'csharp'
+          || officialAssessment?.language === 'java'
         ) && caseIndex === 0
-        const supervisorCommand = `/opt/runner/supervisor.py ${record.language}${
-          projectAnalysisRequested ? ' --project-analysis' : ''
-        }`
-        const execution = await sandbox.exec(supervisorCommand, {
-          timeout: SUPERVISOR_TIMEOUT_MS,
-        })
-        const supervisor = execution.success
-          ? parseSupervisorResult(execution.stdout, record.language, projectAnalysisRequested)
-          : null
-        const safeSupervisor = supervisor ?? supervisorSystemError()
-        supervisorRuns.push(safeSupervisor)
+        const pythonDataToolsAnalysisRequested = officialAssessment?.analysisProfile
+          === PYTHON_DATA_TOOLS_ASSESSMENT_PROFILE && caseIndex === 0
+        let profileAnalysisFailed = false
+        if (pythonDataToolsAnalysisRequested) {
+          if (record.language !== 'python') {
+            profileAnalysisFailed = true
+          } else {
+            const analysisExecution = await sandbox.exec(PYTHON_DATA_TOOLS_ANALYZER_COMMAND, {
+              timeout: TRUSTED_ANALYZER_TIMEOUT_MS,
+            })
+            pythonDataToolsAnalysis = analysisExecution.success
+              ? parsePythonDataToolsAnalysis(analysisExecution.stdout)
+              : null
+            profileAnalysisFailed = !pythonDataToolsAnalysis?.analyzed
+          }
+        }
+        if (profileAnalysisFailed) {
+          supervisorRuns.push(supervisorSystemError())
+        } else {
+          const supervisorCommand = `/opt/runner/supervisor.py ${record.language}${
+            projectAnalysisRequested ? ' --project-analysis' : ''
+          }`
+          const execution = await sandbox.exec(supervisorCommand, {
+            timeout: SUPERVISOR_TIMEOUT_MS,
+          })
+          const supervisor = execution.success
+            ? parseSupervisorResult(execution.stdout, record.language, projectAnalysisRequested)
+            : null
+          const safeSupervisor = supervisor ?? supervisorSystemError()
+          supervisorRuns.push(safeSupervisor)
+        }
       } catch {
         supervisorRuns.push(supervisorSystemError())
       } finally {
@@ -1390,18 +1457,20 @@ export class RunnerCoordinator {
     const failureIndex = sanitizedRuns.findIndex((supervisor) => supervisor.outcome !== 'completed')
     const representativeIndex = failureIndex >= 0 ? failureIndex : 0
     const representative = sanitizedRuns[representativeIndex] ?? supervisorSystemError()
-    const projectEvaluation = officialProjectAssessment && assignment
-      ? evaluateProjectRunnerAssignment(
+    const projectEvaluation = officialAssessment && assignment
+      ? evaluateProtectedRunnerAssignment(
           assignment,
           sanitizedRuns.map((supervisor) => ({
             outcome: supervisor.outcome,
             stdout: supervisor.stdout,
           })),
-          officialProjectAssessment.language === 'cpp'
+          officialAssessment.analysisProfile === PYTHON_DATA_TOOLS_ASSESSMENT_PROFILE
+            ? pythonDataToolsAnalysis
+            : officialAssessment.language === 'cpp'
             ? sanitizedRuns[0]?.cpp_analysis
-            : officialProjectAssessment.language === 'csharp'
+            : officialAssessment.language === 'csharp'
               ? sanitizedRuns[0]?.csharp_analysis
-              : officialProjectAssessment.language === 'java'
+              : officialAssessment.language === 'java'
                 ? sanitizedRuns[0]?.java_analysis
                 : sanitizedRuns[0]?.python_analysis,
         )
@@ -1419,7 +1488,7 @@ export class RunnerCoordinator {
               record.source,
             )
           : []
-    const visibleCaseIndex = officialProjectAssessment?.testCases.findIndex((testCase) => (
+    const visibleCaseIndex = officialAssessment?.testCases.findIndex((testCase) => (
       testCase.visibility === 'visible'
     )) ?? -1
     const stdout = projectEvaluation

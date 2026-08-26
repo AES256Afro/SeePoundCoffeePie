@@ -1,5 +1,12 @@
 export type LanguageId = 'python' | 'cpp' | 'csharp' | 'java'
 
+export type CourseId =
+  | 'python-foundations'
+  | 'cpp-foundations'
+  | 'csharp-foundations'
+  | 'java-foundations'
+  | 'python-data-tools'
+
 export type ExerciseType = 'choice' | 'prediction' | 'ordering' | 'bugfix' | 'code'
 
 export interface AuthUser {

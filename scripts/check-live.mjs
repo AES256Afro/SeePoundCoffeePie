@@ -4,6 +4,8 @@ import { request as httpsRequest } from 'node:https'
 const canonical = 'https://seepoundcoffeepie.com/'
 const expectedTitle = '<title>SeePoundCoffeePie | Programming from the beginning.</title>'
 const socialImageUrl = 'https://seepoundcoffeepie.com/social-card-v7.jpg'
+const practicalPythonCourseUrl = 'https://seepoundcoffeepie.com/courses/python-data-tools'
+const practicalPythonLessonUrl = 'https://seepoundcoffeepie.com/learn/python-data-tools/py-data-return-values/pydata1-retrieve-call'
 
 async function requestWithFreshDns(input, init = {}) {
   try {
@@ -61,6 +63,71 @@ if (!body.includes(expectedTitle) || !body.includes('<div id="root"></div>')) {
   throw new Error('The canonical domain did not return the SeePoundCoffeePie application shell')
 }
 
+const entryAssetPath = body.match(/<script[^>]+src="([^"]+\.js)"[^>]*><\/script>/u)?.[1]
+if (!entryAssetPath) {
+  throw new Error('The live application shell did not name its JavaScript entry asset')
+}
+
+const entryAssetResponse = await requestWithFreshDns(new URL(entryAssetPath, canonical), {
+  redirect: 'manual',
+})
+const entryAsset = await entryAssetResponse.text()
+if (
+  entryAssetResponse.status !== 200
+  || !(entryAssetResponse.headers.get('content-type') ?? '').includes('javascript')
+  || !entryAsset.includes('python-data-tools')
+) {
+  throw new Error('The deployed application entry does not contain the Practical Python course registry')
+}
+
+async function verifyPracticalPythonAsset(pattern, marker, label) {
+  const assetPath = entryAsset.match(pattern)?.[0]
+  if (!assetPath) {
+    throw new Error(`The deployed application entry does not reference the ${label}`)
+  }
+
+  const assetResponse = await requestWithFreshDns(new URL(assetPath, canonical), { redirect: 'manual' })
+  const asset = await assetResponse.text()
+  if (
+    assetResponse.status !== 200
+    || !(assetResponse.headers.get('content-type') ?? '').includes('javascript')
+    || !asset.includes(marker)
+  ) {
+    throw new Error(`The deployed ${label} is missing or does not match Phase 5A`)
+  }
+}
+
+await verifyPracticalPythonAsset(
+  /assets\/PythonDataToolsRoute-[A-Za-z0-9_-]+\.js/u,
+  'python-data-tools-course-',
+  'Practical Python route asset',
+)
+await verifyPracticalPythonAsset(
+  /assets\/python-data-tools-course-[A-Za-z0-9_-]+\.js/u,
+  'Products: 2',
+  'Practical Python teaching-content asset',
+)
+
+const sitemapResponse = await requestWithFreshDns(new URL('/sitemap.xml', canonical), { redirect: 'manual' })
+const sitemap = await sitemapResponse.text()
+if (
+  sitemapResponse.status !== 200
+  || !(sitemapResponse.headers.get('content-type') ?? '').includes('xml')
+  || !sitemap.includes(`<loc>${practicalPythonCourseUrl}</loc>`)
+  || !sitemap.includes(`<loc>${practicalPythonLessonUrl}</loc>`)
+) {
+  throw new Error('The live sitemap does not publish the Practical Python course and first lesson')
+}
+
+const robotsResponse = await requestWithFreshDns(new URL('/robots.txt', canonical), { redirect: 'manual' })
+const robots = await robotsResponse.text()
+if (
+  robotsResponse.status !== 200
+  || !robots.includes('Sitemap: https://seepoundcoffeepie.com/sitemap.xml')
+) {
+  throw new Error('The live robots file does not point to the canonical sitemap')
+}
+
 for (const metadata of [
   `<meta property="og:image" content="${socialImageUrl}" />`,
   '<meta property="og:image:width" content="1200" />',
@@ -112,6 +179,7 @@ const canonicalRoutes = [
   '/home',
   '/courses',
   '/courses/python-foundations',
+  '/courses/python-data-tools',
   '/courses/cpp-foundations',
   '/courses/csharp-foundations',
   '/courses/java-foundations',
@@ -128,6 +196,7 @@ const canonicalRoutes = [
   '/portfolio/csharp/workshop-check-in',
   '/portfolio/java/picnic-planner',
   '/learn/python-foundations/py-first-spark/py-console',
+  '/learn/python-data-tools/py-data-return-values/pydata1-retrieve-call',
   '/learn/cpp-foundations/cpp-reactor/cpp-compiler',
   '/learn/csharp-foundations/cs-shield/cs-dotnet',
   '/learn/java-foundations/java-coffee-protocol/java-jvm',
@@ -152,4 +221,4 @@ for (const route of [...canonicalRoutes, ...legacyRoutes]) {
   }
 }
 
-console.log(`Live verification passed for social previews, apex, www redirect, headers, ${canonicalRoutes.length} canonical routes, and ${legacyRoutes.length} legacy routes.`)
+console.log(`Live verification passed for Phase 5A assets, sitemap, robots, social previews, apex, www redirect, headers, ${canonicalRoutes.length} canonical routes, and ${legacyRoutes.length} legacy routes.`)

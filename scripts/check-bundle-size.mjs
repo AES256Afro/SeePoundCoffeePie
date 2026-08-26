@@ -13,10 +13,11 @@ const budgets = {
     html: { raw: 5_000, gzip: 2_000 },
   },
   total: {
-    // Phase 4F adds one route-loaded portfolio preview and exporter. The
-    // route receives its own caps below so it cannot silently bloat.
-    javascript: { raw: 685_000, gzip: 195_000 },
-    css: { raw: 76_000, gzip: 15_000 },
+    // Phase 5A adds one reviewed 30-lesson course, its route shell, and a
+    // separately loaded Codebook. The first-load limits above do not move.
+    // Each new lazy boundary also receives an exact asset cap below.
+    javascript: { raw: 765_000, gzip: 218_000 },
+    css: { raw: 87_000, gzip: 17_500 },
     html: { raw: 5_000, gzip: 2_000 },
   },
 }
@@ -33,6 +34,30 @@ const routeBudgets = [
     pattern: /^PortfolioPage-.*\.css$/u,
     raw: 4_500,
     gzip: 1_500,
+  },
+  {
+    label: 'practical python route javascript',
+    pattern: /^PythonDataToolsRoute-.*\.js$/u,
+    raw: 11_000,
+    gzip: 4_000,
+  },
+  {
+    label: 'practical python teaching content',
+    pattern: /^python-data-tools-course-.*\.js$/u,
+    raw: 50_000,
+    gzip: 14_000,
+  },
+  {
+    label: 'practical python route css',
+    pattern: /^PythonDataToolsRoute-.*\.css$/u,
+    raw: 10_000,
+    gzip: 2_200,
+  },
+  {
+    label: 'codebook route javascript',
+    pattern: /^CodebookRoute-.*\.js$/u,
+    raw: 30_000,
+    gzip: 10_000,
   },
 ]
 

@@ -1,7 +1,9 @@
+import { readFileSync } from 'node:fs'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { cppCompiledProjectServerAssessment } from './data/cpp-compiled-project.server'
+import { pythonDataToolsServerAssessment } from './data/python-data-tools.server'
 import { pythonInteractiveProjectServerAssessment } from './data/python-interactive-project.server'
-import type { CppAnalysis, PythonAnalysis } from './lib/runner-assignments'
+import type { CppAnalysis, PythonAnalysis, PythonDataToolsAnalysis } from './lib/runner-assignments'
 import type { RunnerPurpose, RunnerResult } from './lib/runner-contract'
 
 const sandboxMocks = vi.hoisted(() => ({
@@ -179,6 +181,32 @@ function queuedCppRun(source: string, purpose: RunnerPurpose, stdin = ''): TestQ
     id: 'cppprojectrunnercase00000000001',
     exerciseId: 'project-cpp-final',
     language: 'cpp',
+  }
+}
+
+function queuedPythonDataToolsRun(source: string, purpose: RunnerPurpose = 'check'): TestQueuedRun {
+  return {
+    ...queuedRun(source, purpose),
+    id: 'pythondatatoolsrunnercase000001',
+    exerciseId: 'pydata6-supply-tracker',
+  }
+}
+
+function pythonDataToolsAnalysis(
+  overrides: Partial<PythonDataToolsAnalysis> = {},
+): PythonDataToolsAnalysis {
+  return {
+    version: 1,
+    profile: 'python-data-tools-supply-tracker-v1',
+    analyzed: true,
+    parsed: true,
+    authored_frame: true,
+    normalize_name: true,
+    add_stock: true,
+    total_stock: true,
+    low_stock: true,
+    harness: true,
+    ...overrides,
   }
 }
 
@@ -631,5 +659,146 @@ describe('trusted C++ project analysis coordination', () => {
     expect(result.outcome).toBe('system_error')
     expect(result.tests.slice(0, 4).map((test) => test.passed)).toEqual([true, false, false, false])
     expect(result.tests.slice(4).every((test) => test.passed)).toBe(true)
+  })
+})
+
+describe('trusted Python Data Tools lesson analysis coordination', () => {
+  const expectedOutput = pythonDataToolsServerAssessment.testCases[0].expectedStdout
+  const authenticSource = readFileSync(
+    new URL('../runner/fixtures/python-data-tools-reference.python.txt', import.meta.url),
+    'utf8',
+  ).trimEnd()
+
+  function trustedSandbox(analysis: unknown, sourceOutput = expectedOutput) {
+    return {
+      writeFile: vi.fn(async () => undefined),
+      exec: vi.fn(async (command: string) => {
+        if (command === '/usr/bin/python3 -I -B /opt/runner/PythonDataToolsAnalyzer.py /workspace/source.txt') {
+          return { success: true, stdout: typeof analysis === 'string' ? analysis : JSON.stringify(analysis) }
+        }
+        return {
+          success: true,
+          stdout: supervisorResult(
+            'completed',
+            sourceOutput,
+            '',
+            5,
+            { ...emptyPythonAnalysis(), straight_line: false },
+          ),
+        }
+      }),
+      destroy: vi.fn(async () => undefined),
+    }
+  }
+
+  it('runs the fixed analyzer before the fixed supervisor in one fresh sandbox', async () => {
+    const storage = new MemoryStorage()
+    const sandbox = trustedSandbox(pythonDataToolsAnalysis(), `${expectedOutput}\n`)
+    sandboxMocks.getSandbox.mockReturnValue(sandbox)
+    const record = queuedPythonDataToolsRun(authenticSource)
+
+    await coordinatorWith(storage).execute(record)
+
+    expect(sandboxMocks.getSandbox).toHaveBeenCalledOnce()
+    expect(sandbox.exec.mock.calls.map(([command]) => command)).toEqual([
+      '/usr/bin/python3 -I -B /opt/runner/PythonDataToolsAnalyzer.py /workspace/source.txt',
+      '/opt/runner/supervisor.py python',
+    ])
+    expect(sandbox.writeFile).toHaveBeenCalledWith('/workspace/source.txt', authenticSource)
+    expect(sandbox.writeFile).toHaveBeenCalledWith('/workspace/stdin.txt', '')
+    expect(sandbox.destroy).toHaveBeenCalledOnce()
+    const result = storedResult(storage, record.id)
+    expect(result.outcome).toBe('completed')
+    expect(result.stdout).toBe(`${expectedOutput}\n`)
+    expect(result.tests).toHaveLength(7)
+    expect(result.tests.every((test) => test.passed)).toBe(true)
+    const serialized = JSON.stringify(result)
+    expect(serialized).not.toContain('python-data-tools-supply-tracker-v1')
+    expect(serialized).not.toContain('python_data_tools_analysis')
+    expect(serialized).not.toContain('authored_frame')
+  })
+
+  it('lets visible output pass while a hardcoded answer fails all protected facts', async () => {
+    const storage = new MemoryStorage()
+    const sandbox = trustedSandbox(pythonDataToolsAnalysis({
+      authored_frame: false,
+      normalize_name: false,
+      add_stock: false,
+      total_stock: false,
+      low_stock: false,
+      harness: false,
+    }))
+    sandboxMocks.getSandbox.mockReturnValue(sandbox)
+    const record = queuedPythonDataToolsRun(`print(${JSON.stringify(expectedOutput)})`)
+
+    await coordinatorWith(storage).execute(record)
+
+    const result = storedResult(storage, record.id)
+    expect(result.outcome).toBe('completed')
+    expect(result.tests).toHaveLength(7)
+    expect(result.tests[0]).toMatchObject({ visibility: 'visible', passed: true })
+    expect(result.tests.slice(1).every((test) => !test.passed)).toBe(true)
+  })
+
+  it.each([
+    ['missing', ''],
+    ['invalid JSON', '{'],
+    ['wrong profile', JSON.stringify({ ...pythonDataToolsAnalysis(), profile: 'wrong-profile' })],
+    ['extra root key', JSON.stringify({ ...pythonDataToolsAnalysis(), extra: true })],
+    ['facts in an unparsed envelope', JSON.stringify(pythonDataToolsAnalysis({
+      parsed: false,
+      authored_frame: true,
+    }))],
+    ['not analyzed', JSON.stringify(pythonDataToolsAnalysis({
+      analyzed: false,
+      parsed: false,
+      authored_frame: false,
+      normalize_name: false,
+      add_stock: false,
+      total_stock: false,
+      low_stock: false,
+      harness: false,
+    }))],
+    ['oversized', 'x'.repeat(2_049)],
+  ])('fails closed without executing learner code when analysis is %s', async (_label, analyzerOutput) => {
+    const storage = new MemoryStorage()
+    const sandbox = trustedSandbox(analyzerOutput)
+    sandboxMocks.getSandbox.mockReturnValue(sandbox)
+    const record = queuedPythonDataToolsRun(authenticSource)
+
+    await coordinatorWith(storage).execute(record)
+
+    expect(sandbox.exec).toHaveBeenCalledOnce()
+    expect(sandbox.exec).toHaveBeenCalledWith(
+      '/usr/bin/python3 -I -B /opt/runner/PythonDataToolsAnalyzer.py /workspace/source.txt',
+      { timeout: 5_000 },
+    )
+    expect(sandbox.destroy).toHaveBeenCalledOnce()
+    const result = storedResult(storage, record.id)
+    expect(result.outcome).toBe('system_error')
+    expect(result.stdout).toBe('')
+    expect(result.stderr).toBe('')
+    expect(result.tests).toHaveLength(7)
+    expect(result.tests.every((test) => !test.passed)).toBe(true)
+    expect(JSON.stringify(result)).not.toContain('python_data_tools_analysis')
+  })
+
+  it('keeps the trusted analyzer out of an ungraded run request', async () => {
+    const storage = new MemoryStorage()
+    const sandbox = trustedSandbox(pythonDataToolsAnalysis(), 'Practice output')
+    sandbox.exec.mockImplementationOnce(async () => ({
+      success: true,
+      stdout: supervisorResult('completed', 'Practice output'),
+    }))
+    sandboxMocks.getSandbox.mockReturnValue(sandbox)
+    const record = queuedPythonDataToolsRun('print("Practice output")', 'run')
+
+    await coordinatorWith(storage).execute(record)
+
+    expect(sandbox.exec).toHaveBeenCalledOnce()
+    expect(sandbox.exec).toHaveBeenCalledWith('/opt/runner/supervisor.py python', { timeout: 20_000 })
+    expect(JSON.stringify(storedResult(storage, record.id))).not.toContain(
+      'python-data-tools-supply-tracker-v1',
+    )
   })
 })

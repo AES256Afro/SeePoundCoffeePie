@@ -12,7 +12,7 @@ import {
 } from './course-model'
 
 describe('course presentation model', () => {
-  it('presents the four tracks as beginner foundation course cards', () => {
+  it('presents four foundations and one distinct next-step course', () => {
     const cards = buildCourseCards(initialProgress())
 
     expect(cards.map((card) => ({
@@ -21,13 +21,14 @@ describe('course presentation model', () => {
       title: card.title,
       symbol: card.symbol,
     }))).toEqual([
-      { id: 'python', slug: 'python-foundations', title: 'Python Foundations', symbol: 'pi' },
-      { id: 'cpp', slug: 'cpp-foundations', title: 'C++ Foundations', symbol: 'eye' },
-      { id: 'csharp', slug: 'csharp-foundations', title: 'C# Foundations', symbol: 'hash' },
-      { id: 'java', slug: 'java-foundations', title: 'Java Foundations', symbol: 'coffee' },
+      { id: 'python-foundations', slug: 'python-foundations', title: 'Python Foundations', symbol: 'pi' },
+      { id: 'cpp-foundations', slug: 'cpp-foundations', title: 'C++ Foundations', symbol: 'eye' },
+      { id: 'csharp-foundations', slug: 'csharp-foundations', title: 'C# Foundations', symbol: 'hash' },
+      { id: 'java-foundations', slug: 'java-foundations', title: 'Java Foundations', symbol: 'coffee' },
+      { id: 'python-data-tools', slug: 'python-data-tools', title: 'Practical Python: Data Tools', symbol: 'pi' },
     ])
 
-    for (const card of cards) {
+    for (const card of cards.slice(0, 4)) {
       expect(card.level).toBe('Beginner')
       expect(card.moduleCount).toBe(6)
       expect(card.lessonCount).toBe(30)
@@ -37,6 +38,36 @@ describe('course presentation model', () => {
       expect(card.actionLabel).toBe('Start course')
       expect('modules' in card).toBe(false)
     }
+    expect(cards[4]).toMatchObject({
+      language: 'python',
+      kind: 'continuing',
+      level: 'Beginner II',
+      availability: 'locked',
+      actionLabel: 'View prerequisites',
+      moduleCount: 6,
+      lessonCount: 30,
+    })
+  })
+
+  it('keeps recorded continuing-course activity behind its current prerequisites', () => {
+    const progress = {
+      ...initialProgress('python'),
+      completedLessons: ['pydata1-retrieve-call'],
+    }
+    const practicalPython = buildCourseCards(progress).find((course) => (
+      course.id === 'python-data-tools'
+    ))
+
+    expect(practicalPython).toMatchObject({
+      availability: 'locked',
+      status: 'in-progress',
+      completedLessonCount: 1,
+      actionLabel: 'View prerequisites',
+    })
+    expect(practicalPython?.missingPrerequisites.map((item) => item.label)).toEqual([
+      'Complete Python Foundations',
+      'Complete Your First Interactive Program',
+    ])
   })
 
   it('maps every mission to one display module without changing curriculum IDs', () => {
@@ -252,7 +283,7 @@ describe('course presentation model', () => {
     const progress = initialProgress('csharp')
 
     expect(courseBySlug('csharp-foundations', progress)).toMatchObject({
-      id: 'csharp',
+      id: 'csharp-foundations',
       title: 'C# Foundations',
       active: true,
     })
@@ -261,6 +292,8 @@ describe('course presentation model', () => {
     expect(coursePath('csharp')).toBe('/courses/csharp-foundations')
     expect(languageForCourseSlug('csharp-foundations')).toBe('csharp')
     expect(languageForCourseSlug('not-a-course')).toBeUndefined()
-    expect(buildCourseCards(progress).filter((course) => course.active).map((course) => course.id)).toEqual(['csharp'])
+    expect(buildCourseCards(progress).filter((course) => course.active).map((course) => course.id)).toEqual([
+      'csharp-foundations',
+    ])
   })
 })

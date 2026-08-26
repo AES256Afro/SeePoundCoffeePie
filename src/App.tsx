@@ -38,10 +38,8 @@ import {
   Orbit,
   RefreshCw,
   RotateCcw,
-  Search,
   Settings,
   Shield,
-  Sparkles,
   TerminalSquare,
   Trophy,
   Trash2,
@@ -50,8 +48,9 @@ import {
   X,
   Zap,
 } from 'lucide-react'
-import { codebookEntries, codebookExampleState, codebookMatches } from './data/codebook'
+import { courseDefinition, foundationCourseId } from './data/course-registry'
 import { trackById, tracks } from './data/curriculum'
+import { pythonDataToolsManifest } from './data/python-data-tools-manifest'
 import {
   projectManifestByRoute,
   projectManifestForLanguage,
@@ -61,7 +60,6 @@ import { buildCourseCards, buildCourseModel, type CourseCardModel } from './lib/
 import { missionAvailability } from './lib/missions'
 import {
   conceptDisplayName,
-  countEligibleDueConcepts,
   recommendPractice,
   type AdaptivePracticeSession,
 } from './lib/practice'
@@ -103,7 +101,9 @@ import {
 } from './lib/routes'
 import type {
   AuthUser,
+  CourseId,
   LanguageId,
+  LanguageTrack,
   LearnerProgress,
   Mission,
 } from './types'
@@ -123,6 +123,21 @@ const PortfolioPage = lazy(async () => {
 const LessonPlayer = lazy(async () => {
   const module = await import('./LessonPlayer')
   return { default: module.LessonPlayer }
+})
+
+const PythonDataToolsCoursePage = lazy(async () => {
+  const module = await import('./PythonDataToolsRoute')
+  return { default: module.PythonDataToolsCoursePage }
+})
+
+const PythonDataToolsLessonPage = lazy(async () => {
+  const module = await import('./PythonDataToolsRoute')
+  return { default: module.PythonDataToolsLessonPage }
+})
+
+const CodebookRoute = lazy(async () => {
+  const module = await import('./CodebookRoute')
+  return { default: module.CodebookRoute }
 })
 
 function LessonPlayerFallback({ practice = false }: { practice?: boolean }) {
@@ -568,7 +583,7 @@ function AppShell({ authReady, authUser, progress, view, onLanguageChange, onSig
           <div className="workshop-topbar__tools">
             <label className="track-switcher">
               <LanguageSymbol decorative language={track.id} size="small" />
-              <span className="sr-only">Active course</span>
+              <span className="sr-only">Active language</span>
               <select value={progress.activeLanguage} onChange={(event) => onLanguageChange(event.target.value as LanguageId)}>
                 {tracks.map((item) => <option key={item.id} value={item.id}>{item.shortName}</option>)}
               </select>
@@ -607,18 +622,20 @@ function AppShell({ authReady, authUser, progress, view, onLanguageChange, onSig
   )
 }
 
-function CourseSymbol({ course, size = 'medium' }: { course: Pick<CourseCardModel, 'id' | 'title'>; size?: 'small' | 'medium' | 'large' }) {
-  return <LanguageSymbol language={course.id} size={size} />
+function CourseSymbol({ course, size = 'medium' }: { course: Pick<CourseCardModel, 'language' | 'title'>; size?: 'small' | 'medium' | 'large' }) {
+  return <LanguageSymbol language={course.language} size={size} />
 }
 
 function CourseCard({ course }: { course: CourseCardModel }) {
-  const status = course.status === 'complete'
+  const status = course.availability === 'locked'
+    ? 'Complete the prerequisites to start'
+    : course.status === 'complete'
     ? 'Course complete'
     : course.status === 'in-progress'
       ? `${course.completedLessonCount} of ${course.lessonCount} lessons complete`
       : 'Ready when you are'
   return (
-    <article className={`course-card course-card--${course.id}`}>
+    <article className={`course-card course-card--${course.language} course-card--${course.kind} ${course.availability === 'locked' ? 'course-card--locked' : ''}`}>
       <div className="course-card__heading">
         <CourseSymbol course={course} size="large" />
         <div><span>{course.level} course</span><h2>{course.title}</h2></div>
@@ -628,6 +645,14 @@ function CourseCard({ course }: { course: CourseCardModel }) {
         <div><dt>What you will make</dt><dd>{course.outcome}</dd></div>
         <div><dt>Course size</dt><dd>{course.moduleCount} modules, {course.lessonCount} short lessons</dd></div>
       </dl>
+      {course.missingPrerequisites.length > 0 && (
+        <div className="course-card__prerequisites">
+          <b><LockKeyhole size={15} /> Before you begin</b>
+          <ul>{course.missingPrerequisites.map((prerequisite) => (
+            <li key={`${prerequisite.kind}:${prerequisite.id}`}>{prerequisite.label}</li>
+          ))}</ul>
+        </div>
+      )}
       <div className="course-card__progress">
         <span><b>{status}</b><small>{course.progressPercent}%</small></span>
         <i aria-label={`${course.title} progress`} aria-valuemax={100} aria-valuemin={0} aria-valuenow={course.progressPercent} role="progressbar"><b style={{ width: `${course.progressPercent}%` }} /></i>
@@ -639,23 +664,29 @@ function CourseCard({ course }: { course: CourseCardModel }) {
 
 function CourseCatalog({ progress }: { progress: LearnerProgress }) {
   const courses = buildCourseCards(progress)
-  const [filter, setFilter] = useState<'all' | 'foundations' | 'projects'>('all')
-  const showFoundations = filter !== 'projects'
-  const showProjects = filter !== 'foundations'
+  const [filter, setFilter] = useState<'all' | 'foundations' | 'continuing' | 'projects'>('all')
+  const filteredCourses = filter === 'foundations'
+    ? courses.filter((course) => course.kind === 'foundation')
+    : filter === 'continuing'
+      ? courses.filter((course) => course.kind === 'continuing')
+      : courses
+  const showCourses = filter !== 'projects'
+  const showProjects = filter === 'all' || filter === 'projects'
   return (
     <main className="workshop-page course-catalog">
       <header className="workshop-page-heading">
         <p className="eyebrow">Course catalog</p>
-        <h1>Choose a foundation. Explore every course.</h1>
-        <p>Each course begins at the beginning. You can switch languages whenever you like without losing work in another course.</p>
+        <h1>Start with a foundation. Keep building from there.</h1>
+        <p>The four foundation courses assume no experience. Practical Python unlocks after you finish its two earlier steps, and every course keeps its own progress.</p>
       </header>
       <nav className="catalog-filters" aria-label="Course filters">
         <button aria-pressed={filter === 'all'} className={filter === 'all' ? 'is-active' : ''} onClick={() => setFilter('all')} type="button">All courses</button>
         <button aria-pressed={filter === 'foundations'} className={filter === 'foundations' ? 'is-active' : ''} onClick={() => setFilter('foundations')} type="button">Foundations</button>
+        <button aria-pressed={filter === 'continuing'} className={filter === 'continuing' ? 'is-active' : ''} onClick={() => setFilter('continuing')} type="button">Next-step courses</button>
         <button aria-pressed={filter === 'projects'} className={filter === 'projects' ? 'is-active' : ''} onClick={() => setFilter('projects')} type="button">Guided projects</button>
       </nav>
-      {showFoundations && <section className="course-grid" aria-label="Foundation courses">
-        {courses.map((course) => <CourseCard course={course} key={course.id} />)}
+      {showCourses && <section className="course-grid" aria-label="Courses">
+        {filteredCourses.map((course) => <CourseCard course={course} key={course.id} />)}
       </section>}
       {showProjects && <section className="guided-project-list" aria-labelledby="guided-projects-title">
         <div className="section-heading-open">
@@ -689,35 +720,82 @@ function CourseCatalog({ progress }: { progress: LearnerProgress }) {
   )
 }
 
+function countLanguageDueConcepts(
+  track: LanguageTrack,
+  progress: LearnerProgress,
+  now = new Date(),
+): number {
+  const completedMissions = new Set(progress.completedMissions)
+  const conceptIds = new Set<string>()
+  track.missions.forEach((mission) => {
+    if (!completedMissions.has(mission.id)) return
+    mission.exercises.forEach((exercise) => conceptIds.add(exercise.conceptId))
+  })
+  if (track.id === 'python') {
+    Object.entries(pythonDataToolsManifest).forEach(([missionId, lessons]) => {
+      if (!completedMissions.has(missionId)) return
+      lessons.forEach((lesson) => conceptIds.add(lesson.conceptId))
+    })
+  }
+  const today = dateKey(now)
+  return [...conceptIds].filter((conceptId) => {
+    const concept = progress.conceptProgress[conceptId]
+    return !concept || concept.dueAt <= today
+  }).length
+}
+
 function LearnerHome({ progress }: { progress: LearnerProgress }) {
   const courses = buildCourseCards(progress)
   const activeTrack = trackById(progress.activeLanguage)
   const activeCourse = buildCourseModel(activeTrack, progress)
-  const reviewsDue = countEligibleDueConcepts(activeTrack, progress)
-  const readyProject = activeCourse.status === 'complete'
-    ? projectManifestForLanguage(activeCourse.id)
+  const reviewsDue = countLanguageDueConcepts(activeTrack, progress)
+  const foundationProject = activeCourse.status === 'complete'
+    ? projectManifestForLanguage(activeCourse.language)
     : undefined
-  const completedProjectCheckpointCount = readyProject?.checkpoints.filter((checkpoint) => (
+  const completedProjectCheckpointCount = foundationProject?.checkpoints.filter((checkpoint) => (
     progress.completedProjectCheckpoints.includes(checkpoint.id)
   )).length ?? 0
-  const nextProjectCheckpoint = readyProject?.checkpoints.find((checkpoint) => (
+  const nextProjectCheckpoint = foundationProject?.checkpoints.find((checkpoint) => (
     !progress.completedProjectCheckpoints.includes(checkpoint.id)
   ))
-  const projectComplete = readyProject ? progress.completedProjects.includes(readyProject.id) : false
-  const continueTo = readyProject
+  const projectComplete = foundationProject
+    ? progress.completedProjects.includes(foundationProject.id)
+    : false
+  const continuingCourse = progress.activeLanguage === 'python' && projectComplete
+    ? courses.find((course) => course.id === 'python-data-tools')
+    : undefined
+  const readyProject = foundationProject && !continuingCourse ? foundationProject : undefined
+  const continueCourse = continuingCourse ?? activeCourse
+  const continueTo = continuingCourse
+    ? continuingCourse.currentModuleId && continuingCourse.currentLessonId
+      ? lessonPath(continuingCourse.id, continuingCourse.currentModuleId, continuingCourse.currentLessonId)
+      : coursePath(continuingCourse.id)
+    : readyProject
     ? completedProjectCheckpointCount > 0 && nextProjectCheckpoint && !projectComplete
       ? projectPath(readyProject.language, readyProject.id, nextProjectCheckpoint.id)
       : projectPath(readyProject.language, readyProject.id)
     : activeCourse.currentModuleId && activeCourse.currentLessonId
       ? lessonPath(activeCourse.id, activeCourse.currentModuleId, activeCourse.currentLessonId)
       : coursePath(activeCourse.id)
-  const continueEyebrow = readyProject
+  const continueEyebrow = continuingCourse
+    ? continuingCourse.status === 'complete'
+      ? 'Course complete'
+      : continuingCourse.status === 'in-progress'
+        ? 'Continue Practical Python'
+        : 'Your next course'
+    : readyProject
     ? projectComplete ? 'Project complete' : completedProjectCheckpointCount > 0 ? 'Continue your project' : 'Your next step'
     : 'Continue learning'
-  const continueTitle = readyProject
+  const continueTitle = continuingCourse
+    ? continuingCourse.title
+    : readyProject
     ? readyProject.title
     : activeCourse.currentLessonTitle ?? activeCourse.title
-  const continueDescription = readyProject
+  const continueDescription = continuingCourse
+    ? continuingCourse.currentModuleTitle
+      ? `${continuingCourse.currentModuleTitle} is the next module in your practical Python path.`
+      : continuingCourse.outcome
+    : readyProject
     ? projectComplete
       ? readyProject.completionDescription
       : completedProjectCheckpointCount > 0
@@ -726,7 +804,13 @@ function LearnerHome({ progress }: { progress: LearnerProgress }) {
     : activeCourse.currentModuleTitle
       ? `${activeCourse.title}, Module ${activeCourse.modules.find((item) => item.id === activeCourse.currentModuleId)?.number}: ${activeCourse.currentModuleTitle}`
       : activeCourse.outcome
-  const continueAction = readyProject
+  const continueAction = continuingCourse
+    ? continuingCourse.status === 'complete'
+      ? 'Review course'
+      : continuingCourse.status === 'in-progress'
+        ? 'Continue course'
+        : 'Start course'
+    : readyProject
     ? projectComplete ? 'Review project' : completedProjectCheckpointCount > 0 ? 'Continue project' : 'Start project'
     : activeCourse.status === 'complete' ? 'Review course' : 'Continue lesson'
   const today = new Date()
@@ -747,8 +831,8 @@ function LearnerHome({ progress }: { progress: LearnerProgress }) {
         <div className="daily-goal-open"><span>{Math.min(progress.dailyXp, progress.dailyGoal)} / {progress.dailyGoal} XP today</span><i aria-label="Daily XP goal" aria-valuemax={progress.dailyGoal} aria-valuemin={0} aria-valuenow={Math.min(progress.dailyXp, progress.dailyGoal)} role="progressbar"><b style={{ width: `${Math.min(100, (progress.dailyXp / progress.dailyGoal) * 100)}%` }} /></i></div>
       </header>
 
-      <section className={`continue-panel continue-panel--${activeCourse.id}`}>
-        <CourseSymbol course={activeCourse} size="large" />
+      <section className={`continue-panel continue-panel--${continueCourse.language}`}>
+        <CourseSymbol course={continueCourse} size="large" />
         <div>
           <p className="eyebrow">{continueEyebrow}</p>
           <h2>{continueTitle}</h2>
@@ -773,11 +857,11 @@ function LearnerHome({ progress }: { progress: LearnerProgress }) {
       </div>
 
       <section className="home-course-list" aria-labelledby="my-courses-title">
-        <div className="section-heading-open"><div><p className="eyebrow">Your courses</p><h2 id="my-courses-title">Four ways to learn the same foundations</h2></div><AppLink to={coursesPath()}>Browse all courses <ArrowRight size={16} /></AppLink></div>
+        <div className="section-heading-open"><div><p className="eyebrow">Your courses</p><h2 id="my-courses-title">Five courses, one connected learning path</h2></div><AppLink to={coursesPath()}>Browse all courses <ArrowRight size={16} /></AppLink></div>
         {courses.map((course) => (
-          <AppLink className="home-course-row" key={course.id} to={coursePath(course.id)}>
+          <AppLink className={`home-course-row ${course.availability === 'locked' ? 'is-locked' : ''}`} key={course.id} to={coursePath(course.id)}>
             <CourseSymbol course={course} />
-            <span><b>{course.title}</b><small>{course.status === 'not-started' ? 'Not started' : `${course.completedLessonCount} of ${course.lessonCount} lessons complete`}</small></span>
+            <span><b>{course.title}</b><small>{course.availability === 'locked' ? 'Prerequisites required' : course.status === 'not-started' ? 'Not started' : `${course.completedLessonCount} of ${course.lessonCount} lessons complete`}</small></span>
             <i aria-label={`${course.title} progress`} aria-valuemax={100} aria-valuemin={0} aria-valuenow={course.progressPercent} role="progressbar"><b style={{ width: `${course.progressPercent}%` }} /></i>
             <strong>{course.actionLabel} <ArrowRight size={15} /></strong>
           </AppLink>
@@ -922,8 +1006,8 @@ function practiceReasonLabel(item: AdaptivePracticeSession['items'][number], tod
   return item.progress.dueAt < today ? 'Ready for review' : 'Due today'
 }
 
-function PracticeBay({ progress }: { progress: LearnerProgress }) {
-  const track = trackById(progress.activeLanguage)
+function PracticeBay({ progress, trackOverride }: { progress: LearnerProgress; trackOverride?: LanguageTrack }) {
+  const track = trackOverride ?? trackById(progress.activeLanguage)
   const recommendation = recommendPractice(track, progress)
   const { deferredDueCount, dueConcepts, items, mode, nextReviewAt, starterMission } = recommendation
   const questionCount = items.length
@@ -1014,10 +1098,11 @@ interface PracticeSessionRouteProps {
   onProgress: Dispatch<SetStateAction<LearnerProgress>>
   practiceStep: number
   progress: LearnerProgress
+  trackOverride?: LanguageTrack
 }
 
-function PracticeSessionRoute({ onNavigate, onProgress, practiceStep, progress }: PracticeSessionRouteProps) {
-  const track = trackById(progress.activeLanguage)
+function PracticeSessionRoute({ onNavigate, onProgress, practiceStep, progress, trackOverride }: PracticeSessionRouteProps) {
+  const track = trackOverride ?? trackById(progress.activeLanguage)
   const [session] = useState(() => loadOrCreatePracticeSession(
     track,
     progress,
@@ -1072,81 +1157,17 @@ function PracticeSessionRoute({ onNavigate, onProgress, practiceStep, progress }
   )
 }
 
-function Codebook({ progress }: { progress: LearnerProgress }) {
-  const [query, setQuery] = useState('')
-  const track = trackById(progress.activeLanguage)
-  const filteredEntries = useMemo(
-    () => codebookEntries.filter((entry) => codebookMatches(entry, query, track.id)),
-    [query, track.id],
-  )
-  const entriesWithExamples = codebookEntries.filter((entry) => entry.examples?.[track.id])
-  const unlockedExamples = entriesWithExamples.filter((entry) => (
-    codebookExampleState(entry, track, progress.completedMissions) === 'unlocked'
-  )).length
-
-  return (
-    <main className="content-page">
-      <div className="page-heading page-heading--simple">
-        <div><p className="kicker"><LibraryBig size={14} /> PLAIN-LANGUAGE REFERENCE</p><h1>Cadet codebook</h1><p>Search every definition now. Code examples unlock after you learn them in a mission.</p></div>
-      </div>
-      <section className="codebook-tools" aria-label="Codebook controls">
-        <label className="codebook-search">
-          <Search size={18} />
-          <span className="sr-only">Search the codebook</span>
-          <input type="search" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search variable, true, braces, ==..." />
-          {query && <button onClick={() => setQuery('')} aria-label="Clear codebook search"><X size={15} /></button>}
-        </label>
-        <div className="codebook-unlocks">
-          <small>{track.shortName.toUpperCase()} EXAMPLES</small>
-          <b>{unlockedExamples} of {entriesWithExamples.length} unlocked</b>
-          <span>Complete lessons to reveal syntax you have already met.</span>
-        </div>
-      </section>
-      {filteredEntries.length > 0 ? (
-        <div className="glossary-grid">
-          {filteredEntries.map((item, index) => {
-            const exampleState = codebookExampleState(item, track, progress.completedMissions)
-            const example = item.examples?.[track.id]
-            const requiredMission = item.unlockAfter ? track.missions[item.unlockAfter - 1] : undefined
-            return (
-              <article key={item.term}>
-                <span className="glossary-number">{String(index + 1).padStart(2, '0')}</span>
-                <Code2 size={21} />
-                <h2>{item.term}</h2>
-                <p>{item.plain}</p>
-                <div className="glossary-analogy"><Sparkles size={15} /><span><b>On the ship</b>{item.ship}</span></div>
-                {exampleState === 'unlocked' && example && (
-                  <div className="glossary-example"><small>{track.shortName.toUpperCase()} EXAMPLE</small><code>{example}</code></div>
-                )}
-                {exampleState === 'locked' && (
-                  <div className="glossary-example-lock"><LockKeyhole size={15} /><span><b>EXAMPLE LOCKED</b>Complete {requiredMission?.title ?? 'the introducing mission'} to reveal it.</span></div>
-                )}
-              </article>
-            )
-          })}
-        </div>
-      ) : (
-        <section className="codebook-empty">
-          <Search size={28} />
-          <h2>No codebook term matches “{query}”</h2>
-          <p>Try a plain word such as text, number, decision, output, or braces.</p>
-          <button className="secondary-action" onClick={() => setQuery('')}>Clear search</button>
-        </section>
-      )}
-    </main>
-  )
-}
-
 interface CadetRecordProps {
-  onOpenTrack: (language: LanguageId) => void
+  onOpenCourse: (courseId: CourseId, language: LanguageId) => void
   progress: LearnerProgress
   recordLocation: string
 }
 
-function CadetRecord({ onOpenTrack, progress, recordLocation }: CadetRecordProps) {
+function CadetRecord({ onOpenCourse, progress, recordLocation }: CadetRecordProps) {
   const concepts = Object.values(progress.conceptProgress)
   const answers = concepts.reduce((sum, item) => sum + item.correct + item.incorrect, 0)
   const accuracy = answers ? Math.round((concepts.reduce((sum, item) => sum + item.correct, 0) / answers) * 100) : 0
+  const courses = buildCourseCards(progress)
 
   return (
     <main className="content-page">
@@ -1159,21 +1180,19 @@ function CadetRecord({ onOpenTrack, progress, recordLocation }: CadetRecordProps
       </div>
       <section className="station-records" aria-labelledby="course-records-title">
         <div className="station-records__heading">
-          <div><small>FOUR FOUNDATION COURSES</small><h2 id="course-records-title">Course records</h2></div>
-          <p>Each language keeps its own ordered course record. Open any foundation without erasing progress in the others.</p>
+          <div><small>FIVE COURSE RECORDS</small><h2 id="course-records-title">Course records</h2></div>
+          <p>Each course keeps its own ordered record. Python Foundations and Practical Python remain separate, so continuing never changes your foundation completion.</p>
         </div>
         <div className="station-records__grid">
-          {tracks.map((track) => {
-            const completed = track.missions.filter((mission) => progress.completedMissions.includes(mission.id)).length
-            const percent = Math.round((completed / track.missions.length) * 100)
-            const active = progress.activeLanguage === track.id
+          {courses.map((course) => {
+            const track = trackById(course.language)
             return (
-              <article key={track.id} style={{ '--station-accent': track.accent } as React.CSSProperties}>
-                <div className="station-records__name"><LanguageSymbol language={track.id} size="small" /><span><b>{track.shortName} Foundations</b><small>{track.role}</small></span></div>
-                <div className="station-records__count"><b>{completed} / {track.missions.length}</b><small>missions complete</small></div>
-                <div className="station-records__bar" aria-label={`${track.shortName} ${percent}% complete`} aria-valuemax={100} aria-valuemin={0} aria-valuenow={percent} role="progressbar"><span style={{ width: `${percent}%` }} /></div>
-                <button className="secondary-action" onClick={() => onOpenTrack(track.id)}>
-                  {active ? 'View active course' : `Open ${track.shortName} Foundations`} <ArrowRight size={15} />
+              <article key={course.id} style={{ '--station-accent': track.accent } as React.CSSProperties}>
+                <div className="station-records__name"><LanguageSymbol language={course.language} size="small" /><span><b>{course.title}</b><small>{course.kind === 'foundation' ? `${track.role} foundation` : 'Next-step Python course'}</small></span></div>
+                <div className="station-records__count"><b>{course.completedModuleCount} / {course.moduleCount}</b><small>modules complete</small></div>
+                <div className="station-records__bar" aria-label={`${course.title} ${course.progressPercent}% complete`} aria-valuemax={100} aria-valuemin={0} aria-valuenow={course.progressPercent} role="progressbar"><span style={{ width: `${course.progressPercent}%` }} /></div>
+                <button className="secondary-action" onClick={() => onOpenCourse(course.id, course.language)}>
+                  {course.actionLabel} <ArrowRight size={15} />
                 </button>
               </article>
             )
@@ -1466,6 +1485,7 @@ function AppContent() {
   const [syncMessage, setSyncMessage] = useState('')
   const [syncRecord, setSyncRecord] = useState<RemoteProgressRecord | null>(null)
   const [syncState, setSyncState] = useState<ProgressSyncState>('guest')
+  const [pythonDataToolsMissions, setPythonDataToolsMissions] = useState<Mission[] | null>(null)
   const progressRef = useRef(progress)
   const syncEnabledRef = useRef(false)
   const syncRevisionRef = useRef(0)
@@ -1484,6 +1504,18 @@ function AppContent() {
         : route.page === 'settings'
           ? 'settings'
           : 'path'
+
+  const needsPythonPractice = route.language === 'python'
+    && (route.page === 'practice' || route.page === 'practice-session')
+
+  useEffect(() => {
+    if (!needsPythonPractice || pythonDataToolsMissions) return
+    let active = true
+    void import('./data/python-data-tools-course').then((module) => {
+      if (active) setPythonDataToolsMissions(module.pythonDataToolsCourse.missions)
+    })
+    return () => { active = false }
+  }, [needsPythonPractice, pythonDataToolsMissions])
 
   useEffect(() => {
     progressRef.current = progress
@@ -1507,9 +1539,13 @@ function AppContent() {
       document.title = 'SeePoundCoffeePie | Programming from the beginning.'
       return
     }
+    if (route.page === 'lesson' && route.courseId === 'python-data-tools') return
 
+    const routeCourse = route.courseId ? courseDefinition(route.courseId) : null
     const track = route.language ? trackById(route.language) : null
-    const mission = track?.missions.find((item) => item.id === route.missionId)
+    const mission = route.courseId === 'python-data-tools'
+      ? null
+      : track?.missions.find((item) => item.id === route.missionId)
     const exercise = mission?.exercises.find((item) => item.id === route.exerciseId)
     const routeProject = (route.page === 'project' || route.page === 'portfolio') && route.language && route.projectId
       ? projectManifestByRoute(route.language, route.projectId)
@@ -1522,7 +1558,7 @@ function AppContent() {
         : route.page === 'courses'
           ? 'Courses'
           : route.page === 'course' || route.page === 'academy'
-            ? track ? `${track.shortName} Foundations` : 'Course'
+            ? routeCourse?.title ?? (track ? `${track.shortName} Foundations` : 'Course')
         : route.page === 'practice' || route.page === 'practice-session'
           ? `${track?.shortName} Practice`
           : route.page === 'codebook'
@@ -1536,10 +1572,12 @@ function AppContent() {
                 : route.page === 'portfolio'
                   ? routeProject ? `${routeProject.title} Portfolio` : 'Portfolio'
                 : route.page === 'lesson'
-                  ? exercise?.title ?? mission?.title
+                  ? routeCourse?.id === 'python-data-tools'
+                    ? routeCourse.title
+                    : exercise?.title ?? mission?.title
                   : 'Page not found'
     document.title = `${pageTitle ?? 'Academy'} | SeePoundCoffeePie`
-  }, [route.checkpointId, route.exerciseId, route.language, route.missionId, route.page, route.projectId])
+  }, [route.checkpointId, route.courseId, route.exerciseId, route.language, route.missionId, route.page, route.projectId])
 
   useEffect(() => {
     const handleNavigation = () => {
@@ -1704,6 +1742,13 @@ function AppContent() {
     }
     return dailyProgress
   }, [progress, route.language, route.page])
+
+  const practiceTrack = useMemo<LanguageTrack | null>(() => {
+    const foundation = trackById(normalizedProgress.activeLanguage)
+    if (!needsPythonPractice || foundation.id !== 'python') return foundation
+    if (!pythonDataToolsMissions) return null
+    return { ...foundation, missions: [...foundation.missions, ...pythonDataToolsMissions] }
+  }, [needsPythonPractice, normalizedProgress.activeLanguage, pythonDataToolsMissions])
 
   const updateProgress: Dispatch<SetStateAction<LearnerProgress>> = setProgress
 
@@ -1890,6 +1935,7 @@ function AppContent() {
 
   if (route.page === 'practice-session') {
     const language = route.language ?? progress.activeLanguage
+    if (!practiceTrack) return <LessonPlayerFallback practice />
     return (
       <>
         {authNotice && <AuthNotice message={authNotice} onDismiss={() => setAuthNotice(null)} />}
@@ -1900,7 +1946,31 @@ function AppContent() {
           onProgress={updateProgress}
           practiceStep={route.practiceStep ?? 1}
           progress={{ ...normalizedProgress, activeLanguage: language }}
+          trackOverride={practiceTrack}
         />
+      </>
+    )
+  }
+
+  if (
+    route.page === 'lesson'
+    && route.courseId === 'python-data-tools'
+    && route.missionId
+    && route.exerciseId
+  ) {
+    return (
+      <>
+        {authNotice && <AuthNotice message={authNotice} onDismiss={() => setAuthNotice(null)} />}
+        {syncDialog}
+        <Suspense fallback={<LessonPlayerFallback />}>
+          <PythonDataToolsLessonPage
+            exerciseId={route.exerciseId}
+            missionId={route.missionId}
+            onNavigate={navigateTo}
+            onProgress={updateProgress}
+            progress={normalizedProgress}
+          />
+        </Suspense>
       </>
     )
   }
@@ -2088,7 +2158,7 @@ function AppContent() {
         onLanguageChange={(language) => {
           setProgress((current) => ({ ...current, activeLanguage: language }))
           if (route.page === 'course' || route.page === 'academy') {
-            navigateTo(coursePath(language))
+            navigateTo(coursePath(foundationCourseId(language)))
           } else if (route.page === 'practice' || route.page === 'codebook') {
             navigateTo(pagePath(route.page, language))
           }
@@ -2097,20 +2167,43 @@ function AppContent() {
       >
         {route.page === 'home' && <LearnerHome progress={normalizedProgress} />}
         {route.page === 'courses' && <CourseCatalog progress={normalizedProgress} />}
-        {(route.page === 'course' || route.page === 'academy') && (
+        {route.page === 'course' && route.courseId === 'python-data-tools' && (
+          <Suspense fallback={(
+            <main className="content-page" aria-busy="true">
+              <section className="route-message-card route-message-card--inside">
+                <p className="kicker"><BookOpen size={15} /> Practical Python</p>
+                <h1>Opening the course</h1>
+                <p>Loading the six-module outline and its beginner-friendly lesson previews.</p>
+              </section>
+            </main>
+          )}>
+            <PythonDataToolsCoursePage
+              onNavigate={navigateTo}
+              onProgress={updateProgress}
+              progress={normalizedProgress}
+            />
+          </Suspense>
+        )}
+        {(route.page === 'academy' || (route.page === 'course' && route.courseId !== 'python-data-tools')) && (
           <MissionPath
-            key={`course:${route.language ?? normalizedProgress.activeLanguage}`}
+            key={`course:${route.courseId ?? route.language ?? normalizedProgress.activeLanguage}`}
             onProgress={updateProgress}
             progress={route.language ? { ...normalizedProgress, activeLanguage: route.language } : normalizedProgress}
           />
         )}
-        {route.page === 'practice' && <PracticeBay progress={normalizedProgress} />}
-        {route.page === 'codebook' && <Codebook progress={normalizedProgress} />}
+        {route.page === 'practice' && (practiceTrack
+          ? <PracticeBay progress={normalizedProgress} trackOverride={practiceTrack} />
+          : <main className="content-page" aria-busy="true"><section className="route-message-card route-message-card--inside"><p className="kicker"><RotateCcw size={15} /> Practice</p><h1>Preparing your review</h1><p>Loading completed Python course material for this language-wide practice set.</p></section></main>)}
+        {route.page === 'codebook' && (
+          <Suspense fallback={<main className="content-page" aria-busy="true"><section className="route-message-card route-message-card--inside"><p className="kicker"><BookOpen size={15} /> Codebook</p><h1>Opening the reference</h1><p>Loading plain-language definitions and the examples you have unlocked.</p></section></main>}>
+            <CodebookRoute progress={normalizedProgress} />
+          </Suspense>
+        )}
         {route.page === 'profile' && (
           <CadetRecord
-            onOpenTrack={(language) => {
+            onOpenCourse={(courseId, language) => {
               setProgress((current) => ({ ...current, activeLanguage: language }))
-              navigateTo(coursePath(language))
+              navigateTo(coursePath(courseId))
             }}
             progress={normalizedProgress}
             recordLocation={recordLocation}

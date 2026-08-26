@@ -21,8 +21,12 @@ describe('bookmarkable application routes', () => {
     expect(homePath()).toBe('/home')
     expect(coursesPath()).toBe('/courses')
     expect(coursePath('cpp')).toBe('/courses/cpp-foundations')
+    expect(coursePath('python-data-tools')).toBe('/courses/python-data-tools')
     expect(lessonPath('python', 'py-first-spark', 'py-print')).toBe(
       '/learn/python-foundations/py-first-spark/py-print',
+    )
+    expect(lessonPath('python-data-tools', 'py-data-return-values', 'pydata1-return-purpose')).toBe(
+      '/learn/python-data-tools/py-data-return-values/pydata1-return-purpose',
     )
     expect(practicePath('csharp')).toBe('/practice/csharp')
     expect(practiceSessionPath('python')).toBe('/practice/python/session')
@@ -60,15 +64,32 @@ describe('bookmarkable application routes', () => {
 
   it('parses course catalog, course outline, and individual lesson URLs', () => {
     expect(parseAppRoute('/courses')).toEqual({ page: 'courses', conceptIds: [] })
-    expect(parseAppRoute('/courses/java-foundations')).toMatchObject({ page: 'course', language: 'java' })
+    expect(parseAppRoute('/courses/java-foundations')).toMatchObject({
+      page: 'course', language: 'java', courseId: 'java-foundations',
+    })
+    expect(parseAppRoute('/courses/python-data-tools')).toMatchObject({
+      page: 'course', language: 'python', courseId: 'python-data-tools',
+    })
     expect(parseAppRoute('/learn/csharp-foundations/cs-shield/cs-output')).toEqual({
       page: 'lesson',
       language: 'csharp',
+      courseId: 'csharp-foundations',
       missionId: 'cs-shield',
       exerciseId: 'cs-output',
       practice: false,
       conceptIds: [],
     })
+    expect(parseAppRoute('/learn/python-data-tools/py-data-return-values/pydata1-return-purpose')).toEqual({
+      page: 'lesson',
+      language: 'python',
+      courseId: 'python-data-tools',
+      missionId: 'py-data-return-values',
+      exerciseId: 'pydata1-return-purpose',
+      practice: false,
+      conceptIds: [],
+    })
+    expect(parseAppRoute('/learn/python-foundations/py-data-return-values/pydata1-return-purpose').page).toBe('not-found')
+    expect(parseAppRoute('/learn/python-data-tools/py-first-spark/py-console').page).toBe('not-found')
   })
 
   it('parses academy pages and focused practice lessons', () => {

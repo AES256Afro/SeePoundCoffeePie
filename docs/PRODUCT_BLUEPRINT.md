@@ -46,7 +46,7 @@ Wrong answers do not consume hearts, lives, energy, or paid currency. A mistake 
 
 Before a module completes, each exercise missed during that run returns once in a short memory-repair round. The answer is reset so the learner retrieves it again, all teaching material remains available, and the repair updates memory strength and timing without awarding XP.
 
-The current Practice page keeps review sets separate by language. It chooses at most five authored questions across completed modules, brings due and weaker ideas back first, and keeps each short set varied. The learner sees what will return, where it came from, and why it was selected before starting. Practice updates the existing memory counts and next review date. It awards no XP, star shards, or module completion.
+The current Practice page keeps review sets separate by language, not by course. It chooses at most five authored questions across completed modules in every course for that runtime language, brings due and weaker ideas back first, and keeps each short set varied. A Python set can therefore retrieve eligible work from both Python Foundations and Practical Python. The learner sees what will return, where it came from, and why it was selected before starting. Practice updates the existing memory counts and next review date. It awards no XP, star shards, or module completion.
 
 ### Helpful hints without answer dumping
 
@@ -102,9 +102,9 @@ Editable exercises now run in isolated, ephemeral workers. Choice, prediction, a
 
 Competitive leaderboards are not part of the first product. They can motivate some learners but can also reward speed and XP optimization over understanding. Cooperative crew goals are a better future experiment.
 
-## Four-track curriculum
+## Language tracks and courses
 
-The first sector uses the same conceptual spine across languages so learners can compare syntax without losing the underlying idea.
+The first sector uses the same conceptual spine across four runtime languages so learners can compare syntax without losing the underlying idea. Course identity and runtime language are deliberately separate. `CourseId` owns a catalog entry, prerequisite set, outline, module IDs, lesson IDs, and routes. `LanguageTrack.id` remains the execution and review identity used by the runner, Practice, and Codebook. More than one course can therefore teach Python without inventing another language or mixing their completion requirements.
 
 ### See: C++ Engineering Corps
 
@@ -143,6 +143,19 @@ The first sector uses the same conceptual spine across languages so learners can
 6. **The Void Wyrm:** guided text adventure
 
 Python remains the recommended first route because its first useful instructions require less ceremony. The academy never presents the other paths as inferior. Their explicit structure can be valuable to a learner who wants systems, enterprise, or game-development context.
+
+### Practical Python: Data Tools
+
+The second Python course stays beginner-first while moving from isolated syntax to a small useful tool:
+
+1. **Functions That Return Answers:** retrieve parameters and calls, then use returned results in calculations.
+2. **Cleaning and Normalizing Text:** use `strip()` and `lower()` to make inconsistent labels dependable.
+3. **Lists That Grow and Change:** use `append()`, `len()`, and membership tests without adding duplicates.
+4. **Dictionaries and Named Data:** look up, default, and update quantities under meaningful keys.
+5. **Totals and Filters:** use accumulators and conditions to summarize stored data.
+6. **Supply Tracker:** assemble normalization, dictionary updates, totals, and low-stock filtering in one console tool.
+
+The course unlock is conjunctive. The learner must complete both Python Foundations and `Your First Interactive Program`. Completing only one prerequisite leaves the course locked while keeping its outcome and module previews visible. The course introduces no files, packages, APIs, classes, exceptions, comprehensions, lambdas, generators, decorators, type hints, or database work. Those ideas would add setup or abstraction before the learner has consolidated returned values and changing collections.
 
 ## Content rules
 
@@ -267,6 +280,19 @@ The remaining Phase 4 work is to:
 
 - evaluate cooperative learning only after a separate privacy, child-safety, and moderation review, and before considering competitive leaderboards.
 
+### Phase 5A: Practical Python: Data Tools (release candidate)
+
+- `Practical Python: Data Tools` is a complete second Python course with six ordered modules, 30 lessons, 12 runner-backed edits, and 420 possible first-completion XP.
+- Each module begins with retrieval. Modules 1 through 4 use prediction, choice, prediction, bug repair, and guided code. Modules 5 and 6 replace the second prediction with ordering so the learner rehearses program structure before the capstone.
+- The final Supply Tracker prints the number of products, total units, and low-stock names from fixed in-memory data. It does not introduce input, files, packages, or network access.
+- The `python-data-tools` course ID owns prerequisites and routes, while `python` remains its runtime language. Python Practice lazily combines completed modules from both Python courses and continues to exclude incomplete modules, projects, and other languages.
+- Eleven new Python Codebook examples use explicit introducing mission IDs. Their unlock state does not depend on a module number that could refer to the wrong Python course.
+- The compact Phase 5A manifest owns progress identifiers and XP without importing teaching copy. The course route, 30-lesson content, route CSS, and Codebook each remain separate lazy boundaries with dedicated bundle limits.
+- Exactly 100 editable assignments are registered across 48 foundation lessons, 12 Practical Python lessons, and 40 project checkpoints.
+- The Supply Tracker's five visible expression checks and exact output are reinforced by a server-owned AST profile. The profile verifies the taught four-function frame, normalized dictionary update, accumulator, filter, fixed harness, and statement order without exposing analysis facts to the browser.
+- Browser persistence uses V2 local keys so an already-open older tab cannot become authoritative over new Phase 5A identifiers. The synchronized record and backup remain version 1, and no D1 table migration is required.
+- The compatibility floor and controlled staging and production procedure are specified in [the Phase 5A release record](PHASE_5A_RELEASE.md).
+
 ## Release gates
 
 A lesson is ready only when:
@@ -278,5 +304,12 @@ A lesson is ready only when:
 - keyboard-only completion works;
 - the mobile layout remains usable at 390 CSS pixels wide;
 - replaying a completed module or completed project cannot add XP or shards, and adaptive Practice awards no rewards;
+- every continuing-course prerequisite is enforced conjunctively on catalog, outline, and direct lesson routes;
+- every mission, lesson, course, project, checkpoint, and runner assignment identifier has one validated owner;
+- Practice aggregates only completed modules for one runtime language, even when those modules belong to multiple courses;
+- Codebook examples introduced outside a foundation course unlock by an explicit mission identifier;
+- protected assessments validate taught structure from server-owned analysis without shipping profiles, private facts, or reference source to the browser;
+- lazy route, teaching-content, route-style, and Codebook chunks remain within their individual raw and gzip budgets while the initial bundle stays within its unchanged limits;
+- progress survives refresh, cross-device merge, backup and restore, and an already-open older tab without losing new identifiers;
 - automated tests pass;
 - a human completes the lesson in a real browser.

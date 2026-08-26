@@ -9,7 +9,7 @@ The name is the curriculum:
 - **Coffee** = Java
 - **Pie** = Python
 
-The product teaches programming through short, guided lessons inside four foundation courses. Every new term is explained in plain language, reinforced with a concrete example, used immediately, and scheduled to return for later practice. The interface keeps the lesson readable and the next action obvious, while the existing story exercises remain available as memorable teaching examples.
+The product teaches programming through short, guided lessons inside four foundation courses and a continuing Practical Python course. Every new term is explained in plain language, reinforced with a concrete example, used immediately, and scheduled to return for later practice. The interface keeps the lesson readable and the next action obvious, while the existing story exercises remain available as memorable teaching examples.
 
 ## What is runnable today
 
@@ -18,19 +18,19 @@ The current vertical slice includes:
 - a public launch page that always explains the academy before asking a visitor to choose a course;
 - a four-question beginner intake that asks one plain-language question at a time and recommends, but does not lock, a course;
 - an open learner home with one continuation action, review priorities, and visible course progress;
-- a bookmarkable course catalog and separate outlines for Python, C++, C#, and Java Foundations;
-- six fully playable five-lesson modules for each language;
+- a bookmarkable course catalog and separate outlines for Python, C++, C#, and Java Foundations plus `Practical Python: Data Tools`;
+- six fully playable five-lesson modules in each foundation course and six more five-lesson Practical Python modules;
 - four bookmarkable 12-checkpoint projects: a Python Coffee Counter, C++ Observation Desk, C# Community Workshop Check-In, and Java Community Picnic Planner;
 - a private portfolio preview for each completed project with a deliberate, script-free HTML download;
 - plain-language explanations and concrete analogies;
 - guided choices, output prediction, code ordering, bug repair, and editable code exercises;
 - immediate, specific feedback and optional hints;
 - an end-of-module memory-repair round that brings missed ideas back once and awards no repair XP;
-- real isolated execution for all 48 editable Python, C++, C#, and Java exercises;
+- real isolated execution for 48 editable foundation lessons and 12 editable Practical Python lessons;
 - XP, adjustable daily goal, streak, star-shard, lesson-completion, module-completion, and accuracy tracking;
 - a spaced-review scheduler that weighs correct and incorrect attempts;
-- Practice that builds a short review of up to five familiar questions from completed modules, starting with ideas that are due or need another pass and awarding no XP or shards;
-- a searchable 50-term beginner Codebook and a learner record with progression-unlocked examples and separate progress for all four courses;
+- language-wide Practice that builds a short review of up to five familiar questions from completed modules across every course in the selected language, starting with ideas that are due or need another pass and awarding no XP or shards;
+- a searchable 61-term beginner Codebook and a learner record with progression-unlocked examples and separate progress for every course;
 - validated local JSON backup and restore for course progress;
 - offline-safe browser persistence with a visible reset control;
 - optional private cross-device progress synchronization, conflict choices, and account-data deletion;
@@ -46,27 +46,31 @@ The academy uses clean application URLs instead of separate `.html` files. Cloud
 - `/start` is beginner intake;
 - `/home` is the learner home and continuation page;
 - `/courses` is the complete course catalog;
-- `/courses/python-foundations`, `/courses/cpp-foundations`, `/courses/csharp-foundations`, and `/courses/java-foundations` are the four course outlines;
+- `/courses/python-foundations`, `/courses/cpp-foundations`, `/courses/csharp-foundations`, and `/courses/java-foundations` are the four foundation-course outlines;
+- `/courses/python-data-tools` is the Practical Python outline. It can be previewed while locked and opens only after both Python Foundations and `/projects/python/first-interactive-program` are complete;
 - `/learn/:course-slug/:module-id/:lesson-id` is an exact lesson URL. For example, `/learn/python-foundations/py-first-spark/py-console` opens the first Python lesson directly;
+- `/learn/python-data-tools/py-data-return-values/pydata1-retrieve-call` opens the first Practical Python lesson after both prerequisites are complete;
 - `/projects/python/first-interactive-program` is the Python project overview, and adding a checkpoint ID opens that exact project checkpoint;
 - `/projects/cpp/first-compiled-program` is the C++ project overview, and adding a checkpoint ID opens that exact C++ checkpoint;
 - `/projects/csharp/workshop-check-in` is the C# project overview, and adding a checkpoint ID opens that exact C# checkpoint;
 - `/projects/java/picnic-planner` is the Java project overview, and adding a checkpoint ID opens that exact Java checkpoint;
 - `/portfolio/:language/:project-id` is the browser-local portfolio preview for one matching completed project. The route is bookmarkable, but project source remains in the browser where it was written;
-- `/practice/:language` is the selected course’s Practice page;
+- `/practice/:language` is the selected language's Practice page and can draw from completed modules in more than one course;
 - `/practice/:language/session` opens a private adaptive set assembled from completed modules;
 - `/practice/:language/session/:step` preserves the current question while navigating inside the same open tab without exposing weak concept identifiers;
-- `/codebook/:language` is the selected course’s Codebook;
+- `/codebook/:language` is the selected language's Codebook;
 - `/profile` is the learner record;
 - `/settings` contains GitHub identity, synchronization state, training-goal, backup, restore, account-data deletion, and reset controls;
 - `/academy/:language` and `/academy/:language/missions/:mission-id` remain supported compatibility routes for existing bookmarks;
 - older focused Practice bookmarks under `/practice/:language/missions/:mission-id` remain available only for completed missions. New adaptive sets keep the bounded exercise queue in tab-scoped session storage instead of putting learner weaknesses in the URL.
 
-The browser Back and Forward buttons follow these routes normally. A bookmarked course controls the course selector, Practice link, and Codebook link on that page without silently replacing the learner’s saved default course. Selecting another active course does not erase progress in the other languages. Existing mission and exercise identifiers remain unchanged behind the course, module, and lesson presentation. Authored exercise identifiers now also provide durable per-lesson completion, so a learner resumes at the first unfinished lesson without replaying credited work. A separate allowlisted browser-local lesson journal protects that partial progress from an already-open older tab that does not know the new field.
+The browser Back and Forward buttons follow these routes normally. A bookmarked course controls the course selector, Practice link, and Codebook link on that page without silently replacing the learner’s saved default course. A `CourseId` owns curriculum and routes, while its runtime `language` selects the toolchain, Practice pool, and Codebook. This allows `python-foundations` and `python-data-tools` to remain distinct courses without pretending Python is two execution languages. Selecting another active course does not erase progress in the other languages. Existing mission and exercise identifiers remain unchanged behind the course, module, and lesson presentation. Authored exercise identifiers also provide durable per-lesson completion, so a learner resumes at the first unfinished lesson without replaying credited work. A separate allowlisted browser-local lesson journal protects that partial progress from an already-open older tab that does not know the new field.
 
 Each module unlocks only after the previous module is complete in the same language. Module 2 retrieves output and variable skills before introducing Booleans, comparisons, `if`, and `else`. Module 3 retrieves that decision work before introducing collections, arrays or lists, and zero-based indexing. Module 4 retrieves an indexed item before explaining loops, tracing repeated output, assembling a loop, and applying it to the whole collection. Module 5 retrieves that loop before introducing reusable functions or methods, parameters, arguments, definitions, and calls. Module 6 then combines storage, conditions, collections, loops, and reusable code in an integrative capstone without adding another syntax burden.
 
-The current curriculum totals 24 playable modules and 120 authored lessons across the four foundation courses, plus four 12-checkpoint project studios, one for each language.
+Practical Python begins only after the learner completes both Python Foundations and `Your First Interactive Program`. Its modules retrieve functions and formatting before introducing returned answers, text normalization, list mutation, dictionaries, accumulators, and filters. The final Supply Tracker combines those ideas with fixed in-memory data and no new input or package burden.
+
+The current curriculum totals 30 playable modules and 150 authored lessons across five courses, plus four 12-checkpoint project studios. The runner registry contains exactly 100 editable assignments: 48 foundation lessons, 12 Practical Python lessons, and 40 project checkpoints.
 
 Inside editable code exercises, press Ctrl+Enter on Windows or Linux, or Command+Enter on macOS, to run the same check as the visible button. Tab keeps its normal browser behavior so keyboard learners can leave the editor without getting trapped.
 
@@ -108,7 +112,7 @@ npm run check:runner:image
 ```
 
 The production bundle is written to `dist/`.
-`npm run check:bundle` enforces raw and gzip budgets for emitted JavaScript, CSS, and HTML. It also gives the lazy portfolio JavaScript and CSS their own limits, so route growth cannot silently create an oversized first load.
+`npm run check:bundle` enforces raw and gzip budgets for emitted JavaScript, CSS, and HTML. It gives the lazy portfolio, Practical Python route, Practical Python teaching content, Practical Python CSS, and Codebook assets their own limits, so course growth cannot silently create an oversized first load.
 `npm run check:social-preview` verifies the Open Graph and large-card metadata plus the exact 1200 by 630 share image used by Discord and other social platforms.
 
 ## Production hosting
@@ -126,6 +130,7 @@ Run a configuration-only deployment check with:
 
 ```bash
 npm run deploy:dry-run
+npm run deploy:staging:dry-run
 ```
 
 Deploy the current checkout with:
@@ -176,9 +181,9 @@ The Cadet Record can also download a versioned JSON backup and restore it after 
 
 ## How editable code runs
 
-The 48 editable foundation exercises and 40 editable guided-project checkpoints use real server-side Python, C++, C#, and Java toolchains. The browser requests a five-minute exercise-scoped run grant, submits only the versioned language, source, optional text input, and `run` or `check` purpose, then polls an opaque learner-owned result ID. Learners cannot choose an executable, command, compiler flag, package, image, path, mount, or network destination.
+The 48 editable foundation exercises, 12 editable Practical Python exercises, and 40 editable guided-project checkpoints use real server-side Python, C++, C#, and Java toolchains. The browser requests a five-minute exercise-scoped run grant, submits only the versioned language, source, optional text input, and `run` or `check` purpose, then polls an opaque learner-owned result ID. Learners cannot choose an executable, command, compiler flag, package, image, path, mount, or network destination.
 
-Every attempt starts in a fresh Cloudflare Sandbox VM with a pinned base image and fixed server-owned toolchain commands. A trusted supervisor drops privileges, blocks socket syscalls, measures the whole process tree, caps CPU, wall time, memory, processes, writable storage, stdout, and stderr, and destroys the VM after the result. Each final project check replaces caller-supplied input with one visible and three server-owned cases. Every case uses a different fresh VM. Python's parser, C++'s pinned compiler front end, C#'s pinned Roslyn parser, and Java's pinned compiler-tree analyzer verify the deliberately small program shapes taught by their projects. Comments, inactive code, early exits, aliases, Unicode escapes, added members, moved statements, and unsupported control flow cannot earn structural credit. The browser receives only visible output and pass summaries. Private inputs, reference solutions, and internal syntax analysis stay out of the browser bundle and result. Language errors are translated into beginner language while sanitized raw diagnostics remain available under a disclosure.
+Every attempt starts in a fresh Cloudflare Sandbox VM with a pinned base image and fixed server-owned toolchain commands. A trusted supervisor drops privileges, blocks socket syscalls, measures the whole process tree, caps CPU, wall time, memory, processes, writable storage, stdout, and stderr, and destroys the VM after the result. Each final project check replaces caller-supplied input with one visible and three server-owned cases. Every case uses a different fresh VM. Python's parser, C++'s pinned compiler front end, C#'s pinned Roslyn parser, and Java's pinned compiler-tree analyzer verify the deliberately small program shapes taught by their projects. The Practical Python Supply Tracker has fixed in-memory data and uses a separate protected Python AST profile to verify the four taught functions, the supplied harness, and statement order. Comments, inactive code, early exits, aliases, Unicode escapes, added members, moved statements, and unsupported control flow cannot earn structural credit. The browser receives only visible output and pass summaries. Private inputs, reference solutions, assessment profiles, and internal syntax analysis stay out of the browser bundle and result. Language errors are translated into beginner language while sanitized raw diagnostics remain available under a disclosure.
 
 The production runner can be paused independently of the academy and GitHub sign-in. Deployment and kill-switch instructions, supported language versions, staging and production verification commands, rollback steps, and known boundaries are in the Phase 2 release record.
 
@@ -202,6 +207,7 @@ The verified Phase 1 scope and handoff are recorded in the [Phase 1 learning fou
 The verified Phase 2 execution boundary is recorded in the [Phase 2 real execution release](docs/PHASE_2_RELEASE.md).
 The Phase 3 account and durable-learning-data contract is recorded in the [Phase 3 release](docs/PHASE_3_RELEASE.md).
 The Python project studio, protected assessment, local-draft boundary, and Phase 4A verification are recorded in the [Phase 4A release](docs/PHASE_4A_RELEASE.md). The multi-project registry and first compiled C++ project are recorded in the [Phase 4B release](docs/PHASE_4B_RELEASE.md). The first complete C# project and its trusted Roslyn grading boundary are recorded in the [Phase 4C release](docs/PHASE_4C_RELEASE.md). The Java picnic project, compiler-tree grading boundary, and final four-language project parity are recorded in the [Phase 4D release](docs/PHASE_4D_RELEASE.md). The bounded cross-module review selector, private same-tab session routing, zero-reward Practice flow, and progress-schema hardening are recorded in the [Phase 4E release](docs/PHASE_4E_RELEASE.md). Durable per-lesson resume, honest project completion semantics, and the private portfolio export boundary are recorded in the [Phase 4F release](docs/PHASE_4F_RELEASE.md).
+The second Python course, two-part prerequisite, language-wide Practice pool, protected Supply Tracker grading, compatibility floor, lazy boundaries, and controlled rollout are recorded in the [Phase 5A release](docs/PHASE_5A_RELEASE.md).
 The course, lesson, navigation, accessibility, and visual direction is recorded in the [Open Learning Workshop milestone](docs/UI_REDESIGN_MOCKUPS.md). The milestone is live, and its release record includes the exact source commit, deployed Worker version, accessibility review, route checks, runner regressions, and production browser evidence.
 
 ## Research references

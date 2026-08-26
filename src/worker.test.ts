@@ -765,6 +765,44 @@ describe('production Worker', () => {
     expect(coordinatorFetch).toHaveBeenCalledOnce()
   })
 
+  it('exposes only the visible Supply Tracker output in its short-lived runner grant', async () => {
+    const runnerEnv = {
+      ...htmlEnv,
+      RUNNER_ENABLED: 'true',
+      RUNNER_CONTROL: {
+        getByName: vi.fn(() => ({ fetch: vi.fn() })),
+      },
+    }
+    const response = await handleRequest(
+      new Request('https://seepoundcoffeepie.com/api/runner/grants', {
+        method: 'POST',
+        headers: {
+          Origin: 'https://seepoundcoffeepie.com',
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ exerciseId: 'pydata6-supply-tracker' }),
+      }),
+      runnerEnv,
+    )
+
+    expect(response.status).toBe(200)
+    const body = await response.json()
+    expect(body).toMatchObject({
+      version: 1,
+      language: 'python',
+      visibleTest: {
+        name: 'Visible console check',
+        expectedOutput: 'Products: 2\nTotal units: 17\nRestock: markers',
+      },
+    })
+    const serialized = JSON.stringify(body)
+    expect(serialized).not.toContain('python-data-tools-supply-tracker-v1')
+    expect(serialized).not.toContain('supply-tracker-visible-report')
+    expect(serialized).not.toContain('authored_frame')
+    expect(serialized).not.toContain('structuralChecks')
+    expect(serialized).not.toContain('referenceSolution')
+  })
+
   it('rejects cross-site grants and learner-selected commands before the coordinator', async () => {
     const coordinatorFetch = vi.fn()
     const runnerEnv = {

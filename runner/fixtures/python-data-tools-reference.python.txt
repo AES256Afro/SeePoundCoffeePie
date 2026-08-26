@@ -1,0 +1,31 @@
+def normalize_name(name):
+    return name.strip().lower()
+
+def add_stock(inventory, name, amount):
+    clean_name = normalize_name(name)
+    current = inventory.get(clean_name, 0)
+    inventory[clean_name] = current + amount
+    return inventory[clean_name]
+
+def total_stock(inventory):
+    total = 0
+    for amount in inventory.values():
+        total += amount
+    return total
+
+def low_stock(inventory, limit):
+    names = []
+    for name in inventory:
+        if inventory[name] < limit:
+            names.append(name)
+    return names
+
+inventory = {}
+add_stock(inventory, " Markers ", 2)
+add_stock(inventory, "markers", 3)
+add_stock(inventory, "Paper", 12)
+
+print("Products:", len(inventory))
+print("Total units:", total_stock(inventory))
+for name in low_stock(inventory, 6):
+    print("Restock:", name)

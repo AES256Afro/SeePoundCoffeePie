@@ -16,7 +16,9 @@ RUN useradd --uid 10001 --no-create-home --home-dir /nonexistent --shell /usr/sb
     && chmod 0700 /workspace
 
 COPY runner/supervisor.py /opt/runner/supervisor.py
+COPY runner/PythonDataToolsAnalyzer.py /opt/runner/PythonDataToolsAnalyzer.py
 
 RUN chmod 0555 /opt/runner/supervisor.py \
+    && chmod 0500 /opt/runner/PythonDataToolsAnalyzer.py \
     && find /opt/runner -type d -exec chmod 0555 {} + \
     && python3 --version
