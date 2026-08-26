@@ -19,6 +19,16 @@ docker run --rm \
   "$image_prefix-cpp:worker" \
   /fixture/test_supervisor_cpp_analysis.py
 docker build --platform linux/amd64 -t "$image_prefix-java:worker" -f "$project_dir/Dockerfile.runner.java" "$project_dir"
+docker run --rm \
+  --platform linux/amd64 \
+  --network none \
+  --memory 1g \
+  --pids-limit 256 \
+  --entrypoint /usr/bin/python3 \
+  -e PYTHONPATH=/opt/runner \
+  -v "$project_dir/runner/test_supervisor_java_analysis.py:/fixture/test_supervisor_java_analysis.py:ro" \
+  "$image_prefix-java:worker" \
+  /fixture/test_supervisor_java_analysis.py
 docker build --platform linux/amd64 -t "$image_prefix-csharp:worker" -f "$project_dir/Dockerfile.runner.csharp" "$project_dir"
 docker run --rm \
   --platform linux/amd64 \
@@ -91,6 +101,36 @@ run_fixture() {
       }
     } else if ("cpp_analysis" in result) {
       throw new Error(`${process.env.FIXTURE}: non-C++ result exposed C++ analysis`)
+    }
+    if (process.env.LANGUAGE === "java") {
+      const analysis = result.java_analysis
+      if (
+        !analysis ||
+        analysis.version !== 1 ||
+        analysis.analyzed !== false ||
+        analysis.parsed !== false ||
+        analysis.straight_line !== false ||
+        analysis.class_signature !== false
+      ) {
+        throw new Error(`${process.env.FIXTURE}: malformed ordinary Java analysis sentinel`)
+      }
+      const emptyFacts = [
+        analysis.imports,
+        analysis.main_methods,
+        analysis.static_methods,
+        analysis.scanner_declarations,
+        analysis.arrays,
+        analysis.inputs,
+        analysis.writes,
+        analysis.conditionals,
+        analysis.foreach_loops,
+        analysis.calls,
+      ]
+      if (emptyFacts.some((facts) => !Array.isArray(facts) || facts.length !== 0)) {
+        throw new Error(`${process.env.FIXTURE}: ordinary Java result exposed protected facts`)
+      }
+    } else if ("java_analysis" in result) {
+      throw new Error(`${process.env.FIXTURE}: non-Java result exposed Java analysis`)
     }
     if (process.env.LANGUAGE === "csharp") {
       const analysis = result.csharp_analysis

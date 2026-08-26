@@ -101,3 +101,30 @@ export type ServerOwnedProjectStructuralCheck =
   | ServerOwnedProjectStructuralCheckBase & {
       validation: 'csharp-top-level-order'
     }
+  | ServerOwnedProjectStructuralCheckBase & {
+      validation: 'java-scanner-import'
+    }
+  | ServerOwnedProjectStructuralCheckBase & {
+      validation: 'java-main-frame'
+    }
+  | ServerOwnedProjectStructuralCheckBase & {
+      validation: 'java-print-picnic'
+    }
+  | ServerOwnedProjectStructuralCheckBase & {
+      validation: 'java-scanner-setup'
+    }
+  | ServerOwnedProjectStructuralCheckBase & {
+      validation: 'java-supplies-array'
+    }
+  | ServerOwnedProjectStructuralCheckBase & {
+      validation: 'java-console-inputs'
+    }
+  | ServerOwnedProjectStructuralCheckBase & {
+      validation: 'java-table-branch'
+    }
+  | ServerOwnedProjectStructuralCheckBase & {
+      validation: 'java-supply-foreach'
+    }
+  | ServerOwnedProjectStructuralCheckBase & {
+      validation: 'java-main-statement-order'
+    }

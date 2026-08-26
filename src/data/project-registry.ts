@@ -17,5 +17,9 @@ export async function loadGuidedProject(
     const module = await import('./csharp-workshop-project')
     return module.csharpWorkshopProject
   }
+  if (language === 'java' && projectId === 'picnic-planner') {
+    const module = await import('./java-picnic-project')
+    return module.javaPicnicProject
+  }
   return undefined
 }

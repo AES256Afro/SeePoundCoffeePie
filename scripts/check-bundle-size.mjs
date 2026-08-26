@@ -11,10 +11,10 @@ const budgets = {
     html: { raw: 5_000, gzip: 2_000 },
   },
   total: {
-    // Phase 4C adds a third complete route-loaded curriculum. The small
+    // Phase 4D adds a fourth complete route-loaded curriculum. The small
     // manifests remain on the initial page, while each full language project
     // stays in its own on-demand chunk.
-    javascript: { raw: 615_000, gzip: 168_000 },
+    javascript: { raw: 660_000, gzip: 180_000 },
     css: { raw: 70_000, gzip: 13_000 },
     html: { raw: 5_000, gzip: 2_000 },
   },

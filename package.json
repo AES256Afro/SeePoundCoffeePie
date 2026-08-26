@@ -16,6 +16,8 @@
     "check:runner:cpp-project:production": "node scripts/check-runner-cpp-project.mjs https://seepoundcoffeepie.com",
     "check:runner:csharp-project:staging": "node scripts/check-runner-csharp-project.mjs https://see-pound-coffee-pie-phase2-staging.chris-c39.workers.dev",
     "check:runner:csharp-project:production": "node scripts/check-runner-csharp-project.mjs https://seepoundcoffeepie.com",
+    "check:runner:java-project:staging": "node scripts/check-runner-java-project.mjs https://see-pound-coffee-pie-phase2-staging.chris-c39.workers.dev",
+    "check:runner:java-project:production": "node scripts/check-runner-java-project.mjs https://seepoundcoffeepie.com",
     "check:runner:smoke": "node scripts/check-runner-smoke.mjs https://seepoundcoffeepie.com",
     "d1:migrate:local": "wrangler d1 migrations apply LEARNER_DB --local",
     "d1:migrate:staging": "wrangler d1 migrations apply LEARNER_DB --remote --config wrangler.staging.jsonc",

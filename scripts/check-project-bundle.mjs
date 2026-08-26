@@ -23,11 +23,15 @@ const privateMarkers = [
   'final-hidden-zero-visits',
   'final-hidden-below-member',
   'final-hidden-member-boundary',
+  'final-hidden-one-guest',
+  'final-hidden-below-large-table',
+  'final-hidden-large-table-boundary',
 ]
 const teachingMarkers = [
   'A sequence of instructions that a computer follows.',
   'C++ source code does not run directly.',
   'Modern C# also permits top-level instructions',
+  'Java begins as readable source saved in Main.java.',
 ]
 
 const index = await readFile(new URL('index.html', dist), 'utf8')

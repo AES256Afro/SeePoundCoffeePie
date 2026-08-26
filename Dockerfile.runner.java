@@ -21,7 +21,29 @@ RUN useradd --uid 10001 --no-create-home --home-dir /nonexistent --shell /usr/sb
     && chmod 0700 /workspace
 
 COPY runner/supervisor.py /opt/runner/supervisor.py
+COPY runner/JavaProjectAnalyzer.java /opt/runner/JavaProjectAnalyzer.java
 
 RUN chmod 0555 /opt/runner/supervisor.py \
+    && install -d -m 0555 /opt/runner/java/analyzer /opt/runner/java/empty-classpath \
+    && /usr/bin/javac \
+        --release 21 \
+        -encoding UTF-8 \
+        -proc:none \
+        -d /opt/runner/java/analyzer \
+        /opt/runner/JavaProjectAnalyzer.java \
+    && rm /opt/runner/JavaProjectAnalyzer.java \
     && find /opt/runner -type d -exec chmod 0555 {} + \
+    && find /opt/runner -type f -exec chmod 0444 {} + \
+    && chmod 0555 /opt/runner/supervisor.py \
+    && /usr/bin/java \
+        -Xms16m \
+        -Xmx384m \
+        -XX:MaxMetaspaceSize=128m \
+        -XX:+UseSerialGC \
+        -XX:ActiveProcessorCount=1 \
+        -XX:CICompilerCount=2 \
+        -cp /opt/runner/java/analyzer \
+        JavaProjectAnalyzer \
+        /nonexistent \
+        >/dev/null \
     && javac -version

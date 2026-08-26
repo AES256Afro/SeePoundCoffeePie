@@ -171,9 +171,9 @@ The Cadet Record can also download a versioned JSON backup and restore it after 
 
 ## How editable code runs
 
-The 48 editable foundation exercises and 20 editable Python and C++ project checkpoints use real server-side Python, C++, C#, and Java toolchains. The browser requests a five-minute exercise-scoped run grant, submits only the versioned language, source, optional text input, and `run` or `check` purpose, then polls an opaque learner-owned result ID. Learners cannot choose an executable, command, compiler flag, package, image, path, mount, or network destination.
+The 48 editable foundation exercises and 40 editable guided-project checkpoints use real server-side Python, C++, C#, and Java toolchains. The browser requests a five-minute exercise-scoped run grant, submits only the versioned language, source, optional text input, and `run` or `check` purpose, then polls an opaque learner-owned result ID. Learners cannot choose an executable, command, compiler flag, package, image, path, mount, or network destination.
 
-Every attempt starts in a fresh Cloudflare Sandbox VM with a pinned base image and fixed server-owned toolchain commands. A trusted supervisor drops privileges, blocks socket syscalls, measures the whole process tree, caps CPU, wall time, memory, processes, writable storage, stdout, and stderr, and destroys the VM after the result. Each final project check replaces caller-supplied input with one visible and three server-owned cases. Every case uses a different fresh VM. Python's parser and C++'s pinned compiler front end verify the small straight-line code shapes taught by their projects, so comments, inactive code, early exits, line-splicing tricks, macros, and unsupported control flow cannot earn structural credit. The browser receives only visible output and pass summaries. Private inputs, reference solutions, and internal syntax analysis stay out of the browser bundle and result. Language errors are translated into beginner language while sanitized raw diagnostics remain available under a disclosure.
+Every attempt starts in a fresh Cloudflare Sandbox VM with a pinned base image and fixed server-owned toolchain commands. A trusted supervisor drops privileges, blocks socket syscalls, measures the whole process tree, caps CPU, wall time, memory, processes, writable storage, stdout, and stderr, and destroys the VM after the result. Each final project check replaces caller-supplied input with one visible and three server-owned cases. Every case uses a different fresh VM. Python's parser, C++'s pinned compiler front end, C#'s pinned Roslyn parser, and Java's pinned compiler-tree analyzer verify the deliberately small program shapes taught by their projects. Comments, inactive code, early exits, aliases, Unicode escapes, added members, moved statements, and unsupported control flow cannot earn structural credit. The browser receives only visible output and pass summaries. Private inputs, reference solutions, and internal syntax analysis stay out of the browser bundle and result. Language errors are translated into beginner language while sanitized raw diagnostics remain available under a disclosure.
 
 The production runner can be paused independently of the academy and GitHub sign-in. Deployment and kill-switch instructions, supported language versions, staging and production verification commands, rollback steps, and known boundaries are in the Phase 2 release record.
 
@@ -188,7 +188,7 @@ The learning loop draws on broad, well-supported product patterns:
 - immediate feedback;
 - retrieval practice and spaced repetition;
 - streaks and small rewards for habit support;
-- a comparable guided project for Java after its foundational micro-skills.
+- complete guided projects after all four foundation courses.
 
 SeePoundCoffeePie keeps its own interface, narrative, mentor, terminology, missions, rewards, and course content. It does not copy another product’s branding or lesson material.
 
@@ -196,7 +196,7 @@ Read the full [product and curriculum blueprint](docs/PRODUCT_BLUEPRINT.md).
 The verified Phase 1 scope and handoff are recorded in the [Phase 1 learning foundation release](docs/PHASE_1_RELEASE.md).
 The verified Phase 2 execution boundary is recorded in the [Phase 2 real execution release](docs/PHASE_2_RELEASE.md).
 The Phase 3 account and durable-learning-data contract is recorded in the [Phase 3 release](docs/PHASE_3_RELEASE.md).
-The Python project studio, protected assessment, local-draft boundary, and Phase 4A verification are recorded in the [Phase 4A release](docs/PHASE_4A_RELEASE.md). The multi-project registry and first compiled C++ project are recorded in the [Phase 4B release](docs/PHASE_4B_RELEASE.md). The first complete C# project and its trusted Roslyn grading boundary are recorded in the [Phase 4C release](docs/PHASE_4C_RELEASE.md).
+The Python project studio, protected assessment, local-draft boundary, and Phase 4A verification are recorded in the [Phase 4A release](docs/PHASE_4A_RELEASE.md). The multi-project registry and first compiled C++ project are recorded in the [Phase 4B release](docs/PHASE_4B_RELEASE.md). The first complete C# project and its trusted Roslyn grading boundary are recorded in the [Phase 4C release](docs/PHASE_4C_RELEASE.md). The Java picnic project, compiler-tree grading boundary, and final four-language project parity are recorded in the [Phase 4D release](docs/PHASE_4D_RELEASE.md).
 The course, lesson, navigation, accessibility, and visual direction is recorded in the [Open Learning Workshop milestone](docs/UI_REDESIGN_MOCKUPS.md). The milestone is live, and its release record includes the exact source commit, deployed Worker version, accessibility review, route checks, runner regressions, and production browser evidence.
 
 ## Research references

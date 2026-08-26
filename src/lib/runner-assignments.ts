@@ -3,6 +3,8 @@ import { cppCompiledProject } from '../data/cpp-compiled-project'
 import { cppCompiledProjectServerAssessment } from '../data/cpp-compiled-project.server'
 import { csharpWorkshopProject } from '../data/csharp-workshop-project'
 import { csharpWorkshopProjectServerAssessment } from '../data/csharp-workshop-project.server'
+import { javaPicnicProject } from '../data/java-picnic-project'
+import { javaPicnicProjectServerAssessment } from '../data/java-picnic-project.server'
 import { pythonInteractiveProject } from '../data/python-interactive-project'
 import { pythonInteractiveProjectServerAssessment } from '../data/python-interactive-project.server'
 import type {
@@ -167,7 +169,105 @@ export interface CsharpAnalysis {
   calls: CsharpCallFact[]
 }
 
-export type ProjectStructuralAnalysis = PythonAnalysis | CppAnalysis | CsharpAnalysis
+export interface JavaOutputFact {
+  parts: string[]
+  fields: string[]
+}
+
+export interface JavaParameterFact {
+  position: number
+  name: string
+  type: string
+}
+
+export interface JavaMainFact {
+  occurrence: number
+  member: number
+}
+
+export interface JavaStaticMethodFact {
+  occurrence: number
+  member: number
+  name: string
+  return_type: string
+  parameters: JavaParameterFact[]
+  output: JavaOutputFact
+}
+
+export interface JavaScannerFact {
+  occurrence: number
+  statement: number
+  target: string
+  kind: 'scanner_system_in'
+}
+
+export interface JavaArrayFact {
+  occurrence: number
+  statement: number
+  target: string
+  element_type: string
+  values: string[]
+}
+
+export interface JavaInputFact {
+  occurrence: number
+  statement: number
+  target: string
+  kind: 'scanner_next_line' | 'integer_parse_scanner_next_line'
+  receiver: string
+}
+
+export interface JavaWriteFact {
+  occurrence: number
+  statement: number
+  text: string
+}
+
+export interface JavaConditionalFact {
+  occurrence: number
+  statement: number
+  left: string
+  operator: '>='
+  right: number
+  when_true: string
+  when_false: string
+}
+
+export interface JavaForeachFact {
+  occurrence: number
+  statement: number
+  element_type: string
+  target: string
+  collection: string
+  output: JavaOutputFact
+}
+
+export interface JavaCallFact {
+  occurrence: number
+  statement: number
+  target: string
+  arguments: string[]
+}
+
+export interface JavaAnalysis {
+  version: 1
+  analyzed: boolean
+  parsed: boolean
+  straight_line: boolean
+  imports: string[]
+  class_signature: boolean
+  main_methods: JavaMainFact[]
+  static_methods: JavaStaticMethodFact[]
+  scanner_declarations: JavaScannerFact[]
+  arrays: JavaArrayFact[]
+  inputs: JavaInputFact[]
+  writes: JavaWriteFact[]
+  conditionals: JavaConditionalFact[]
+  foreach_loops: JavaForeachFact[]
+  calls: JavaCallFact[]
+}
+
+export type ProjectStructuralAnalysis = PythonAnalysis | CppAnalysis | CsharpAnalysis | JavaAnalysis
 
 export interface RunnerProjectEvaluation {
   tests: RunnerTestResult[]
@@ -235,6 +335,22 @@ for (const checkpoint of csharpWorkshopProject.checkpoints) {
     projectCheckStdin: checkpoint.practiceStdin ?? '',
     ...(exercise.id === 'project-csharp-final'
       ? { projectAssessment: csharpWorkshopProjectServerAssessment }
+      : {}),
+  })
+}
+
+for (const checkpoint of javaPicnicProject.checkpoints) {
+  const { exercise } = checkpoint
+  if ((exercise.type !== 'code' && exercise.type !== 'bugfix') || exercise.output === undefined) continue
+  assignments.set(exercise.id, {
+    exerciseId: exercise.id,
+    language: javaPicnicProject.language,
+    expectedOutput: exercise.output,
+    exercise,
+    kind: 'project',
+    projectCheckStdin: checkpoint.practiceStdin ?? '',
+    ...(exercise.id === 'project-java-final'
+      ? { projectAssessment: javaPicnicProjectServerAssessment }
       : {}),
   })
 }
@@ -479,6 +595,123 @@ function checkCsharpAnalysisFact(
   }
 }
 
+function hasAuthoredJavaFactFrame(analysis: JavaAnalysis): boolean {
+  return analysis.main_methods.length === 1
+    && analysis.main_methods[0].occurrence === 1
+    && analysis.main_methods[0].member === 2
+    && analysis.static_methods.length === 1
+    && analysis.static_methods[0].occurrence === 1
+    && analysis.static_methods[0].member === 1
+    && analysis.scanner_declarations.length === 1
+    && analysis.scanner_declarations[0].occurrence === 1
+    && analysis.scanner_declarations[0].statement === 1
+    && analysis.arrays.length === 1
+    && analysis.arrays[0].occurrence === 1
+    && analysis.arrays[0].statement === 2
+    && analysis.writes.length === 2
+    && analysis.writes.every((fact, index) => (
+      fact.occurrence === index + 1 && fact.statement === [3, 5][index]
+    ))
+    && analysis.inputs.length === 2
+    && analysis.inputs.every((fact, index) => (
+      fact.occurrence === index + 1 && fact.statement === [4, 6][index]
+    ))
+    && analysis.conditionals.length === 1
+    && analysis.conditionals[0].occurrence === 1
+    && analysis.conditionals[0].statement === 7
+    && analysis.foreach_loops.length === 1
+    && analysis.foreach_loops[0].occurrence === 1
+    && analysis.foreach_loops[0].statement === 8
+    && analysis.calls.length === 1
+    && analysis.calls[0].occurrence === 1
+    && analysis.calls[0].statement === 9
+}
+
+function checkJavaAnalysisFact(
+  analysis: JavaAnalysis,
+  check: ServerOwnedProjectStructuralCheck,
+): boolean {
+  switch (check.validation) {
+    case 'java-scanner-import':
+      return sameStrings(analysis.imports, ['java.util.Scanner'])
+    case 'java-main-frame': {
+      const main = analysis.main_methods[0]
+      return analysis.class_signature
+        && Boolean(main)
+        && main.occurrence === 1
+        && main.member === 2
+    }
+    case 'java-print-picnic': {
+      const method = analysis.static_methods[0]
+      return Boolean(method)
+        && method.name === 'printPicnic'
+        && method.return_type === 'void'
+        && method.parameters.length === 2
+        && method.parameters[0].position === 1
+        && method.parameters[0].name === 'name'
+        && method.parameters[0].type === 'String'
+        && method.parameters[1].position === 2
+        && method.parameters[1].name === 'guests'
+        && method.parameters[1].type === 'int'
+        && sameStrings(method.output.parts, ['Picnic: ', ' | Guests: ', ''])
+        && sameStrings(method.output.fields, ['name', 'guests'])
+    }
+    case 'java-scanner-setup': {
+      const scanner = analysis.scanner_declarations[0]
+      return Boolean(scanner)
+        && scanner.target === 'scanner'
+        && scanner.kind === 'scanner_system_in'
+    }
+    case 'java-supplies-array': {
+      const array = analysis.arrays[0]
+      return Boolean(array)
+        && array.target === 'supplies'
+        && array.element_type === 'String'
+        && sameStrings(array.values, ['Blankets', 'Cups', 'Napkins'])
+    }
+    case 'java-console-inputs': {
+      const [nameInput, countInput] = analysis.inputs
+      const [namePrompt, countPrompt] = analysis.writes
+      return Boolean(nameInput && countInput && namePrompt && countPrompt)
+        && namePrompt.text === 'What is your name?'
+        && nameInput.target === 'guestName'
+        && nameInput.kind === 'scanner_next_line'
+        && nameInput.receiver === 'scanner'
+        && countPrompt.text === 'How many guests are coming?'
+        && countInput.target === 'guestCount'
+        && countInput.kind === 'integer_parse_scanner_next_line'
+        && countInput.receiver === 'scanner'
+    }
+    case 'java-table-branch': {
+      const conditional = analysis.conditionals[0]
+      return Boolean(conditional)
+        && conditional.left === 'guestCount'
+        && conditional.operator === '>='
+        && conditional.right === 8
+        && conditional.when_true === 'Table: Large'
+        && conditional.when_false === 'Table: Small'
+    }
+    case 'java-supply-foreach': {
+      const loop = analysis.foreach_loops[0]
+      return Boolean(loop)
+        && loop.element_type === 'String'
+        && loop.target === 'supply'
+        && loop.collection === 'supplies'
+        && sameStrings(loop.output.parts, ['Supply: ', ''])
+        && sameStrings(loop.output.fields, ['supply'])
+    }
+    case 'java-main-statement-order': {
+      const call = analysis.calls[0]
+      return hasAuthoredJavaFactFrame(analysis)
+        && Boolean(call)
+        && call.target === 'printPicnic'
+        && sameStrings(call.arguments, ['guestName', 'guestCount'])
+    }
+    default:
+      return false
+  }
+}
+
 export function evaluateProjectStructuralChecks(
   assessment: ServerOwnedProjectAssessment,
   analysis: ProjectStructuralAnalysis | null | undefined,
@@ -510,6 +743,16 @@ export function evaluateProjectStructuralChecks(
     && analysis.parsed
     && analysis.straight_line
     && hasAuthoredCsharpFactFrame(analysis)
+  const trustedJava = assessment.language === 'java'
+    && analysis !== null
+    && analysis !== undefined
+    && 'analyzed' in analysis
+    && 'main_methods' in analysis
+    && analysis.version === 1
+    && analysis.analyzed
+    && analysis.parsed
+    && analysis.straight_line
+    && hasAuthoredJavaFactFrame(analysis)
   return assessment.structuralChecks.map((check) => ({
     passed: trustedPython
       ? checkPythonAnalysisFact(analysis, check)
@@ -517,7 +760,9 @@ export function evaluateProjectStructuralChecks(
         ? checkCppAnalysisFact(analysis, check)
         : trustedCsharp
           ? checkCsharpAnalysisFact(analysis, check)
-          : false,
+          : trustedJava
+            ? checkJavaAnalysisFact(analysis, check)
+            : false,
     message: check.message,
   }))
 }

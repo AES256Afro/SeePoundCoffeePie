@@ -40,6 +40,9 @@ describe('bookmarkable application routes', () => {
     expect(projectPath('csharp', 'workshop-check-in', 'project-csharp-final')).toBe(
       '/projects/csharp/workshop-check-in/project-csharp-final',
     )
+    expect(projectPath('java', 'picnic-planner', 'project-java-final')).toBe(
+      '/projects/java/picnic-planner/project-java-final',
+    )
   })
 
   it('keeps the public home page separate from cadet intake', () => {
@@ -119,6 +122,23 @@ describe('bookmarkable application routes', () => {
       language: 'csharp',
       projectId: 'workshop-check-in',
       checkpointId: 'project-csharp-final',
+      conceptIds: [],
+    })
+  })
+
+  it('parses the Java project and checkpoint deep links', () => {
+    expect(parseAppRoute('/projects/java/picnic-planner')).toEqual({
+      page: 'project',
+      language: 'java',
+      projectId: 'picnic-planner',
+      checkpointId: undefined,
+      conceptIds: [],
+    })
+    expect(parseAppRoute('/projects/java/picnic-planner/project-java-final')).toEqual({
+      page: 'project',
+      language: 'java',
+      projectId: 'picnic-planner',
+      checkpointId: 'project-java-final',
       conceptIds: [],
     })
   })

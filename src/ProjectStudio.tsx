@@ -8,6 +8,7 @@ import {
   CircleHelp,
   Clock3,
   Code2,
+  Coffee,
   Download,
   Eye,
   Hash,
@@ -150,7 +151,9 @@ function ProjectOverview({ onNavigate, progress, project }: Pick<ProjectContentP
             ? <Eye aria-hidden="true" />
             : project.language === 'csharp'
               ? <Hash aria-hidden="true" />
-              : <Code2 aria-hidden="true" />}
+              : project.language === 'java'
+                ? <Coffee aria-hidden="true" />
+                : <Code2 aria-hidden="true" />}
         </div>
         <div>
           <p className="eyebrow">{project.studioLabel}</p>

@@ -450,7 +450,7 @@ describe('beginner lesson interactions', () => {
     expect(document.title).toBe('Courses | SeePoundCoffeePie')
   })
 
-  it('lists the released Python, C++, and C# projects with canonical catalog links', () => {
+  it('lists the released Python, C++, C#, and Java projects with canonical catalog links', () => {
     window.history.replaceState({}, '', '/courses')
 
     render(<App />)
@@ -469,6 +469,9 @@ describe('beginner lesson interactions', () => {
     expect(screen.getByRole('link', { name: /Community Workshop Check-In/iu }).getAttribute('href')).toBe(
       '/projects/csharp/workshop-check-in',
     )
+    expect(screen.getByRole('link', { name: /Community Picnic Planner/iu }).getAttribute('href')).toBe(
+      '/projects/java/picnic-planner',
+    )
   })
 
   it('shows the compiled project after the C++ course outline', () => {
@@ -481,6 +484,19 @@ describe('beginner lesson interactions', () => {
     expect(screen.getByText(/downloadable C\+\+ source file/iu)).toBeTruthy()
     expect(screen.getByRole('link', { name: /Preview project/iu }).getAttribute('href')).toBe(
       '/projects/cpp/first-compiled-program',
+    )
+  })
+
+  it('shows the picnic project after the Java course outline', () => {
+    window.history.replaceState({}, '', '/courses/java-foundations')
+
+    render(<App />)
+
+    expect(screen.getByRole('heading', { name: 'Java Foundations' })).toBeTruthy()
+    expect(screen.getByRole('heading', { name: 'Community Picnic Planner' })).toBeTruthy()
+    expect(screen.getByText(/downloadable \.java source file/iu)).toBeTruthy()
+    expect(screen.getByRole('link', { name: /Preview project/iu }).getAttribute('href')).toBe(
+      '/projects/java/picnic-planner',
     )
   })
 

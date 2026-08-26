@@ -18,6 +18,18 @@ import {
   type CsharpWriteFact,
   type CppAnalysis,
   type CppDeclarationFact,
+  type JavaAnalysis,
+  type JavaArrayFact,
+  type JavaCallFact,
+  type JavaConditionalFact,
+  type JavaForeachFact,
+  type JavaInputFact,
+  type JavaMainFact,
+  type JavaOutputFact,
+  type JavaParameterFact,
+  type JavaScannerFact,
+  type JavaStaticMethodFact,
+  type JavaWriteFact,
   type PythonAnalysis,
   type PythonAssignmentFact,
 } from './lib/runner-assignments'
@@ -105,6 +117,7 @@ interface SupervisorResult {
   python_analysis?: PythonAnalysis
   cpp_analysis?: CppAnalysis
   csharp_analysis?: CsharpAnalysis
+  java_analysis?: JavaAnalysis
 }
 
 function json(body: unknown, status = 200): Response {
@@ -681,6 +694,360 @@ function parseCsharpAnalysis(value: unknown): CsharpAnalysis | null {
   }
 }
 
+function isJavaValueType(value: unknown): value is 'String' | 'int' {
+  return value === 'String' || value === 'int'
+}
+
+function parseJavaOutput(value: unknown): JavaOutputFact | null {
+  if (!value || typeof value !== 'object' || !hasExactKeys(value, ['parts', 'fields'])) return null
+  const output = value as Partial<JavaOutputFact>
+  if (
+    !Array.isArray(output.parts)
+    || output.parts.length > 16
+    || !output.parts.every((part) => isBoundedAnalysisText(part))
+    || !Array.isArray(output.fields)
+    || output.fields.length > 16
+    || !output.fields.every(isCppAnalysisName)
+    || output.parts.length !== output.fields.length + 1
+  ) return null
+  return { parts: [...output.parts], fields: [...output.fields] }
+}
+
+function parseJavaParameter(value: unknown): JavaParameterFact | null {
+  if (!value || typeof value !== 'object' || !hasExactKeys(value, ['position', 'name', 'type'])) return null
+  const parameter = value as Partial<JavaParameterFact>
+  if (
+    !isPositiveBoundedInteger(parameter.position, 8)
+    || !isCppAnalysisName(parameter.name)
+    || !isJavaValueType(parameter.type)
+  ) return null
+  return { position: parameter.position, name: parameter.name, type: parameter.type }
+}
+
+function parseJavaMain(value: unknown): JavaMainFact | null {
+  if (!value || typeof value !== 'object' || !hasExactKeys(value, ['occurrence', 'member'])) return null
+  const fact = value as Partial<JavaMainFact>
+  if (
+    !isPositiveBoundedInteger(fact.occurrence, 4)
+    || !isPositiveBoundedInteger(fact.member, 8)
+  ) return null
+  return { occurrence: fact.occurrence, member: fact.member }
+}
+
+function parseJavaStaticMethod(value: unknown): JavaStaticMethodFact | null {
+  if (!value || typeof value !== 'object' || !hasExactKeys(value, [
+    'occurrence', 'member', 'name', 'return_type', 'parameters', 'output',
+  ])) return null
+  const fact = value as Partial<JavaStaticMethodFact>
+  const parameters = Array.isArray(fact.parameters) ? fact.parameters.map(parseJavaParameter) : []
+  const output = parseJavaOutput(fact.output)
+  if (
+    !isPositiveBoundedInteger(fact.occurrence, 8)
+    || !isPositiveBoundedInteger(fact.member, 8)
+    || !isCppAnalysisName(fact.name)
+    || fact.return_type !== 'void'
+    || !Array.isArray(fact.parameters)
+    || fact.parameters.length > 8
+    || parameters.some((parameter) => !parameter)
+    || parameters.some((parameter, index) => parameter?.position !== index + 1)
+    || !output
+  ) return null
+  return {
+    occurrence: fact.occurrence,
+    member: fact.member,
+    name: fact.name,
+    return_type: 'void',
+    parameters: parameters as JavaParameterFact[],
+    output,
+  }
+}
+
+function parseJavaScanner(value: unknown): JavaScannerFact | null {
+  if (!value || typeof value !== 'object' || !hasExactKeys(value, [
+    'occurrence', 'statement', 'target', 'kind',
+  ])) return null
+  const fact = value as Partial<JavaScannerFact>
+  if (
+    !isPositiveBoundedInteger(fact.occurrence, 8)
+    || !isPositiveBoundedInteger(fact.statement, Number.MAX_SAFE_INTEGER)
+    || !isCppAnalysisName(fact.target)
+    || fact.kind !== 'scanner_system_in'
+  ) return null
+  return {
+    occurrence: fact.occurrence,
+    statement: fact.statement,
+    target: fact.target,
+    kind: 'scanner_system_in',
+  }
+}
+
+function parseJavaArray(value: unknown): JavaArrayFact | null {
+  if (!value || typeof value !== 'object' || !hasExactKeys(value, [
+    'occurrence', 'statement', 'target', 'element_type', 'values',
+  ])) return null
+  const fact = value as Partial<JavaArrayFact>
+  if (
+    !isPositiveBoundedInteger(fact.occurrence, 16)
+    || !isPositiveBoundedInteger(fact.statement, Number.MAX_SAFE_INTEGER)
+    || !isCppAnalysisName(fact.target)
+    || !isJavaValueType(fact.element_type)
+    || !Array.isArray(fact.values)
+    || fact.values.length > 32
+    || !fact.values.every((item) => isBoundedAnalysisText(item))
+  ) return null
+  return {
+    occurrence: fact.occurrence,
+    statement: fact.statement,
+    target: fact.target,
+    element_type: fact.element_type,
+    values: [...fact.values],
+  }
+}
+
+function parseJavaInput(value: unknown): JavaInputFact | null {
+  if (!value || typeof value !== 'object' || !hasExactKeys(value, [
+    'occurrence', 'statement', 'target', 'kind', 'receiver',
+  ])) return null
+  const fact = value as Partial<JavaInputFact>
+  if (
+    !isPositiveBoundedInteger(fact.occurrence, 16)
+    || !isPositiveBoundedInteger(fact.statement, Number.MAX_SAFE_INTEGER)
+    || !isCppAnalysisName(fact.target)
+    || (fact.kind !== 'scanner_next_line' && fact.kind !== 'integer_parse_scanner_next_line')
+    || !isCppAnalysisName(fact.receiver)
+  ) return null
+  return {
+    occurrence: fact.occurrence,
+    statement: fact.statement,
+    target: fact.target,
+    kind: fact.kind,
+    receiver: fact.receiver,
+  }
+}
+
+function parseJavaWrite(value: unknown): JavaWriteFact | null {
+  if (!value || typeof value !== 'object' || !hasExactKeys(value, [
+    'occurrence', 'statement', 'text',
+  ])) return null
+  const fact = value as Partial<JavaWriteFact>
+  if (
+    !isPositiveBoundedInteger(fact.occurrence, 32)
+    || !isPositiveBoundedInteger(fact.statement, Number.MAX_SAFE_INTEGER)
+    || !isBoundedAnalysisText(fact.text, 512)
+  ) return null
+  return { occurrence: fact.occurrence, statement: fact.statement, text: fact.text }
+}
+
+function parseJavaConditional(value: unknown): JavaConditionalFact | null {
+  if (!value || typeof value !== 'object' || !hasExactKeys(value, [
+    'occurrence', 'statement', 'left', 'operator', 'right', 'when_true', 'when_false',
+  ])) return null
+  const fact = value as Partial<JavaConditionalFact>
+  if (
+    !isPositiveBoundedInteger(fact.occurrence, 16)
+    || !isPositiveBoundedInteger(fact.statement, Number.MAX_SAFE_INTEGER)
+    || !isCppAnalysisName(fact.left)
+    || fact.operator !== '>='
+    || !Number.isSafeInteger(fact.right)
+    || !isBoundedAnalysisText(fact.when_true, 512)
+    || !isBoundedAnalysisText(fact.when_false, 512)
+  ) return null
+  return {
+    occurrence: fact.occurrence,
+    statement: fact.statement,
+    left: fact.left,
+    operator: '>=',
+    right: fact.right as number,
+    when_true: fact.when_true,
+    when_false: fact.when_false,
+  }
+}
+
+function parseJavaForeach(value: unknown): JavaForeachFact | null {
+  if (!value || typeof value !== 'object' || !hasExactKeys(value, [
+    'occurrence', 'statement', 'element_type', 'target', 'collection', 'output',
+  ])) return null
+  const fact = value as Partial<JavaForeachFact>
+  const output = parseJavaOutput(fact.output)
+  if (
+    !isPositiveBoundedInteger(fact.occurrence, 16)
+    || !isPositiveBoundedInteger(fact.statement, Number.MAX_SAFE_INTEGER)
+    || !isJavaValueType(fact.element_type)
+    || !isCppAnalysisName(fact.target)
+    || !isCppAnalysisName(fact.collection)
+    || !output
+  ) return null
+  return {
+    occurrence: fact.occurrence,
+    statement: fact.statement,
+    element_type: fact.element_type,
+    target: fact.target,
+    collection: fact.collection,
+    output,
+  }
+}
+
+function parseJavaCall(value: unknown): JavaCallFact | null {
+  if (!value || typeof value !== 'object' || !hasExactKeys(value, [
+    'occurrence', 'statement', 'target', 'arguments',
+  ])) return null
+  const fact = value as Partial<JavaCallFact>
+  if (
+    !isPositiveBoundedInteger(fact.occurrence, 16)
+    || !isPositiveBoundedInteger(fact.statement, Number.MAX_SAFE_INTEGER)
+    || !isCppAnalysisName(fact.target)
+    || !Array.isArray(fact.arguments)
+    || fact.arguments.length > 16
+    || !fact.arguments.every(isCppAnalysisName)
+  ) return null
+  return {
+    occurrence: fact.occurrence,
+    statement: fact.statement,
+    target: fact.target,
+    arguments: [...fact.arguments],
+  }
+}
+
+function parseJavaAnalysis(value: unknown): JavaAnalysis | null {
+  if (!value || typeof value !== 'object' || !hasExactKeys(value, [
+    'version',
+    'analyzed',
+    'parsed',
+    'straight_line',
+    'imports',
+    'class_signature',
+    'main_methods',
+    'static_methods',
+    'scanner_declarations',
+    'arrays',
+    'inputs',
+    'writes',
+    'conditionals',
+    'foreach_loops',
+    'calls',
+  ])) return null
+  const analysis = value as Partial<JavaAnalysis>
+  const mainMethods = Array.isArray(analysis.main_methods) ? analysis.main_methods.map(parseJavaMain) : []
+  const staticMethods = Array.isArray(analysis.static_methods)
+    ? analysis.static_methods.map(parseJavaStaticMethod)
+    : []
+  const scanners = Array.isArray(analysis.scanner_declarations)
+    ? analysis.scanner_declarations.map(parseJavaScanner)
+    : []
+  const arrays = Array.isArray(analysis.arrays) ? analysis.arrays.map(parseJavaArray) : []
+  const inputs = Array.isArray(analysis.inputs) ? analysis.inputs.map(parseJavaInput) : []
+  const writes = Array.isArray(analysis.writes) ? analysis.writes.map(parseJavaWrite) : []
+  const conditionals = Array.isArray(analysis.conditionals)
+    ? analysis.conditionals.map(parseJavaConditional)
+    : []
+  const foreachLoops = Array.isArray(analysis.foreach_loops)
+    ? analysis.foreach_loops.map(parseJavaForeach)
+    : []
+  const calls = Array.isArray(analysis.calls) ? analysis.calls.map(parseJavaCall) : []
+  if (
+    analysis.version !== 1
+    || typeof analysis.analyzed !== 'boolean'
+    || typeof analysis.parsed !== 'boolean'
+    || typeof analysis.straight_line !== 'boolean'
+    || !Array.isArray(analysis.imports)
+    || analysis.imports.length > 4
+    || !analysis.imports.every((entry) => entry === 'java.util.Scanner')
+    || new Set(analysis.imports).size !== analysis.imports.length
+    || typeof analysis.class_signature !== 'boolean'
+    || !Array.isArray(analysis.main_methods)
+    || analysis.main_methods.length > 4
+    || mainMethods.some((fact) => !fact)
+    || !Array.isArray(analysis.static_methods)
+    || analysis.static_methods.length > 8
+    || staticMethods.some((fact) => !fact)
+    || !Array.isArray(analysis.scanner_declarations)
+    || analysis.scanner_declarations.length > 8
+    || scanners.some((fact) => !fact)
+    || !Array.isArray(analysis.arrays)
+    || analysis.arrays.length > 16
+    || arrays.some((fact) => !fact)
+    || !Array.isArray(analysis.inputs)
+    || analysis.inputs.length > 16
+    || inputs.some((fact) => !fact)
+    || !Array.isArray(analysis.writes)
+    || analysis.writes.length > 32
+    || writes.some((fact) => !fact)
+    || !Array.isArray(analysis.conditionals)
+    || analysis.conditionals.length > 16
+    || conditionals.some((fact) => !fact)
+    || !Array.isArray(analysis.foreach_loops)
+    || analysis.foreach_loops.length > 16
+    || foreachLoops.some((fact) => !fact)
+    || !Array.isArray(analysis.calls)
+    || analysis.calls.length > 16
+    || calls.some((fact) => !fact)
+  ) return null
+
+  for (const facts of [
+    mainMethods,
+    staticMethods,
+    scanners,
+    arrays,
+    inputs,
+    writes,
+    conditionals,
+    foreachLoops,
+    calls,
+  ]) {
+    if (facts.some((fact, index) => fact?.occurrence !== index + 1)) return null
+  }
+
+  const allFacts = [
+    mainMethods,
+    staticMethods,
+    scanners,
+    arrays,
+    inputs,
+    writes,
+    conditionals,
+    foreachLoops,
+    calls,
+  ]
+  const hasFacts = analysis.imports.length > 0
+    || analysis.class_signature
+    || allFacts.some((facts) => facts.length > 0)
+  if (!analysis.analyzed && (analysis.parsed || analysis.straight_line || hasFacts)) return null
+  if (analysis.parsed && !analysis.straight_line) return null
+  if (!analysis.parsed && (analysis.straight_line || hasFacts)) return null
+  if (analysis.straight_line && (
+    analysis.imports.length !== 1
+    || !analysis.class_signature
+    || mainMethods.length !== 1
+    || staticMethods.length !== 1
+    || scanners.length !== 1
+    || arrays.length !== 1
+    || inputs.length !== 2
+    || writes.length !== 2
+    || conditionals.length !== 1
+    || foreachLoops.length !== 1
+    || calls.length !== 1
+  )) return null
+  if (JSON.stringify(value).length > 32_768) return null
+
+  return {
+    version: 1,
+    analyzed: analysis.analyzed,
+    parsed: analysis.parsed,
+    straight_line: analysis.straight_line,
+    imports: [...analysis.imports],
+    class_signature: analysis.class_signature,
+    main_methods: mainMethods as JavaMainFact[],
+    static_methods: staticMethods as JavaStaticMethodFact[],
+    scanner_declarations: scanners as JavaScannerFact[],
+    arrays: arrays as JavaArrayFact[],
+    inputs: inputs as JavaInputFact[],
+    writes: writes as JavaWriteFact[],
+    conditionals: conditionals as JavaConditionalFact[],
+    foreach_loops: foreachLoops as JavaForeachFact[],
+    calls: calls as JavaCallFact[],
+  }
+}
+
 function parseSupervisorResult(
   value: string,
   language: LanguageId,
@@ -717,11 +1084,20 @@ function parseSupervisorResult(
       !csharpAnalysis || csharpAnalysis.analyzed !== projectAnalysisRequested
     )) return null
     if (language !== 'csharp' && result.csharp_analysis !== undefined) return null
+    const javaAnalysis = result.java_analysis === undefined
+      ? null
+      : parseJavaAnalysis(result.java_analysis)
+    if (result.java_analysis !== undefined && !javaAnalysis) return null
+    if (language === 'java' && (
+      !javaAnalysis || javaAnalysis.analyzed !== projectAnalysisRequested
+    )) return null
+    if (language !== 'java' && result.java_analysis !== undefined) return null
     return {
       ...result as SupervisorResult,
       ...(pythonAnalysis ? { python_analysis: pythonAnalysis } : {}),
       ...(cppAnalysis ? { cpp_analysis: cppAnalysis } : {}),
       ...(csharpAnalysis ? { csharp_analysis: csharpAnalysis } : {}),
+      ...(javaAnalysis ? { java_analysis: javaAnalysis } : {}),
     }
   } catch {
     return null
@@ -973,6 +1349,7 @@ export class RunnerCoordinator {
         const projectAnalysisRequested = (
           officialProjectAssessment?.language === 'cpp'
           || officialProjectAssessment?.language === 'csharp'
+          || officialProjectAssessment?.language === 'java'
         ) && caseIndex === 0
         const supervisorCommand = `/opt/runner/supervisor.py ${record.language}${
           projectAnalysisRequested ? ' --project-analysis' : ''
@@ -1024,7 +1401,9 @@ export class RunnerCoordinator {
             ? sanitizedRuns[0]?.cpp_analysis
             : officialProjectAssessment.language === 'csharp'
               ? sanitizedRuns[0]?.csharp_analysis
-              : sanitizedRuns[0]?.python_analysis,
+              : officialProjectAssessment.language === 'java'
+                ? sanitizedRuns[0]?.java_analysis
+                : sanitizedRuns[0]?.python_analysis,
         )
       : null
     const projectPracticeRun = assignment?.kind === 'project' && purpose === 'run'

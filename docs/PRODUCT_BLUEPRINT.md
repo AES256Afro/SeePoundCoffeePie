@@ -228,9 +228,18 @@ Phase 4C adds the first complete C# path without assuming that .NET vocabulary i
 - A pinned Roslyn analyzer reads the exact C# 12 syntax tree and emits only bounded facts needed for eight server-owned requirements. Extra statements, aliases, directives, disabled code, added types or methods, helper calls, casts, moved statements, and decoys fail closed.
 - The finished `.cs` file stays in browser-local draft storage until the learner deliberately downloads it.
 
+Phase 4D completes the first guided-project pass across all four language schools:
+
+- `Community Picnic Planner` follows Java Foundations with 12 ordered, bookmarkable checkpoints and a practical community-event program.
+- The opening checkpoint explains `.java` source, `javac`, `.class` bytecode, the JVM, `public class Main`, the exact `main` entry point, case sensitivity, parentheses, brackets, braces, and semicolons before asking the learner to edit source.
+- The project then introduces `System.out.println`, `Scanner`, complete-line input, `Integer.parseInt`, concatenation, arrays, `if` and `else`, the enhanced `for` loop, static methods, parameters, arguments, and dependency order.
+- Ten editable checkpoints use the isolated Java runner. One choice and one ordering exercise retrieve the compile path and the complete program flow.
+- The final assessment uses one visible organizer and three server-owned behavior cases covering one guest, the value just below the large-table threshold, and the exact boundary.
+- A pinned Java compiler-tree analyzer accepts only the taught two-member `Main` class and nine-statement `main` frame. Unicode escapes, extra imports or types, added members, alternate input shapes, moved statements, helper expressions, unreachable code, and unsupported control flow fail closed.
+- The completed program remains in browser-local draft storage and downloads deliberately as `Main.java`.
+
 The remaining Phase 4 work is to:
 
-- add one comparable guided project after Java Foundations;
 - generate adaptive practice from mastered and weak concepts under strict curriculum constraints;
 - define a deliberate portfolio export instead of treating a raw source download as a public portfolio;
 - evaluate cooperative learning only after a separate privacy, child-safety, and moderation review, and before considering competitive leaderboards.
