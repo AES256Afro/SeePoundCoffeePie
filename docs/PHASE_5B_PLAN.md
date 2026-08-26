@@ -1,10 +1,10 @@
 # Phase 5B Practical C++ Collections and Records Plan
 
-Status: planned and unpublished. This document reserves the curriculum contract for the next continuing course. A compact identifier-only manifest is implemented locally so a compatible client and Worker can preserve future Phase 5B progress, but it does not publish a catalog card, route, lesson, runner assignment, Practice item, Codebook example, or sitemap entry.
+Status: compatibility floor released and course still unpublished. This document reserves the curriculum contract for the next continuing course. A compact identifier-only manifest is deployed so compatible clients and Workers preserve future Phase 5B progress, but it does not publish a catalog card, route, lesson, runner assignment, Practice item, Codebook example, or sitemap entry.
 
-## Current implementation checkpoint
+## Released compatibility checkpoint
 
-The 2026-08-26 contract-lock and hidden-authoring checkpoint contains the complete unpublished TypeScript plan plus the first four fully authored modules:
+The 2026-08-26 compatibility release contains the complete unpublished TypeScript plan plus the first four fully authored modules:
 
 - all 6 module IDs, 30 lesson IDs, concept links, exercise types, XP, prerequisites, exclusions, publication blockers, and final-assessment requirements are mechanically validated;
 - Modules 1 through 4 provide 20 complete beginner lessons and 280 possible first-completion XP in the hidden teaching draft;
@@ -16,10 +16,12 @@ The 2026-08-26 contract-lock and hidden-authoring checkpoint contains the comple
 - the continuing-course route, ownership, resume, and Practice infrastructure is course-driven while Practical Python remains the only published continuing course;
 - the course and first lesson URLs still return not found, no draft lesson receives a runner assignment, and the course ID and a unique teaching marker are forbidden from every emitted production browser asset;
 - `npm run check:release` passes 51 test files and 592 tests, lint, repository text style, social-preview verification, TypeScript, the production build, the server-owned bundle boundary, and every bundle budget;
-- production and staging Wrangler dry runs passed with their expected bindings, asset package, and all four existing container definitions. No deployment was performed;
+- staging and production deployments completed without a D1 migration or container change. Staging records Worker version `13a2ec40-137d-4b46-959a-0d51200cce78`; production records Worker version `571495f3-3997-45f8-b1e2-d34a97f526dc`;
 - the compatibility build measures 475.35 kB raw and 128.83 kB gzip initial JavaScript, 72.37 kB raw and 13.46 kB gzip initial CSS, 764.00 kB raw and 214.28 kB gzip total JavaScript, and 85.22 kB raw and 16.45 kB gzip total CSS. The complete hidden teaching draft remains outside the production import graph;
+- desktop and 390-pixel browser checks passed for the launch page, catalog, Practical Python course, and invalid Phase 5B course and lesson links. Each route fit its viewport, lazy course navigation focused the final heading, and no hidden C++ teaching marker appeared;
+- production live checks passed for canonical routes, redirects, security headers, social previews, runner boundaries, and account-progress authentication. All 30 reserved Phase 5B exercise IDs returned `404` from the enabled production runner grant endpoint, while a published C++ exercise and the protected Practical Python capstone still ran successfully;
 
-This is local source and build evidence only. The Phase 5B compatibility candidate is implemented, but no staging or production compatibility floor has been deployed, verified, or recorded. No Phase 5B runner assignment, public route, catalog release, staging release, or production release exists yet.
+The compatibility floor is now live from source commit `46175bfaf1f5c2005bdbbb3a183c58aa6551aebd`. The detailed release record is in `docs/PHASE_5B_COMPATIBILITY_RELEASE.md`. The Phase 5B course itself remains unpublished: no Phase 5B runner assignment, public route, catalog card, Practice item, Codebook example, or sitemap entry exists.
 
 ## Outcome
 
