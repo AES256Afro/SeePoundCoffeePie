@@ -17,7 +17,7 @@ The 2026-08-26 contract-lock and hidden-authoring checkpoint contains the comple
 - the course and first lesson URLs still return not found, no draft lesson receives a runner assignment, and the course ID and a unique teaching marker are forbidden from every emitted production browser asset;
 - `npm run check:release` passes 51 test files and 592 tests, lint, repository text style, social-preview verification, TypeScript, the production build, the server-owned bundle boundary, and every bundle budget;
 - production and staging Wrangler dry runs passed with their expected bindings, asset package, and all four existing container definitions. No deployment was performed;
-- the compatibility build measures 475.35 kB raw and 128.83 kB gzip initial JavaScript, 72.37 kB raw and 13.46 kB gzip initial CSS, 763.92 kB raw and 214.27 kB gzip total JavaScript, and 85.22 kB raw and 16.45 kB gzip total CSS. The complete hidden teaching draft remains outside the production import graph;
+- the compatibility build measures 475.35 kB raw and 128.83 kB gzip initial JavaScript, 72.37 kB raw and 13.46 kB gzip initial CSS, 764.00 kB raw and 214.28 kB gzip total JavaScript, and 85.22 kB raw and 16.45 kB gzip total CSS. The complete hidden teaching draft remains outside the production import graph;
 
 This is local source and build evidence only. The Phase 5B compatibility candidate is implemented, but no staging or production compatibility floor has been deployed, verified, or recorded. No Phase 5B runner assignment, public route, catalog release, staging release, or production release exists yet.
 

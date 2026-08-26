@@ -146,6 +146,7 @@ export function ContinuingCoursePage({ courseId, onNavigate, onProgress, progres
   const [expandedModule, setExpandedModule] = useState(currentModule?.id ?? course.missions[0]?.id ?? '')
   const [completionNotice, setCompletionNotice] = useState('')
   const [focusModuleId, setFocusModuleId] = useState<string | null>(null)
+  const courseHeadingRef = useRef<HTMLHeadingElement>(null)
   const moduleSummaryRefs = useRef(new Map<string, HTMLButtonElement>())
   const continueTo = currentModule && currentLesson
     ? lessonPath(definition.id, currentModule.id, currentLesson.id)
@@ -153,6 +154,7 @@ export function ContinuingCoursePage({ courseId, onNavigate, onProgress, progres
 
   useEffect(() => {
     document.title = `${definition.title} | SeePoundCoffeePie`
+    courseHeadingRef.current?.focus({ preventScroll: true })
   }, [definition.title])
 
   useEffect(() => {
@@ -183,7 +185,7 @@ export function ContinuingCoursePage({ courseId, onNavigate, onProgress, progres
         <span aria-label={languageLabel(definition)} className={`language-symbol language-symbol--${definition.language} language-symbol--large`}>{courseSymbol(definition)}</span>
         <div>
           <p className="eyebrow">Next-step {languageLabel(definition)} course</p>
-          <h1>{definition.title}</h1>
+          <h1 ref={courseHeadingRef} tabIndex={-1}>{definition.title}</h1>
           <p>{definition.description}</p>
           <span>{definition.missionIds.length} modules · {definition.lessonIds.length} short lessons · {definition.level}</span>
         </div>

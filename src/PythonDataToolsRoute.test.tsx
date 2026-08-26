@@ -81,10 +81,11 @@ describe('Practical Python route components', () => {
       />,
     )
 
-    expect(screen.getByRole('heading', {
+    const courseHeading = screen.getByRole('heading', {
       level: 1,
       name: 'Practical Python: Data Tools',
-    })).toBeTruthy()
+    })
+    expect(courseHeading).toBeTruthy()
     expect(screen.getByText('Finish both prerequisites to start')).toBeTruthy()
     expect(screen.getByRole('heading', {
       name: 'Two earlier steps make this course feel gentle',
@@ -110,6 +111,7 @@ describe('Practical Python route components', () => {
     ])
     await waitFor(() => {
       expect(document.title).toBe('Practical Python: Data Tools | SeePoundCoffeePie')
+      expect(document.activeElement).toBe(courseHeading)
     })
   })
 
