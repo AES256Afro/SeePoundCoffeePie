@@ -1,8 +1,8 @@
 # Phase 5A Practical Python Data Tools Release
 
-Release date: pending controlled rollout
+Release date: 2026-08-26
 
-Release status: pre-release. The compatibility floor is deployed, but the final Phase 5A content release and production learner QA are not yet verified. Replace the three marked content-release placeholders only with deployment evidence from the final published commit.
+Release status: released. The final Phase 5A content is deployed to staging and production. Hosted CI, local release gates, container-image checks, controlled runner checks, live-route verification, and production browser QA are complete.
 
 ## Outcome
 
@@ -361,12 +361,19 @@ Runner failure and static-site failure have separate containment paths:
 
 The staging rollback floor is `3bff5e2d-48a2-494b-9dce-894375da9a8b`. The production rollback floor is `b1efbd9d-521d-47e4-b6d2-022f705d267f`. Never select an older Worker after Phase 5A learner writes are possible.
 
-## Release evidence to complete
+## Release evidence
 
-The following values are intentionally unresolved and do not constitute deployment claims:
+- final Phase 5A content commit: `a5ce1327beb0275ab1625c1962887375419b52d2`;
+- staging content-release Worker version: `c4865af7-fc5c-492f-96cd-89ec4ce37b17`;
+- production content-release Worker version: `8f67ade6-abdb-4e79-9516-1c128ccf3cdc`;
+- Python image digest in both environments: `sha256:da8296ec951f3cfab6faf71b95eeb6d58733f088f745a7f38e8a6837a8441315`;
+- GitHub CI: [run 32986108791](https://github.com/AES256Afro/SeePoundCoffeePie/actions/runs/32986108791) passed on the exact content commit after installing dependencies, running 545 tests in 48 files, linting, checking repository-wide text style and social preview metadata, building the production bundle, checking the server-owned assessment boundary, and enforcing bundle budgets;
+- local release gate: 545 tests in 48 files, lint, text style across 190 tracked and release-candidate files, 1200 by 630 social preview validation, production build, private assessment boundary, and all bundle budgets passed;
+- local runner-image gate: Python, C++, C#, and Java image checks passed, including network isolation, CPU, memory, output, disk, cleanup, analyzer language separation, and root-only mode `0500` for the Python Data Tools analyzer;
+- bundle evidence: 470.49 kB raw and 127.80 kB gzip initial JavaScript, 72.37 kB raw and 13.46 kB gzip initial CSS, 758.19 kB raw and 212.98 kB gzip total JavaScript, 9.65 kB raw and 3.38 kB gzip Practical Python route JavaScript, 46.41 kB raw and 12.76 kB gzip teaching content, 9.23 kB raw and 1.88 kB gzip course CSS, and 28.36 kB raw and 9.08 kB gzip Codebook JavaScript;
+- staging runner gate: platform isolation and resource checks passed for all four languages, existing Python, C++, C#, and Java project assessments passed, and the Supply Tracker probe rejected hardcoded output, comment decoys, unreachable required code, source-encoding disagreement, and behavior aliases while accepting the authentic seven-check solution. Staging was returned to disabled, and both KV storage and the public status endpoint reported `enabled: false`;
+- production live gate: Phase 5A assets, sitemap, robots declaration, social preview, apex domain, `www` redirect, security headers, 30 canonical routes, and 2 legacy routes passed;
+- production browser QA: the course and locked direct lesson rendered at 1280 and 390 CSS pixels without horizontal overflow; all six modules and both prerequisite links were present; direct refresh and Back and Forward navigation retained the exact route and title; the locked route exposed no editor; and the browser console remained clear. Automated route and application tests separately cover the post-prerequisite unlocked editor path and ordered-module enforcement;
+- production runner gate: platform checks, all four existing project assessment suites, the seven-check Supply Tracker probe, and the final smoke test passed. All four container applications reported `ready`, and both KV storage and the public status endpoint reported `enabled: true` after the controlled window.
 
-- final Phase 5A content commit: `<PHASE_5A_CONTENT_COMMIT>`;
-- staging content-release Worker version: `<PHASE_5A_STAGING_WORKER_VERSION>`;
-- production content-release Worker version: `<PHASE_5A_PRODUCTION_WORKER_VERSION>`.
-
-Before changing the release status at the top of this file, replace those placeholders with exact values and add the matching CI run, bundle output, Python image digest, staging and production runner output, live-route output, and learner browser QA evidence. The final content commit must match `origin/main`, staging and production must run the reviewed content, and the production runner's final enabled state must be confirmed separately.
+The source tree used for both content deployments matched the recorded commit and `origin/main` at rollout time. The release-evidence documentation commit that follows does not change emitted application or container bytes.
