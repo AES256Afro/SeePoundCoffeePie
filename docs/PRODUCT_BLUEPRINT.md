@@ -218,9 +218,19 @@ Phase 4B proves that the project system is genuinely multi-language with one com
 - Project drafts and history remain keyed by project and checkpoint. Existing version 1 local, backup, synchronization, and remote progress records accept both projects without a migration and preserve Phase 4A identifiers.
 - The final Observation Desk uses changing name and detail-count cases, including a spaced name and zero, plus trusted compiler-derived structural facts for the exact straight-line grammar taught by the project.
 
+Phase 4C adds the first complete C# path without assuming that .NET vocabulary is already familiar:
+
+- `Community Workshop Check-In` follows C# Foundations with 12 ordered checkpoints and a practical front-desk program.
+- The opening retrieval explains C# source, the compiler, .NET, the runtime, and top-level instructions before asking for syntax.
+- The project then introduces `using System;`, `Console.ReadLine()`, `??`, `int.Parse`, interpolation, arrays, `if` and `else`, `foreach`, methods, parameters, arguments, and dependency order one small job at a time.
+- Ten editable checkpoints use the existing isolated C# runner. One choice and one ordering exercise retrieve the build path and the complete program flow.
+- The final assessment uses one visible visitor and three server-owned boundary cases for zero, just below member access, and the exact member threshold.
+- A pinned Roslyn analyzer reads the exact C# 12 syntax tree and emits only bounded facts needed for eight server-owned requirements. Extra statements, aliases, directives, disabled code, added types or methods, helper calls, casts, moved statements, and decoys fail closed.
+- The finished `.cs` file stays in browser-local draft storage until the learner deliberately downloads it.
+
 The remaining Phase 4 work is to:
 
-- add one comparable guided project after C# and Java Foundations;
+- add one comparable guided project after Java Foundations;
 - generate adaptive practice from mastered and weak concepts under strict curriculum constraints;
 - define a deliberate portfolio export instead of treating a raw source download as a public portfolio;
 - evaluate cooperative learning only after a separate privacy, child-safety, and moderation review, and before considering competitive leaderboards.

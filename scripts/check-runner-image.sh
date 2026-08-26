@@ -20,6 +20,16 @@ docker run --rm \
   /fixture/test_supervisor_cpp_analysis.py
 docker build --platform linux/amd64 -t "$image_prefix-java:worker" -f "$project_dir/Dockerfile.runner.java" "$project_dir"
 docker build --platform linux/amd64 -t "$image_prefix-csharp:worker" -f "$project_dir/Dockerfile.runner.csharp" "$project_dir"
+docker run --rm \
+  --platform linux/amd64 \
+  --network none \
+  --memory 1g \
+  --pids-limit 256 \
+  --entrypoint /usr/bin/python3 \
+  -e PYTHONPATH=/opt/runner \
+  -v "$project_dir/runner/test_supervisor_csharp_analysis.py:/fixture/test_supervisor_csharp_analysis.py:ro" \
+  "$image_prefix-csharp:worker" \
+  /fixture/test_supervisor_csharp_analysis.py
 
 run_fixture() {
   local language="$1"
@@ -81,6 +91,33 @@ run_fixture() {
       }
     } else if ("cpp_analysis" in result) {
       throw new Error(`${process.env.FIXTURE}: non-C++ result exposed C++ analysis`)
+    }
+    if (process.env.LANGUAGE === "csharp") {
+      const analysis = result.csharp_analysis
+      if (
+        !analysis ||
+        analysis.version !== 1 ||
+        analysis.analyzed !== false ||
+        analysis.parsed !== false ||
+        analysis.straight_line !== false
+      ) {
+        throw new Error(`${process.env.FIXTURE}: malformed ordinary C# analysis sentinel`)
+      }
+      const emptyFacts = [
+        analysis.usings,
+        analysis.local_functions,
+        analysis.arrays,
+        analysis.inputs,
+        analysis.writes,
+        analysis.conditionals,
+        analysis.foreach_loops,
+        analysis.calls,
+      ]
+      if (emptyFacts.some((facts) => !Array.isArray(facts) || facts.length !== 0)) {
+        throw new Error(`${process.env.FIXTURE}: ordinary C# result exposed protected facts`)
+      }
+    } else if ("csharp_analysis" in result) {
+      throw new Error(`${process.env.FIXTURE}: non-C# result exposed C# analysis`)
     }
     process.stdout.write(`pass ${process.env.FIXTURE}: ${result.outcome}${result.limit ? ` (${result.limit})` : ""}\n`)
   '

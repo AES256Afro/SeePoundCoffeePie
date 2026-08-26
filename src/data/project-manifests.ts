@@ -1,4 +1,5 @@
 import { cppCompiledProjectManifest } from './cpp-compiled-project-manifest'
+import { csharpWorkshopProjectManifest } from './csharp-workshop-project-manifest'
 import { pythonInteractiveProjectManifest } from './python-interactive-project-manifest'
 import type { GuidedProjectManifest } from './project-types'
 import type { LanguageId } from '../types'
@@ -6,6 +7,7 @@ import type { LanguageId } from '../types'
 export const projectManifests: readonly GuidedProjectManifest[] = [
   pythonInteractiveProjectManifest,
   cppCompiledProjectManifest,
+  csharpWorkshopProjectManifest,
 ]
 
 export function projectManifestByRoute(

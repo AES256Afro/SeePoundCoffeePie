@@ -86,6 +86,25 @@ CPP_ANALYSIS_CLANG_COMMAND = (
     "mission.cpp",
 )
 
+CSHARP_ANALYSIS_VERSION = 1
+CSHARP_ANALYSIS_OUTPUT_LIMIT = 128 * 1024
+CSHARP_ANALYSIS_IDENTIFIER_LIMIT = 128
+CSHARP_ANALYSIS_TEXT_LIMIT = 256
+CSHARP_ANALYSIS_TEXT_BUDGET = 4096
+CSHARP_ANALYSIS_FACT_LIMIT = 16
+CSHARP_ANALYSIS_LOCAL_FUNCTION_LIMIT = 8
+CSHARP_ANALYSIS_USING_LIMIT = 8
+CSHARP_ANALYSIS_WRITE_LIMIT = 32
+CSHARP_ANALYSIS_FIELD_LIMIT = 16
+CSHARP_ANALYSIS_PARAMETER_LIMIT = 8
+CSHARP_ANALYSIS_STATEMENT_LIMIT = 4096
+CSHARP_ANALYSIS_INTEGER_LIMIT = (1 << 53) - 1
+CSHARP_ANALYSIS_COMMAND = (
+    "/usr/bin/dotnet",
+    "/opt/runner/csharp/analyzer/CsharpProjectAnalyzer.dll",
+    "/workspace/Program.cs",
+)
+
 PR_SET_NO_NEW_PRIVS = 38
 
 
@@ -920,6 +939,452 @@ def analyze_cpp_source_file() -> dict[str, object]:
     return analyze_cpp_ast(source, str(analysis_run["stdout"]), policy)
 
 
+def failed_csharp_analysis(*, analyzed: bool = False, parsed: bool = False) -> dict[str, object]:
+    """Return a stable C# analysis value that no protected check can accept."""
+
+    return {
+        "version": CSHARP_ANALYSIS_VERSION,
+        "analyzed": analyzed,
+        "parsed": parsed,
+        "straight_line": False,
+        "usings": [],
+        "local_functions": [],
+        "arrays": [],
+        "inputs": [],
+        "writes": [],
+        "conditionals": [],
+        "foreach_loops": [],
+        "calls": [],
+    }
+
+
+def normalize_csharp_analysis(raw: str) -> dict[str, object] | None:
+    """Validate and copy the bounded JSON emitted by the trusted analyzer."""
+
+    if len(raw.encode("utf-8", errors="replace")) > CSHARP_ANALYSIS_OUTPUT_LIMIT:
+        return None
+    try:
+        value = json.loads(raw)
+    except (MemoryError, RecursionError, UnicodeError, ValueError):
+        return None
+    root_keys = {
+        "version",
+        "analyzed",
+        "parsed",
+        "straight_line",
+        "usings",
+        "local_functions",
+        "arrays",
+        "inputs",
+        "writes",
+        "conditionals",
+        "foreach_loops",
+        "calls",
+    }
+    if not isinstance(value, dict) or set(value) != root_keys:
+        return None
+    if value.get("version") != CSHARP_ANALYSIS_VERSION:
+        return None
+    analyzed = value.get("analyzed")
+    parsed = value.get("parsed")
+    straight_line = value.get("straight_line")
+    if any(type(item) is not bool for item in (analyzed, parsed, straight_line)):
+        return None
+    if (parsed and not analyzed) or (straight_line and not parsed):
+        return None
+
+    text_budget = 0
+
+    def bounded_text(item: object) -> str | None:
+        nonlocal text_budget
+        if not isinstance(item, str):
+            return None
+        encoded_length = len(item.encode("utf-8"))
+        if encoded_length > CSHARP_ANALYSIS_TEXT_LIMIT:
+            return None
+        text_budget += encoded_length
+        if text_budget > CSHARP_ANALYSIS_TEXT_BUDGET:
+            return None
+        return item
+
+    def identifier(item: object) -> str | None:
+        if not isinstance(item, str):
+            return None
+        if len(item) > CSHARP_ANALYSIS_IDENTIFIER_LIMIT:
+            return None
+        if re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*", item) is None:
+            return None
+        return bounded_text(item)
+
+    def positive_integer(item: object, maximum: int = CSHARP_ANALYSIS_STATEMENT_LIMIT) -> int | None:
+        if type(item) is not int or item < 1 or item > maximum:
+            return None
+        return item
+
+    def fact_list(name: str, maximum: int = CSHARP_ANALYSIS_FACT_LIMIT) -> list[object] | None:
+        items = value.get(name)
+        if not isinstance(items, list) or len(items) > maximum:
+            return None
+        return items
+
+    def interpolation(item: object) -> dict[str, object] | None:
+        if not isinstance(item, dict) or set(item) != {"parts", "fields"}:
+            return None
+        raw_parts = item.get("parts")
+        raw_fields = item.get("fields")
+        if (
+            not isinstance(raw_parts, list)
+            or not isinstance(raw_fields, list)
+            or len(raw_fields) > CSHARP_ANALYSIS_FIELD_LIMIT
+            or len(raw_parts) != len(raw_fields) + 1
+        ):
+            return None
+        parts: list[str] = []
+        fields: list[str] = []
+        for part in raw_parts:
+            normalized = bounded_text(part)
+            if normalized is None:
+                return None
+            parts.append(normalized)
+        for field in raw_fields:
+            normalized = identifier(field)
+            if normalized is None:
+                return None
+            fields.append(normalized)
+        return {"parts": parts, "fields": fields}
+
+    raw_usings = value.get("usings")
+    if not isinstance(raw_usings, list) or len(raw_usings) > CSHARP_ANALYSIS_USING_LIMIT:
+        return None
+    usings: list[str] = []
+    for using in raw_usings:
+        normalized = identifier(using)
+        if normalized != "System" or normalized in usings:
+            return None
+        usings.append(normalized)
+
+    local_functions: list[dict[str, object]] = []
+    raw_local_functions = fact_list("local_functions", CSHARP_ANALYSIS_LOCAL_FUNCTION_LIMIT)
+    if raw_local_functions is None:
+        return None
+    for index, fact in enumerate(raw_local_functions):
+        if not isinstance(fact, dict) or set(fact) != {
+            "occurrence",
+            "statement",
+            "name",
+            "return_type",
+            "parameters",
+            "interpolation",
+        }:
+            return None
+        occurrence = positive_integer(fact.get("occurrence"), CSHARP_ANALYSIS_FACT_LIMIT)
+        statement = positive_integer(fact.get("statement"))
+        name = identifier(fact.get("name"))
+        return_type = identifier(fact.get("return_type"))
+        parameters_value = fact.get("parameters")
+        normalized_interpolation = interpolation(fact.get("interpolation"))
+        if (
+            occurrence != index + 1
+            or statement is None
+            or name is None
+            or return_type not in {"void", "string", "int"}
+            or not isinstance(parameters_value, list)
+            or len(parameters_value) > CSHARP_ANALYSIS_PARAMETER_LIMIT
+            or normalized_interpolation is None
+        ):
+            return None
+        parameters: list[dict[str, object]] = []
+        for parameter_index, parameter in enumerate(parameters_value):
+            if not isinstance(parameter, dict) or set(parameter) != {"position", "name", "type"}:
+                return None
+            position = positive_integer(parameter.get("position"), CSHARP_ANALYSIS_FIELD_LIMIT)
+            parameter_name = identifier(parameter.get("name"))
+            parameter_type = identifier(parameter.get("type"))
+            if (
+                position != parameter_index + 1
+                or parameter_name is None
+                or parameter_type not in {"string", "int"}
+            ):
+                return None
+            parameters.append({"position": position, "name": parameter_name, "type": parameter_type})
+        local_functions.append({
+            "occurrence": occurrence,
+            "statement": statement,
+            "name": name,
+            "return_type": return_type,
+            "parameters": parameters,
+            "interpolation": normalized_interpolation,
+        })
+
+    arrays: list[dict[str, object]] = []
+    raw_arrays = fact_list("arrays")
+    if raw_arrays is None:
+        return None
+    for index, fact in enumerate(raw_arrays):
+        if not isinstance(fact, dict) or set(fact) != {
+            "occurrence",
+            "statement",
+            "target",
+            "element_type",
+            "values",
+        }:
+            return None
+        occurrence = positive_integer(fact.get("occurrence"), CSHARP_ANALYSIS_FACT_LIMIT)
+        statement = positive_integer(fact.get("statement"))
+        target = identifier(fact.get("target"))
+        element_type = identifier(fact.get("element_type"))
+        raw_values = fact.get("values")
+        if (
+            occurrence != index + 1
+            or statement is None
+            or target is None
+            or element_type not in {"string", "int"}
+            or not isinstance(raw_values, list)
+            or len(raw_values) > CSHARP_ANALYSIS_FIELD_LIMIT
+        ):
+            return None
+        values: list[str] = []
+        for item in raw_values:
+            normalized = bounded_text(item)
+            if normalized is None:
+                return None
+            values.append(normalized)
+        arrays.append({
+            "occurrence": occurrence,
+            "statement": statement,
+            "target": target,
+            "element_type": element_type,
+            "values": values,
+        })
+
+    inputs: list[dict[str, object]] = []
+    raw_inputs = fact_list("inputs")
+    if raw_inputs is None:
+        return None
+    allowed_input_kinds = {
+        "read_line_coalesce_string",
+        "int_parse_read_line_coalesce_string",
+    }
+    for index, fact in enumerate(raw_inputs):
+        if not isinstance(fact, dict) or set(fact) != {
+            "occurrence",
+            "statement",
+            "target",
+            "kind",
+            "fallback",
+        }:
+            return None
+        occurrence = positive_integer(fact.get("occurrence"), CSHARP_ANALYSIS_FACT_LIMIT)
+        statement = positive_integer(fact.get("statement"))
+        target = identifier(fact.get("target"))
+        kind = fact.get("kind")
+        fallback = bounded_text(fact.get("fallback"))
+        if (
+            occurrence != index + 1
+            or statement is None
+            or target is None
+            or kind not in allowed_input_kinds
+            or fallback is None
+        ):
+            return None
+        inputs.append({
+            "occurrence": occurrence,
+            "statement": statement,
+            "target": target,
+            "kind": kind,
+            "fallback": fallback,
+        })
+
+    writes: list[dict[str, object]] = []
+    raw_writes = fact_list("writes", CSHARP_ANALYSIS_WRITE_LIMIT)
+    if raw_writes is None:
+        return None
+    for index, fact in enumerate(raw_writes):
+        if not isinstance(fact, dict) or set(fact) != {"occurrence", "statement", "text"}:
+            return None
+        occurrence = positive_integer(fact.get("occurrence"), CSHARP_ANALYSIS_FACT_LIMIT)
+        statement = positive_integer(fact.get("statement"))
+        output_text = bounded_text(fact.get("text"))
+        if occurrence != index + 1 or statement is None or output_text is None:
+            return None
+        writes.append({"occurrence": occurrence, "statement": statement, "text": output_text})
+
+    conditionals: list[dict[str, object]] = []
+    raw_conditionals = fact_list("conditionals")
+    if raw_conditionals is None:
+        return None
+    for index, fact in enumerate(raw_conditionals):
+        if not isinstance(fact, dict) or set(fact) != {
+            "occurrence",
+            "statement",
+            "left",
+            "operator",
+            "right",
+            "when_true",
+            "when_false",
+        }:
+            return None
+        occurrence = positive_integer(fact.get("occurrence"), CSHARP_ANALYSIS_FACT_LIMIT)
+        statement = positive_integer(fact.get("statement"))
+        left = identifier(fact.get("left"))
+        operator = fact.get("operator")
+        right = fact.get("right")
+        when_true = bounded_text(fact.get("when_true"))
+        when_false = bounded_text(fact.get("when_false"))
+        if (
+            occurrence != index + 1
+            or statement is None
+            or left is None
+            or operator != ">="
+            or type(right) is not int
+            or right < 0
+            or right > CSHARP_ANALYSIS_INTEGER_LIMIT
+            or when_true is None
+            or when_false is None
+        ):
+            return None
+        conditionals.append({
+            "occurrence": occurrence,
+            "statement": statement,
+            "left": left,
+            "operator": operator,
+            "right": right,
+            "when_true": when_true,
+            "when_false": when_false,
+        })
+
+    foreach_loops: list[dict[str, object]] = []
+    raw_foreach_loops = fact_list("foreach_loops")
+    if raw_foreach_loops is None:
+        return None
+    for index, fact in enumerate(raw_foreach_loops):
+        if not isinstance(fact, dict) or set(fact) != {
+            "occurrence",
+            "statement",
+            "element_type",
+            "target",
+            "collection",
+            "interpolation",
+        }:
+            return None
+        occurrence = positive_integer(fact.get("occurrence"), CSHARP_ANALYSIS_FACT_LIMIT)
+        statement = positive_integer(fact.get("statement"))
+        element_type = identifier(fact.get("element_type"))
+        target = identifier(fact.get("target"))
+        collection = identifier(fact.get("collection"))
+        normalized_interpolation = interpolation(fact.get("interpolation"))
+        if (
+            occurrence != index + 1
+            or statement is None
+            or element_type not in {"string", "int"}
+            or target is None
+            or collection is None
+            or normalized_interpolation is None
+        ):
+            return None
+        foreach_loops.append({
+            "occurrence": occurrence,
+            "statement": statement,
+            "element_type": element_type,
+            "target": target,
+            "collection": collection,
+            "interpolation": normalized_interpolation,
+        })
+
+    calls: list[dict[str, object]] = []
+    raw_calls = fact_list("calls")
+    if raw_calls is None:
+        return None
+    for index, fact in enumerate(raw_calls):
+        if not isinstance(fact, dict) or set(fact) != {
+            "occurrence",
+            "statement",
+            "target",
+            "arguments",
+        }:
+            return None
+        occurrence = positive_integer(fact.get("occurrence"), CSHARP_ANALYSIS_FACT_LIMIT)
+        statement = positive_integer(fact.get("statement"))
+        target = identifier(fact.get("target"))
+        raw_arguments = fact.get("arguments")
+        if (
+            occurrence != index + 1
+            or statement is None
+            or target is None
+            or not isinstance(raw_arguments, list)
+            or len(raw_arguments) > CSHARP_ANALYSIS_FIELD_LIMIT
+        ):
+            return None
+        arguments: list[str] = []
+        for argument in raw_arguments:
+            normalized = identifier(argument)
+            if normalized is None:
+                return None
+            arguments.append(normalized)
+        calls.append({
+            "occurrence": occurrence,
+            "statement": statement,
+            "target": target,
+            "arguments": arguments,
+        })
+
+    fact_groups = (
+        usings,
+        local_functions,
+        arrays,
+        inputs,
+        writes,
+        conditionals,
+        foreach_loops,
+        calls,
+    )
+    if parsed and not straight_line:
+        return None
+    if not parsed and (straight_line or any(fact_groups)):
+        return None
+    if not analyzed and (parsed or straight_line or any(fact_groups)):
+        return None
+
+    return {
+        "version": CSHARP_ANALYSIS_VERSION,
+        "analyzed": analyzed,
+        "parsed": parsed,
+        "straight_line": straight_line,
+        "usings": usings,
+        "local_functions": local_functions,
+        "arrays": arrays,
+        "inputs": inputs,
+        "writes": writes,
+        "conditionals": conditionals,
+        "foreach_loops": foreach_loops,
+        "calls": calls,
+    }
+
+
+def analyze_csharp_source_file() -> dict[str, object]:
+    """Run the pinned Roslyn syntax analyzer over the exact Program.cs file."""
+
+    analysis_run = run_bounded(
+        CSHARP_ANALYSIS_COMMAND,
+        stdin=b"",
+        cpu_seconds=COMPILE_CPU_SECONDS,
+        wall_seconds=COMPILE_WALL_SECONDS,
+        memory_bytes=768 * 1024 * 1024,
+        set_runtime_heap=True,
+        process_limit=COMPILE_PROCESS_LIMIT,
+        writable_bytes=COMPILE_WORKSPACE_LIMIT,
+        file_size_bytes=None,
+        deny_network_syscalls=False,
+        output_limit=CSHARP_ANALYSIS_OUTPUT_LIMIT,
+    )
+    if analysis_run["limit"] or analysis_run["exit_code"] != 0:
+        return failed_csharp_analysis(analyzed=True)
+    normalized = normalize_csharp_analysis(str(analysis_run["stdout"]))
+    if normalized is None or not normalized["analyzed"]:
+        return failed_csharp_analysis(analyzed=True)
+    return normalized
+
+
 def install_network_seccomp() -> None:
     """Deny socket syscalls in the child while allowing normal computation."""
 
@@ -1232,19 +1697,31 @@ def prepare_workspace(language: str, toolchain: Toolchain) -> bytes:
 def execute(
     language: str,
     *,
-    analyze_cpp_project: bool = False,
-) -> tuple[dict[str, object], dict[str, object] | None]:
+    analyze_project: bool = False,
+) -> tuple[
+    dict[str, object],
+    dict[str, object] | None,
+    dict[str, object] | None,
+]:
     toolchain = TOOLCHAINS[language]
     stdin = prepare_workspace(language, toolchain)
     total_started = time.monotonic()
     cpp_analysis = None
     if language == "cpp":
         cpp_analysis = failed_cpp_analysis()
-        if analyze_cpp_project:
+        if analyze_project:
             try:
                 cpp_analysis = analyze_cpp_source_file()
             except Exception:
                 cpp_analysis = failed_cpp_analysis(analyzed=True)
+    csharp_analysis = None
+    if language == "csharp":
+        csharp_analysis = failed_csharp_analysis()
+        if analyze_project:
+            try:
+                csharp_analysis = analyze_csharp_source_file()
+            except Exception:
+                csharp_analysis = failed_csharp_analysis(analyzed=True)
 
     if toolchain.compile_command:
         compile_result = run_bounded(
@@ -1270,7 +1747,7 @@ def execute(
                 "phase": "compile",
                 **compile_result,
                 "duration_ms": round((time.monotonic() - total_started) * 1000),
-            }, cpp_analysis
+            }, cpp_analysis, csharp_analysis
         if compile_result["exit_code"] != 0:
             if not compile_result["stderr"] and compile_result["stdout"]:
                 compile_result["stderr"] = compile_result["stdout"]
@@ -1280,7 +1757,7 @@ def execute(
                 "phase": "compile",
                 **compile_result,
                 "duration_ms": round((time.monotonic() - total_started) * 1000),
-            }, cpp_analysis
+            }, cpp_analysis, csharp_analysis
 
     run_result = run_bounded(
         toolchain.run_command,
@@ -1310,7 +1787,7 @@ def execute(
         "phase": "runtime",
         **run_result,
         "duration_ms": round((time.monotonic() - total_started) * 1000),
-    }, cpp_analysis
+    }, cpp_analysis, csharp_analysis
 
 
 def main() -> int:
@@ -1318,10 +1795,11 @@ def main() -> int:
     parser.add_argument("language", choices=sorted(TOOLCHAINS))
     parser.add_argument("--project-analysis", action="store_true")
     args = parser.parse_args()
-    if args.project_analysis and args.language != "cpp":
-        parser.error("project analysis is available only for C++")
+    if args.project_analysis and args.language not in {"cpp", "csharp"}:
+        parser.error("project analysis is available only for C++ and C#")
     python_analysis = None
     cpp_analysis = failed_cpp_analysis() if args.language == "cpp" else None
+    csharp_analysis = failed_csharp_analysis() if args.language == "csharp" else None
     if args.language == "python":
         try:
             python_analysis = analyze_python_source_file()
@@ -1332,9 +1810,9 @@ def main() -> int:
             python_analysis = failed_python_analysis()
 
     try:
-        result, cpp_analysis = execute(
+        result, cpp_analysis, csharp_analysis = execute(
             args.language,
-            analyze_cpp_project=args.project_analysis,
+            analyze_project=args.project_analysis,
         )
     except Exception as error:
         result = {
@@ -1369,6 +1847,8 @@ def main() -> int:
         result["python_analysis"] = python_analysis
     if cpp_analysis is not None:
         result["cpp_analysis"] = cpp_analysis
+    if csharp_analysis is not None:
+        result["csharp_analysis"] = csharp_analysis
     sys.stdout.write(json.dumps(result, ensure_ascii=False, separators=(",", ":")))
     return 0
 

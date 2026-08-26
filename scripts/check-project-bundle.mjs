@@ -17,10 +17,17 @@ const privateMarkers = [
   'final-hidden-seven-details',
   'The smallest ordinary observation',
   'A larger observation',
+  'Maren Holt',
+  'Ivo Chen',
+  'Tess Alvarez',
+  'final-hidden-zero-visits',
+  'final-hidden-below-member',
+  'final-hidden-member-boundary',
 ]
 const teachingMarkers = [
   'A sequence of instructions that a computer follows.',
   'C++ source code does not run directly.',
+  'Modern C# also permits top-level instructions',
 ]
 
 const index = await readFile(new URL('index.html', dist), 'utf8')

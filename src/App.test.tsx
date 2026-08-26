@@ -450,7 +450,7 @@ describe('beginner lesson interactions', () => {
     expect(document.title).toBe('Courses | SeePoundCoffeePie')
   })
 
-  it('lists the released Python and C++ projects with canonical catalog links', () => {
+  it('lists the released Python, C++, and C# projects with canonical catalog links', () => {
     window.history.replaceState({}, '', '/courses')
 
     render(<App />)
@@ -465,6 +465,9 @@ describe('beginner lesson interactions', () => {
     )
     expect(screen.getByRole('link', { name: /Your First Compiled Program/iu }).getAttribute('href')).toBe(
       '/projects/cpp/first-compiled-program',
+    )
+    expect(screen.getByRole('link', { name: /Community Workshop Check-In/iu }).getAttribute('href')).toBe(
+      '/projects/csharp/workshop-check-in',
     )
   })
 

@@ -14,6 +14,8 @@
     "check:runner:project:production": "node scripts/check-runner-project.mjs https://seepoundcoffeepie.com",
     "check:runner:cpp-project:staging": "node scripts/check-runner-cpp-project.mjs https://see-pound-coffee-pie-phase2-staging.chris-c39.workers.dev",
     "check:runner:cpp-project:production": "node scripts/check-runner-cpp-project.mjs https://seepoundcoffeepie.com",
+    "check:runner:csharp-project:staging": "node scripts/check-runner-csharp-project.mjs https://see-pound-coffee-pie-phase2-staging.chris-c39.workers.dev",
+    "check:runner:csharp-project:production": "node scripts/check-runner-csharp-project.mjs https://seepoundcoffeepie.com",
     "check:runner:smoke": "node scripts/check-runner-smoke.mjs https://seepoundcoffeepie.com",
     "d1:migrate:local": "wrangler d1 migrations apply LEARNER_DB --local",
     "d1:migrate:staging": "wrangler d1 migrations apply LEARNER_DB --remote --config wrangler.staging.jsonc",
@@ -53,6 +55,6 @@
     "typescript-eslint": "8.67.0",
     "vite": "8.2.2",
     "vitest": "4.1.11",
-    "wrangler": "4.125.0"
+    "wrangler": "4.126.0"
   }
 }

@@ -6,15 +6,15 @@ const root = new URL('../dist/', import.meta.url)
 const budgets = {
   // The first-load budget stays tight. Route-loaded teaching content gets a separate total cap.
   initial: {
-    javascript: { raw: 480_000, gzip: 130_000 },
+    javascript: { raw: 485_000, gzip: 132_000 },
     css: { raw: 70_000, gzip: 13_000 },
     html: { raw: 5_000, gzip: 2_000 },
   },
   total: {
-    // Phase 4B adds a second complete route-loaded curriculum. The initial
-    // page budget remains unchanged, and each language project is emitted as
-    // its own on-demand chunk instead of making learners download both.
-    javascript: { raw: 575_000, gzip: 160_000 },
+    // Phase 4C adds a third complete route-loaded curriculum. The small
+    // manifests remain on the initial page, while each full language project
+    // stays in its own on-demand chunk.
+    javascript: { raw: 615_000, gzip: 168_000 },
     css: { raw: 70_000, gzip: 13_000 },
     html: { raw: 5_000, gzip: 2_000 },
   },

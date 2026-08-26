@@ -37,6 +37,9 @@ describe('bookmarkable application routes', () => {
     expect(projectPath('cpp', 'first-compiled-program', 'project-cpp-final')).toBe(
       '/projects/cpp/first-compiled-program/project-cpp-final',
     )
+    expect(projectPath('csharp', 'workshop-check-in', 'project-csharp-final')).toBe(
+      '/projects/csharp/workshop-check-in/project-csharp-final',
+    )
   })
 
   it('keeps the public home page separate from cadet intake', () => {
@@ -99,6 +102,23 @@ describe('bookmarkable application routes', () => {
       language: 'cpp',
       projectId: 'first-compiled-program',
       checkpointId: 'project-cpp-final',
+      conceptIds: [],
+    })
+  })
+
+  it('parses the C# project and checkpoint deep links', () => {
+    expect(parseAppRoute('/projects/csharp/workshop-check-in')).toEqual({
+      page: 'project',
+      language: 'csharp',
+      projectId: 'workshop-check-in',
+      checkpointId: undefined,
+      conceptIds: [],
+    })
+    expect(parseAppRoute('/projects/csharp/workshop-check-in/project-csharp-final')).toEqual({
+      page: 'project',
+      language: 'csharp',
+      projectId: 'workshop-check-in',
+      checkpointId: 'project-csharp-final',
       conceptIds: [],
     })
   })

@@ -77,3 +77,27 @@ export type ServerOwnedProjectStructuralCheck =
       requiredFields: string[]
       statement: number
     }
+  | ServerOwnedProjectStructuralCheckBase & {
+      validation: 'csharp-using-system'
+    }
+  | ServerOwnedProjectStructuralCheckBase & {
+      validation: 'csharp-print-badge'
+    }
+  | ServerOwnedProjectStructuralCheckBase & {
+      validation: 'csharp-areas-array'
+    }
+  | ServerOwnedProjectStructuralCheckBase & {
+      validation: 'csharp-console-inputs'
+    }
+  | ServerOwnedProjectStructuralCheckBase & {
+      validation: 'csharp-membership-branch'
+    }
+  | ServerOwnedProjectStructuralCheckBase & {
+      validation: 'csharp-area-foreach'
+    }
+  | ServerOwnedProjectStructuralCheckBase & {
+      validation: 'csharp-print-badge-call'
+    }
+  | ServerOwnedProjectStructuralCheckBase & {
+      validation: 'csharp-top-level-order'
+    }

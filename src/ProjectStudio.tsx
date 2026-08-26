@@ -10,6 +10,7 @@ import {
   Code2,
   Download,
   Eye,
+  Hash,
   LockKeyhole,
   Play,
   RefreshCw,
@@ -110,7 +111,12 @@ function nextProjectCheckpoint(project: GuidedProject, progress: LearnerProgress
 }
 
 function downloadSource(project: GuidedProject, source: string) {
-  const type = project.language === 'cpp' ? 'text/x-c++src;charset=utf-8' : 'text/x-python;charset=utf-8'
+  const type = {
+    cpp: 'text/x-c++src;charset=utf-8',
+    csharp: 'text/x-csharp;charset=utf-8',
+    java: 'text/x-java-source;charset=utf-8',
+    python: 'text/x-python;charset=utf-8',
+  }[project.language]
   const url = URL.createObjectURL(new Blob([`${source.trimEnd()}\n`], { type }))
   const link = document.createElement('a')
   link.href = url
@@ -139,7 +145,13 @@ function ProjectOverview({ onNavigate, progress, project }: Pick<ProjectContentP
       </StudioLink>
 
       <header className="project-overview__hero">
-        <div className="project-overview__mark">{project.language === 'cpp' ? <Eye aria-hidden="true" /> : <Code2 aria-hidden="true" />}</div>
+        <div className="project-overview__mark">
+          {project.language === 'cpp'
+            ? <Eye aria-hidden="true" />
+            : project.language === 'csharp'
+              ? <Hash aria-hidden="true" />
+              : <Code2 aria-hidden="true" />}
+        </div>
         <div>
           <p className="eyebrow">{project.studioLabel}</p>
           <h1>{project.title}</h1>

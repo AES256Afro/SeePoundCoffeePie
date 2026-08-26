@@ -6,6 +6,16 @@ import {
   evaluateRunnerAssignment,
   findRunnerAssignment,
   runnerInputCases,
+  type CsharpAnalysis,
+  type CsharpArrayFact,
+  type CsharpCallFact,
+  type CsharpConditionalFact,
+  type CsharpForeachFact,
+  type CsharpInputFact,
+  type CsharpInterpolationFact,
+  type CsharpLocalFunctionFact,
+  type CsharpParameterFact,
+  type CsharpWriteFact,
   type CppAnalysis,
   type CppDeclarationFact,
   type PythonAnalysis,
@@ -94,6 +104,7 @@ interface SupervisorResult {
   allocated_bytes?: number
   python_analysis?: PythonAnalysis
   cpp_analysis?: CppAnalysis
+  csharp_analysis?: CsharpAnalysis
 }
 
 function json(body: unknown, status = 200): Response {
@@ -375,10 +386,305 @@ function parseCppAnalysis(value: unknown): CppAnalysis | null {
   }
 }
 
+function isBoundedAnalysisText(value: unknown, maximum = 256): value is string {
+  return typeof value === 'string' && value.length <= maximum
+}
+
+function isCsharpValueType(value: unknown): value is 'string' | 'int' {
+  return value === 'string' || value === 'int'
+}
+
+function isCsharpReturnType(value: unknown): value is 'void' | 'string' | 'int' {
+  return value === 'void' || isCsharpValueType(value)
+}
+
+function isCsharpInputKind(value: unknown): value is CsharpInputFact['kind'] {
+  return value === 'read_line_coalesce_string'
+    || value === 'int_parse_read_line_coalesce_string'
+}
+
+function parseCsharpInterpolation(value: unknown): CsharpInterpolationFact | null {
+  if (!value || typeof value !== 'object' || !hasExactKeys(value, ['parts', 'fields'])) return null
+  const interpolation = value as Partial<CsharpInterpolationFact>
+  if (
+    !Array.isArray(interpolation.parts)
+    || interpolation.parts.length > 16
+    || !interpolation.parts.every((part) => isBoundedAnalysisText(part))
+    || !Array.isArray(interpolation.fields)
+    || interpolation.fields.length > 16
+    || !interpolation.fields.every(isCppAnalysisName)
+    || interpolation.parts.length !== interpolation.fields.length + 1
+  ) return null
+  return { parts: [...interpolation.parts], fields: [...interpolation.fields] }
+}
+
+function parseCsharpParameter(value: unknown): CsharpParameterFact | null {
+  if (!value || typeof value !== 'object' || !hasExactKeys(value, ['position', 'name', 'type'])) return null
+  const parameter = value as Partial<CsharpParameterFact>
+  if (
+    !isPositiveBoundedInteger(parameter.position, 16)
+    || !isCppAnalysisName(parameter.name)
+    || !isCsharpValueType(parameter.type)
+  ) return null
+  return { position: parameter.position, name: parameter.name, type: parameter.type }
+}
+
+function parseCsharpLocalFunction(value: unknown): CsharpLocalFunctionFact | null {
+  if (!value || typeof value !== 'object' || !hasExactKeys(value, [
+    'occurrence',
+    'statement',
+    'name',
+    'return_type',
+    'parameters',
+    'interpolation',
+  ])) return null
+  const fact = value as Partial<CsharpLocalFunctionFact>
+  const parameters = Array.isArray(fact.parameters)
+    ? fact.parameters.map(parseCsharpParameter)
+    : []
+  const interpolation = parseCsharpInterpolation(fact.interpolation)
+  if (
+    !isPositiveBoundedInteger(fact.occurrence, 16)
+    || !isPositiveBoundedInteger(fact.statement, Number.MAX_SAFE_INTEGER)
+    || !isCppAnalysisName(fact.name)
+    || !isCsharpReturnType(fact.return_type)
+    || !Array.isArray(fact.parameters)
+    || fact.parameters.length > 8
+    || parameters.some((parameter) => !parameter)
+    || parameters.some((parameter, index) => parameter?.position !== index + 1)
+    || !interpolation
+  ) return null
+  return {
+    occurrence: fact.occurrence,
+    statement: fact.statement,
+    name: fact.name,
+    return_type: fact.return_type,
+    parameters: parameters as CsharpParameterFact[],
+    interpolation,
+  }
+}
+
+function parseCsharpArray(value: unknown): CsharpArrayFact | null {
+  if (!value || typeof value !== 'object' || !hasExactKeys(value, [
+    'occurrence', 'statement', 'target', 'element_type', 'values',
+  ])) return null
+  const fact = value as Partial<CsharpArrayFact>
+  if (
+    !isPositiveBoundedInteger(fact.occurrence, 16)
+    || !isPositiveBoundedInteger(fact.statement, Number.MAX_SAFE_INTEGER)
+    || !isCppAnalysisName(fact.target)
+    || !isCsharpValueType(fact.element_type)
+    || !Array.isArray(fact.values)
+    || fact.values.length > 32
+    || !fact.values.every((item) => isBoundedAnalysisText(item))
+  ) return null
+  return {
+    occurrence: fact.occurrence,
+    statement: fact.statement,
+    target: fact.target,
+    element_type: fact.element_type,
+    values: [...fact.values],
+  }
+}
+
+function parseCsharpInput(value: unknown): CsharpInputFact | null {
+  if (!value || typeof value !== 'object' || !hasExactKeys(value, [
+    'occurrence', 'statement', 'target', 'kind', 'fallback',
+  ])) return null
+  const fact = value as Partial<CsharpInputFact>
+  if (
+    !isPositiveBoundedInteger(fact.occurrence, 16)
+    || !isPositiveBoundedInteger(fact.statement, Number.MAX_SAFE_INTEGER)
+    || !isCppAnalysisName(fact.target)
+    || !isCsharpInputKind(fact.kind)
+    || !isBoundedAnalysisText(fact.fallback)
+  ) return null
+  return {
+    occurrence: fact.occurrence,
+    statement: fact.statement,
+    target: fact.target,
+    kind: fact.kind,
+    fallback: fact.fallback,
+  }
+}
+
+function parseCsharpWrite(value: unknown): CsharpWriteFact | null {
+  if (!value || typeof value !== 'object' || !hasExactKeys(value, [
+    'occurrence', 'statement', 'text',
+  ])) return null
+  const fact = value as Partial<CsharpWriteFact>
+  if (
+    !isPositiveBoundedInteger(fact.occurrence, 32)
+    || !isPositiveBoundedInteger(fact.statement, Number.MAX_SAFE_INTEGER)
+    || !isBoundedAnalysisText(fact.text, 512)
+  ) return null
+  return { occurrence: fact.occurrence, statement: fact.statement, text: fact.text }
+}
+
+function parseCsharpConditional(value: unknown): CsharpConditionalFact | null {
+  if (!value || typeof value !== 'object' || !hasExactKeys(value, [
+    'occurrence', 'statement', 'left', 'operator', 'right', 'when_true', 'when_false',
+  ])) return null
+  const fact = value as Partial<CsharpConditionalFact>
+  if (
+    !isPositiveBoundedInteger(fact.occurrence, 16)
+    || !isPositiveBoundedInteger(fact.statement, Number.MAX_SAFE_INTEGER)
+    || !isCppAnalysisName(fact.left)
+    || fact.operator !== '>='
+    || typeof fact.right !== 'number'
+    || !Number.isSafeInteger(fact.right)
+    || !isBoundedAnalysisText(fact.when_true, 512)
+    || !isBoundedAnalysisText(fact.when_false, 512)
+  ) return null
+  return {
+    occurrence: fact.occurrence,
+    statement: fact.statement,
+    left: fact.left,
+    operator: '>=',
+    right: fact.right,
+    when_true: fact.when_true,
+    when_false: fact.when_false,
+  }
+}
+
+function parseCsharpForeach(value: unknown): CsharpForeachFact | null {
+  if (!value || typeof value !== 'object' || !hasExactKeys(value, [
+    'occurrence', 'statement', 'element_type', 'target', 'collection', 'interpolation',
+  ])) return null
+  const fact = value as Partial<CsharpForeachFact>
+  const interpolation = parseCsharpInterpolation(fact.interpolation)
+  if (
+    !isPositiveBoundedInteger(fact.occurrence, 16)
+    || !isPositiveBoundedInteger(fact.statement, Number.MAX_SAFE_INTEGER)
+    || !isCsharpValueType(fact.element_type)
+    || !isCppAnalysisName(fact.target)
+    || !isCppAnalysisName(fact.collection)
+    || !interpolation
+  ) return null
+  return {
+    occurrence: fact.occurrence,
+    statement: fact.statement,
+    element_type: fact.element_type,
+    target: fact.target,
+    collection: fact.collection,
+    interpolation,
+  }
+}
+
+function parseCsharpCall(value: unknown): CsharpCallFact | null {
+  if (!value || typeof value !== 'object' || !hasExactKeys(value, [
+    'occurrence', 'statement', 'target', 'arguments',
+  ])) return null
+  const fact = value as Partial<CsharpCallFact>
+  if (
+    !isPositiveBoundedInteger(fact.occurrence, 16)
+    || !isPositiveBoundedInteger(fact.statement, Number.MAX_SAFE_INTEGER)
+    || !isCppAnalysisName(fact.target)
+    || !Array.isArray(fact.arguments)
+    || fact.arguments.length > 16
+    || !fact.arguments.every(isCppAnalysisName)
+  ) return null
+  return {
+    occurrence: fact.occurrence,
+    statement: fact.statement,
+    target: fact.target,
+    arguments: [...fact.arguments],
+  }
+}
+
+function parseCsharpAnalysis(value: unknown): CsharpAnalysis | null {
+  if (!value || typeof value !== 'object' || !hasExactKeys(value, [
+    'version',
+    'analyzed',
+    'parsed',
+    'straight_line',
+    'usings',
+    'local_functions',
+    'arrays',
+    'inputs',
+    'writes',
+    'conditionals',
+    'foreach_loops',
+    'calls',
+  ])) return null
+  const analysis = value as Partial<CsharpAnalysis>
+  const localFunctions = Array.isArray(analysis.local_functions)
+    ? analysis.local_functions.map(parseCsharpLocalFunction)
+    : []
+  const arrays = Array.isArray(analysis.arrays) ? analysis.arrays.map(parseCsharpArray) : []
+  const inputs = Array.isArray(analysis.inputs) ? analysis.inputs.map(parseCsharpInput) : []
+  const writes = Array.isArray(analysis.writes) ? analysis.writes.map(parseCsharpWrite) : []
+  const conditionals = Array.isArray(analysis.conditionals)
+    ? analysis.conditionals.map(parseCsharpConditional)
+    : []
+  const foreachLoops = Array.isArray(analysis.foreach_loops)
+    ? analysis.foreach_loops.map(parseCsharpForeach)
+    : []
+  const calls = Array.isArray(analysis.calls) ? analysis.calls.map(parseCsharpCall) : []
+  if (
+    analysis.version !== 1
+    || typeof analysis.analyzed !== 'boolean'
+    || typeof analysis.parsed !== 'boolean'
+    || typeof analysis.straight_line !== 'boolean'
+    || !Array.isArray(analysis.usings)
+    || analysis.usings.length > 8
+    || !analysis.usings.every((usingName) => usingName === 'System')
+    || new Set(analysis.usings).size !== analysis.usings.length
+    || !Array.isArray(analysis.local_functions)
+    || analysis.local_functions.length > 8
+    || localFunctions.some((fact) => !fact)
+    || !Array.isArray(analysis.arrays)
+    || analysis.arrays.length > 16
+    || arrays.some((fact) => !fact)
+    || !Array.isArray(analysis.inputs)
+    || analysis.inputs.length > 16
+    || inputs.some((fact) => !fact)
+    || !Array.isArray(analysis.writes)
+    || analysis.writes.length > 32
+    || writes.some((fact) => !fact)
+    || !Array.isArray(analysis.conditionals)
+    || analysis.conditionals.length > 16
+    || conditionals.some((fact) => !fact)
+    || !Array.isArray(analysis.foreach_loops)
+    || analysis.foreach_loops.length > 16
+    || foreachLoops.some((fact) => !fact)
+    || !Array.isArray(analysis.calls)
+    || analysis.calls.length > 16
+    || calls.some((fact) => !fact)
+  ) return null
+
+  for (const facts of [localFunctions, arrays, inputs, writes, conditionals, foreachLoops, calls]) {
+    if (facts.some((fact, index) => fact?.occurrence !== index + 1)) return null
+  }
+
+  const allFacts = [localFunctions, arrays, inputs, writes, conditionals, foreachLoops, calls]
+  const hasFacts = analysis.usings.length > 0 || allFacts.some((facts) => facts.length > 0)
+  if (!analysis.analyzed && (analysis.parsed || analysis.straight_line || hasFacts)) return null
+  if (!analysis.parsed && (analysis.straight_line || hasFacts)) return null
+
+  const textBudget = JSON.stringify(value).length
+  if (textBudget > 32_768) return null
+
+  return {
+    version: 1,
+    analyzed: analysis.analyzed,
+    parsed: analysis.parsed,
+    straight_line: analysis.straight_line,
+    usings: [...analysis.usings],
+    local_functions: localFunctions as CsharpLocalFunctionFact[],
+    arrays: arrays as CsharpArrayFact[],
+    inputs: inputs as CsharpInputFact[],
+    writes: writes as CsharpWriteFact[],
+    conditionals: conditionals as CsharpConditionalFact[],
+    foreach_loops: foreachLoops as CsharpForeachFact[],
+    calls: calls as CsharpCallFact[],
+  }
+}
+
 function parseSupervisorResult(
   value: string,
   language: LanguageId,
-  cppAnalysisRequested = false,
+  projectAnalysisRequested = false,
 ): SupervisorResult | null {
   try {
     const result = JSON.parse(value) as Partial<SupervisorResult>
@@ -401,12 +707,21 @@ function parseSupervisorResult(
       ? null
       : parseCppAnalysis(result.cpp_analysis)
     if (result.cpp_analysis !== undefined && !cppAnalysis) return null
-    if (language === 'cpp' && (!cppAnalysis || cppAnalysis.analyzed !== cppAnalysisRequested)) return null
+    if (language === 'cpp' && (!cppAnalysis || cppAnalysis.analyzed !== projectAnalysisRequested)) return null
     if (language !== 'cpp' && result.cpp_analysis !== undefined) return null
+    const csharpAnalysis = result.csharp_analysis === undefined
+      ? null
+      : parseCsharpAnalysis(result.csharp_analysis)
+    if (result.csharp_analysis !== undefined && !csharpAnalysis) return null
+    if (language === 'csharp' && (
+      !csharpAnalysis || csharpAnalysis.analyzed !== projectAnalysisRequested
+    )) return null
+    if (language !== 'csharp' && result.csharp_analysis !== undefined) return null
     return {
       ...result as SupervisorResult,
       ...(pythonAnalysis ? { python_analysis: pythonAnalysis } : {}),
       ...(cppAnalysis ? { cpp_analysis: cppAnalysis } : {}),
+      ...(csharpAnalysis ? { csharp_analysis: csharpAnalysis } : {}),
     }
   } catch {
     return null
@@ -655,15 +970,18 @@ export class RunnerCoordinator {
       try {
         await sandbox.writeFile('/workspace/source.txt', record.source)
         await sandbox.writeFile('/workspace/stdin.txt', stdin)
-        const cppAnalysisRequested = officialProjectAssessment?.language === 'cpp' && caseIndex === 0
+        const projectAnalysisRequested = (
+          officialProjectAssessment?.language === 'cpp'
+          || officialProjectAssessment?.language === 'csharp'
+        ) && caseIndex === 0
         const supervisorCommand = `/opt/runner/supervisor.py ${record.language}${
-          cppAnalysisRequested ? ' --project-analysis' : ''
+          projectAnalysisRequested ? ' --project-analysis' : ''
         }`
         const execution = await sandbox.exec(supervisorCommand, {
           timeout: SUPERVISOR_TIMEOUT_MS,
         })
         const supervisor = execution.success
-          ? parseSupervisorResult(execution.stdout, record.language, cppAnalysisRequested)
+          ? parseSupervisorResult(execution.stdout, record.language, projectAnalysisRequested)
           : null
         const safeSupervisor = supervisor ?? supervisorSystemError()
         supervisorRuns.push(safeSupervisor)
@@ -704,7 +1022,9 @@ export class RunnerCoordinator {
           })),
           officialProjectAssessment.language === 'cpp'
             ? sanitizedRuns[0]?.cpp_analysis
-            : sanitizedRuns[0]?.python_analysis,
+            : officialProjectAssessment.language === 'csharp'
+              ? sanitizedRuns[0]?.csharp_analysis
+              : sanitizedRuns[0]?.python_analysis,
         )
       : null
     const projectPracticeRun = assignment?.kind === 'project' && purpose === 'run'

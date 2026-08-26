@@ -13,5 +13,9 @@ export async function loadGuidedProject(
     const module = await import('./cpp-compiled-project')
     return module.cppCompiledProject
   }
+  if (language === 'csharp' && projectId === 'workshop-check-in') {
+    const module = await import('./csharp-workshop-project')
+    return module.csharpWorkshopProject
+  }
   return undefined
 }

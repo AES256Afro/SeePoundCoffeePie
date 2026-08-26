@@ -1,6 +1,8 @@
 import { tracks } from '../data/curriculum'
 import { cppCompiledProject } from '../data/cpp-compiled-project'
 import { cppCompiledProjectServerAssessment } from '../data/cpp-compiled-project.server'
+import { csharpWorkshopProject } from '../data/csharp-workshop-project'
+import { csharpWorkshopProjectServerAssessment } from '../data/csharp-workshop-project.server'
 import { pythonInteractiveProject } from '../data/python-interactive-project'
 import { pythonInteractiveProjectServerAssessment } from '../data/python-interactive-project.server'
 import type {
@@ -82,7 +84,90 @@ export interface CppAnalysis {
   cout_chains: CppCoutChainFact[]
 }
 
-export type ProjectStructuralAnalysis = PythonAnalysis | CppAnalysis
+export interface CsharpInterpolationFact {
+  parts: string[]
+  fields: string[]
+}
+
+export interface CsharpParameterFact {
+  position: number
+  name: string
+  type: string
+}
+
+export interface CsharpLocalFunctionFact {
+  occurrence: number
+  statement: number
+  name: string
+  return_type: string
+  parameters: CsharpParameterFact[]
+  interpolation: CsharpInterpolationFact
+}
+
+export interface CsharpArrayFact {
+  occurrence: number
+  statement: number
+  target: string
+  element_type: string
+  values: string[]
+}
+
+export interface CsharpInputFact {
+  occurrence: number
+  statement: number
+  target: string
+  kind: 'read_line_coalesce_string' | 'int_parse_read_line_coalesce_string'
+  fallback: string
+}
+
+export interface CsharpWriteFact {
+  occurrence: number
+  statement: number
+  text: string
+}
+
+export interface CsharpConditionalFact {
+  occurrence: number
+  statement: number
+  left: string
+  operator: '>='
+  right: number
+  when_true: string
+  when_false: string
+}
+
+export interface CsharpForeachFact {
+  occurrence: number
+  statement: number
+  element_type: string
+  target: string
+  collection: string
+  interpolation: CsharpInterpolationFact
+}
+
+export interface CsharpCallFact {
+  occurrence: number
+  statement: number
+  target: string
+  arguments: string[]
+}
+
+export interface CsharpAnalysis {
+  version: 1
+  analyzed: boolean
+  parsed: boolean
+  straight_line: boolean
+  usings: string[]
+  local_functions: CsharpLocalFunctionFact[]
+  arrays: CsharpArrayFact[]
+  inputs: CsharpInputFact[]
+  writes: CsharpWriteFact[]
+  conditionals: CsharpConditionalFact[]
+  foreach_loops: CsharpForeachFact[]
+  calls: CsharpCallFact[]
+}
+
+export type ProjectStructuralAnalysis = PythonAnalysis | CppAnalysis | CsharpAnalysis
 
 export interface RunnerProjectEvaluation {
   tests: RunnerTestResult[]
@@ -134,6 +219,22 @@ for (const checkpoint of cppCompiledProject.checkpoints) {
     projectCheckStdin: checkpoint.practiceStdin ?? '',
     ...(exercise.id === 'project-cpp-final'
       ? { projectAssessment: cppCompiledProjectServerAssessment }
+      : {}),
+  })
+}
+
+for (const checkpoint of csharpWorkshopProject.checkpoints) {
+  const { exercise } = checkpoint
+  if ((exercise.type !== 'code' && exercise.type !== 'bugfix') || exercise.output === undefined) continue
+  assignments.set(exercise.id, {
+    exerciseId: exercise.id,
+    language: csharpWorkshopProject.language,
+    expectedOutput: exercise.output,
+    exercise,
+    kind: 'project',
+    projectCheckStdin: checkpoint.practiceStdin ?? '',
+    ...(exercise.id === 'project-csharp-final'
+      ? { projectAssessment: csharpWorkshopProjectServerAssessment }
       : {}),
   })
 }
@@ -272,6 +373,112 @@ function checkCppAnalysisFact(
   }
 }
 
+function sameStrings(actual: readonly string[], expected: readonly string[]): boolean {
+  return actual.length === expected.length
+    && actual.every((value, index) => value === expected[index])
+}
+
+function hasAuthoredCsharpFactFrame(analysis: CsharpAnalysis): boolean {
+  return analysis.local_functions.length === 1
+    && analysis.local_functions[0].occurrence === 1
+    && analysis.local_functions[0].statement === 1
+    && analysis.arrays.length === 1
+    && analysis.arrays[0].occurrence === 1
+    && analysis.arrays[0].statement === 2
+    && analysis.writes.length === 2
+    && analysis.writes.every((fact, index) => (
+      fact.occurrence === index + 1
+      && fact.statement === [3, 5][index]
+    ))
+    && analysis.inputs.length === 2
+    && analysis.inputs.every((fact, index) => (
+      fact.occurrence === index + 1
+      && fact.statement === [4, 6][index]
+    ))
+    && analysis.conditionals.length === 1
+    && analysis.conditionals[0].occurrence === 1
+    && analysis.conditionals[0].statement === 7
+    && analysis.foreach_loops.length === 1
+    && analysis.foreach_loops[0].occurrence === 1
+    && analysis.foreach_loops[0].statement === 8
+    && analysis.calls.length === 1
+    && analysis.calls[0].occurrence === 1
+    && analysis.calls[0].statement === 9
+}
+
+function checkCsharpAnalysisFact(
+  analysis: CsharpAnalysis,
+  check: ServerOwnedProjectStructuralCheck,
+): boolean {
+  switch (check.validation) {
+    case 'csharp-using-system':
+      return sameStrings(analysis.usings, ['System'])
+    case 'csharp-print-badge': {
+      const fact = analysis.local_functions[0]
+      return Boolean(fact)
+        && fact.name === 'PrintBadge'
+        && fact.return_type === 'void'
+        && fact.parameters.length === 2
+        && fact.parameters[0].position === 1
+        && fact.parameters[0].name === 'name'
+        && fact.parameters[0].type === 'string'
+        && fact.parameters[1].position === 2
+        && fact.parameters[1].name === 'visits'
+        && fact.parameters[1].type === 'int'
+        && sameStrings(fact.interpolation.parts, ['Badge: ', ' | Visits: ', ''])
+        && sameStrings(fact.interpolation.fields, ['name', 'visits'])
+    }
+    case 'csharp-areas-array': {
+      const fact = analysis.arrays[0]
+      return Boolean(fact)
+        && fact.target === 'areas'
+        && fact.element_type === 'string'
+        && sameStrings(fact.values, ['Studio', 'Lab', 'Library'])
+    }
+    case 'csharp-console-inputs': {
+      const [nameInput, visitInput] = analysis.inputs
+      const [namePrompt, visitPrompt] = analysis.writes
+      return Boolean(nameInput && visitInput && namePrompt && visitPrompt)
+        && namePrompt.text === 'What is your name?'
+        && nameInput.target === 'guestName'
+        && nameInput.kind === 'read_line_coalesce_string'
+        && nameInput.fallback === ''
+        && visitPrompt.text === 'How many visits have you completed?'
+        && visitInput.target === 'visitCount'
+        && visitInput.kind === 'int_parse_read_line_coalesce_string'
+        && visitInput.fallback === '0'
+    }
+    case 'csharp-membership-branch': {
+      const fact = analysis.conditionals[0]
+      return Boolean(fact)
+        && fact.left === 'visitCount'
+        && fact.operator === '>='
+        && fact.right === 3
+        && fact.when_true === 'Access: Member'
+        && fact.when_false === 'Access: Guest'
+    }
+    case 'csharp-area-foreach': {
+      const fact = analysis.foreach_loops[0]
+      return Boolean(fact)
+        && fact.element_type === 'string'
+        && fact.target === 'area'
+        && fact.collection === 'areas'
+        && sameStrings(fact.interpolation.parts, ['Area: ', ''])
+        && sameStrings(fact.interpolation.fields, ['area'])
+    }
+    case 'csharp-print-badge-call': {
+      const fact = analysis.calls[0]
+      return Boolean(fact)
+        && fact.target === 'PrintBadge'
+        && sameStrings(fact.arguments, ['guestName', 'visitCount'])
+    }
+    case 'csharp-top-level-order':
+      return hasAuthoredCsharpFactFrame(analysis)
+    default:
+      return false
+  }
+}
+
 export function evaluateProjectStructuralChecks(
   assessment: ServerOwnedProjectAssessment,
   analysis: ProjectStructuralAnalysis | null | undefined,
@@ -287,17 +494,30 @@ export function evaluateProjectStructuralChecks(
     && analysis !== null
     && analysis !== undefined
     && 'analyzed' in analysis
+    && 'headers' in analysis
     && analysis.version === 1
     && analysis.analyzed
     && analysis.parsed
     && analysis.straight_line
     && hasAuthoredCppFactFrame(analysis)
+  const trustedCsharp = assessment.language === 'csharp'
+    && analysis !== null
+    && analysis !== undefined
+    && 'analyzed' in analysis
+    && 'local_functions' in analysis
+    && analysis.version === 1
+    && analysis.analyzed
+    && analysis.parsed
+    && analysis.straight_line
+    && hasAuthoredCsharpFactFrame(analysis)
   return assessment.structuralChecks.map((check) => ({
     passed: trustedPython
       ? checkPythonAnalysisFact(analysis, check)
       : trustedCpp
         ? checkCppAnalysisFact(analysis, check)
-        : false,
+        : trustedCsharp
+          ? checkCsharpAnalysisFact(analysis, check)
+          : false,
     message: check.message,
   }))
 }

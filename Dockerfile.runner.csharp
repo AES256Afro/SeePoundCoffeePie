@@ -21,6 +21,7 @@ RUN useradd --uid 10001 --no-create-home --home-dir /nonexistent --shell /usr/sb
     && chmod 0700 /workspace
 
 COPY runner/supervisor.py /opt/runner/supervisor.py
+COPY runner/CsharpProjectAnalyzer.cs /opt/runner/csharp-analyzer-source.cs
 
 RUN chmod 0555 /opt/runner/supervisor.py \
     && runtime_dir="$(find /usr/lib/dotnet/shared/Microsoft.NETCore.App -mindepth 1 -maxdepth 1 -type d | head -1)" \
@@ -38,7 +39,28 @@ RUN chmod 0555 /opt/runner/supervisor.py \
     && printf '%s\n' \
         "{\"runtimeOptions\":{\"tfm\":\"net8.0\",\"framework\":{\"name\":\"Microsoft.NETCore.App\",\"version\":\"$runtime_version\"}}}" \
         > /opt/runner/csharp/Cadet.runtimeconfig.json \
+    && install -d -m 0755 /opt/runner/csharp/analyzer \
+    && /usr/bin/dotnet /usr/lib/dotnet/sdk/8.0.130/Roslyn/bincore/csc.dll \
+        -nologo \
+        -noconfig \
+        -nostdlib+ \
+        -langversion:12.0 \
+        -nullable:enable \
+        -target:exe \
+        -out:/opt/runner/csharp/analyzer/CsharpProjectAnalyzer.dll \
+        @/opt/runner/csharp/framework.rsp \
+        -r:/usr/lib/dotnet/sdk/8.0.130/Roslyn/bincore/Microsoft.CodeAnalysis.dll \
+        -r:/usr/lib/dotnet/sdk/8.0.130/Roslyn/bincore/Microsoft.CodeAnalysis.CSharp.dll \
+        /opt/runner/csharp-analyzer-source.cs \
+    && cp /opt/runner/csharp/Cadet.runtimeconfig.json \
+        /opt/runner/csharp/analyzer/CsharpProjectAnalyzer.runtimeconfig.json \
+    && cp /usr/lib/dotnet/sdk/8.0.130/Roslyn/bincore/Microsoft.CodeAnalysis.dll \
+        /opt/runner/csharp/analyzer/Microsoft.CodeAnalysis.dll \
+    && cp /usr/lib/dotnet/sdk/8.0.130/Roslyn/bincore/Microsoft.CodeAnalysis.CSharp.dll \
+        /opt/runner/csharp/analyzer/Microsoft.CodeAnalysis.CSharp.dll \
+    && rm /opt/runner/csharp-analyzer-source.cs \
     && find /opt/runner -type d -exec chmod 0555 {} + \
     && find /opt/runner -type f -exec chmod 0444 {} + \
     && chmod 0555 /opt/runner/supervisor.py \
+    && /usr/bin/dotnet /opt/runner/csharp/analyzer/CsharpProjectAnalyzer.dll /nonexistent >/dev/null \
     && dotnet --version

@@ -49,6 +49,7 @@ The academy uses clean application URLs instead of separate `.html` files. Cloud
 - `/learn/:course-slug/:module-id/:lesson-id` is an exact lesson URL. For example, `/learn/python-foundations/py-first-spark/py-console` opens the first Python lesson directly;
 - `/projects/python/first-interactive-program` is the Python project overview, and adding a checkpoint ID opens that exact project checkpoint;
 - `/projects/cpp/first-compiled-program` is the C++ project overview, and adding a checkpoint ID opens that exact C++ checkpoint;
+- `/projects/csharp/workshop-check-in` is the C# project overview, and adding a checkpoint ID opens that exact C# checkpoint;
 - `/practice/:language` is the selected course’s Practice page;
 - `/codebook/:language` is the selected course’s Codebook;
 - `/profile` is the learner record;
@@ -187,7 +188,7 @@ The learning loop draws on broad, well-supported product patterns:
 - immediate feedback;
 - retrieval practice and spaced repetition;
 - streaks and small rewards for habit support;
-- comparable guided projects for C# and Java after their foundational micro-skills.
+- a comparable guided project for Java after its foundational micro-skills.
 
 SeePoundCoffeePie keeps its own interface, narrative, mentor, terminology, missions, rewards, and course content. It does not copy another product’s branding or lesson material.
 
@@ -195,7 +196,7 @@ Read the full [product and curriculum blueprint](docs/PRODUCT_BLUEPRINT.md).
 The verified Phase 1 scope and handoff are recorded in the [Phase 1 learning foundation release](docs/PHASE_1_RELEASE.md).
 The verified Phase 2 execution boundary is recorded in the [Phase 2 real execution release](docs/PHASE_2_RELEASE.md).
 The Phase 3 account and durable-learning-data contract is recorded in the [Phase 3 release](docs/PHASE_3_RELEASE.md).
-The Python project studio, protected assessment, local-draft boundary, and Phase 4A verification are recorded in the [Phase 4A release](docs/PHASE_4A_RELEASE.md). The multi-project registry and first compiled C++ project are recorded in the [Phase 4B release](docs/PHASE_4B_RELEASE.md).
+The Python project studio, protected assessment, local-draft boundary, and Phase 4A verification are recorded in the [Phase 4A release](docs/PHASE_4A_RELEASE.md). The multi-project registry and first compiled C++ project are recorded in the [Phase 4B release](docs/PHASE_4B_RELEASE.md). The first complete C# project and its trusted Roslyn grading boundary are recorded in the [Phase 4C release](docs/PHASE_4C_RELEASE.md).
 The course, lesson, navigation, accessibility, and visual direction is recorded in the [Open Learning Workshop milestone](docs/UI_REDESIGN_MOCKUPS.md). The milestone is live, and its release record includes the exact source commit, deployed Worker version, accessibility review, route checks, runner regressions, and production browser evidence.
 
 ## Research references
