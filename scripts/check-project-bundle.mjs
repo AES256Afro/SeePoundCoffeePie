@@ -29,6 +29,8 @@ const privateMarkers = [
   'python-data-tools-supply-tracker-v1',
   'supply-tracker-visible-report',
   'Keep the four supplied functions and report steps in their taught order without extra or unreachable statements.',
+  'cpp-collections-records',
+  'A workshop calculator has a label promising a whole-number result.',
 ]
 const teachingMarkers = [
   'A sequence of instructions that a computer follows.',

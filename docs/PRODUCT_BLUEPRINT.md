@@ -280,7 +280,7 @@ The remaining Phase 4 work is to:
 
 - evaluate cooperative learning only after a separate privacy, child-safety, and moderation review, and before considering competitive leaderboards.
 
-### Phase 5A: Practical Python: Data Tools (release candidate)
+### Phase 5A: Practical Python: Data Tools (complete)
 
 - `Practical Python: Data Tools` is a complete second Python course with six ordered modules, 30 lessons, 12 runner-backed edits, and 420 possible first-completion XP.
 - Each module begins with retrieval. Modules 1 through 4 use prediction, choice, prediction, bug repair, and guided code. Modules 5 and 6 replace the second prediction with ordering so the learner rehearses program structure before the capstone.
@@ -292,6 +292,15 @@ The remaining Phase 4 work is to:
 - The Supply Tracker's five visible expression checks and exact output are reinforced by a server-owned AST profile. The profile verifies the taught four-function frame, normalized dictionary update, accumulator, filter, fixed harness, and statement order without exposing analysis facts to the browser.
 - Browser persistence uses V2 local keys so an already-open older tab cannot become authoritative over new Phase 5A identifiers. The synchronized record and backup remain version 1, and no D1 table migration is required.
 - The compatibility floor and controlled staging and production procedure are specified in [the Phase 5A release record](PHASE_5A_RELEASE.md).
+- Source commit `a5ce1327beb0275ab1625c1962887375419b52d2` was deployed to production on 2026-08-26. The release evidence, deployed Worker versions, runner state, container readiness, automated gates, and manual browser verification are recorded in [the Phase 5A release record](PHASE_5A_RELEASE.md).
+
+### Phase 5B: Practical C++: Collections and Records (planned and unpublished)
+
+- The next continuing course follows both C++ Foundations and `Your First Compiled Program`. It introduces returned helper values, vectors, data-only structs, references, record updates, accumulators, and filters without introducing pointers, manual memory management, custom template definitions, files, packages, build systems, or object-oriented design.
+- Six module IDs and 30 lesson IDs are reserved in an unpublished TypeScript contract. The course uses the same 70 XP per module and 420 XP total rhythm as Practical Python, with exactly 12 planned runner-backed edits.
+- Modules 1 and 2 are authored as a hidden ten-lesson vertical slice and remain outside the public course registry, routes, progress allowlists, Practice, Codebook, runner assignments, sitemap, and production bundles.
+- The final Workshop Stock Report uses fixed in-memory records and requires a separate pinned C++ collections analyzer. The existing Observation Desk analyzer remains narrow and unchanged.
+- No partial course or `coming soon` card may reach production. The complete curriculum, compatibility floor, protected assessment, release gates, staged implementation slices, and manual learner checks are specified in [the Phase 5B plan](PHASE_5B_PLAN.md).
 
 ## Release gates
 
