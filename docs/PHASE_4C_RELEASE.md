@@ -154,4 +154,65 @@ Rollback restores the previous compatible Worker version and reviewed C# image. 
 
 ## Release evidence
 
-The source commit, CI run, image digest, Worker versions, live gates, final kill-switch states, and browser measurements are recorded here after the controlled staging and production rollout completes.
+### Source and continuous integration
+
+- Source commit: `566f2d8ee3a9fda7c8b501964f2044d9b50321d6`
+- GitHub CI run: [32915624546](https://github.com/AES256Afro/SeePoundCoffeePie/actions/runs/32915624546)
+- CI result: passed in 1 minute, including tests, lint, production build, and bundle budgets
+- Local release result: 31 test files and 342 tests passed, followed by lint, social-preview validation, production build, project bundle-boundary checks, and private-marker scans
+- Initial JavaScript bundle: 479.63 kB raw and 128.33 kB gzip
+- Total route-loaded JavaScript: 601.97 kB raw and 162.61 kB gzip
+- CSS: 69.01 kB raw and 12.86 kB gzip
+- Wrangler 4.126.0 production dry run: passed
+- Full four-image gate: passed for Python, C++, C#, and Java
+- Trusted analyzer suites: Python 11 of 11, C++ 14 of 14, and C# 16 of 16 passed
+- Runtime versions: .NET SDK 8.0.130 and Roslyn C# compiler 4.8.0-7.25569.25
+
+The independent C# analyzer review found and corrected two issues before release. Canonical token checks now reject verbatim identifiers, Unicode-escaped identifiers, escaped equivalent strings, verbatim strings, and raw strings. Unsupported grammar now returns an empty `analyzed: true`, `parsed: false` sentinel instead of partial facts.
+
+The final local C# image was `linux/amd64`, 675,987,007 bytes, with OCI image ID `sha256:c80f9a6b562c6695e903a21f0b9d42528c104b40011f934a873288bdd1fe7096` and manifest `sha256:02dee97d9e1b8a23431b36e0a52b016ef6f446455ba429de88919145bc0465a1`. The compiled analyzer hash was `sha256:fcee0f5d680e935048a7ce217ee9aa0d44b45d184b7c48606787dfe76ab3e032`.
+
+### Staging rollout
+
+- Staging Worker version: `e6e0aeb0-96d1-496b-8560-09a3d671c6ba`
+- Python image: `sha256:5a17c13b4a55684e3ca92832b2a2dca3ad5f0981a429acd4447343f3bd0f14ae`
+- C++ image: `sha256:a63c441350477786b19136f3833e8805ca483bc03c57cc8c30926e48c2a439f8`
+- C# image: `sha256:02dee97d9e1b8a23431b36e0a52b016ef6f446455ba429de88919145bc0465a1`
+- Java image: `sha256:7b58a8ddf1936d820e5e3aac57bd29d3d5c05c68417b98abb0197eee65d06ac9`
+- All four staging applications reached version 15 with two healthy instances, zero failed instances, and no health errors before tests began.
+- The platform boundary passed all four languages, seccomp network denial, CPU cutoff, process-tree memory cutoff, disk and output limits, diagnostic sanitization, run isolation, queue saturation, and learner authorization.
+- The protected Python project passed its practice, behavior, parser-integrity, and 10-check final gates.
+- The protected C++ project passed its practice, behavior, early-return, macro-expansion, and 12-check final gates.
+- The protected C# project rejected visible-output hardcoding and passed all 12 public-safe behavior and structural checks.
+- The project route returned HTTP 200 while execution was paused.
+- Final staging runner state: `enabled: false`, confirmed by KV and the public status endpoint.
+
+### Production rollout
+
+- Production Worker version: `21646830-c3d7-4c4f-9c42-408a78f5477d`
+- Production container images: the same four reviewed digests used in staging
+- All four production applications reached version 4 with four healthy instances, zero failed instances, and no health errors before execution was restored.
+- Production stayed paused while the control plane moved from the previous version 3 images to the new version 4 digests. The static academy remained available with HTTP 200 throughout the pause.
+- The live platform boundary passed all four language runs and every isolation, quota, authorization, and sanitization probe.
+- The live protected Python project passed all integrity probes and all 10 final checks.
+- The live protected C++ project passed all integrity probes and all 12 final checks.
+- The live protected C# project rejected visible-output hardcoding and passed all 12 public-safe checks.
+- The separate production smoke run passed in 33 ms.
+- Public-site verification passed social previews, apex domain, `www` redirect, security headers, 21 canonical routes, and two legacy routes.
+- Final production runner state: `enabled: true`, confirmed by KV and the public status endpoint.
+
+### Production browser evidence
+
+The browser check used the deployed route at `https://seepoundcoffeepie.com/projects/csharp/workshop-check-in`.
+
+- Desktop viewport: 1703 by 839 CSS pixels
+- Desktop body and heading sizes: 17 pixels and 69.6 pixels
+- Phone viewport: exactly 390 by 844 CSS pixels
+- Phone body and heading sizes: 16 pixels and 42.9 pixels
+- Horizontal overflow: none at either viewport
+- Mobile navigation: opened with `aria-expanded="true"`, moved focus to the `Close navigation` button, and preserved the 390-pixel document width
+- Direct route: the page title and `Community Workshop Check-In` heading were correct
+- Fresh-navigation application log: no warnings or errors before optional account-record synchronization
+- Later log entries were emitted by installed Chrome extensions, including Grammarly, and not by an academy asset
+
+The C# project is intentionally locked until C# Foundations is complete. The production browser check therefore verifies the public overview and prerequisite handoff. Component tests verify the unlocked editor, C# runner language, Run and Check controls, direct final-checkpoint route, and `.cs` download.
