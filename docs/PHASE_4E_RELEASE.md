@@ -1,6 +1,6 @@
 # Phase 4E Adaptive Practice Release
 
-Release date: 2026-08-25
+Release date: 2026-08-26
 
 ## Outcome
 
@@ -198,3 +198,38 @@ Automated coverage includes:
 Phase 4E changes client and Worker application code only. It does not change a runner assignment, supervisor, compiler, runtime, image, D1 migration, secret, or durable record shape.
 
 The full four-language runner regression still runs before and after release because adaptive sessions reuse ordinary foundation assignments. Rollback restores the prior Worker version. No database rollback, secret rotation, or learner-record conversion is required.
+
+## Verified release evidence
+
+The released application source is commit `aea274db269de6f547be8ff41585cd2497e6668c` on `main`. GitHub Actions run [32932015070](https://github.com/AES256Afro/SeePoundCoffeePie/actions/runs/32932015070) passed on that exact commit before either environment was deployed.
+
+The final local release gate passed with:
+
+- 40 test files and 440 tests;
+- ESLint;
+- social-preview metadata and the 1200 by 630 preview image;
+- the TypeScript and Vite production build;
+- the project lazy-loading boundary;
+- 659.89 kB total raw JavaScript against the unchanged 660.00 kB limit;
+- the Cloudflare deployment dry run and all required bindings;
+- diff hygiene, credential-pattern scanning, and the no-em-dash source check.
+
+The unchanged four-language container images also passed the local runner contract before deployment: Python 3.10, C++ 11, C# 12 on .NET 8, and Java 21, plus compile diagnostics, CPU, output, memory, storage, network denial, and repeated cleanup checks.
+
+Staging Worker version `8d26ff0c-7953-4072-b464-f6aa15920f59` passed the core runner suite and the Python, C++, C#, and Java protected-project suites. Its KV override was then returned to disabled and verified as disabled.
+
+Production Worker version `0ae47050-961e-4d7b-9410-a0b338cea8e7` was deployed while the production runner was disabled. It then passed:
+
+- the core four-language runner and isolation suite;
+- every Python, C++, C#, and Java protected-project suite;
+- the production runner smoke test;
+- the social preview, apex domain, `www` redirect, security headers, 24 canonical routes, and 2 legacy routes.
+
+The production runner was restored only after those checks and was verified enabled for all four languages.
+
+A final production browser pass verified both beginner states without submitting an answer or altering the learner's recorded result:
+
+- Java, with no completed Java module, linked to the canonical first normal lesson and explained when Practice becomes available;
+- Python, with one completed module, showed a two-question set, source-module labels, plain-language selection reasons, the zero-reward disclosure, the bookmarkable session route, the distinct `Exit practice` control, the isolated runner explanation, and the open split lesson layout.
+
+Independent architecture, security and data-boundary, and beginner UX and accessibility reviews all returned `SHIP` after the delayed-runner and direct-final lesson regressions were added.
