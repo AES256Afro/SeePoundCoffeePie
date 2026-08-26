@@ -191,6 +191,30 @@ describe('durable progress synchronization', () => {
     expect(reverse.completedMissions).toEqual(forward.completedMissions)
   })
 
+  it('unions additive Phase 5A lesson and module completion without double-counting rewards', () => {
+    const local = {
+      ...initialProgress('python'),
+      xp: 22,
+      completedLessons: ['pydata1-retrieve-call'],
+    }
+    const remote = {
+      ...initialProgress('python'),
+      xp: 40,
+      completedMissions: ['py-data-return-values'],
+    }
+
+    const merged = mergeLearnerProgress(local, remote)
+    expect(merged.xp).toBe(40)
+    expect(merged.completedMissions).toEqual(['py-data-return-values'])
+    expect(merged.completedLessons).toEqual([
+      'pydata1-fix-return',
+      'pydata1-predict-result',
+      'pydata1-retrieve-call',
+      'pydata1-return-purpose',
+      'pydata1-subtotal',
+    ])
+  })
+
   it('matches semantically equal records regardless of set and concept insertion order', () => {
     const left = {
       ...recordProgress(),

@@ -1,12 +1,23 @@
 import { tracks } from '../data/curriculum'
 import { projectManifests } from '../data/project-manifests'
+import {
+  pythonDataToolsLessons,
+  pythonDataToolsManifest,
+  pythonDataToolsMissionIds,
+} from '../data/python-data-tools-manifest'
 import type { ConceptProgress, LanguageId, LearnerProgress } from '../types'
 
 const languages = new Set<LanguageId>(tracks.map((track) => track.id))
-const missionIds = new Set(tracks.flatMap((track) => track.missions.map((mission) => mission.id)))
-const lessonIds = new Set(tracks.flatMap((track) => (
-  track.missions.flatMap((mission) => mission.exercises.map((exercise) => exercise.id))
-)))
+const missionIds = new Set([
+  ...tracks.flatMap((track) => track.missions.map((mission) => mission.id)),
+  ...pythonDataToolsMissionIds,
+])
+const lessonIds = new Set([
+  ...tracks.flatMap((track) => (
+    track.missions.flatMap((mission) => mission.exercises.map((exercise) => exercise.id))
+  )),
+  ...pythonDataToolsLessons.map((lesson) => lesson.id),
+])
 const projectIds = new Set(projectManifests.map((project) => project.id))
 const projectCheckpointIds = new Set(projectManifests.flatMap((project) => (
   project.checkpoints.map((checkpoint) => checkpoint.id)
@@ -16,6 +27,7 @@ const conceptIds = new Set([
     track.missions.flatMap((mission) => mission.exercises.map((exercise) => exercise.conceptId))
   )),
   ...projectManifests.flatMap((project) => project.checkpoints.map((checkpoint) => checkpoint.conceptId)),
+  ...pythonDataToolsLessons.map((lesson) => lesson.conceptId),
 ])
 const datePattern = /^\d{4}-\d{2}-\d{2}$/u
 
@@ -81,11 +93,15 @@ function normalizedConceptProgress(
 
 function lessonsFromCompletedMissions(completedMissions: string[]): string[] {
   const completed = new Set(completedMissions)
-  return tracks.flatMap((track) => (
+  const foundationLessons = tracks.flatMap((track) => (
     track.missions.flatMap((mission) => (
       completed.has(mission.id) ? mission.exercises.map((exercise) => exercise.id) : []
     ))
   ))
+  const dataToolsLessons = Object.entries(pythonDataToolsManifest).flatMap(([missionId, lessons]) => (
+    completed.has(missionId) ? lessons.map((lesson) => lesson.id) : []
+  ))
+  return [...foundationLessons, ...dataToolsLessons]
 }
 
 function withCompletedMissionLessons(completedLessons: string[], completedMissions: string[]): string[] {

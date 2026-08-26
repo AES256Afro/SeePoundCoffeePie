@@ -1048,13 +1048,15 @@ describe('beginner lesson interactions', () => {
     )
 
     unmount()
-    window.localStorage.setItem(progressKey, JSON.stringify({
+    const continuedProjectProgress = JSON.stringify({
       ...initialProgress('python'),
       callsign: 'Project Cadet',
       onboardingComplete: true,
       completedMissions: pythonMissionIds,
       completedProjectCheckpoints: [pythonInteractiveProject.checkpoints[0].id],
-    }))
+    })
+    window.localStorage.setItem(progressKey, continuedProjectProgress)
+    window.localStorage.setItem('see-pound-coffee-pie-progress-v2', continuedProjectProgress)
 
     render(<App />)
 

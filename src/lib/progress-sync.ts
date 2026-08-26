@@ -1,5 +1,9 @@
 import { projectManifests } from '../data/project-manifests'
 import { tracks } from '../data/curriculum'
+import {
+  pythonDataToolsLessons,
+  pythonDataToolsManifest,
+} from '../data/python-data-tools-manifest'
 import type { ConceptProgress, LearnerProgress } from '../types'
 import { parseLearnerProgress } from './progress-schema'
 
@@ -27,12 +31,20 @@ export type SaveProgressResult =
   | { ok: false; conflicted: boolean; conflict: RemoteProgressRecord | null; message: string }
 
 const projectIds = new Set(projectManifests.map((project) => project.id))
-const lessonIds = new Set(tracks.flatMap((track) => (
-  track.missions.flatMap((mission) => mission.exercises.map((exercise) => exercise.id))
-)))
-const missionLessonIds = new Map(tracks.flatMap((track) => track.missions.map((mission) => (
-  [mission.id, mission.exercises.map((exercise) => exercise.id)] as const
-))))
+const lessonIds = new Set([
+  ...tracks.flatMap((track) => (
+    track.missions.flatMap((mission) => mission.exercises.map((exercise) => exercise.id))
+  )),
+  ...pythonDataToolsLessons.map((lesson) => lesson.id),
+])
+const missionLessonIds = new Map([
+  ...tracks.flatMap((track) => track.missions.map((mission) => (
+    [mission.id, mission.exercises.map((exercise) => exercise.id)] as const
+  ))),
+  ...Object.entries(pythonDataToolsManifest).map(([missionId, lessons]) => (
+    [missionId, lessons.map((lesson) => lesson.id)] as const
+  )),
+])
 const projectCheckpointIds = new Set(projectManifests.flatMap((project) => (
   project.checkpoints.map((checkpoint) => checkpoint.id)
 )))

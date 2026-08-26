@@ -62,6 +62,32 @@ describe('learner progress schema', () => {
     })
   })
 
+  it('accepts additive Phase 5A identifiers and closes a completed module over its lessons', () => {
+    const progress = {
+      ...initialProgress('python'),
+      completedMissions: ['py-data-return-values'],
+      conceptProgress: {
+        'python-return-values': {
+          strength: 1,
+          correct: 1,
+          incorrect: 0,
+          dueAt: '2026-08-27',
+        },
+      },
+    }
+
+    expect(parseLearnerProgress(progress)).toMatchObject({
+      completedMissions: ['py-data-return-values'],
+      completedLessons: [
+        'pydata1-retrieve-call',
+        'pydata1-return-purpose',
+        'pydata1-predict-result',
+        'pydata1-fix-return',
+        'pydata1-subtotal',
+      ],
+    })
+  })
+
   it.each([
     ['missing mission list', () => {
       const progress: Record<string, unknown> = { ...validProgress() }

@@ -403,7 +403,7 @@ describe('progress helpers', () => {
     }
   })
 
-  it('recovers lesson completion after an older tab overwrites the legacy browser record', () => {
+  it('keeps the v2 record authoritative when an older tab overwrites the legacy browser record', () => {
     const values = new Map<string, string>()
     const localStorage = {
       getItem: vi.fn((key: string) => values.get(key) ?? null),
@@ -426,12 +426,45 @@ describe('progress helpers', () => {
       values.set('see-pound-coffee-pie-progress', JSON.stringify(legacyRecord))
 
       expect(loadProgress()).toMatchObject({
-        callsign: 'Older Tab Cadet',
+        callsign: 'Current Tab Cadet',
         completedLessons: ['py-console'],
       })
 
       saveProgress(initialProgress('python'))
       expect(loadProgress().completedLessons).toEqual([])
+    } finally {
+      vi.unstubAllGlobals()
+    }
+  })
+
+  it('records and restores additive Phase 5A lessons without exposing course prose', () => {
+    const values = new Map<string, string>()
+    const localStorage = {
+      getItem: vi.fn((key: string) => values.get(key) ?? null),
+      setItem: vi.fn((key: string, value: string) => values.set(key, value)),
+    }
+    vi.stubGlobal('window', { localStorage })
+
+    try {
+      const completed = completeMission(
+        recordLessonSuccess(initialProgress('python'), 'pydata1-retrieve-call'),
+        'py-data-return-values',
+        new Date(2026, 7, 26),
+      )
+      saveProgress(completed)
+
+      const restored = loadProgress()
+      expect(restored.completedMissions).toContain('py-data-return-values')
+      expect(restored.completedLessons).toEqual(expect.arrayContaining([
+        'pydata1-retrieve-call',
+        'pydata1-return-purpose',
+        'pydata1-predict-result',
+        'pydata1-fix-return',
+        'pydata1-subtotal',
+      ]))
+      expect(restored.conceptProgress['python-parameters-and-calls']).toBeDefined()
+      expect(values.has('see-pound-coffee-pie-progress-v2')).toBe(true)
+      expect(values.has('see-pound-coffee-pie-completed-lessons-v2')).toBe(true)
     } finally {
       vi.unstubAllGlobals()
     }
