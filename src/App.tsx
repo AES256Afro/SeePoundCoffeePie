@@ -8,14 +8,13 @@ import {
   useState,
   type AnchorHTMLAttributes,
   type ChangeEvent,
-  type KeyboardEvent as ReactKeyboardEvent,
+  type Dispatch,
   type MouseEvent as ReactMouseEvent,
+  type SetStateAction,
 } from 'react'
 import {
-  ArrowDown,
   ArrowLeft,
   ArrowRight,
-  ArrowUp,
   BookOpen,
   Check,
   CheckCircle2,
@@ -29,14 +28,12 @@ import {
   Download,
   Eye,
   Flame,
-  Gem,
   GitFork as Github,
   Home,
   LibraryBig,
   LockKeyhole,
   LogOut,
   Menu,
-  MessageCircleQuestion,
   Orbit,
   RefreshCw,
   RotateCcw,
@@ -60,21 +57,25 @@ import {
   projectManifests,
 } from './data/project-manifests'
 import { buildCourseCards, buildCourseModel, type CourseCardModel } from './lib/course-model'
-import { orderedChoices } from './lib/choice-order'
-import { evaluateExercise } from './lib/evaluator'
 import { missionAvailability } from './lib/missions'
-import { buildPracticeExercises, conceptDisplayName, recommendPractice } from './lib/practice'
+import {
+  conceptDisplayName,
+  countEligibleDueConcepts,
+  recommendPractice,
+  type AdaptivePracticeSession,
+} from './lib/practice'
+import {
+  clearPracticeSession,
+  loadOrCreatePracticeSession,
+  practiceSessionStorage,
+} from './lib/practice-session'
 import { parseProgressBackup, serializeProgressBackup } from './lib/progress-backup'
 import {
-  completeMission,
   dateKey,
   initialProgress,
-  isDue,
   loadProgress,
-  recordAttempt,
   saveProgress,
 } from './lib/progress'
-import { buildReviewQueue, resetReviewAnswers } from './lib/review'
 import {
   deleteRemoteProgress,
   fetchRemoteProgress,
@@ -85,8 +86,6 @@ import {
   type ProgressSyncState,
   type RemoteProgressRecord,
 } from './lib/progress-sync'
-import { runExercise, type RunnerClientStatus } from './lib/runner-client'
-import type { RunnerResult } from './lib/runner-contract'
 import {
   codebookPath,
   coursePath,
@@ -95,13 +94,12 @@ import {
   lessonPath,
   pagePath,
   parseAppRoute,
-  practiceMissionPath,
   practicePath,
+  practiceSessionPath,
   projectPath,
 } from './lib/routes'
 import type {
   AuthUser,
-  EvaluationResult,
   LanguageId,
   LearnerProgress,
   Mission,
@@ -113,6 +111,25 @@ const ProjectStudio = lazy(async () => {
   const module = await import('./ProjectStudio')
   return { default: module.ProjectStudio }
 })
+
+const LessonPlayer = lazy(async () => {
+  const module = await import('./LessonPlayer')
+  return { default: module.LessonPlayer }
+})
+
+function LessonPlayerFallback({ practice = false }: { practice?: boolean }) {
+  return (
+    <div className="lesson-overlay">
+      <main className="route-message-page" aria-busy="true" id="main-content" tabIndex={-1}>
+        <section className="route-message-card">
+          <p className="kicker"><BookOpen size={15} /> {practice ? 'Practice' : 'Lesson'}</p>
+          <h1>Opening your {practice ? 'practice set' : 'lesson'}</h1>
+          <p>Loading the explanation, exercise, and code workspace.</p>
+        </section>
+      </main>
+    </div>
+  )
+}
 
 const languageSnippets: Record<LanguageId, string> = {
   python: 'print("Hello, cosmos!")',
@@ -632,8 +649,9 @@ function CourseCatalog({ progress }: { progress: LearnerProgress }) {
 
 function LearnerHome({ progress }: { progress: LearnerProgress }) {
   const courses = buildCourseCards(progress)
-  const activeCourse = buildCourseModel(trackById(progress.activeLanguage), progress)
-  const reviewsDue = Object.values(progress.conceptProgress).filter((concept) => isDue(concept)).length
+  const activeTrack = trackById(progress.activeLanguage)
+  const activeCourse = buildCourseModel(activeTrack, progress)
+  const reviewsDue = countEligibleDueConcepts(activeTrack, progress)
   const readyProject = activeCourse.status === 'complete'
     ? projectManifestForLanguage(activeCourse.id)
     : undefined
@@ -707,7 +725,7 @@ function LearnerHome({ progress }: { progress: LearnerProgress }) {
         </section>
         <section className="review-open" aria-labelledby="review-title">
           <div><RotateCcw size={22} /><span><p className="eyebrow">Practice</p><h2 id="review-title">{reviewsDue === 0 ? 'Nothing is due yet' : `${reviewsDue} ${reviewsDue === 1 ? 'concept is' : 'concepts are'} ready`}</h2></span></div>
-          <p>{reviewsDue === 0 ? 'Reviews appear after you learn a concept.' : 'Bring these ideas back before they become fuzzy.'}</p>
+          <p>{reviewsDue === 0 ? 'Reviews appear after you finish a module.' : 'Bring these ideas back before they become fuzzy.'}</p>
           <AppLink to={practicePath(progress.activeLanguage)}>{reviewsDue === 0 ? 'See how practice works' : 'Start a short review'} <ArrowRight size={16} /></AppLink>
         </section>
       </div>
@@ -795,55 +813,168 @@ function MissionPath({ progress }: { progress: LearnerProgress }) {
   )
 }
 
-function PracticeBay({ progress, onStart }: { progress: LearnerProgress; onStart: (mission: Mission, conceptIds: string[]) => void }) {
+function reviewDateLabel(value: string | null): string | null {
+  if (!value) return null
+  const [year, month, day] = value.split('-').map(Number)
+  return new Date(year, month - 1, day).toLocaleDateString(undefined, {
+    month: 'long',
+    day: 'numeric',
+  })
+}
+
+function practiceReasonLabel(item: AdaptivePracticeSession['items'][number], today: string): string {
+  if (item.reason === 'weak') return 'Could use another pass'
+  if (item.reason === 'fresh') return 'Keep it fresh'
+  return item.progress.dueAt < today ? 'Ready for review' : 'Due today'
+}
+
+function PracticeBay({ progress }: { progress: LearnerProgress }) {
   const track = trackById(progress.activeLanguage)
   const recommendation = recommendPractice(track, progress)
-  const { coveredConceptIds, dueConcepts, mission, mode } = recommendation
-  const dueLabel = `${dueConcepts.length} ${dueConcepts.length === 1 ? 'concept is' : 'concepts are'} ready`
-  const heroTitle = mode === 'start' ? 'Your first mission is ready' : mode === 'due' ? dueLabel : 'Your orbit is clear'
-  const heroText = mode === 'start'
-    ? `Begin with ${mission.title}. Reviews appear here after you have practiced a concept.`
+  const { deferredDueCount, dueConcepts, items, mode, nextReviewAt, starterMission } = recommendation
+  const questionCount = items.length
+  const estimatedMinutes = Math.max(2, questionCount * 2)
+  const firstLesson = starterMission.exercises[0]
+  const nextReviewLabel = reviewDateLabel(nextReviewAt)
+  const heroTitle = mode === 'start'
+    ? 'Practice what you have learned'
     : mode === 'due'
-      ? `Replay ${mission.title}. It is the best completed mission for ${coveredConceptIds.length} of the ${dueConcepts.length} concepts due in ${track.shortName}.`
-      : `Nothing in ${track.shortName} is due yet. ${mission.title} is available if you want an extra pass.`
-  const actionLabel = mode === 'start' ? `Start ${mission.title}` : mode === 'due' ? `Review ${mission.title}` : `Practice ${mission.title}`
+      ? 'A short review is ready'
+      : 'You are caught up for today'
+  const heroText = mode === 'start'
+    ? `Short reviews appear here after you finish a module. Start with ${firstLesson?.title ?? starterMission.title} first.`
+    : mode === 'due'
+      ? `These ${questionCount} questions bring back ideas from modules you already completed.${deferredDueCount > 0 ? ` Another ${deferredDueCount} ${deferredDueCount === 1 ? 'idea will' : 'ideas will'} wait for the next short set.` : ''}`
+      : mode === 'weak'
+        ? 'Nothing is due. A few ideas could use another gentle pass now, or you can wait for their scheduled review.'
+        : `Nothing is due.${nextReviewLabel ? ` Your next scheduled review is ${nextReviewLabel}.` : ''} You can still take an optional refresher.`
+
+  useEffect(() => {
+    clearPracticeSession(track.id, practiceSessionStorage())
+  }, [track.id])
 
   return (
     <main className="content-page">
       <div className="page-heading page-heading--simple">
-        <div><p className="kicker"><Orbit size={14} /> SPACED PRACTICE</p><h1>Memory orbit</h1><p>Short reviews return when they can do the most good.</p></div>
+        <div><p className="kicker"><RotateCcw size={14} /> SHORT REVIEW</p><h1>Practice</h1><p>A small set of familiar ideas, chosen from modules you have already completed.</p></div>
       </div>
       <section className="practice-hero">
-        <div className="practice-orbit"><Orbit /><span>{dueConcepts.length}</span></div>
+        <LanguageSymbol language={track.id} size="large" />
         <div>
-          <small>{mode === 'due' ? `BEST MATCH · MISSION ${String(mission.chapter).padStart(2, '0')}` : 'REVIEW QUEUE'}</small>
+          <small>{mode === 'start' ? 'FIRST, FINISH ONE MODULE' : `${questionCount} ${questionCount === 1 ? 'QUESTION' : 'QUESTIONS'} · ABOUT ${estimatedMinutes} MINUTES`}</small>
           <h2>{heroTitle}</h2>
           <p>{heroText}</p>
         </div>
-        <button className="primary-action" onClick={() => onStart(mission, mode === 'due' ? coveredConceptIds : [])}><RotateCcw size={17} /> {actionLabel}</button>
+        {mode === 'start' && firstLesson ? (
+          <AppLink className="primary-action" to={lessonPath(track.id, starterMission.id, firstLesson.id)}>
+            Start your first lesson <ArrowRight size={17} />
+          </AppLink>
+        ) : (
+          <AppLink className="primary-action" to={practiceSessionPath(track.id)}>
+            {mode === 'due' ? `Start ${questionCount}-question review` : `Practice ${questionCount} familiar ${questionCount === 1 ? 'idea' : 'ideas'}`} <ArrowRight size={17} />
+          </AppLink>
+        )}
       </section>
-      <div className="section-label"><span>HOW REVIEWS WORK</span><i /></div>
+      {items.length > 0 && (
+        <section className="practice-plan" aria-labelledby="practice-plan-title">
+          <div className="section-heading-open">
+            <div><p className="eyebrow">Your review plan</p><h2 id="practice-plan-title">What you will practice</h2></div>
+            <p>No new concepts. Every question comes from a completed {track.shortName} module.</p>
+          </div>
+          <ol aria-label="Practice questions" role="list">
+            {items.map((item, index) => (
+              <li key={item.exercise.id}>
+                <span>{index + 1}</span>
+                <div>
+                  <b>{conceptDisplayName(track, item.conceptId)}</b>
+                  <small>From {item.missionTitle}</small>
+                </div>
+                <strong>{practiceReasonLabel(item, recommendation.generatedFor)}</strong>
+              </li>
+            ))}
+          </ol>
+          <p className="practice-plan__note">
+            Practice changes only when these ideas return. It awards no XP or star shards.
+            {deferredDueCount > 0 && ` This set stays short on purpose. The remaining ${deferredDueCount} due ${deferredDueCount === 1 ? 'idea' : 'ideas'} will be first in your next set.`}
+          </p>
+        </section>
+      )}
+      <div className="section-label"><span>HOW PRACTICE WORKS</span><i /></div>
       <div className="explain-grid">
         <article><span>01</span><h3>Learn it</h3><p>Meet one idea in plain language, then use it immediately.</p></article>
         <article><span>02</span><h3>Retrieve it</h3><p>Bring the idea back from memory instead of only rereading it.</p></article>
         <article><span>03</span><h3>Space it</h3><p>Correct answers wait longer. Struggles return sooner and more gently.</p></article>
       </div>
       {dueConcepts.length > 0 && (
-        <section className="concept-list">
-          <h2>Due concepts</h2>
-          {dueConcepts.map(({ id, missionTitles, progress: concept }) => (
-            <div key={id}>
-              <Code2 />
-              <span>
-                <b>{conceptDisplayName(track, id)}</b>
-                <small>Learned in {missionTitles.join(' and ')} · Memory strength {concept.strength} of 5</small>
-              </span>
-              <strong>{coveredConceptIds.includes(id) ? 'IN REVIEW' : 'WAITING'}</strong>
-            </div>
-          ))}
+        <section className="practice-plain-note">
+          <BookOpen size={19} />
+          <p><b>Why these questions?</b> {dueConcepts.length === 1 ? 'One idea is ready' : `${dueConcepts.length} ideas are ready`} to be recalled. We use your answers only to decide when these ideas should return. Practice answers and code are not added to your saved learning record.</p>
         </section>
       )}
     </main>
+  )
+}
+
+interface PracticeSessionRouteProps {
+  onNavigate: (path: string) => void
+  onProgress: Dispatch<SetStateAction<LearnerProgress>>
+  practiceStep: number
+  progress: LearnerProgress
+}
+
+function PracticeSessionRoute({ onNavigate, onProgress, practiceStep, progress }: PracticeSessionRouteProps) {
+  const track = trackById(progress.activeLanguage)
+  const [session] = useState(() => loadOrCreatePracticeSession(
+    track,
+    progress,
+    practiceSessionStorage(),
+  ))
+  const mission = useMemo<Mission>(() => ({
+    id: `${track.id}-adaptive-practice`,
+    language: track.id,
+    chapter: 0,
+    title: `${track.shortName} review`,
+    subtitle: 'A short review from completed modules',
+    description: 'Authored exercises selected from completed course material.',
+    duration: `${Math.max(2, session.items.length * 2)} min`,
+    icon: 'terminal',
+    status: 'available',
+    exercises: session.items.map((item) => item.exercise),
+  }), [session.items, track.id, track.shortName])
+  const activeItem = session.items[practiceStep - 1]
+
+  if (session.items.length === 0 || !activeItem) {
+    return (
+      <main className="route-message-page" id="main-content" tabIndex={-1}>
+        <BrandMark />
+        <section className="route-message-card">
+          <p className="kicker"><RotateCcw size={15} /> Practice</p>
+          <h1>{session.items.length === 0 ? 'Finish a module before starting practice' : 'That review step is no longer available'}</h1>
+          <p>{session.items.length === 0
+            ? 'Practice uses only ideas from modules you have already completed.'
+            : 'The saved review set is shorter than this address expects. Build a fresh set from the Practice page.'}</p>
+          <AppLink className="primary-action" to={practicePath(track.id)}>Back to Practice <ArrowRight size={17} /></AppLink>
+        </section>
+      </main>
+    )
+  }
+
+  return (
+    <Suspense fallback={<LessonPlayerFallback practice />}>
+      <LessonPlayer
+        initialExerciseId={activeItem.exercise.id}
+        mission={mission}
+        onExerciseChange={(exerciseId) => {
+          const nextIndex = session.items.findIndex((item) => item.exercise.id === exerciseId)
+          if (nextIndex >= 0) onNavigate(practiceSessionPath(track.id, nextIndex + 1))
+        }}
+        onPracticeComplete={() => clearPracticeSession(track.id, practiceSessionStorage())}
+        practiceSession={session}
+        progress={progress}
+        onProgress={onProgress}
+        onExit={() => onNavigate(practicePath(track.id))}
+      />
+    </Suspense>
   )
 }
 
@@ -1108,7 +1239,7 @@ function SettingsPage({
         </section>
       )}
       <section className="settings-panel">
-        <div><small>LEARNING PROGRESS</small><h2>Reset learning progress</h2><p>Resetting removes the learner name, XP, mission completion, and review history from this browser. When account synchronization is active, the reset becomes the new synchronized copy too.</p></div>
+        <div><small>LEARNING PROGRESS</small><h2>Reset learning progress</h2><p>Resetting removes your learner name, course and project completion, XP, shards, streak, training goal, and review schedule from this browser. Saved project code and local check summaries stay on this browser. When account synchronization is active, the empty learning record becomes the synchronized copy too.</p></div>
         <button className="danger-button" onClick={onReset}><RotateCcw size={16} /> Reset learning progress</button>
       </section>
     </main>
@@ -1204,492 +1335,6 @@ function SyncChoiceDialog({ busy, local, onChoose, onLater, remote }: SyncChoice
   )
 }
 
-interface LessonPlayerProps {
-  initialExerciseId?: string
-  mission: Mission
-  onExerciseChange?: (exerciseId: string) => void
-  practiceConceptIds?: string[]
-  progress: LearnerProgress
-  onProgress: (progress: LearnerProgress) => void
-  onExit: () => void
-}
-
-function LessonPlayer({ initialExerciseId, mission, onExerciseChange, practiceConceptIds, progress, onProgress, onExit }: LessonPlayerProps) {
-  const initialStep = Math.max(0, mission.exercises.findIndex((item) => item.id === initialExerciseId))
-  const [step, setStep] = useState(initialStep)
-  const [answers, setAnswers] = useState<Record<string, string>>({})
-  const [feedback, setFeedback] = useState<EvaluationResult | null>(null)
-  const [runnerBusy, setRunnerBusy] = useState(false)
-  const [runnerStatus, setRunnerStatus] = useState<RunnerClientStatus | null>(null)
-  const [runnerResult, setRunnerResult] = useState<RunnerResult | null>(null)
-  const [runnerFailure, setRunnerFailure] = useState(false)
-  const [credited, setCredited] = useState<string[]>([])
-  const [hintOpen, setHintOpen] = useState(false)
-  const [finished, setFinished] = useState(false)
-  const [mistakes, setMistakes] = useState<string[]>([])
-  const [reviewQueue, setReviewQueue] = useState<string[]>([])
-  const [reviewIndex, setReviewIndex] = useState(0)
-  const [orderingAnnouncement, setOrderingAnnouncement] = useState('')
-  const lessonHeadingRef = useRef<HTMLHeadingElement>(null)
-  const completionHeadingRef = useRef<HTMLHeadingElement>(null)
-  const [missionAlreadyComplete] = useState(() => progress.completedMissions.includes(mission.id))
-  const practiceMode = practiceConceptIds !== undefined
-  const sessionExercises = practiceMode
-    ? buildPracticeExercises(mission, practiceConceptIds)
-    : mission.exercises
-  const reviewing = reviewQueue.length > 0
-  const routeStep = !practiceMode && initialExerciseId
-    ? sessionExercises.findIndex((item) => item.id === initialExerciseId)
-    : -1
-  const activeStep = !reviewing && routeStep >= 0 ? routeStep : step
-  const exercise = reviewing
-    ? sessionExercises.find((item) => item.id === reviewQueue[reviewIndex])
-    : sessionExercises[activeStep]
-  const totalXp = sessionExercises.reduce((sum, item) => sum + item.xp, 0)
-  const earnedXp = sessionExercises.filter((item) => credited.includes(item.id)).reduce((sum, item) => sum + item.xp, 0)
-  const progressPercent = reviewing
-    ? ((reviewIndex + 1) / reviewQueue.length) * 100
-    : ((activeStep + 1) / sessionExercises.length) * 100
-
-  useEffect(() => {
-    const timer = window.setTimeout(() => lessonHeadingRef.current?.focus({ preventScroll: true }), 0)
-    return () => window.clearTimeout(timer)
-  }, [exercise?.id, reviewIndex, reviewing])
-
-  useEffect(() => {
-    if (!finished) return
-    const timer = window.setTimeout(() => completionHeadingRef.current?.focus({ preventScroll: true }), 0)
-    return () => window.clearTimeout(timer)
-  }, [finished])
-
-  if (!exercise) return null
-
-  const initialOrder = exercise.orderItems?.map((item) => item.id).join('|') ?? ''
-  const answer = answers[exercise.id]
-    ?? (exercise.type === 'ordering' ? initialOrder : exercise.starterCode)
-    ?? ''
-  const orderedIds = exercise.type === 'ordering'
-    ? answer.split('|').filter(Boolean)
-    : []
-  const blankCount = exercise.starterCode?.match(/_____/gu)?.length ?? 0
-  const choiceExercise = exercise.type === 'choice' || exercise.type === 'prediction'
-  const displayChoices = choiceExercise ? orderedChoices(exercise) : []
-  const editableExercise = exercise.type === 'code' || exercise.type === 'bugfix'
-  const taskLabel = reviewing
-    ? 'TRY IT ONCE MORE'
-    : exercise.type === 'choice'
-      ? 'GUIDED CHECK'
-      : exercise.type === 'prediction'
-        ? 'PREDICT THE OUTPUT'
-        : exercise.type === 'ordering'
-          ? 'PUT IT IN ORDER'
-          : exercise.type === 'bugfix'
-            ? 'DEBUGGING TASK'
-            : 'YOUR TASK'
-  const checkActionLabel = editableExercise
-    ? 'Run check'
-      : exercise.type === 'ordering' ? 'Check order' : 'Check answer'
-  const hasUnfinishedLessons = !missionAlreadyComplete
-    && sessionExercises.some((item) => !credited.includes(item.id))
-
-  const setAnswer = (value: string) => {
-    setAnswers((current) => ({ ...current, [exercise.id]: value }))
-    if (feedback && !feedback.correct) setFeedback(null)
-    setRunnerResult(null)
-    setRunnerStatus(null)
-    setRunnerFailure(false)
-  }
-
-  const moveOrderItem = (index: number, direction: -1 | 1) => {
-    const destination = index + direction
-    if (destination < 0 || destination >= orderedIds.length) return
-    const reordered = [...orderedIds]
-    ;[reordered[index], reordered[destination]] = [reordered[destination], reordered[index]]
-    setAnswer(reordered.join('|'))
-    const movedItem = exercise.orderItems?.find((item) => item.id === reordered[destination])
-    setOrderingAnnouncement(`${movedItem?.code ?? 'Code line'} moved to position ${destination + 1} of ${reordered.length}.`)
-  }
-
-  const recordEvaluation = (result: EvaluationResult, countFailure = true) => {
-    setFeedback(result)
-    if (!result.correct) {
-      if (countFailure && !reviewing && !mistakes.includes(exercise.id)) {
-        setMistakes((current) => [...current, exercise.id])
-        onProgress(recordAttempt(progress, exercise.conceptId, false, 0))
-      }
-      return
-    }
-
-    if (reviewing) {
-      onProgress(recordAttempt(progress, exercise.conceptId, true, 0))
-    } else if (!credited.includes(exercise.id)) {
-      setCredited((current) => [...current, exercise.id])
-      onProgress(recordAttempt(progress, exercise.conceptId, true, exercise.xp))
-    }
-  }
-
-  const checkAnswer = async () => {
-    setRunnerFailure(false)
-    if (!editableExercise) {
-      recordEvaluation(evaluateExercise(exercise, answer))
-      return
-    }
-
-    const localCheck = evaluateExercise(exercise, answer)
-    if (!answer.trim() || answer.includes('_____')) {
-      recordEvaluation(localCheck)
-      return
-    }
-
-    setRunnerBusy(true)
-    setRunnerResult(null)
-    try {
-      const result = await runExercise(exercise.id, mission.language, answer, setRunnerStatus)
-      setRunnerResult(result)
-      const correct = result.outcome === 'completed'
-        && result.tests.length > 0
-        && result.tests.every((test) => test.passed)
-      setRunnerFailure(result.outcome === 'system_error')
-      recordEvaluation({
-        correct,
-        message: correct
-          ? exercise.recap
-          : `${result.diagnostic.explanation} ${result.diagnostic.suggestion}`,
-        output: result.stdout,
-      }, result.outcome !== 'system_error')
-    } catch (error) {
-      const message = error instanceof Error
-        ? error.message
-        : 'The isolated runner could not be reached. Your code was not marked wrong.'
-      setRunnerFailure(true)
-      setFeedback({ correct: false, message })
-    } finally {
-      setRunnerBusy(false)
-      setRunnerStatus(null)
-    }
-  }
-
-  const finishSession = () => {
-    if (!practiceMode) onProgress(completeMission(progress, mission.id))
-    setFinished(true)
-  }
-
-  const continueLesson = () => {
-    if (reviewing) {
-      if (reviewIndex === reviewQueue.length - 1) {
-        finishSession()
-        return
-      }
-      setReviewIndex((current) => current + 1)
-      setFeedback(null)
-      setRunnerResult(null)
-      setRunnerStatus(null)
-      setRunnerFailure(false)
-      setHintOpen(false)
-      return
-    }
-
-    if (activeStep === sessionExercises.length - 1) {
-      const queue = buildReviewQueue(mistakes, sessionExercises.map((item) => item.id))
-      if (queue.length > 0) {
-        setAnswers((current) => resetReviewAnswers(current, queue))
-        setReviewQueue(queue)
-        setReviewIndex(0)
-        setFeedback(null)
-        setRunnerResult(null)
-        setRunnerStatus(null)
-        setRunnerFailure(false)
-        setHintOpen(false)
-        return
-      }
-      if (!practiceMode && hasUnfinishedLessons) {
-        const nextUnfinished = sessionExercises.find((item) => !credited.includes(item.id))
-        const nextStep = nextUnfinished ? sessionExercises.findIndex((item) => item.id === nextUnfinished.id) : -1
-        if (nextUnfinished && nextStep >= 0) {
-          setStep(nextStep)
-          onExerciseChange?.(nextUnfinished.id)
-          setFeedback(null)
-          setRunnerResult(null)
-          setRunnerStatus(null)
-          setRunnerFailure(false)
-          setHintOpen(false)
-          return
-        }
-      }
-      finishSession()
-      return
-    }
-    const nextExercise = sessionExercises[activeStep + 1]
-    setStep(activeStep + 1)
-    if (nextExercise) onExerciseChange?.(nextExercise.id)
-    setFeedback(null)
-    setRunnerResult(null)
-    setRunnerStatus(null)
-    setHintOpen(false)
-  }
-
-  const handleEditorKeyDown = (event: ReactKeyboardEvent<HTMLTextAreaElement>) => {
-    if (event.key !== 'Enter' || (!event.ctrlKey && !event.metaKey)) return
-    event.preventDefault()
-    if (feedback?.correct) continueLesson()
-    else void checkAnswer()
-  }
-
-  if (finished) {
-    const reviewedConcepts = [...new Set(sessionExercises.map((item) => item.conceptId.split('-').slice(1).join(' ')))]
-    const awardedShards = practiceMode || missionAlreadyComplete ? 0 : 25
-    return (
-      <div className="lesson-overlay">
-        <main className="mission-complete" id="main-content" tabIndex={-1}>
-          <div className="completion-burst" aria-hidden="true"><Sparkles /><span><Check /></span></div>
-          <p className="kicker">{practiceMode ? 'PRACTICE COMPLETE' : 'MISSION COMPLETE'}</p>
-          <h1 ref={completionHeadingRef} tabIndex={-1}>{mission.title}</h1>
-          <p>{practiceMode ? 'You brought the idea back from memory and strengthened it for next time.' : 'You turned unfamiliar symbols into a working report. That is programming.'}</p>
-          <div className="completion-stats">
-            <div><Zap /><b>{earnedXp || totalXp}</b><span>XP earned</span></div>
-            {practiceMode
-              ? <div><Orbit /><b>{reviewedConcepts.length}</b><span>concepts reviewed</span></div>
-              : <div><Gem /><b>{awardedShards}</b><span>star shards</span></div>}
-            <div><RotateCcw /><b>{reviewQueue.length}</b><span>mistakes repaired</span></div>
-          </div>
-          <div className="what-learned"><h2>{practiceMode ? 'Memory strengthened' : 'Systems now familiar'}</h2><div>{reviewedConcepts.map((concept) => <span key={concept}><Check size={14} /> {concept}</span>)}</div></div>
-          <button className="primary-action primary-action--wide" onClick={onExit}>Return to {practiceMode ? 'Practice Bay' : 'mission path'} <ArrowRight size={18} /></button>
-        </main>
-      </div>
-    )
-  }
-
-  return (
-    <div className="lesson-overlay">
-      <header className="lesson-header">
-        <button onClick={onExit} className="icon-button" aria-label="Exit lesson"><X /></button>
-        <div className="lesson-progress" aria-label="Lesson progress" aria-valuemax={100} aria-valuemin={0} aria-valuenow={Math.round(progressPercent)} role="progressbar"><i style={{ width: `${progressPercent}%` }} /></div>
-        <div className="lesson-step"><b>{reviewing ? reviewIndex + 1 : activeStep + 1}</b><span>/ {reviewing ? reviewQueue.length : sessionExercises.length}</span></div>
-        <div className="lesson-xp"><Zap size={17} /> {earnedXp} XP</div>
-      </header>
-
-      <main className="lesson-layout" id="main-content" tabIndex={-1}>
-        {practiceMode && !reviewing && (
-          <section className="memory-repair" aria-label="Focused practice round">
-            <Orbit size={22} />
-            <div>
-              <small>FOCUSED REVIEW · {activeStep + 1} OF {sessionExercises.length}</small>
-              <h2>Only the concepts that need another pass.</h2>
-              <p>This short session uses exercises from {mission.title}. Correct answers strengthen the next review interval.</p>
-            </div>
-            <span>SHORT SESSION</span>
-          </section>
-        )}
-        {reviewing && (
-          <section className="memory-repair" aria-label="Memory repair round">
-            <RotateCcw size={22} />
-            <div>
-              <small>MEMORY REPAIR · {reviewIndex + 1} OF {reviewQueue.length}</small>
-              <h2>This one is coming back so it can stick.</h2>
-              <p>You already corrected it once. Now try it again from a clean starting point. Reread the explanation and use the hint whenever you want.</p>
-            </div>
-            <span>NO XP LOST</span>
-          </section>
-        )}
-        <section className="lesson-briefing">
-          <p className="kicker">{exercise.eyebrow}</p>
-          <h1 ref={lessonHeadingRef} tabIndex={-1}>{exercise.title}</h1>
-          <p className="lesson-explanation">{exercise.explanation}</p>
-          <div className="analogy-card">
-            <span className="mentor-avatar"><b>π</b><i /></span>
-            <div><small>PIE-314 · SHIPBOARD VERSION</small><p>{exercise.analogy}</p></div>
-          </div>
-          <div className="micro-rule"><BookOpen size={18} /><div><b>New words are never a test</b><p>Reread the explanation or open the codebook whenever you need it.</p></div></div>
-        </section>
-
-        <section className="exercise-panel">
-          <div className="exercise-panel__head">
-            <div><small>{taskLabel}</small><h2>{exercise.prompt}</h2></div>
-            <span>{reviewing ? <><RotateCcw size={14} /> REVIEW</> : <><Trophy size={14} /> {exercise.xp} XP</>}</span>
-          </div>
-
-          {choiceExercise ? (
-            <div>
-              {exercise.type === 'prediction' && exercise.displayCode && (
-                <div className="prediction-code" aria-label="Code to predict">
-                  <div><Code2 size={15} /> READ THIS CODE</div>
-                  <pre><code>{exercise.displayCode}</code></pre>
-                </div>
-              )}
-              <div className="guided-check-note">
-                <BookOpen size={17} />
-                <p><b>This is not a prior-knowledge test.</b> {exercise.type === 'prediction' ? 'Read the code from top to bottom and use the explanation on the left.' : 'The answer was just explained on the left.'} Reread it as often as you need, then choose the sentence that matches.</p>
-              </div>
-              <fieldset className="choice-list">
-                <legend className="sr-only">{exercise.prompt}</legend>
-                {displayChoices.map((choice, index) => (
-                  <label
-                    className={answer === choice.id ? 'is-selected' : ''}
-                    key={choice.id}
-                  >
-                    <input
-                      checked={answer === choice.id}
-                      className="sr-only"
-                      disabled={feedback?.correct}
-                      name={`answer-${exercise.id}`}
-                      onChange={() => setAnswer(choice.id)}
-                      type="radio"
-                      value={choice.id}
-                    />
-                    <span aria-hidden="true">{String.fromCharCode(65 + index)}</span>
-                    <div><b>{choice.label}</b><small>{choice.detail}</small></div>
-                    <i aria-hidden="true">{answer === choice.id && <Check size={16} />}</i>
-                  </label>
-                ))}
-              </fieldset>
-              {feedback?.correct && exercise.output && <div className="exercise-result"><TerminalSquare size={15} /><span><b>RESULT</b><code>{exercise.output}</code></span></div>}
-            </div>
-          ) : exercise.type === 'ordering' ? (
-            <div>
-              <div className="guided-check-note">
-                <BookOpen size={17} />
-                <p><b>The computer reads from top to bottom.</b> Use the arrow buttons to place each piece where the computer should meet it. You can change the order as often as you need.</p>
-              </div>
-              <ol className="ordering-list" aria-label="Code pieces to order">
-                {orderedIds.map((id, index) => {
-                  const item = exercise.orderItems?.find((candidate) => candidate.id === id)
-                  if (!item) return null
-                  return (
-                    <li key={item.id}>
-                      <span>{index + 1}</span>
-                      <code>{item.code}</code>
-                      <div>
-                        <button onClick={() => moveOrderItem(index, -1)} disabled={index === 0} aria-label={`Move ${item.code} up`}><ArrowUp size={16} /></button>
-                        <button onClick={() => moveOrderItem(index, 1)} disabled={index === orderedIds.length - 1} aria-label={`Move ${item.code} down`}><ArrowDown size={16} /></button>
-                      </div>
-                    </li>
-                  )
-                })}
-              </ol>
-              <p aria-live="polite" className="sr-only" role="status">{orderingAnnouncement}</p>
-              {feedback?.correct && exercise.output && <div className="exercise-result"><TerminalSquare size={15} /><span><b>RESULT</b><code>{exercise.output}</code></span></div>}
-            </div>
-          ) : editableExercise ? (
-            <div>
-              <section className="code-onramp" aria-label="Code walkthrough">
-                <div className="code-focus">
-                  <Compass size={19} />
-                  <div>
-                    <small>YOUR ONE JOB ON THIS SCREEN</small>
-                    <b>{exercise.focus ?? `Replace the ${blankCount === 1 ? 'one' : blankCount} _____ ${blankCount === 1 ? 'blank' : 'blanks'}.`}</b>
-                    <p>Everything else is supplied scaffolding. Read it if you are curious, but you are not expected to memorize or rewrite it yet.</p>
-                  </div>
-                </div>
-                {exercise.codeGuide && exercise.codeGuide.length > 0 && (
-                  <div className="code-guide">
-                    <div className="code-guide__head">
-                      <small>DEMYSTIFY THE CODE</small>
-                      <h3>Read each piece like a sentence</h3>
-                    </div>
-                    <div className="code-guide__items">
-                      {exercise.codeGuide.map((item) => (
-                        <article key={`${exercise.id}-${item.code}`}>
-                          <code>{item.code}</code>
-                          <p>{item.plain}</p>
-                        </article>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </section>
-              <div className="code-workspace">
-                <div className="editor-bar"><span><Code2 size={15} /> {mission.language === 'python' ? 'mission.py' : mission.language === 'cpp' ? 'mission.cpp' : mission.language === 'java' ? 'Mission.java' : 'Mission.cs'}</span><small>LIVE ISOLATED RUNNER</small></div>
-                <div className="editor-body">
-                  <div className="line-numbers" aria-hidden="true">{answer.split('\n').map((_, index) => <span key={index}>{index + 1}</span>)}</div>
-                  <textarea
-                    aria-label="Code editor"
-                    aria-keyshortcuts="Control+Enter Meta+Enter"
-                    value={answer}
-                    onChange={(event) => setAnswer(event.target.value)}
-                    onKeyDown={handleEditorKeyDown}
-                    spellCheck={false}
-                    disabled={feedback?.correct || runnerBusy}
-                  />
-                </div>
-                <div className="console-pane" aria-live="polite">
-                  <div><TerminalSquare size={14} /> REAL CONSOLE OUTPUT</div>
-                  <pre>{runnerBusy
-                    ? runnerStatus === 'running' ? 'Your program is running inside a fresh isolated sandbox...' : 'Preparing a fresh isolated sandbox...'
-                    : runnerResult
-                      ? runnerResult.stdout || runnerResult.stderr || '(The program finished without printing any text.)'
-                      : 'Nothing has run yet. Complete your one small change, then select Run check.'}</pre>
-                </div>
-                {runnerResult && (
-                  <section className="runner-report" aria-label="Real runner report">
-                    <div className="runner-report__summary">
-                      <span className={runnerResult.outcome === 'completed' ? 'is-good' : 'is-alert'}>
-                        {runnerResult.diagnostic.title}
-                      </span>
-                      <small>{runnerResult.durationMs} ms · fresh sandbox destroyed after run</small>
-                    </div>
-                    <div className="runner-tests">
-                      {runnerResult.tests.map((test) => (
-                        <article key={`${runnerResult.runId}-${test.name}`}>
-                          {test.passed ? <CheckCircle2 size={15} /> : <MessageCircleQuestion size={15} />}
-                          <span><b>{test.name}</b><small>{test.message}</small></span>
-                          <i>{test.visibility === 'hidden' ? 'HIDDEN CHECK' : 'VISIBLE CHECK'}</i>
-                        </article>
-                      ))}
-                    </div>
-                    {runnerResult.stderr && (
-                      <details>
-                        <summary>Show the language's exact message</summary>
-                        <pre>{runnerResult.stderr}</pre>
-                      </details>
-                    )}
-                  </section>
-                )}
-                <div className="editor-shortcuts" aria-label="Code editor keyboard controls">
-                  <span>KEYBOARD</span>
-                  <p><kbd>Ctrl</kbd> or <kbd>⌘</kbd> + <kbd>Enter</kbd> runs the check. <kbd>Tab</kbd> moves out of the editor normally.</p>
-                </div>
-              </div>
-            </div>
-          ) : null}
-
-          <button className="hint-toggle" aria-controls="lesson-hint" aria-expanded={hintOpen} onClick={() => setHintOpen((open) => !open)}><CircleHelp size={17} /> {hintOpen ? 'Hide hint' : 'I need a hint'}</button>
-          {hintOpen && <div className="hint-box" id="lesson-hint"><Sparkles size={16} /><span><b>Small nudge</b>{exercise.hint}</span></div>}
-
-          {feedback && (
-            <div aria-live="polite" className={`feedback-box ${runnerFailure ? 'is-neutral' : feedback.correct ? 'is-correct' : 'is-wrong'}`} role="status">
-              {feedback.correct ? <CheckCircle2 /> : runnerFailure ? <CircleHelp /> : <MessageCircleQuestion />}
-              <div><b>{feedback.correct ? 'System online' : runnerFailure ? 'Runner unavailable' : 'Let’s inspect that'}</b><p>{feedback.message}</p></div>
-            </div>
-          )}
-
-          <div className="exercise-actions">
-            {!reviewing && activeStep > 0 && !feedback?.correct && <button className="secondary-action" onClick={() => { const previous = sessionExercises[activeStep - 1]; setStep(activeStep - 1); setFeedback(null); setRunnerFailure(false); if (previous) onExerciseChange?.(previous.id) }}><ArrowLeft size={17} /> Back</button>}
-            <button className="primary-action" disabled={runnerBusy} onClick={feedback?.correct ? continueLesson : () => { void checkAnswer() }}>
-              {feedback?.correct
-                ? reviewing
-                  ? reviewIndex === reviewQueue.length - 1 ? 'Complete memory repair' : 'Next review'
-                  : activeStep === sessionExercises.length - 1
-                    ? mistakes.length > 0
-                      ? 'Repair missed concepts'
-                      : practiceMode
-                        ? 'Finish practice'
-                        : hasUnfinishedLessons
-                          ? 'Complete remaining lessons'
-                          : 'Finish mission'
-                    : 'Continue'
-                : runnerBusy
-                  ? runnerStatus === 'running' ? 'Running your code...' : 'Launching sandbox...'
-                  : checkActionLabel}
-              {feedback?.correct && <ArrowRight size={18} />}
-            </button>
-          </div>
-          <p className="simulator-note">Editable code runs on the server in a new network-blocked sandbox. The sandbox is destroyed after every check. Choice and ordering questions stay in your browser because they do not execute code.</p>
-        </section>
-      </main>
-    </div>
-  )
-}
-
 function NotFoundPage({ progress }: { progress: LearnerProgress }) {
   return (
     <main className="route-message-page" id="main-content" tabIndex={-1}>
@@ -1713,7 +1358,7 @@ function AppContent() {
   const [progress, setProgress] = useState<LearnerProgress>(() => {
     const loaded = loadProgress()
     const initialRoute = parseAppRoute(window.location.pathname, window.location.search)
-    if (initialRoute.language && ['academy', 'practice', 'codebook', 'lesson', 'project'].includes(initialRoute.page)) {
+    if (initialRoute.language && ['academy', 'practice', 'practice-session', 'codebook', 'lesson', 'project'].includes(initialRoute.page)) {
       return { ...loaded, activeLanguage: initialRoute.language }
     }
     return loaded
@@ -1736,7 +1381,7 @@ function AppContent() {
     ? 'home'
     : route.page === 'courses' || route.page === 'course' || route.page === 'academy' || route.page === 'project'
       ? 'courses'
-      : route.page === 'practice' || (route.page === 'lesson' && route.practice)
+      : route.page === 'practice' || route.page === 'practice-session' || (route.page === 'lesson' && route.practice)
     ? 'practice'
     : route.page === 'codebook'
       ? 'spellbook'
@@ -1784,8 +1429,8 @@ function AppContent() {
           ? 'Courses'
           : route.page === 'course' || route.page === 'academy'
             ? track ? `${track.shortName} Foundations` : 'Course'
-        : route.page === 'practice'
-          ? `${track?.shortName} Practice Bay`
+        : route.page === 'practice' || route.page === 'practice-session'
+          ? `${track?.shortName} Practice`
           : route.page === 'codebook'
             ? `${track?.shortName} Codebook`
             : route.page === 'profile'
@@ -1805,7 +1450,7 @@ function AppContent() {
       const nextLocation = readBrowserLocation()
       const nextRoute = parseAppRoute(nextLocation.pathname, nextLocation.search)
       setLocation(nextLocation)
-      if (nextRoute.language && ['academy', 'practice', 'codebook', 'lesson', 'project'].includes(nextRoute.page)) {
+      if (nextRoute.language && ['academy', 'practice', 'practice-session', 'codebook', 'lesson', 'project'].includes(nextRoute.page)) {
         setProgress((current) => current.activeLanguage === nextRoute.language
           ? current
           : { ...current, activeLanguage: nextRoute.language ?? current.activeLanguage })
@@ -1958,13 +1603,13 @@ function AppContent() {
 
   const normalizedProgress = useMemo(() => {
     const dailyProgress = progress.dailyXpDate === dateKey(new Date()) ? progress : { ...progress, dailyXp: 0 }
-    if (route.language && ['academy', 'practice', 'codebook', 'lesson', 'project'].includes(route.page)) {
+    if (route.language && ['academy', 'practice', 'practice-session', 'codebook', 'lesson', 'project'].includes(route.page)) {
       return { ...dailyProgress, activeLanguage: route.language }
     }
     return dailyProgress
   }, [progress, route.language, route.page])
 
-  const updateProgress = (nextProgress: LearnerProgress) => setProgress(nextProgress)
+  const updateProgress: Dispatch<SetStateAction<LearnerProgress>> = setProgress
 
   const signIn = () => {
     window.location.assign('/api/auth/github/start')
@@ -1997,9 +1642,11 @@ function AppContent() {
 
   const reset = () => {
     const message = syncEnabledRef.current
-      ? 'Reset all SeePoundCoffeePie progress? The empty record will replace the synchronized account copy and return this browser to cadet intake.'
-      : 'Reset all local SeePoundCoffeePie progress and return to cadet intake?'
+      ? 'Reset all SeePoundCoffeePie learning progress? The empty record will replace the synchronized account copy and return this browser to beginner intake. Saved project code and local check summaries will stay on this browser.'
+      : 'Reset all local SeePoundCoffeePie learning progress and return to beginner intake? Saved project code and local check summaries will stay on this browser.'
     if (window.confirm(message)) {
+      const sessionStorage = practiceSessionStorage()
+      tracks.forEach((track) => clearPracticeSession(track.id, sessionStorage))
       setProgress(initialProgress())
       navigateTo('/start')
     }
@@ -2145,12 +1792,31 @@ function AppContent() {
     )
   }
 
+  if (route.page === 'practice-session') {
+    const language = route.language ?? progress.activeLanguage
+    return (
+      <>
+        {authNotice && <AuthNotice message={authNotice} onDismiss={() => setAuthNotice(null)} />}
+        {syncDialog}
+        <PracticeSessionRoute
+          key={`practice-session-${language}`}
+          onNavigate={navigateTo}
+          onProgress={updateProgress}
+          practiceStep={route.practiceStep ?? 1}
+          progress={{ ...normalizedProgress, activeLanguage: language }}
+        />
+      </>
+    )
+  }
+
   if (route.page === 'lesson') {
     const track = trackById(route.language ?? progress.activeLanguage)
     const missionIndex = track.missions.findIndex((mission) => mission.id === route.missionId)
     const mission = track.missions[missionIndex]
     const available = mission && mission.language === track.id
-      && missionAvailability(track, missionIndex, progress.completedMissions) === 'available'
+      && (route.practice
+        ? progress.completedMissions.includes(mission.id)
+        : missionAvailability(track, missionIndex, progress.completedMissions) === 'available')
 
     const routeExercise = route.exerciseId
       ? mission?.exercises.find((exercise) => exercise.id === route.exerciseId)
@@ -2159,9 +1825,14 @@ function AppContent() {
       return <NotFoundPage progress={normalizedProgress} />
     }
 
-    const practiceConceptIds = route.conceptIds.filter((conceptId) => (
-      mission.exercises.some((exercise) => exercise.conceptId === conceptId)
-    ))
+    const missionConceptIds = new Set(mission.exercises.map((exercise) => exercise.conceptId))
+    const requestedConceptsAreKnown = route.conceptIds.every((conceptId) => missionConceptIds.has(conceptId))
+
+    if (route.practice && !requestedConceptsAreKnown) {
+      return <NotFoundPage progress={normalizedProgress} />
+    }
+
+    const practiceConceptIds = route.conceptIds
 
     if (!available) {
       const prerequisite = track.missions[missionIndex - 1]
@@ -2183,8 +1854,10 @@ function AppContent() {
             <main className="content-page">
               <section className="route-message-card route-message-card--inside">
                 <p className="kicker"><LockKeyhole size={15} /> Module locked</p>
-                <h1>{mission.title} is still ahead</h1>
-                <p>Complete {prerequisite?.title ?? 'the earlier course work'} first. The course keeps the steps in order so each new idea has a foundation.</p>
+                <h1>{route.practice ? `Complete ${mission.title} before reviewing it` : `${mission.title} is still ahead`}</h1>
+                <p>{route.practice
+                  ? 'Practice only uses modules you have finished. Return to the course and complete this module in the normal lesson flow first.'
+                  : `Complete ${prerequisite?.title ?? 'the earlier course work'} first. The course keeps the steps in order so each new idea has a foundation.`}</p>
                 <AppLink className="primary-action" to={coursePath(track.id)}>Return to {track.shortName} Foundations</AppLink>
               </section>
             </main>
@@ -2197,16 +1870,18 @@ function AppContent() {
       <>
         {authNotice && <AuthNotice message={authNotice} onDismiss={() => setAuthNotice(null)} />}
         {syncDialog}
-        <LessonPlayer
-          key={`${route.practice ? 'practice' : 'academy'}-${mission.id}-${practiceConceptIds.join('-')}`}
-          initialExerciseId={route.practice ? undefined : routeExercise?.id}
-          mission={mission}
-          onExerciseChange={route.practice ? undefined : (exerciseId) => navigateTo(lessonPath(track.id, mission.id, exerciseId))}
-          practiceConceptIds={route.practice ? practiceConceptIds : undefined}
-          progress={progress}
-          onProgress={updateProgress}
-          onExit={() => navigateTo(route.practice ? practicePath(track.id) : coursePath(track.id))}
-        />
+        <Suspense fallback={<LessonPlayerFallback practice={route.practice} />}>
+          <LessonPlayer
+            key={`${route.practice ? 'practice' : 'academy'}-${mission.id}-${practiceConceptIds.join('-')}`}
+            initialExerciseId={route.practice ? undefined : routeExercise?.id}
+            mission={mission}
+            onExerciseChange={route.practice ? undefined : (exerciseId) => navigateTo(lessonPath(track.id, mission.id, exerciseId))}
+            practiceConceptIds={route.practice ? practiceConceptIds : undefined}
+            progress={progress}
+            onProgress={updateProgress}
+            onExit={() => navigateTo(route.practice ? practicePath(track.id) : coursePath(track.id))}
+          />
+        </Suspense>
       </>
     )
   }
@@ -2286,7 +1961,7 @@ function AppContent() {
             progress={route.language ? { ...normalizedProgress, activeLanguage: route.language } : normalizedProgress}
           />
         )}
-        {route.page === 'practice' && <PracticeBay progress={normalizedProgress} onStart={(mission, practiceConceptIds) => navigateTo(practiceMissionPath(mission.language, mission.id, practiceConceptIds))} />}
+        {route.page === 'practice' && <PracticeBay progress={normalizedProgress} />}
         {route.page === 'codebook' && <Codebook progress={normalizedProgress} />}
         {route.page === 'profile' && (
           <CadetRecord

@@ -4,7 +4,7 @@
 
 SeePoundCoffeePie helps an absolute beginner move from “code looks like punctuation” to “I can read, explain, change, test, and build a small program.”
 
-The academy should feel like joining the engineering and command crew of a strange living starship. Space operations provide the structure. Fantasy technology, eccentric crew problems, and dry workplace humor keep the examples memorable. The stories are original and do not depend on a licensed universe.
+The academy puts plain explanations, readable layouts, and the four language symbols first. Original examples can draw from everyday tools, fantasy, science fiction, engineering, and dry workplace humor when a story makes an idea easier to remember. No single theme should overpower the lesson, and no example depends on a licensed universe.
 
 ## The learner we design for
 
@@ -25,7 +25,7 @@ Nothing in the first sector assumes prior command-line, IDE, Git, or computer-sc
 Every lesson uses the same seven-part rhythm:
 
 1. **Orient.** Name one new concept in plain language.
-2. **Relate.** Connect it to a shipboard analogy.
+2. **Relate.** Connect it to one concrete, familiar analogy.
 3. **Unmask.** Separate the learner’s one small job from supplied scaffolding, then decode every unfamiliar line and symbol in plain language.
 4. **Predict.** Ask the learner what the instruction should do, while making clear that the answer was just taught and prior knowledge is not expected.
 5. **Type.** Make the learner edit only the relevant code before asking them to build larger structures.
@@ -44,9 +44,9 @@ The mission map determines the next recommended lesson. A true beginner should n
 
 Wrong answers do not consume hearts, lives, energy, or paid currency. A mistake produces a specific explanation, another attempt, and an earlier review date. The system rewards returning and learning, not avoiding risk.
 
-Before the current missions award completion, each exercise missed during that run returns in a short memory-repair round. The answer is reset so the learner retrieves it again, all teaching material remains available, and the repaired answer strengthens memory without awarding the exercise XP twice.
+Before a module completes, each exercise missed during that run returns once in a short memory-repair round. The answer is reset so the learner retrieves it again, all teaching material remains available, and the repair updates memory strength and timing without awarding XP.
 
-The current Practice Bay keeps review queues separate by language. It recommends the completed mission that covers the greatest number of concepts due now, uses lower memory strength to break close matches, and creates one focused exercise for each covered concept. A clear queue still offers the latest completed mission as optional practice. Focused completion strengthens review intervals and awards exercise XP, but it does not award mission completion or star shards again.
+The current Practice page keeps review sets separate by language. It chooses at most five authored questions across completed modules, brings due and weaker ideas back first, and keeps each short set varied. The learner sees what will return, where it came from, and why it was selected before starting. Practice updates the existing memory counts and next review date. It awards no XP, star shards, or module completion.
 
 ### Helpful hints without answer dumping
 
@@ -93,12 +93,12 @@ Editable exercises now run in isolated, ephemeral workers. Choice, prediction, a
 
 | System | Learner purpose | Current behavior |
 | --- | --- | --- |
-| XP | Makes effort visible | Awarded once per correctly completed step in a mission or focused-practice session |
+| XP | Makes effort visible | Awarded during normal module work and on the first completion of each project checkpoint. Completed-module replays, memory repair, and adaptive Practice award zero XP |
 | Daily goal | Creates a small finish line | Learner chooses 5, 10, or 15 minutes, represented by an XP target in the prototype |
-| Streak | Supports a return habit | Advances when a mission is completed on a new consecutive day |
-| Star shards | Marks meaningful completion | Awarded once per mission, not on replay |
+| Streak | Supports a return habit | Advances when a module is completed on a new consecutive day |
+| Star shards | Marks meaningful completion | Awarded once per module, not on replay |
 | Memory strength | Controls review timing | Correct answers increase the interval; mistakes shorten it |
-| Mission badges | Show demonstrated capability | Mission completion appears on the path and cadet record |
+| Module badges | Show demonstrated capability | Module completion appears on the path and learner record |
 
 Competitive leaderboards are not part of the first product. They can motivate some learners but can also reward speed and XP optimization over understanding. Cooperative crew goals are a better future experiment.
 
@@ -214,8 +214,8 @@ Phase 4B proves that the project system is genuinely multi-language with one com
 - `Your First Compiled Program` follows C++ Foundations with 12 ordered checkpoints that build an Observation Desk program.
 - The project begins before syntax by explaining source code, compilation, executables, and running. It then opens the `main` frame, console output, semicolons, explicit types, full-line text input, typed integer input, arithmetic, output chains, and assembly.
 - A deliberate missing-semicolon exercise invites the learner to run broken source first. The project workspace shows the friendly diagnostic before placing exact compiler text in an optional disclosure.
-- The public application loads only small Python and C++ manifests. The shared studio and each complete curriculum are separate route-loaded chunks, so opening one language does not download the other language's teaching copy.
-- Project drafts and history remain keyed by project and checkpoint. Existing version 1 local, backup, synchronization, and remote progress records accept both projects without a migration and preserve Phase 4A identifiers.
+- This milestone introduced language-specific manifest loading for Python and C++. The same split now covers C# and Java, so opening one project does not download another project's teaching copy.
+- Drafts and history stay keyed by project and checkpoint. The version 1 record expanded from two projects to four without changing earlier identifiers.
 - The final Observation Desk uses changing name and detail-count cases, including a spaced name and zero, plus trusted compiler-derived structural facts for the exact straight-line grammar taught by the project.
 
 Phase 4C adds the first complete C# path without assuming that .NET vocabulary is already familiar:
@@ -238,9 +238,20 @@ Phase 4D completes the first guided-project pass across all four language school
 - A pinned Java compiler-tree analyzer accepts only the taught two-member `Main` class and nine-statement `main` frame. Unicode escapes, extra imports or types, added members, alternate input shapes, moved statements, helper expressions, unreachable code, and unsupported control flow fail closed.
 - The completed program remains in browser-local draft storage and downloads deliberately as `Main.java`.
 
+Phase 4E turns the existing one-mission review scheduler into bounded adaptive practice:
+
+- Practice selects at most five unique authored exercises across completed foundation missions in the active language, with at most two questions from one mission.
+- Due ideas come first, weaker future ideas follow, and a strong familiar idea can fill an optional refresh. Stable dates, strengths, misses, authored order, and identifiers make the set deterministic.
+- `/practice/:language/session` is a bookmarkable session entry. Its numbered routes preserve Back, Forward, and refresh position within the same open tab without putting weak concept identifiers in the URL. The selected exercise IDs stay only in a validated tab-scoped record while the set is open.
+- New learners are linked to the canonical first lesson. Unfinished material, other languages, project concepts, unknown identifiers, duplicate concepts, and crafted legacy routes cannot enter the set.
+- Direct lesson URLs do not bypass first-time sequencing. The player routes through every unanswered authored lesson before memory repair or module completion, even when the learner opens a module's final lesson first.
+- Adaptive answers update the existing aggregate concept schedule but award no replayable XP or shards. Runner failures do not weaken a concept.
+- Browser progress now passes through a tolerant allowlisted normalizer, while backup, synchronization, and Worker requests keep the strict version 1 parser. Equal-strength device merges keep the earlier review date.
+- Lesson and project runner tokens reject delayed results after internal navigation, exit, reset, overview changes, or unmount. A full learning-progress reset also clears every language's tab-scoped Practice queue.
+- The learner record, backup format, D1 schema, runner assignments, compiler images, and durable privacy boundary remain unchanged.
+
 The remaining Phase 4 work is to:
 
-- generate adaptive practice from mastered and weak concepts under strict curriculum constraints;
 - define a deliberate portfolio export instead of treating a raw source download as a public portfolio;
 - evaluate cooperative learning only after a separate privacy, child-safety, and moderation review, and before considering competitive leaderboards.
 
@@ -254,6 +265,6 @@ A lesson is ready only when:
 - incorrect answers receive specific, actionable feedback;
 - keyboard-only completion works;
 - the mobile layout remains usable at 390 CSS pixels wide;
-- progress cannot be awarded twice by repeating the same completion action;
+- replaying a completed module or completed project cannot add XP or shards, and adaptive Practice awards no rewards;
 - automated tests pass;
 - a human completes the lesson in a real browser.

@@ -1,6 +1,6 @@
 import { projectManifests } from '../data/project-manifests'
 import type { ConceptProgress, LearnerProgress } from '../types'
-import { parseLearnerProgress } from './progress-backup'
+import { parseLearnerProgress } from './progress-schema'
 
 export const PROGRESS_RECORD_VERSION = 1 as const
 
@@ -42,12 +42,16 @@ function mergeConcept(
 ): ConceptProgress | undefined {
   if (!local) return remote
   if (!remote) return local
-  const strongest = local.strength >= remote.strength ? local : remote
+  const dueAt = local.strength > remote.strength
+    ? local.dueAt
+    : remote.strength > local.strength
+      ? remote.dueAt
+      : local.dueAt <= remote.dueAt ? local.dueAt : remote.dueAt
   return {
     strength: Math.max(local.strength, remote.strength),
     correct: Math.max(local.correct, remote.correct),
     incorrect: Math.max(local.incorrect, remote.incorrect),
-    dueAt: strongest.dueAt,
+    dueAt,
   }
 }
 
@@ -67,6 +71,28 @@ function withProjectCompletionDefaults(progress: LearnerProgress): LearnerProgre
       projectCheckpointIds,
     ),
     completedProjects: projectCompletionIds(progress.completedProjects, projectIds),
+  }
+}
+
+function canonicalProgress(progress: LearnerProgress): LearnerProgress {
+  const normalized = withProjectCompletionDefaults(progress)
+  return {
+    callsign: normalized.callsign,
+    activeLanguage: normalized.activeLanguage,
+    dailyGoal: normalized.dailyGoal,
+    xp: normalized.xp,
+    dailyXp: normalized.dailyXp,
+    dailyXpDate: normalized.dailyXpDate,
+    starShards: normalized.starShards,
+    streak: normalized.streak,
+    lastStudyDate: normalized.lastStudyDate,
+    completedMissions: [...normalized.completedMissions].sort(),
+    completedProjectCheckpoints: [...normalized.completedProjectCheckpoints].sort(),
+    completedProjects: [...normalized.completedProjects].sort(),
+    conceptProgress: Object.fromEntries(
+      Object.entries(normalized.conceptProgress).sort(([left], [right]) => left.localeCompare(right)),
+    ),
+    onboardingComplete: normalized.onboardingComplete,
   }
 }
 
@@ -125,7 +151,7 @@ export function hasMeaningfulProgress(progress: LearnerProgress): boolean {
 }
 
 export function progressRecordsMatch(left: LearnerProgress, right: LearnerProgress): boolean {
-  return JSON.stringify(withProjectCompletionDefaults(left)) === JSON.stringify(withProjectCompletionDefaults(right))
+  return JSON.stringify(canonicalProgress(left)) === JSON.stringify(canonicalProgress(right))
 }
 
 async function readJson(response: Response): Promise<Record<string, unknown>> {

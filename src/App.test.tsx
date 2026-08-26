@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import App from './App'
 import { cppCompiledProject } from './data/cpp-compiled-project'
@@ -71,6 +71,7 @@ describe('beginner lesson interactions', () => {
       value: vi.fn(),
     })
     window.localStorage.clear()
+    window.sessionStorage.clear()
     window.localStorage.setItem(progressKey, JSON.stringify({
       ...initialProgress('python'),
       callsign: 'Test Cadet',
@@ -89,7 +90,7 @@ describe('beginner lesson interactions', () => {
   async function openFirstEditableStep() {
     render(<App />)
     fireEvent.click(screen.getByRole('link', { name: /Meet the console/iu }))
-    fireEvent.click(screen.getByRole('radio', { name: /Shows text from the program/iu }))
+    fireEvent.click(await screen.findByRole('radio', { name: /Shows text from the program/iu }))
     fireEvent.click(screen.getByRole('button', { name: 'Check answer' }))
     fireEvent.click(screen.getByRole('button', { name: 'Continue' }))
     return screen.getByRole('textbox', { name: 'Code editor' })
@@ -105,7 +106,9 @@ describe('beginner lesson interactions', () => {
     expect(await screen.findByText('System online')).toBeTruthy()
     expect(screen.getByText('Signal online', { selector: 'pre' })).toBeTruthy()
     expect(screen.getByLabelText('Real runner report').textContent).toContain('fresh sandbox destroyed after run')
+    expect(screen.getAllByRole('status').filter((status) => status.textContent?.trim())).toHaveLength(1)
     expect(editor.getAttribute('aria-keyshortcuts')).toBe('Control+Enter Meta+Enter')
+    expect(screen.getByRole('button', { name: 'Exit lesson' })).toBeTruthy()
   })
 
   it('keeps Tab available for normal keyboard navigation', async () => {
@@ -116,12 +119,479 @@ describe('beginner lesson interactions', () => {
     expect(screen.getByLabelText('Code editor keyboard controls').textContent).toContain('Tab moves out of the editor normally')
   })
 
-  it('opens the completed mission that best covers the active review queue', async () => {
+  it('ignores a runner response after routing to another exercise', async () => {
+    type RunResult = Awaited<ReturnType<typeof runExercise>>
+    let finishRun!: (result: RunResult) => void
+    const delayedRun = new Promise<RunResult>((resolve) => {
+      finishRun = resolve
+    })
+    vi.mocked(runExercise).mockImplementationOnce((_exerciseId, _language, _source, onStatus) => {
+      onStatus?.('running')
+      return delayedRun
+    })
+    const editor = await openFirstEditableStep()
+    fireEvent.change(editor, {
+      target: { value: '# Tell the bridge our signal is ready\nprint("Signal online")' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Run check' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Back' }))
+
+    expect(await screen.findByRole('heading', { name: 'Meet the console' })).toBeTruthy()
+    await act(async () => {
+      finishRun({
+        version: 1,
+        runId: 'run_stale_response_1234567890',
+        outcome: 'completed',
+        stdout: 'Signal online\n',
+        stderr: '',
+        exitCode: 0,
+        durationMs: 18,
+        truncated: false,
+        limit: null,
+        tests: [
+          { name: 'Visible console check', visibility: 'visible', passed: true, message: 'The output matched.' },
+          { name: 'Finish without a language error', visibility: 'hidden', passed: true, message: 'The program finished.' },
+        ],
+        diagnostic: { title: 'Program finished', explanation: 'The program ran.', suggestion: 'Continue.', line: null },
+      })
+      await delayedRun
+    })
+
+    const firstAnswer = screen.getByRole('radio', { name: /Shows text from the program/iu }) as HTMLInputElement
+    const firstCheck = screen.getByRole('button', { name: 'Check answer' }) as HTMLButtonElement
+    expect(screen.queryByText('System online')).toBeNull()
+    expect(screen.queryByLabelText('Real runner report')).toBeNull()
+    expect(firstAnswer.disabled).toBe(false)
+    expect(firstCheck.disabled).toBe(false)
+  })
+
+  it('ignores a runner response after using Back inside legacy practice', async () => {
+    type RunResult = Awaited<ReturnType<typeof runExercise>>
+    let finishRun!: (result: RunResult) => void
+    const delayedRun = new Promise<RunResult>((resolve) => {
+      finishRun = resolve
+    })
+    vi.mocked(runExercise).mockImplementationOnce((_exerciseId, _language, _source, onStatus) => {
+      onStatus?.('running')
+      return delayedRun
+    })
+    window.localStorage.setItem(progressKey, JSON.stringify({
+      ...initialProgress('python'),
+      callsign: 'Legacy Practice Cadet',
+      onboardingComplete: true,
+      xp: 120,
+      dailyXp: 20,
+      dailyXpDate: dateKey(new Date()),
+      starShards: 25,
+      completedMissions: ['py-first-spark'],
+    }))
+    window.history.replaceState(
+      {},
+      '',
+      '/practice/python/missions/py-first-spark?concepts=python-console,python-print',
+    )
+
+    render(<App />)
+    fireEvent.click(await screen.findByRole('radio', { name: /Shows text from the program/iu }))
+    fireEvent.click(screen.getByRole('button', { name: 'Check answer' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Continue' }))
+
+    const editor = await screen.findByRole('textbox', { name: 'Code editor' })
+    await waitFor(() => {
+      const stored = JSON.parse(window.localStorage.getItem(progressKey) ?? '{}')
+      expect(stored.conceptProgress['python-console']).toMatchObject({ correct: 1, incorrect: 0 })
+    })
+    const progressBeforeRun = JSON.parse(window.localStorage.getItem(progressKey) ?? '{}')
+    fireEvent.change(editor, {
+      target: { value: '# Tell the bridge our signal is ready\nprint("Signal online")' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Run check' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Back' }))
+
+    expect(await screen.findByRole('heading', { name: 'Meet the console' })).toBeTruthy()
+    await act(async () => {
+      finishRun({
+        version: 1,
+        runId: 'run_stale_legacy_practice_1234567890',
+        outcome: 'completed',
+        stdout: 'Signal online\n',
+        stderr: '',
+        exitCode: 0,
+        durationMs: 18,
+        truncated: false,
+        limit: null,
+        tests: [
+          { name: 'Visible console check', visibility: 'visible', passed: true, message: 'The output matched.' },
+          { name: 'Finish without a language error', visibility: 'hidden', passed: true, message: 'The program finished.' },
+        ],
+        diagnostic: { title: 'Program finished', explanation: 'The program ran.', suggestion: 'Continue.', line: null },
+      })
+      await delayedRun
+    })
+
+    const progressAfterRun = JSON.parse(window.localStorage.getItem(progressKey) ?? '{}')
+    expect(progressAfterRun).toEqual(progressBeforeRun)
+    expect(progressAfterRun.xp).toBe(120)
+    expect(progressAfterRun.dailyXp).toBe(20)
+    expect(progressAfterRun.starShards).toBe(25)
+    expect(progressAfterRun.conceptProgress['python-print']).toBeUndefined()
+    expect(screen.queryByText('System online')).toBeNull()
+    expect(screen.queryByLabelText('Real runner report')).toBeNull()
+    expect(screen.getByRole('button', { name: 'Check answer' })).toBeTruthy()
+  })
+
+  it('ignores a runner response after exiting the lesson', async () => {
+    type RunResult = Awaited<ReturnType<typeof runExercise>>
+    let finishRun!: (result: RunResult) => void
+    const delayedRun = new Promise<RunResult>((resolve) => {
+      finishRun = resolve
+    })
+    vi.mocked(runExercise).mockImplementationOnce((_exerciseId, _language, _source, onStatus) => {
+      onStatus?.('running')
+      return delayedRun
+    })
+    const editor = await openFirstEditableStep()
+    await waitFor(() => {
+      const stored = JSON.parse(window.localStorage.getItem(progressKey) ?? '{}')
+      expect(stored.xp).toBe(8)
+      expect(stored.conceptProgress['python-print']).toBeUndefined()
+    })
+    const progressBeforeExit = JSON.parse(window.localStorage.getItem(progressKey) ?? '{}')
+    fireEvent.change(editor, {
+      target: { value: '# Tell the bridge our signal is ready\nprint("Signal online")' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Run check' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Exit lesson' }))
+
+    expect(await screen.findByRole('heading', { name: 'Python Foundations' })).toBeTruthy()
+    await act(async () => {
+      finishRun({
+        version: 1,
+        runId: 'run_after_exit_123456789012',
+        outcome: 'completed',
+        stdout: 'Signal online\n',
+        stderr: '',
+        exitCode: 0,
+        durationMs: 18,
+        truncated: false,
+        limit: null,
+        tests: [
+          { name: 'Visible console check', visibility: 'visible', passed: true, message: 'The output matched.' },
+          { name: 'Finish without a language error', visibility: 'hidden', passed: true, message: 'The program finished.' },
+        ],
+        diagnostic: { title: 'Program finished', explanation: 'The program ran.', suggestion: 'Continue.', line: null },
+      })
+      await delayedRun
+    })
+
+    const progressAfterExit = JSON.parse(window.localStorage.getItem(progressKey) ?? '{}')
+    expect(progressAfterExit).toEqual(progressBeforeExit)
+    expect(screen.getByRole('heading', { name: 'Python Foundations' })).toBeTruthy()
+    expect(screen.queryByText('System online')).toBeNull()
+    expect(screen.queryByLabelText('Real runner report')).toBeNull()
+  })
+
+  it('repairs a missed adaptive answer without awarding XP, shards, or completion', async () => {
+    const routingMission = trackById('java').missions[1]
+    const routingConcepts = [...new Set(routingMission.exercises.map((exercise) => exercise.conceptId))]
+    const conceptProgress = Object.fromEntries(routingConcepts.map((id) => [id, {
+      strength: 4,
+      correct: 1,
+      incorrect: 0,
+      dueAt: '2026-09-30',
+    }]))
+    conceptProgress['java-booleans'] = {
+      strength: 1,
+      correct: 1,
+      incorrect: 1,
+      dueAt: dateKey(new Date()),
+    }
     window.localStorage.setItem(progressKey, JSON.stringify({
       ...initialProgress('java'),
       callsign: 'Test Cadet',
       onboardingComplete: true,
-      completedMissions: ['java-coffee-protocol', 'java-routing-orders'],
+      xp: 80,
+      dailyXp: 20,
+      dailyXpDate: dateKey(new Date()),
+      starShards: 25,
+      completedMissions: ['java-routing-orders'],
+      conceptProgress,
+    }))
+    window.history.replaceState({}, '', '/academy/java')
+
+    render(<App />)
+    fireEvent.click(screen.getByRole('link', { name: 'Practice' }))
+
+    const reviewLink = screen.getByRole('link', { name: 'Start 2-question review' })
+    expect(reviewLink.getAttribute('href')).toBe('/practice/java/session')
+    expect(screen.getByRole('heading', { name: 'What you will practice' })).toBeTruthy()
+    const reviewPlan = screen.getByRole('list', { name: 'Practice questions' })
+    expect(within(reviewPlan).getAllByRole('listitem')).toHaveLength(2)
+    expect(screen.getByText(/awards no XP or star shards/iu)).toBeTruthy()
+    fireEvent.click(reviewLink)
+
+    expect(await screen.findByRole('heading', { name: 'Ask a routing question' })).toBeTruthy()
+    expect(screen.getByText('PRACTICE · QUESTION 1 OF 2')).toBeTruthy()
+    expect(screen.getByRole('button', { name: 'Exit practice' })).toBeTruthy()
+
+    fireEvent.click(screen.getByRole('radio', { name: /up and downThose can/iu }))
+    fireEvent.click(screen.getByRole('button', { name: 'Check answer' }))
+    expect(screen.getByText(/inspect that/iu)).toBeTruthy()
+    fireEvent.click(screen.getByRole('radio', { name: /true and falseJava writes/iu }))
+    fireEvent.click(screen.getByRole('button', { name: 'Check answer' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Continue' }))
+
+    expect(await screen.findByRole('heading', { name: 'Read the galley count' })).toBeTruthy()
+    fireEvent.click(screen.getByRole('radio', { name: /Pods: 12Java joins/iu }))
+    fireEvent.click(screen.getByRole('button', { name: 'Check answer' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Repair missed concepts' }))
+
+    expect(await screen.findByRole('heading', { name: 'Ask a routing question' })).toBeTruthy()
+    expect(screen.getByText('MEMORY REPAIR · 1 OF 1')).toBeTruthy()
+    fireEvent.click(screen.getByRole('radio', { name: /true and falseJava writes/iu }))
+    fireEvent.click(screen.getByRole('button', { name: 'Check answer' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Complete memory repair' }))
+
+    expect(screen.getByText('PRACTICE COMPLETE')).toBeTruthy()
+    expect(screen.getByText('concepts reviewed')).toBeTruthy()
+    expect(screen.queryByText('XP earned')).toBeNull()
+    expect(screen.queryByText('star shards')).toBeNull()
+    await waitFor(() => {
+      const stored = JSON.parse(window.localStorage.getItem(progressKey) ?? '{}')
+      expect(stored.starShards).toBe(25)
+      expect(stored.xp).toBe(80)
+      expect(stored.dailyXp).toBe(20)
+      expect(stored.completedMissions).toEqual(['java-routing-orders'])
+      expect(stored.conceptProgress['java-booleans']).toMatchObject({
+        strength: 2,
+        correct: 3,
+        incorrect: 2,
+      })
+    })
+    const durableRecord = window.localStorage.getItem(progressKey) ?? ''
+    expect(durableRecord).not.toContain('up and down')
+    expect(durableRecord).not.toContain('true and false')
+    expect(durableRecord).not.toContain('Pods: 12')
+  })
+
+  it('clears practice feedback when browser history revisits routed questions', async () => {
+    const routingMission = trackById('java').missions[1]
+    const routingConcepts = [...new Set(routingMission.exercises.map((exercise) => exercise.conceptId))]
+    const conceptProgress = Object.fromEntries(routingConcepts.map((id) => [id, {
+      strength: 4,
+      correct: 1,
+      incorrect: 0,
+      dueAt: '2026-09-30',
+    }]))
+    conceptProgress['java-booleans'] = {
+      strength: 1,
+      correct: 1,
+      incorrect: 1,
+      dueAt: dateKey(new Date()),
+    }
+    window.localStorage.setItem(progressKey, JSON.stringify({
+      ...initialProgress('java'),
+      callsign: 'History Cadet',
+      onboardingComplete: true,
+      completedMissions: ['java-routing-orders'],
+      conceptProgress,
+    }))
+    window.history.replaceState({}, '', '/practice/java')
+
+    render(<App />)
+    fireEvent.click(screen.getByRole('link', { name: 'Start 2-question review' }))
+    fireEvent.click(await screen.findByRole('radio', { name: /true and falseJava writes/iu }))
+    fireEvent.click(screen.getByRole('button', { name: 'Check answer' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Continue' }))
+
+    expect(await screen.findByRole('heading', { name: 'Read the galley count' })).toBeTruthy()
+    const wrongAnswer = screen.getByRole('radio', { name: /Pods: podCountWithout quotes/iu }) as HTMLInputElement
+    fireEvent.click(wrongAnswer)
+    fireEvent.click(screen.getByRole('button', { name: 'I need a hint' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Check answer' }))
+    expect(screen.getByText(/inspect that/iu)).toBeTruthy()
+    expect(wrongAnswer.checked).toBe(true)
+
+    window.history.back()
+
+    expect(await screen.findByRole('heading', { name: 'Ask a routing question' })).toBeTruthy()
+    await waitFor(() => expect(screen.queryByText(/inspect that/iu)).toBeNull())
+    const firstAnswer = screen.getByRole('radio', { name: /true and falseJava writes/iu }) as HTMLInputElement
+    const firstCheck = screen.getByRole('button', { name: 'Check answer' }) as HTMLButtonElement
+    expect(firstAnswer.checked).toBe(true)
+    expect(firstAnswer.disabled).toBe(false)
+    expect(firstCheck.disabled).toBe(false)
+    expect(screen.queryByText('Small nudge')).toBeNull()
+
+    window.history.forward()
+
+    expect(await screen.findByRole('heading', { name: 'Read the galley count' })).toBeTruthy()
+    await waitFor(() => expect(screen.queryByText(/inspect that/iu)).toBeNull())
+    const restoredWrongAnswer = screen.getByRole('radio', { name: /Pods: podCountWithout quotes/iu }) as HTMLInputElement
+    const secondCheck = screen.getByRole('button', { name: 'Check answer' }) as HTMLButtonElement
+    expect(restoredWrongAnswer.checked).toBe(true)
+    expect(restoredWrongAnswer.disabled).toBe(false)
+    expect(secondCheck.disabled).toBe(false)
+    expect(screen.queryByText('Small nudge')).toBeNull()
+  })
+
+  it('requires every selected question before a direct final practice step can finish', async () => {
+    const routingMission = trackById('java').missions[1]
+    const routingConcepts = [...new Set(routingMission.exercises.map((exercise) => exercise.conceptId))]
+    const conceptProgress = Object.fromEntries(routingConcepts.map((id) => [id, {
+      strength: 4,
+      correct: 1,
+      incorrect: 0,
+      dueAt: '2026-09-30',
+    }]))
+    conceptProgress['java-booleans'] = {
+      strength: 1,
+      correct: 1,
+      incorrect: 1,
+      dueAt: dateKey(new Date()),
+    }
+    window.localStorage.setItem(progressKey, JSON.stringify({
+      ...initialProgress('java'),
+      callsign: 'Direct Step Cadet',
+      onboardingComplete: true,
+      completedMissions: ['java-routing-orders'],
+      conceptProgress,
+    }))
+    window.history.replaceState({}, '', '/practice/java/session/2')
+
+    const firstRender = render(<App />)
+    expect(await screen.findByRole('heading', { name: 'Read the galley count' })).toBeTruthy()
+    firstRender.unmount()
+
+    render(<App />)
+    fireEvent.click(await screen.findByRole('radio', { name: /Pods: 12Java joins/iu }))
+    fireEvent.click(screen.getByRole('button', { name: 'Check answer' }))
+    expect(screen.queryByText('PRACTICE COMPLETE')).toBeNull()
+    fireEvent.click(screen.getByRole('button', { name: 'Continue' }))
+
+    expect(window.location.pathname).toBe('/practice/java/session')
+    expect(await screen.findByRole('heading', { name: 'Ask a routing question' })).toBeTruthy()
+    fireEvent.click(screen.getByRole('radio', { name: /up and downThose can describe/iu }))
+    fireEvent.click(screen.getByRole('button', { name: 'Check answer' }))
+    expect(screen.getByText(/inspect that/iu)).toBeTruthy()
+    fireEvent.click(screen.getByRole('radio', { name: /true and falseJava writes/iu }))
+    fireEvent.click(screen.getByRole('button', { name: 'Check answer' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Repair missed concepts' }))
+
+    expect(screen.getByText('MEMORY REPAIR · 1 OF 1')).toBeTruthy()
+    const repairedAnswer = screen.getByRole('radio', { name: /true and falseJava writes/iu }) as HTMLInputElement
+    expect(repairedAnswer.checked).toBe(false)
+    fireEvent.click(repairedAnswer)
+    fireEvent.click(screen.getByRole('button', { name: 'Check answer' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Complete memory repair' }))
+
+    expect(screen.getByText('PRACTICE COMPLETE')).toBeTruthy()
+    expect(screen.getByText('questions completed').previousSibling?.textContent).toBe('2')
+  })
+
+  it('requires every first-time lesson before repair or module completion from a direct final URL', async () => {
+    window.localStorage.setItem(progressKey, JSON.stringify({
+      ...initialProgress('python'),
+      callsign: 'Direct Lesson Cadet',
+      onboardingComplete: true,
+    }))
+    window.history.replaceState({}, '', '/learn/python-foundations/py-first-spark/py-launch')
+
+    render(<App />)
+    const editor = await screen.findByRole('textbox', { name: 'Code editor' })
+    fireEvent.click(screen.getByRole('button', { name: 'Run check' }))
+    expect(screen.getByText(/inspect that/iu)).toBeTruthy()
+    fireEvent.change(editor, {
+      target: {
+        value: 'ship_name = "Wayfarer"\npower_cells = 3\n\nprint("Ship:", ship_name)\nprint("Cells:", power_cells)',
+      },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Run check' }))
+
+    expect(await screen.findByText('System online')).toBeTruthy()
+    expect(screen.getByRole('button', { name: 'Complete remaining lessons' })).toBeTruthy()
+    expect(screen.queryByRole('button', { name: 'Repair missed concepts' })).toBeNull()
+    fireEvent.click(screen.getByRole('button', { name: 'Complete remaining lessons' }))
+
+    expect(await screen.findByRole('heading', { name: 'Meet the console' })).toBeTruthy()
+    expect(screen.queryByText(/MEMORY REPAIR/iu)).toBeNull()
+    expect(screen.queryByText('MISSION COMPLETE')).toBeNull()
+    await waitFor(() => {
+      const stored = JSON.parse(window.localStorage.getItem(progressKey) ?? '{}')
+      expect(stored.completedMissions).toEqual([])
+      expect(stored.conceptProgress['python-output-and-variables']).toMatchObject({
+        correct: 1,
+        incorrect: 1,
+      })
+    })
+  })
+
+  it('updates concept scheduling without awarding replay rewards for a completed module', async () => {
+    const progressBeforeReplay = {
+      ...initialProgress('python'),
+      callsign: 'Replay Cadet',
+      onboardingComplete: true,
+      xp: 240,
+      dailyXp: 30,
+      dailyXpDate: dateKey(new Date()),
+      starShards: 75,
+      completedMissions: ['py-first-spark'],
+      conceptProgress: {
+        'python-output-and-variables': {
+          strength: 2,
+          correct: 3,
+          incorrect: 1,
+          dueAt: dateKey(new Date()),
+        },
+      },
+    }
+    window.localStorage.setItem(progressKey, JSON.stringify(progressBeforeReplay))
+    window.history.replaceState({}, '', '/learn/python-foundations/py-first-spark/py-launch')
+
+    render(<App />)
+    const editor = await screen.findByRole('textbox', { name: 'Code editor' })
+    fireEvent.change(editor, {
+      target: { value: 'ship_name = "Wayfarer"\npower_cells = 3\n\nprint("Ship:", ship_name)\nprint("Cells:", power_cells)' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Run check' }))
+    expect(await screen.findByText('System online')).toBeTruthy()
+    fireEvent.click(screen.getByRole('button', { name: 'Finish mission' }))
+
+    expect(screen.getByText('MISSION COMPLETE')).toBeTruthy()
+    expect(screen.getByText('XP earned').previousSibling?.textContent).toBe('0')
+    expect(screen.getByText('star shards').previousSibling?.textContent).toBe('0')
+    await waitFor(() => {
+      const stored = JSON.parse(window.localStorage.getItem(progressKey) ?? '{}')
+      expect(stored.xp).toBe(progressBeforeReplay.xp)
+      expect(stored.dailyXp).toBe(progressBeforeReplay.dailyXp)
+      expect(stored.starShards).toBe(progressBeforeReplay.starShards)
+      expect(stored.completedMissions).toEqual(progressBeforeReplay.completedMissions)
+      expect(stored.conceptProgress['python-output-and-variables']).toMatchObject({
+        strength: 3,
+        correct: 4,
+        incorrect: 1,
+      })
+    })
+  })
+
+  it('links a new learner to the normal first lesson instead of a non-completing practice replay', () => {
+    window.history.replaceState({}, '', '/practice/python')
+
+    render(<App />)
+
+    expect(screen.getByRole('heading', { name: 'Practice what you have learned' })).toBeTruthy()
+    expect(screen.getByRole('link', { name: 'Start your first lesson' }).getAttribute('href')).toBe(
+      '/learn/python-foundations/py-first-spark/py-console',
+    )
+    expect(screen.queryByRole('link', { name: /question review/iu })).toBeNull()
+  })
+
+  it('keeps the learner-home review count scoped to the active language', async () => {
+    window.localStorage.setItem(progressKey, JSON.stringify({
+      ...initialProgress('python'),
+      callsign: 'Language Cadet',
+      onboardingComplete: true,
+      completedMissions: ['java-routing-orders'],
       conceptProgress: {
         'java-booleans': {
           strength: 1,
@@ -131,30 +601,89 @@ describe('beginner lesson interactions', () => {
         },
       },
     }))
-    window.history.replaceState({}, '', '/academy/java')
+    window.history.replaceState({}, '', '/home')
 
     render(<App />)
-    fireEvent.click(screen.getByRole('link', { name: 'Practice' }))
 
-    const reviewButton = screen.getByRole('button', { name: 'Review Routing Orders' })
-    expect(screen.getByText('BEST MATCH · MISSION 02')).toBeTruthy()
-    fireEvent.click(reviewButton)
+    expect(screen.getByRole('heading', { name: 'Nothing is due yet' })).toBeTruthy()
+    expect(screen.getByRole('link', { name: 'See how practice works' }).getAttribute('href')).toBe('/practice/python')
 
-    expect(await screen.findByRole('heading', { name: 'Ask a routing question' })).toBeTruthy()
-    expect(screen.getByText('FOCUSED REVIEW · 1 OF 1')).toBeTruthy()
+    fireEvent.change(screen.getByRole('combobox'), { target: { value: 'java' } })
 
-    fireEvent.click(screen.getByRole('radio', { name: /true and falseJava writes/iu }))
+    expect(await screen.findByRole('heading', { name: /concepts? (?:is|are) ready/iu })).toBeTruthy()
+    expect(screen.getByRole('link', { name: 'Start a short review' }).getAttribute('href')).toBe('/practice/java')
+  })
+
+  it('restores a frozen practice queue at its bookmarkable step URL after remount', async () => {
+    const routingMission = trackById('java').missions[1]
+    const routingConcepts = [...new Set(routingMission.exercises.map((exercise) => exercise.conceptId))]
+    const conceptProgress = Object.fromEntries(routingConcepts.map((id) => [id, {
+      strength: 4,
+      correct: 1,
+      incorrect: 0,
+      dueAt: '2026-09-30',
+    }]))
+    conceptProgress['java-booleans'] = {
+      strength: 1,
+      correct: 1,
+      incorrect: 1,
+      dueAt: dateKey(new Date()),
+    }
+    window.localStorage.setItem(progressKey, JSON.stringify({
+      ...initialProgress('java'),
+      callsign: 'Bookmark Cadet',
+      onboardingComplete: true,
+      completedMissions: ['java-routing-orders'],
+      conceptProgress,
+    }))
+    window.history.replaceState({}, '', '/practice/java')
+
+    const firstRender = render(<App />)
+    fireEvent.click(screen.getByRole('link', { name: 'Start 2-question review' }))
+    fireEvent.click(await screen.findByRole('radio', { name: /true and falseJava writes/iu }))
     fireEvent.click(screen.getByRole('button', { name: 'Check answer' }))
-    fireEvent.click(screen.getByRole('button', { name: 'Finish practice' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Continue' }))
 
-    expect(screen.getByText('PRACTICE COMPLETE')).toBeTruthy()
-    expect(screen.getByText('concepts reviewed')).toBeTruthy()
-    expect(screen.queryByText('star shards')).toBeNull()
-    await waitFor(() => {
-      const stored = JSON.parse(window.localStorage.getItem(progressKey) ?? '{}')
-      expect(stored.starShards).toBe(0)
-      expect(stored.completedMissions).toEqual(['java-coffee-protocol', 'java-routing-orders'])
-    })
+    expect(window.location.pathname).toBe('/practice/java/session/2')
+    expect(await screen.findByRole('heading', { name: 'Read the galley count' })).toBeTruthy()
+    expect(screen.getByRole('progressbar', { name: 'Practice progress' }).getAttribute('aria-valuetext')).toBe('Question 2 of 2')
+
+    firstRender.unmount()
+    render(<App />)
+
+    expect(await screen.findByRole('heading', { name: 'Read the galley count' })).toBeTruthy()
+    expect(screen.getByText('PRACTICE · QUESTION 2 OF 2')).toBeTruthy()
+  })
+
+  it('does not let a direct or legacy practice route unlock unfinished material', () => {
+    window.history.replaceState({}, '', '/practice/python/session')
+    const direct = render(<App />)
+
+    expect(screen.getByRole('heading', { name: 'Finish a module before starting practice' })).toBeTruthy()
+    direct.unmount()
+
+    window.history.replaceState({}, '', '/practice/python/missions/py-first-spark?concepts=python-console')
+    render(<App />)
+
+    expect(screen.getByRole('heading', { name: 'Complete First Spark before reviewing it' })).toBeTruthy()
+  })
+
+  it('rejects unknown and mixed legacy practice concepts instead of broadening the review', () => {
+    window.localStorage.setItem(progressKey, JSON.stringify({
+      ...initialProgress('java'),
+      callsign: 'Route Cadet',
+      onboardingComplete: true,
+      completedMissions: ['java-routing-orders'],
+    }))
+
+    window.history.replaceState({}, '', '/practice/java/missions/java-routing-orders?concepts=bogus')
+    const unknownOnly = render(<App />)
+    expect(screen.getByRole('heading', { name: 'That page is not on the academy map' })).toBeTruthy()
+    unknownOnly.unmount()
+
+    window.history.replaceState({}, '', '/practice/java/missions/java-routing-orders?concepts=java-booleans,bogus')
+    render(<App />)
+    expect(screen.getByRole('heading', { name: 'That page is not on the academy map' })).toBeTruthy()
   })
 
   it('restores a validated local progress backup from Settings', async () => {
@@ -189,6 +718,33 @@ describe('beginner lesson interactions', () => {
     expect(screen.getAllByText('140').length).toBeGreaterThan(0)
     await waitFor(() => {
       expect(JSON.parse(window.localStorage.getItem(progressKey) ?? '{}')).toMatchObject(restored)
+    })
+  })
+
+  it('clears every frozen practice queue when learning progress is reset', async () => {
+    const sessionPrefix = 'see-pound-coffee-pie-practice-session'
+    const languages = ['python', 'cpp', 'csharp', 'java'] as const
+    languages.forEach((language) => {
+      window.sessionStorage.setItem(`${sessionPrefix}:${language}`, JSON.stringify({
+        version: 1,
+        language,
+        exerciseIds: [`${language}-example`],
+      }))
+    })
+    vi.spyOn(window, 'confirm').mockReturnValue(true)
+
+    render(<App />)
+    fireEvent.click(screen.getByRole('link', { name: 'Settings' }))
+    expect(screen.getByText(/Saved project code and local check summaries stay/iu)).toBeTruthy()
+    fireEvent.click(screen.getByRole('button', { name: 'Reset learning progress' }))
+
+    await waitFor(() => expect(window.location.pathname).toBe('/start'))
+    expect(screen.getByText('How familiar does programming feel right now?')).toBeTruthy()
+    languages.forEach((language) => {
+      expect(window.sessionStorage.getItem(`${sessionPrefix}:${language}`)).toBeNull()
+    })
+    await waitFor(() => {
+      expect(JSON.parse(window.localStorage.getItem(progressKey) ?? '{}')).toEqual(initialProgress())
     })
   })
 

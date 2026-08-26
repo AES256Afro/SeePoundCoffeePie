@@ -11,6 +11,7 @@ import {
   loadProgress,
   nextStreak,
   recordAttempt,
+  saveProgress,
   updateConcept,
 } from './progress'
 
@@ -174,6 +175,42 @@ describe('progress helpers', () => {
     expect(completeProject(bothComplete, cppCompiledProject.id, now)).toBe(bothComplete)
   })
 
+  it('saturates progress counters before they exceed safe integer storage', () => {
+    const maximum = Number.MAX_SAFE_INTEGER
+    const now = new Date(2026, 7, 26)
+    const today = dateKey(now)
+    const attempted = recordAttempt({
+      ...initialProgress(),
+      xp: maximum - 2,
+      dailyXp: maximum - 1,
+      dailyXpDate: today,
+    }, 'python-print', true, 8, now)
+    const concept = updateConcept({
+      strength: 5,
+      correct: maximum,
+      incorrect: maximum,
+      dueAt: today,
+    }, true, now)
+    const moduleComplete = completeMission({
+      ...initialProgress(),
+      starShards: maximum - 10,
+      streak: maximum,
+      lastStudyDate: '2026-08-25',
+    }, 'py-first-spark', now)
+    const projectComplete = completeProject({
+      ...initialProgress(),
+      starShards: maximum - 10,
+    }, pythonInteractiveProject.id, now)
+
+    expect(attempted.xp).toBe(maximum)
+    expect(attempted.dailyXp).toBe(maximum)
+    expect(concept.correct).toBe(maximum)
+    expect(concept.incorrect).toBe(maximum)
+    expect(moduleComplete.starShards).toBe(maximum)
+    expect(moduleComplete.streak).toBe(maximum)
+    expect(projectComplete.starShards).toBe(maximum)
+  })
+
   it('migrates old browser records without project arrays to empty completion lists', () => {
     const legacyProgress: Record<string, unknown> = { ...initialProgress('java') }
     delete legacyProgress.completedProjectCheckpoints
@@ -191,6 +228,102 @@ describe('progress helpers', () => {
         completedProjectCheckpoints: [],
         completedProjects: [],
       })
+    } finally {
+      vi.unstubAllGlobals()
+    }
+  })
+
+  it('allowlists browser progress and drops malformed concept entries without crashing practice', () => {
+    const stored = {
+      ...initialProgress('python'),
+      callsign: 'Safe Cadet',
+      xp: -10,
+      dailyGoal: 999,
+      completedMissions: ['py-first-spark', 'unknown-mission', 'py-first-spark'],
+      completedProjectCheckpoints: ['unknown-checkpoint'],
+      completedProjects: ['unknown-project'],
+      conceptProgress: {
+        'python-variables': {
+          strength: 2,
+          correct: 3,
+          incorrect: 1,
+          dueAt: '2026-08-28',
+        },
+        'python-conditions': null,
+        'unknown-concept': {
+          strength: 5,
+          correct: 999,
+          incorrect: 0,
+          dueAt: '2099-01-01',
+        },
+      },
+      rawAnswer: 'do not retain me',
+    }
+    const localStorage = {
+      getItem: vi.fn(() => JSON.stringify(stored)),
+      setItem: vi.fn(),
+    }
+    vi.stubGlobal('window', { localStorage })
+
+    try {
+      const loaded = loadProgress()
+      expect(loaded).toMatchObject({
+        callsign: 'Safe Cadet',
+        activeLanguage: 'python',
+        dailyGoal: 10,
+        xp: 0,
+        completedMissions: ['py-first-spark'],
+        completedProjectCheckpoints: [],
+        completedProjects: [],
+        conceptProgress: {
+          'python-variables': {
+            strength: 2,
+            correct: 3,
+            incorrect: 1,
+            dueAt: '2026-08-28',
+          },
+        },
+      })
+      expect(loaded).not.toHaveProperty('rawAnswer')
+      expect(() => Object.values(loaded.conceptProgress).map((concept) => isDue(concept))).not.toThrow()
+    } finally {
+      vi.unstubAllGlobals()
+    }
+  })
+
+  it('uses safe defaults when the browser record has invalid scalar and date types', () => {
+    const localStorage = {
+      getItem: vi.fn(() => JSON.stringify({
+        ...initialProgress('java'),
+        callsign: ['not text'],
+        activeLanguage: 'ruby',
+        dailyXp: Number.MAX_SAFE_INTEGER + 1,
+        dailyXpDate: '2026-02-31',
+        lastStudyDate: 42,
+        onboardingComplete: 'yes',
+      })),
+      setItem: vi.fn(),
+    }
+    vi.stubGlobal('window', { localStorage })
+
+    try {
+      expect(loadProgress()).toEqual(initialProgress())
+    } finally {
+      vi.unstubAllGlobals()
+    }
+  })
+
+  it('keeps progress usable when the browser refuses a local storage write', () => {
+    const localStorage = {
+      setItem: vi.fn(() => {
+        throw new DOMException('Storage is unavailable', 'QuotaExceededError')
+      }),
+    }
+    vi.stubGlobal('window', { localStorage })
+
+    try {
+      expect(() => saveProgress({ ...initialProgress(), callsign: 'Memory only' })).not.toThrow()
+      expect(localStorage.setItem).toHaveBeenCalledOnce()
     } finally {
       vi.unstubAllGlobals()
     }

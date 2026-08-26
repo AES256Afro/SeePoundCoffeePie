@@ -1735,38 +1735,6 @@ button:disabled,
   border-radius: 7px;
 }
 
-.practice-orbit {
-  width: 72px;
-  height: 72px;
-  position: relative;
-  display: grid;
-  place-items: center;
-  color: var(--teal);
-  background: var(--teal-soft);
-  border: 1px solid var(--teal);
-  border-radius: 50%;
-}
-
-.practice-orbit svg {
-  width: 36px;
-  height: 36px;
-}
-
-.practice-orbit span {
-  position: absolute;
-  right: -4px;
-  bottom: -4px;
-  min-width: 28px;
-  height: 28px;
-  display: grid;
-  place-items: center;
-  color: #fff;
-  background: var(--teal-dark);
-  border-radius: 50%;
-  font-size: 0.7rem;
-  font-weight: 800;
-}
-
 .practice-hero small {
   color: var(--muted);
   font-size: var(--text-meta);
@@ -1779,7 +1747,85 @@ button:disabled,
 .practice-hero p {
   margin: 0;
   color: var(--muted);
-  font-size: 0.88rem;
+  font-size: 1rem;
+}
+
+.practice-plan {
+  margin-top: 3rem;
+}
+
+.practice-plan .section-heading-open > p {
+  text-align: right;
+}
+
+.practice-plan ol {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border-top: 1px solid var(--rule-strong);
+}
+
+.practice-plan li {
+  min-height: 76px;
+  display: grid;
+  grid-template-columns: 36px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 1rem;
+  border-bottom: 1px solid var(--rule);
+}
+
+.practice-plan li > span {
+  width: 30px;
+  height: 30px;
+  display: grid;
+  place-items: center;
+  color: var(--teal-dark);
+  background: var(--teal-soft);
+  border-radius: 50%;
+  font-size: var(--text-caption);
+  font-weight: 800;
+}
+
+.practice-plan li > div {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.practice-plan li small {
+  overflow: hidden;
+  color: var(--muted);
+  font-size: var(--text-meta);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.practice-plan li strong {
+  color: var(--teal-dark);
+  font-size: var(--text-caption);
+}
+
+.practice-plan__note {
+  margin: 1rem 0 0;
+  color: var(--muted);
+  font-size: var(--text-small);
+}
+
+.practice-plain-note {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.8rem;
+  margin-top: 2rem;
+  padding: 1rem 1.1rem;
+  color: var(--teal-dark);
+  background: var(--teal-soft);
+  border-left: 4px solid var(--teal);
+}
+
+.practice-plain-note p {
+  margin: 0;
+  font-size: var(--text-small);
 }
 
 .section-label {
@@ -2406,7 +2452,7 @@ button:disabled,
 
 .memory-repair p {
   margin: 0;
-  font-size: 0.76rem;
+  font-size: 1rem;
 }
 
 .lesson-briefing,
@@ -4382,6 +4428,20 @@ kbd {
   .practice-hero .primary-action {
     grid-column: 1 / -1;
     justify-self: start;
+  }
+
+  .practice-plan .section-heading-open > p {
+    text-align: left;
+  }
+
+  .practice-plan li {
+    grid-template-columns: 34px minmax(0, 1fr);
+    gap: 0.8rem;
+    padding: 0.8rem 0;
+  }
+
+  .practice-plan li strong {
+    grid-column: 2;
   }
 
   .record-grid {

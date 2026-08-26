@@ -10,6 +10,7 @@ import {
   parseAppRoute,
   practiceMissionPath,
   practicePath,
+  practiceSessionPath,
   projectPath,
 } from './routes'
 
@@ -23,6 +24,8 @@ describe('bookmarkable application routes', () => {
       '/learn/python-foundations/py-first-spark/py-print',
     )
     expect(practicePath('csharp')).toBe('/practice/csharp')
+    expect(practiceSessionPath('python')).toBe('/practice/python/session')
+    expect(practiceSessionPath('python', 3)).toBe('/practice/python/session/3')
     expect(codebookPath('java')).toBe('/codebook/java')
     expect(missionPath('python', 'py-first-spark')).toBe('/academy/python/missions/py-first-spark')
     expect(practiceMissionPath('java', 'java-routing-orders', ['java-booleans'])).toBe(
@@ -73,6 +76,45 @@ describe('bookmarkable application routes', () => {
       practice: true,
       conceptIds: ['java-booleans', 'java-if'],
     })
+  })
+
+  it('parses the private adaptive session route without putting concepts in the URL', () => {
+    expect(parseAppRoute('/practice/java/session')).toEqual({
+      page: 'practice-session',
+      language: 'java',
+      practice: true,
+      practiceStep: 1,
+      conceptIds: [],
+    })
+    expect(parseAppRoute('/practice/java/session/4')).toEqual({
+      page: 'practice-session',
+      language: 'java',
+      practice: true,
+      practiceStep: 4,
+      conceptIds: [],
+    })
+  })
+
+  it('rejects malformed session steps and unsafe legacy practice queries', () => {
+    expect(parseAppRoute('/practice/java/session/1').page).toBe('not-found')
+    expect(parseAppRoute('/practice/java/session/6').page).toBe('not-found')
+    expect(parseAppRoute('/practice/java/session', '?concepts=java-runtime').page).toBe('not-found')
+    expect(parseAppRoute(
+      '/practice/java/missions/java-routing-orders',
+      '?concepts=java-booleans,java-booleans',
+    ).page).toBe('not-found')
+    expect(parseAppRoute(
+      '/practice/java/missions/java-routing-orders',
+      '?concepts=one,two,three,four,five,six',
+    ).page).toBe('not-found')
+    expect(parseAppRoute(
+      '/practice/java/missions/java-routing-orders',
+      '?concepts=java-booleans&extra=true',
+    ).page).toBe('not-found')
+    expect(parseAppRoute(
+      '/practice/java/missions/java-routing-orders',
+      '?concepts=java-booleans&concepts=java-if',
+    ).page).toBe('not-found')
   })
 
   it('parses the Python project and checkpoint deep links', () => {

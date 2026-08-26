@@ -9,6 +9,7 @@ export type RoutePage =
   | 'course'
   | 'academy'
   | 'practice'
+  | 'practice-session'
   | 'codebook'
   | 'profile'
   | 'settings'
@@ -24,6 +25,7 @@ export interface AppRoute {
   projectId?: string
   checkpointId?: string
   practice?: boolean
+  practiceStep?: number
   conceptIds: string[]
 }
 
@@ -93,6 +95,12 @@ export function projectPath(language: LanguageId, projectId: string, checkpointI
 
 export function practicePath(language: LanguageId): string {
   return `/practice/${language}`
+}
+
+export function practiceSessionPath(language: LanguageId, step = 1): string {
+  return step <= 1
+    ? `${practicePath(language)}/session`
+    : `${practicePath(language)}/session/${step}`
 }
 
 export function codebookPath(language: LanguageId): string {
@@ -172,9 +180,38 @@ export function parseAppRoute(pathname: string, search = ''): AppRoute {
   if (segments.length === 2 && area === 'practice') return { page: 'practice', language, conceptIds: emptyConcepts }
   if (segments.length === 2 && area === 'codebook') return { page: 'codebook', language, conceptIds: emptyConcepts }
 
+  if (
+    area === 'practice'
+    && segments[2] === 'session'
+    && (segments.length === 3 || segments.length === 4)
+  ) {
+    if (search) return { page: 'not-found', conceptIds: emptyConcepts }
+    const stepText = segments[3]
+    if (stepText && !/^[2-5]$/u.test(stepText)) {
+      return { page: 'not-found', conceptIds: emptyConcepts }
+    }
+    return {
+      page: 'practice-session',
+      language,
+      practice: true,
+      practiceStep: stepText ? Number(stepText) : 1,
+      conceptIds: emptyConcepts,
+    }
+  }
+
   if (segments.length === 4 && segments[2] === 'missions' && (area === 'academy' || area === 'practice')) {
     const params = new URLSearchParams(search)
-    const conceptIds = (params.get('concepts') ?? '').split(',').filter(Boolean)
+    const rawConcepts = params.get('concepts')
+    const conceptParameters = params.getAll('concepts')
+    const conceptIds = rawConcepts ? rawConcepts.split(',') : []
+    if (
+      search.length > 1_024
+      || conceptParameters.length > 1
+      || conceptIds.length > 5
+      || conceptIds.some((conceptId) => !conceptId || conceptId.length > 100)
+      || new Set(conceptIds).size !== conceptIds.length
+      || [...params.keys()].some((key) => key !== 'concepts')
+    ) return { page: 'not-found', conceptIds: emptyConcepts }
     return {
       page: 'lesson',
       language,

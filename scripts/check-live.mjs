@@ -128,6 +128,7 @@ const canonicalRoutes = [
   '/learn/csharp-foundations/cs-shield/cs-dotnet',
   '/learn/java-foundations/java-coffee-protocol/java-jvm',
   '/practice/java',
+  '/practice/java/session',
   '/codebook/csharp',
   '/profile',
   '/settings',

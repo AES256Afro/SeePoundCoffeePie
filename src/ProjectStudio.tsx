@@ -22,12 +22,15 @@ import {
 } from 'lucide-react'
 import {
   useEffect,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
   type AnchorHTMLAttributes,
+  type Dispatch,
   type KeyboardEvent as ReactKeyboardEvent,
   type MouseEvent as ReactMouseEvent,
+  type SetStateAction,
 } from 'react'
 import { loadGuidedProject } from './data/project-registry'
 import type { GuidedProject, GuidedProjectCheckpoint } from './data/project-types'
@@ -59,7 +62,7 @@ interface ProjectStudioProps {
   checkpointId?: string
   language: LanguageId
   onNavigate: (path: string) => void
-  onProgress: (progress: LearnerProgress) => void
+  onProgress: Dispatch<SetStateAction<LearnerProgress>>
   progress: LearnerProgress
   projectId: string
 }
@@ -277,6 +280,7 @@ function CheckpointWorkspace({ checkpoint, onNavigate, onProgress, progress, pro
   const [runnerAnnouncement, setRunnerAnnouncement] = useState('')
   const [history, setHistory] = useState<ProjectCheckSummary[]>(() => loadProjectHistory(project.id))
   const failedRecorded = useRef(false)
+  const runnerRequestIdRef = useRef(0)
   const stepperRef = useRef<HTMLElement>(null)
   const alreadyComplete = progress.completedProjectCheckpoints.includes(checkpoint.id)
   const finalCheckpoint = checkpoint.order === project.checkpoints.length
@@ -290,6 +294,10 @@ function CheckpointWorkspace({ checkpoint, onNavigate, onProgress, progress, pro
     }
   }, [checkpoint.id])
 
+  useLayoutEffect(() => () => {
+    runnerRequestIdRef.current += 1
+  }, [])
+
   const updateAnswer = (value: string) => {
     setAnswer(value)
     if (editable) saveProjectDraft(project.id, checkpoint.id, value)
@@ -302,13 +310,15 @@ function CheckpointWorkspace({ checkpoint, onNavigate, onProgress, progress, pro
   const recordFailure = () => {
     if (failedRecorded.current || alreadyComplete) return
     failedRecorded.current = true
-    onProgress(recordAttempt(progress, exercise.conceptId, false, 0))
+    onProgress((current) => recordAttempt(current, exercise.conceptId, false, 0))
   }
 
   const awardCheckpoint = () => {
-    let next = completeProjectCheckpoint(progress, project.id, checkpoint.id)
-    if (finalCheckpoint) next = completeProject(next, project.id)
-    onProgress(next)
+    onProgress((current) => {
+      let next = completeProjectCheckpoint(current, project.id, checkpoint.id)
+      if (finalCheckpoint) next = completeProject(next, project.id)
+      return next
+    })
   }
 
   const checkCheckpoint = async () => {
@@ -328,6 +338,9 @@ function CheckpointWorkspace({ checkpoint, onNavigate, onProgress, progress, pro
       return
     }
 
+    const requestId = runnerRequestIdRef.current + 1
+    runnerRequestIdRef.current = requestId
+    const isCurrentRunnerRequest = () => runnerRequestIdRef.current === requestId
     setRunnerBusy(true)
     setRunnerPurpose('check')
     setRunnerResult(null)
@@ -337,9 +350,12 @@ function CheckpointWorkspace({ checkpoint, onNavigate, onProgress, progress, pro
         exercise.id,
         project.language,
         answer,
-        setRunnerStatus,
+        (status) => {
+          if (isCurrentRunnerRequest()) setRunnerStatus(status)
+        },
         { purpose: 'check' },
       )
+      if (!isCurrentRunnerRequest()) return
       setRunnerResult(result)
       const passed = result.outcome === 'completed'
         && result.tests.length > 0
@@ -370,6 +386,7 @@ function CheckpointWorkspace({ checkpoint, onNavigate, onProgress, progress, pro
       if (passed) awardCheckpoint()
       else if (result.outcome !== 'system_error') recordFailure()
     } catch (error) {
+      if (!isCurrentRunnerRequest()) return
       setFeedback({
         correct: false,
         message: error instanceof Error
@@ -378,8 +395,10 @@ function CheckpointWorkspace({ checkpoint, onNavigate, onProgress, progress, pro
       })
       setRunnerAnnouncement('The official checkpoint check could not finish. Your progress was not changed.')
     } finally {
-      setRunnerBusy(false)
-      setRunnerStatus(null)
+      if (isCurrentRunnerRequest()) {
+        setRunnerBusy(false)
+        setRunnerStatus(null)
+      }
     }
   }
 
@@ -389,6 +408,9 @@ function CheckpointWorkspace({ checkpoint, onNavigate, onProgress, progress, pro
       setFeedback({ correct: false, message: 'The editor is empty. Add an instruction before running the program.' })
       return
     }
+    const requestId = runnerRequestIdRef.current + 1
+    runnerRequestIdRef.current = requestId
+    const isCurrentRunnerRequest = () => runnerRequestIdRef.current === requestId
     setRunnerBusy(true)
     setRunnerPurpose('run')
     setRunnerResult(null)
@@ -399,12 +421,16 @@ function CheckpointWorkspace({ checkpoint, onNavigate, onProgress, progress, pro
         exercise.id,
         project.language,
         answer,
-        setRunnerStatus,
+        (status) => {
+          if (isCurrentRunnerRequest()) setRunnerStatus(status)
+        },
         { purpose: 'run', stdin: practiceInput },
       )
+      if (!isCurrentRunnerRequest()) return
       setRunnerResult(result)
       setRunnerAnnouncement('Practice run complete. Output is available in the program console.')
     } catch (error) {
+      if (!isCurrentRunnerRequest()) return
       setFeedback({
         correct: false,
         message: error instanceof Error
@@ -413,19 +439,24 @@ function CheckpointWorkspace({ checkpoint, onNavigate, onProgress, progress, pro
       })
       setRunnerAnnouncement('The practice run could not finish. Your checkpoint progress was not changed.')
     } finally {
-      setRunnerBusy(false)
-      setRunnerStatus(null)
+      if (isCurrentRunnerRequest()) {
+        setRunnerBusy(false)
+        setRunnerStatus(null)
+      }
     }
   }
 
   const resetDraft = () => {
-    if (runnerBusy) return
     if (!window.confirm('Reset only this checkpoint to its starting code? Other project drafts and completed checkpoints will stay unchanged.')) return
+    runnerRequestIdRef.current += 1
     resetProjectDraft(project.id, checkpoint.id)
     setAnswer(exercise.starterCode ?? '')
     setFeedback(null)
+    setRunnerBusy(false)
+    setRunnerStatus(null)
     setRunnerResult(null)
     setRunnerPurpose(null)
+    setRunnerAnnouncement('Checkpoint reset. Any earlier runner result will be ignored.')
   }
 
   const continueProject = () => {
@@ -634,7 +665,7 @@ function CheckpointWorkspace({ checkpoint, onNavigate, onProgress, progress, pro
                 <button aria-disabled={runnerBusy} className="secondary-action" onClick={() => { void runPractice() }} type="button">
                   <Play size={16} /> Run
                 </button>
-                <button aria-disabled={runnerBusy} className="secondary-action" onClick={resetDraft} type="button">
+                <button className="secondary-action" onClick={resetDraft} type="button">
                   <RefreshCw size={16} /> Reset checkpoint
                 </button>
                 <button className="secondary-action" disabled={!answer.trim()} onClick={() => downloadSource(project, answer)} type="button">

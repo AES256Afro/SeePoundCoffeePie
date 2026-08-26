@@ -7,6 +7,7 @@ import {
   fetchRemoteProgress,
   hasMeaningfulProgress,
   mergeLearnerProgress,
+  progressRecordsMatch,
   saveRemoteProgress,
 } from './progress-sync'
 
@@ -81,6 +82,66 @@ describe('durable progress synchronization', () => {
     })
   })
 
+  it('uses the earlier review date when equal-strength records are combined in either direction', () => {
+    const local = {
+      ...recordProgress(),
+      conceptProgress: {
+        'python-print': { strength: 2, correct: 3, incorrect: 4, dueAt: '2026-08-30' },
+      },
+    }
+    const remote = {
+      ...recordProgress(),
+      conceptProgress: {
+        'python-print': { strength: 2, correct: 5, incorrect: 1, dueAt: '2026-08-27' },
+      },
+    }
+
+    const forward = mergeLearnerProgress(local, remote).conceptProgress['python-print']
+    const reverse = mergeLearnerProgress(remote, local).conceptProgress['python-print']
+
+    expect(forward).toEqual({
+      strength: 2,
+      correct: 5,
+      incorrect: 4,
+      dueAt: '2026-08-27',
+    })
+    expect(reverse).toEqual(forward)
+  })
+
+  it('keeps the strongest schedule and merges concept records associatively', () => {
+    const first = {
+      ...initialProgress('python'),
+      conceptProgress: {
+        'python-print': { strength: 1, correct: 7, incorrect: 1, dueAt: '2026-08-20' },
+      },
+    }
+    const second = {
+      ...initialProgress('python'),
+      conceptProgress: {
+        'python-print': { strength: 3, correct: 2, incorrect: 5, dueAt: '2026-09-05' },
+      },
+    }
+    const third = {
+      ...initialProgress('python'),
+      conceptProgress: {
+        'python-print': { strength: 3, correct: 4, incorrect: 3, dueAt: '2026-09-01' },
+      },
+    }
+
+    const leftGrouped = mergeLearnerProgress(mergeLearnerProgress(first, second), third)
+      .conceptProgress['python-print']
+    const rightGrouped = mergeLearnerProgress(first, mergeLearnerProgress(second, third))
+      .conceptProgress['python-print']
+
+    expect(leftGrouped).toEqual({
+      strength: 3,
+      correct: 7,
+      incorrect: 5,
+      dueAt: '2026-09-01',
+    })
+    expect(rightGrouped).toEqual(leftGrouped)
+  })
+
   it('merges C++ and Python project records without dropping either language', () => {
     const local = {
       ...initialProgress('cpp'),
@@ -100,6 +161,28 @@ describe('durable progress synchronization', () => {
       ],
       completedProjects: [cppCompiledProject.id, pythonInteractiveProject.id],
     })
+  })
+
+  it('matches semantically equal records regardless of set and concept insertion order', () => {
+    const left = {
+      ...recordProgress(),
+      completedMissions: ['py-first-spark', 'java-coffee-protocol'],
+      conceptProgress: {
+        'python-print': { strength: 2, correct: 3, incorrect: 1, dueAt: '2026-08-28' },
+        'java-output': { strength: 1, correct: 1, incorrect: 0, dueAt: '2026-08-26' },
+      },
+    }
+    const right = {
+      ...recordProgress(),
+      completedMissions: ['java-coffee-protocol', 'py-first-spark'],
+      conceptProgress: {
+        'java-output': { strength: 1, correct: 1, incorrect: 0, dueAt: '2026-08-26' },
+        'python-print': { strength: 2, correct: 3, incorrect: 1, dueAt: '2026-08-28' },
+      },
+    }
+
+    expect(progressRecordsMatch(left, right)).toBe(true)
+    expect(progressRecordsMatch(left, { ...right, xp: right.xp + 1 })).toBe(false)
   })
 
   it('migrates an old version 1 remote record that omits project arrays', async () => {
