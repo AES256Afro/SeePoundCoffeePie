@@ -1,4 +1,9 @@
 import { tracks } from '../data/curriculum'
+import {
+  cppCollectionsRecordsLessons,
+  cppCollectionsRecordsManifest,
+  cppCollectionsRecordsMissionIds,
+} from '../data/cpp-collections-records-manifest'
 import { projectManifests } from '../data/project-manifests'
 import {
   pythonDataToolsLessons,
@@ -11,12 +16,14 @@ const languages = new Set<LanguageId>(tracks.map((track) => track.id))
 const missionIds = new Set([
   ...tracks.flatMap((track) => track.missions.map((mission) => mission.id)),
   ...pythonDataToolsMissionIds,
+  ...cppCollectionsRecordsMissionIds,
 ])
 const lessonIds = new Set([
   ...tracks.flatMap((track) => (
     track.missions.flatMap((mission) => mission.exercises.map((exercise) => exercise.id))
   )),
   ...pythonDataToolsLessons.map((lesson) => lesson.id),
+  ...cppCollectionsRecordsLessons.map((lesson) => lesson.id),
 ])
 const projectIds = new Set(projectManifests.map((project) => project.id))
 const projectCheckpointIds = new Set(projectManifests.flatMap((project) => (
@@ -28,6 +35,7 @@ const conceptIds = new Set([
   )),
   ...projectManifests.flatMap((project) => project.checkpoints.map((checkpoint) => checkpoint.conceptId)),
   ...pythonDataToolsLessons.map((lesson) => lesson.conceptId),
+  ...cppCollectionsRecordsLessons.map((lesson) => lesson.conceptId),
 ])
 const datePattern = /^\d{4}-\d{2}-\d{2}$/u
 
@@ -101,7 +109,11 @@ function lessonsFromCompletedMissions(completedMissions: string[]): string[] {
   const dataToolsLessons = Object.entries(pythonDataToolsManifest).flatMap(([missionId, lessons]) => (
     completed.has(missionId) ? lessons.map((lesson) => lesson.id) : []
   ))
-  return [...foundationLessons, ...dataToolsLessons]
+  const collectionsRecordsLessons = Object.entries(cppCollectionsRecordsManifest)
+    .flatMap(([missionId, lessons]) => (
+      completed.has(missionId) ? lessons.map((lesson) => lesson.id) : []
+    ))
+  return [...foundationLessons, ...dataToolsLessons, ...collectionsRecordsLessons]
 }
 
 function withCompletedMissionLessons(completedLessons: string[], completedMissions: string[]): string[] {

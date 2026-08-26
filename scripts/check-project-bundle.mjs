@@ -31,6 +31,9 @@ const privateMarkers = [
   'Keep the four supplied functions and report steps in their taught order without extra or unreachable statements.',
   'cpp-collections-records',
   'A workshop calculator has a label promising a whole-number result.',
+  'A vector is a standard C++ collection that can grow after it is created.',
+  'A record keeps related values together. In C++, struct defines a reusable user-defined type for that record shape.',
+  'A normal Part parameter or loop variable receives a copy, so changing it does not change the original record.',
 ]
 const teachingMarkers = [
   'A sequence of instructions that a computer follows.',
@@ -39,6 +42,7 @@ const teachingMarkers = [
   'Java begins as readable source saved in Main.java.',
 ]
 const dataToolsTeachingMarker = 'A normalization function applies the same cleanup rule every time.'
+const phase5bCompatibilityMarker = 'cpprecords6-workshop-stock-report'
 
 const index = await readFile(new URL('index.html', dist), 'utf8')
 const entryMatch = /<script[^>]+src="[^"]*\/([^/"?]+\.js)(?:\?[^" ]*)?"/iu.exec(index)
@@ -58,6 +62,9 @@ for (const { name, contents } of emittedAssets) {
 
 const entry = emittedAssets.find(({ name }) => name === path.basename(entryMatch[1]))
 if (!entry) throw new Error(`The entry asset ${entryMatch[1]} is missing.`)
+if (!entry.contents.includes(phase5bCompatibilityMarker)) {
+  throw new Error('The Phase 5B identifier-only compatibility manifest is missing from the first-load JavaScript asset.')
+}
 for (const teachingMarker of teachingMarkers) {
   if (entry.contents.includes(teachingMarker)) {
     throw new Error(`Full project teaching content ${teachingMarker} leaked into the first-load JavaScript asset.`)

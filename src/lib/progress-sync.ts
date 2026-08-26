@@ -1,6 +1,10 @@
 import { projectManifests } from '../data/project-manifests'
 import { tracks } from '../data/curriculum'
 import {
+  cppCollectionsRecordsLessons,
+  cppCollectionsRecordsManifest,
+} from '../data/cpp-collections-records-manifest'
+import {
   pythonDataToolsLessons,
   pythonDataToolsManifest,
 } from '../data/python-data-tools-manifest'
@@ -36,12 +40,16 @@ const lessonIds = new Set([
     track.missions.flatMap((mission) => mission.exercises.map((exercise) => exercise.id))
   )),
   ...pythonDataToolsLessons.map((lesson) => lesson.id),
+  ...cppCollectionsRecordsLessons.map((lesson) => lesson.id),
 ])
 const missionLessonIds = new Map([
   ...tracks.flatMap((track) => track.missions.map((mission) => (
     [mission.id, mission.exercises.map((exercise) => exercise.id)] as const
   ))),
   ...Object.entries(pythonDataToolsManifest).map(([missionId, lessons]) => (
+    [missionId, lessons.map((lesson) => lesson.id)] as const
+  )),
+  ...Object.entries(cppCollectionsRecordsManifest).map(([missionId, lessons]) => (
     [missionId, lessons.map((lesson) => lesson.id)] as const
   )),
 ])

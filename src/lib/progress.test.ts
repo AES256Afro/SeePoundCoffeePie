@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
+import { cppCollectionsRecordsManifest } from '../data/cpp-collections-records-manifest'
 import { pythonInteractiveProject } from '../data/python-interactive-project'
 import { cppCompiledProject } from '../data/cpp-compiled-project'
 import { trackById } from '../data/curriculum'
@@ -259,7 +260,9 @@ describe('progress helpers', () => {
     delete legacyProgress.completedProjectCheckpoints
     delete legacyProgress.completedProjects
     const localStorage = {
-      getItem: vi.fn(() => JSON.stringify({ ...legacyProgress, callsign: 'Legacy Cadet' })),
+      getItem: vi.fn((key: string) => key === 'see-pound-coffee-pie-progress'
+        ? JSON.stringify({ ...legacyProgress, callsign: 'Legacy Cadet' })
+        : null),
       setItem: vi.fn(),
     }
     vi.stubGlobal('window', { localStorage })
@@ -403,7 +406,7 @@ describe('progress helpers', () => {
     }
   })
 
-  it('keeps the v2 record authoritative when an older tab overwrites the legacy browser record', () => {
+  it('keeps the V3 record authoritative when an older tab overwrites V2 and legacy records', () => {
     const values = new Map<string, string>()
     const localStorage = {
       getItem: vi.fn((key: string) => values.get(key) ?? null),
@@ -423,7 +426,10 @@ describe('progress helpers', () => {
         callsign: 'Older Tab Cadet',
       } as Record<string, unknown>
       delete legacyRecord.completedLessons
+      values.set('see-pound-coffee-pie-progress-v2', JSON.stringify(legacyRecord))
+      values.set('see-pound-coffee-pie-completed-lessons-v2', '[]')
       values.set('see-pound-coffee-pie-progress', JSON.stringify(legacyRecord))
+      values.set('see-pound-coffee-pie-completed-lessons-v1', '[]')
 
       expect(loadProgress()).toMatchObject({
         callsign: 'Current Tab Cadet',
@@ -432,6 +438,59 @@ describe('progress helpers', () => {
 
       saveProgress(initialProgress('python'))
       expect(loadProgress().completedLessons).toEqual([])
+    } finally {
+      vi.unstubAllGlobals()
+    }
+  })
+
+  it('reconciles valid progress added by an already-open V2 tab', () => {
+    const values = new Map<string, string>()
+    const localStorage = {
+      getItem: vi.fn((key: string) => values.get(key) ?? null),
+      setItem: vi.fn((key: string, value: string) => values.set(key, value)),
+    }
+    vi.stubGlobal('window', { localStorage })
+    const currentLesson = firstPythonLessonIds[0]
+    const olderTabLesson = firstPythonLessonIds[1]
+    const checkpointId = pythonInteractiveProject.checkpoints[0].id
+
+    try {
+      saveProgress({
+        ...initialProgress('python'),
+        callsign: 'Current Tab Cadet',
+        completedLessons: [currentLesson],
+        xp: 8,
+      })
+      values.set('see-pound-coffee-pie-progress-v2', JSON.stringify({
+        ...initialProgress('python'),
+        callsign: 'Older Tab Cadet',
+        completedLessons: [olderTabLesson],
+        completedProjectCheckpoints: [checkpointId],
+        xp: 14,
+      }))
+      values.set('see-pound-coffee-pie-completed-lessons-v2', JSON.stringify([olderTabLesson]))
+
+      const reconciled = loadProgress()
+      expect(reconciled).toMatchObject({
+        callsign: 'Current Tab Cadet',
+        completedProjectCheckpoints: [checkpointId],
+        xp: 14,
+      })
+      expect(reconciled.completedLessons).toEqual(expect.arrayContaining([
+        currentLesson,
+        olderTabLesson,
+      ]))
+
+      saveProgress(reconciled)
+      for (const key of [
+        'see-pound-coffee-pie-progress-v3',
+        'see-pound-coffee-pie-progress-v2',
+        'see-pound-coffee-pie-progress',
+      ]) {
+        expect(JSON.parse(values.get(key) ?? '{}').completedLessons).toEqual(
+          expect.arrayContaining([currentLesson, olderTabLesson]),
+        )
+      }
     } finally {
       vi.unstubAllGlobals()
     }
@@ -463,8 +522,178 @@ describe('progress helpers', () => {
         'pydata1-subtotal',
       ]))
       expect(restored.conceptProgress['python-parameters-and-calls']).toBeDefined()
+      expect(values.has('see-pound-coffee-pie-progress-v3')).toBe(true)
+      expect(values.has('see-pound-coffee-pie-completed-lessons-v3')).toBe(true)
       expect(values.has('see-pound-coffee-pie-progress-v2')).toBe(true)
       expect(values.has('see-pound-coffee-pie-completed-lessons-v2')).toBe(true)
+    } finally {
+      vi.unstubAllGlobals()
+    }
+  })
+
+  it('awards Phase 5B lesson XP and module shards once while replay only strengthens memory', () => {
+    const moduleId = 'cpp-records-return-values'
+    const moduleLessons = cppCollectionsRecordsManifest[moduleId]
+    const now = new Date(2026, 7, 26)
+    const completedLessons = moduleLessons.reduce(
+      (current, lesson) => recordLessonSuccess(current, lesson.id, true, now),
+      initialProgress('cpp'),
+    )
+    const completedModule = completeMission(completedLessons, moduleId, now)
+    const replayedLesson = recordLessonSuccess(completedModule, moduleLessons[0].id, true, now)
+    const replayedModule = completeMission(replayedLesson, moduleId, now)
+
+    expect(completedLessons.xp).toBe(70)
+    expect(completedLessons.dailyXp).toBe(70)
+    expect(completedModule.completedLessons).toEqual(moduleLessons.map((lesson) => lesson.id))
+    expect(completedModule.completedMissions).toEqual([moduleId])
+    expect(completedModule.starShards).toBe(25)
+    expect(replayedLesson.xp).toBe(70)
+    expect(replayedLesson.dailyXp).toBe(70)
+    expect(replayedLesson.conceptProgress['cpp-parameters-and-calls'].correct).toBe(2)
+    expect(replayedModule.starShards).toBe(25)
+    expect(replayedModule.completedMissions).toEqual([moduleId])
+  })
+
+  it('falls back from absent V3 storage to V2 and then legacy progress', () => {
+    const values = new Map<string, string>()
+    const localStorage = {
+      getItem: vi.fn((key: string) => values.get(key) ?? null),
+      setItem: vi.fn((key: string, value: string) => values.set(key, value)),
+    }
+    vi.stubGlobal('window', { localStorage })
+
+    try {
+      values.set('see-pound-coffee-pie-progress-v2', JSON.stringify({
+        ...initialProgress('cpp'),
+        callsign: 'V2 Cadet',
+      }))
+      expect(loadProgress().callsign).toBe('V2 Cadet')
+
+      values.delete('see-pound-coffee-pie-progress-v2')
+      values.set('see-pound-coffee-pie-progress', JSON.stringify({
+        ...initialProgress('java'),
+        callsign: 'Legacy Cadet',
+      }))
+      expect(loadProgress()).toMatchObject({ callsign: 'Legacy Cadet', activeLanguage: 'java' })
+    } finally {
+      vi.unstubAllGlobals()
+    }
+  })
+
+  it('falls back independently when newer progress or journal generations are malformed', () => {
+    const values = new Map<string, string>()
+    const localStorage = {
+      getItem: vi.fn((key: string) => values.get(key) ?? null),
+      setItem: vi.fn((key: string, value: string) => values.set(key, value)),
+    }
+    vi.stubGlobal('window', { localStorage })
+    const v2Lesson = firstPythonLessonIds[0]
+    const journalLesson = firstPythonLessonIds[1]
+
+    try {
+      values.set('see-pound-coffee-pie-progress-v3', '{not-json')
+      values.set('see-pound-coffee-pie-completed-lessons-v3', '{not-json')
+      values.set('see-pound-coffee-pie-progress-v2', JSON.stringify({
+        ...initialProgress('python'),
+        callsign: 'Recovered V2 Cadet',
+        completedLessons: [v2Lesson],
+      }))
+      values.set('see-pound-coffee-pie-completed-lessons-v2', JSON.stringify([journalLesson]))
+
+      expect(loadProgress()).toMatchObject({
+        callsign: 'Recovered V2 Cadet',
+        completedLessons: expect.arrayContaining([v2Lesson, journalLesson]),
+      })
+
+      values.set('see-pound-coffee-pie-progress-v2', '{also-not-json')
+      values.set('see-pound-coffee-pie-completed-lessons-v2', '{also-not-json')
+      values.set('see-pound-coffee-pie-progress', JSON.stringify({
+        ...initialProgress('java'),
+        callsign: 'Recovered Legacy Cadet',
+      }))
+      values.set('see-pound-coffee-pie-completed-lessons-v1', JSON.stringify([journalLesson]))
+
+      expect(loadProgress()).toMatchObject({
+        callsign: 'Recovered Legacy Cadet',
+        activeLanguage: 'java',
+        completedLessons: [journalLesson],
+      })
+    } finally {
+      vi.unstubAllGlobals()
+    }
+  })
+
+  it('keeps an explicit V3 reset from being undone by stale older-tab progress', () => {
+    const values = new Map<string, string>()
+    const localStorage = {
+      getItem: vi.fn((key: string) => values.get(key) ?? null),
+      setItem: vi.fn((key: string, value: string) => values.set(key, value)),
+    }
+    vi.stubGlobal('window', { localStorage })
+    const staleLesson = firstPythonLessonIds[0]
+
+    try {
+      saveProgress({
+        ...initialProgress('python'),
+        completedLessons: [staleLesson],
+        xp: 8,
+      })
+      saveProgress(initialProgress('python'), { reset: true })
+
+      values.set('see-pound-coffee-pie-progress-v2', JSON.stringify({
+        ...initialProgress('python'),
+        callsign: 'Stale Older Tab',
+        completedLessons: [staleLesson],
+        xp: 8,
+      }))
+      values.set('see-pound-coffee-pie-completed-lessons-v2', JSON.stringify([staleLesson]))
+
+      expect(loadProgress()).toEqual(initialProgress('python'))
+    } finally {
+      vi.unstubAllGlobals()
+    }
+  })
+
+  it('writes validated Phase 5B progress and resets to every supported local generation', () => {
+    const values = new Map<string, string>()
+    const localStorage = {
+      getItem: vi.fn((key: string) => values.get(key) ?? null),
+      setItem: vi.fn((key: string, value: string) => values.set(key, value)),
+    }
+    vi.stubGlobal('window', { localStorage })
+    const progressKeys = [
+      'see-pound-coffee-pie-progress-v3',
+      'see-pound-coffee-pie-progress-v2',
+      'see-pound-coffee-pie-progress',
+    ]
+    const journalKeys = [
+      'see-pound-coffee-pie-completed-lessons-v3',
+      'see-pound-coffee-pie-completed-lessons-v2',
+      'see-pound-coffee-pie-completed-lessons-v1',
+    ]
+    const lessonId = cppCollectionsRecordsManifest['cpp-records-vectors'][0].id
+
+    try {
+      saveProgress({
+        ...initialProgress('cpp'),
+        completedLessons: [lessonId, 'unknown-lesson'],
+      })
+      for (const key of progressKeys) {
+        expect(JSON.parse(values.get(key) ?? '{}').completedLessons).toEqual([lessonId])
+      }
+      for (const key of journalKeys) {
+        expect(JSON.parse(values.get(key) ?? '[]')).toEqual([lessonId])
+      }
+
+      saveProgress(initialProgress('cpp'))
+      for (const key of progressKeys) {
+        expect(JSON.parse(values.get(key) ?? '{}').completedLessons).toEqual([])
+      }
+      for (const key of journalKeys) {
+        expect(JSON.parse(values.get(key) ?? '[]')).toEqual([])
+      }
+      expect(loadProgress()).toEqual(initialProgress('cpp'))
     } finally {
       vi.unstubAllGlobals()
     }

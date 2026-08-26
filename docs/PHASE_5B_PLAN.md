@@ -1,20 +1,25 @@
 # Phase 5B Practical C++ Collections and Records Plan
 
-Status: planned and unpublished. This document reserves the curriculum contract for the next continuing course. It does not publish a catalog card, route, lesson, runner assignment, Practice item, Codebook example, sitemap entry, or learner progress identifier by itself.
+Status: planned and unpublished. This document reserves the curriculum contract for the next continuing course. A compact identifier-only manifest is implemented locally so a compatible client and Worker can preserve future Phase 5B progress, but it does not publish a catalog card, route, lesson, runner assignment, Practice item, Codebook example, or sitemap entry.
 
 ## Current implementation checkpoint
 
-The 2026-08-26 contract-lock checkpoint contains the complete unpublished TypeScript plan plus the first two fully authored modules:
+The 2026-08-26 contract-lock and hidden-authoring checkpoint contains the complete unpublished TypeScript plan plus the first four fully authored modules:
 
 - all 6 module IDs, 30 lesson IDs, concept links, exercise types, XP, prerequisites, exclusions, publication blockers, and final-assessment requirements are mechanically validated;
-- Modules 1 and 2 provide 10 complete beginner lessons and 140 possible first-completion XP in the hidden teaching draft;
-- the 4 editable Module 1 and 2 authentic solutions pass local C++20 syntax checks, while their public checks accept the taught repair and reject the supplied incorrect source;
+- Modules 1 through 4 provide 20 complete beginner lessons and 280 possible first-completion XP in the hidden teaching draft;
+- all 8 editable Module 1 through 4 authentic solutions pass local C++20 syntax checks, while their public checks accept the taught repair and reject the supplied incorrect source;
+- Modules 3 and 4 preserve the vocabulary boundary: records and fields arrive before field edits, the first stored-record loop remains copy-based, `Part&` is explained before reference updates, and `std::vector<Part>&` appears only in the final Module 4 lesson;
+- the focused Phase 5B plan and hidden-draft suite passes 2 files and 26 tests, and the repository text-style check passes;
+- a compact manifest registers all 6 future module IDs, 30 lesson IDs, concept IDs, and XP values with local progress, backup, remote sync, and Worker validation without importing the teaching draft into production;
+- V3 local progress and lesson-journal keys are primary, valid additions from already-open V2 tabs are reconciled, malformed generations recover independently, and an explicit reset barrier prevents stale older-tab data from undoing a learner-requested reset;
+- the continuing-course route, ownership, resume, and Practice infrastructure is course-driven while Practical Python remains the only published continuing course;
 - the course and first lesson URLs still return not found, no draft lesson receives a runner assignment, and the course ID and a unique teaching marker are forbidden from every emitted production browser asset;
-- `npm run check:release` passed 50 test files and 564 tests, lint, repository text style, social-preview verification, TypeScript, the production build, the server-owned bundle boundary, and every bundle budget;
+- `npm run check:release` passes 51 test files and 592 tests, lint, repository text style, social-preview verification, TypeScript, the production build, the server-owned bundle boundary, and every bundle budget;
 - production and staging Wrangler dry runs passed with their expected bindings, asset package, and all four existing container definitions. No deployment was performed;
-- the emitted production asset measurements remain identical to Phase 5A because neither draft file is reachable from a production import graph.
+- the compatibility build measures 475.35 kB raw and 128.84 kB gzip initial JavaScript, 72.37 kB raw and 13.46 kB gzip initial CSS, 763.89 kB raw and 214.26 kB gzip total JavaScript, and 85.22 kB raw and 16.45 kB gzip total CSS. The complete hidden teaching draft remains outside the production import graph;
 
-This is local source and build evidence only. No Phase 5B progress compatibility floor, runner assignment, route, staging release, or production release exists yet.
+This is local source and build evidence only. The Phase 5B compatibility candidate is implemented, but no staging or production compatibility floor has been deployed, verified, or recorded. No Phase 5B runner assignment, public route, catalog release, staging release, or production release exists yet.
 
 ## Outcome
 
@@ -107,7 +112,7 @@ The course may show a term in a non-editable explanation at its first teaching p
 
 ## Durable curriculum map
 
-The following module, lesson, and concept identifiers are reserved now. They become durable learner-record identifiers when the course is released and must not be renamed afterward.
+The following module, lesson, and concept identifiers are reserved and recognized by the compatibility schema now. They are not earnable through the unpublished site, but they must not be renamed after the compatibility floor reaches production.
 
 The exercise rhythm for Modules 1 through 4 is prediction, choice, prediction, bug repair, and guided code. The rhythm for Modules 5 and 6 is prediction, choice, ordering, bug repair, and guided code. Every module awards `8 + 10 + 14 + 16 + 22 = 70` XP.
 

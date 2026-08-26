@@ -1,11 +1,16 @@
 import { projectManifests } from '../data/project-manifests'
 import { tracks } from '../data/curriculum'
 import {
+  cppCollectionsRecordsLessons,
+  cppCollectionsRecordsManifest,
+} from '../data/cpp-collections-records-manifest'
+import {
   pythonDataToolsLessons,
   pythonDataToolsManifest,
 } from '../data/python-data-tools-manifest'
 import type { ConceptProgress, LanguageId, LearnerProgress } from '../types'
 import { normalizeLocalLearnerProgress } from './progress-schema'
+import { mergeLearnerProgress } from './progress-sync'
 
 const REVIEW_INTERVALS = [0, 1, 3, 7, 14, 30]
 const foundationLessons = tracks.flatMap((track) => track.missions.flatMap((mission) => (
@@ -16,7 +21,11 @@ const foundationLessons = tracks.flatMap((track) => track.missions.flatMap((miss
     xp: exercise.xp,
   }))
 )))
-const lessons = [...foundationLessons, ...pythonDataToolsLessons]
+const lessons = [
+  ...foundationLessons,
+  ...pythonDataToolsLessons,
+  ...cppCollectionsRecordsLessons,
+]
 const lessonsById = new Map(lessons.map((lesson) => [lesson.id, lesson]))
 const lessonIds: ReadonlySet<string> = new Set(lessonsById.keys())
 const missionLessons = new Map([
@@ -26,15 +35,25 @@ const missionLessons = new Map([
   ...Object.entries(pythonDataToolsManifest).map(([missionId, missionLessons]) => (
     [missionId, missionLessons.map((lesson) => lesson.id)] as const
   )),
+  ...Object.entries(cppCollectionsRecordsManifest).map(([missionId, missionLessons]) => (
+    [missionId, missionLessons.map((lesson) => lesson.id)] as const
+  )),
 ])
 const projectCheckpointIds = new Set(projectManifests.flatMap((project) => (
   project.checkpoints.map((checkpoint) => checkpoint.id)
 )))
 const projectIds: ReadonlySet<string> = new Set(projectManifests.map((project) => project.id))
 const legacyProgressStorageKey = 'see-pound-coffee-pie-progress'
-const progressStorageKey = 'see-pound-coffee-pie-progress-v2'
+const phase5aProgressStorageKey = 'see-pound-coffee-pie-progress-v2'
+const progressStorageKey = 'see-pound-coffee-pie-progress-v3'
 const legacyLessonCompletionJournalKey = 'see-pound-coffee-pie-completed-lessons-v1'
-const lessonCompletionJournalKey = 'see-pound-coffee-pie-completed-lessons-v2'
+const phase5aLessonCompletionJournalKey = 'see-pound-coffee-pie-completed-lessons-v2'
+const lessonCompletionJournalKey = 'see-pound-coffee-pie-completed-lessons-v3'
+const progressResetBarrierKey = 'see-pound-coffee-pie-progress-v3-reset'
+
+interface SaveProgressOptions {
+  reset?: boolean
+}
 
 function addSafeCount(current: number, increment: number): number {
   const safeCurrent = Number.isSafeInteger(current) && current >= 0 ? current : 0
@@ -233,39 +252,83 @@ export function isDue(concept: ConceptProgress, now = new Date()): boolean {
   return concept.dueAt <= dateKey(now)
 }
 
-export function loadProgress(): LearnerProgress {
-  let restored = initialProgress()
+function storedProgress(key: string): LearnerProgress | null {
   try {
-    const stored = window.localStorage.getItem(progressStorageKey)
-      ?? window.localStorage.getItem(legacyProgressStorageKey)
-    if (stored) {
-      const parsed: unknown = JSON.parse(stored)
-      restored = normalizeLocalLearnerProgress(parsed, initialProgress())
-    }
+    const stored = window.localStorage.getItem(key)
+    if (stored === null) return null
+    const parsed: unknown = JSON.parse(stored)
+    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return null
+    return normalizeLocalLearnerProgress(parsed, initialProgress())
   } catch {
-    restored = initialProgress()
-  }
-
-  try {
-    const journal = JSON.parse(
-      window.localStorage.getItem(lessonCompletionJournalKey)
-      ?? window.localStorage.getItem(legacyLessonCompletionJournalKey)
-      ?? '[]',
-    )
-    return {
-      ...restored,
-      completedLessons: [...new Set([
-        ...restored.completedLessons,
-        ...knownIds(journal, lessonIds),
-      ])],
-    }
-  } catch {
-    return restored
+    return null
   }
 }
 
-export function saveProgress(progress: LearnerProgress): void {
+function storedCompletionJournal(key: string): string[] {
   try {
+    return knownIds(JSON.parse(window.localStorage.getItem(key) ?? '[]'), lessonIds)
+  } catch {
+    return []
+  }
+}
+
+function resetBarrierIsActive(): boolean {
+  try {
+    const parsed: unknown = JSON.parse(
+      window.localStorage.getItem(progressResetBarrierKey) ?? 'null',
+    )
+    return Boolean(
+      parsed
+      && typeof parsed === 'object'
+      && !Array.isArray(parsed)
+      && (parsed as Record<string, unknown>).version === 1
+      && (parsed as Record<string, unknown>).active === true,
+    )
+  } catch {
+    return false
+  }
+}
+
+export function loadProgress(): LearnerProgress {
+  const resetBarrier = resetBarrierIsActive()
+  const current = storedProgress(progressStorageKey)
+  const restored = resetBarrier
+    ? current ?? initialProgress()
+    : [
+        current,
+        storedProgress(phase5aProgressStorageKey),
+        storedProgress(legacyProgressStorageKey),
+      ].reduce<LearnerProgress | null>((merged, candidate) => {
+        if (!candidate) return merged
+        return merged ? mergeLearnerProgress(merged, candidate) : candidate
+      }, null) ?? initialProgress()
+  const journalKeys = resetBarrier
+    ? [lessonCompletionJournalKey]
+    : [
+        lessonCompletionJournalKey,
+        phase5aLessonCompletionJournalKey,
+        legacyLessonCompletionJournalKey,
+      ]
+  return {
+    ...restored,
+    completedLessons: [...new Set([
+      ...restored.completedLessons,
+      ...journalKeys.flatMap(storedCompletionJournal),
+    ])],
+  }
+}
+
+export function saveProgress(
+  progress: LearnerProgress,
+  options: SaveProgressOptions = {},
+): void {
+  try {
+    if (options.reset) {
+      window.localStorage.setItem(progressResetBarrierKey, JSON.stringify({
+        version: 1,
+        active: true,
+      }))
+    }
     const completedLessons = knownIds(progress.completedLessons, lessonIds)
     // This separate journal survives writes from an already-open pre-Phase 4F
     // tab, which knows the main key but cannot preserve per-lesson progress.
@@ -278,9 +341,11 @@ export function saveProgress(progress: LearnerProgress): void {
     })
     window.localStorage.setItem(lessonCompletionJournalKey, serializedLessons)
     window.localStorage.setItem(progressStorageKey, serializedProgress)
-    // Keep writing the legacy keys for already-open Phase 4F tabs and related
-    // local tools. New code always reads v2 first, so an old tab cannot erase
-    // Phase 5A IDs from the authoritative local record.
+    // Keep writing the V2 and legacy keys for already-open tabs and related
+    // local tools. New code always reads V3 first, so an older tab cannot erase
+    // Phase 5B IDs from the authoritative local record.
+    window.localStorage.setItem(phase5aLessonCompletionJournalKey, serializedLessons)
+    window.localStorage.setItem(phase5aProgressStorageKey, serializedProgress)
     window.localStorage.setItem(legacyLessonCompletionJournalKey, serializedLessons)
     window.localStorage.setItem(legacyProgressStorageKey, serializedProgress)
   } catch {

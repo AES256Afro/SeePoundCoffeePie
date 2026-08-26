@@ -431,7 +431,451 @@ const vectorExercises: Exercise[] = [
   },
 ]
 
-// This authored module remains outside the public course registry and runner
+const structExercises: Exercise[] = [
+  {
+    id: 'cpprecords3-retrieve-types',
+    conceptId: 'cpp-variables',
+    eyebrow: 'Memory check 1 of 5',
+    title: 'Recall typed storage',
+    explanation:
+      'C++ records a type when a variable is declared. std::string tells the compiler to expect text, while int tells it to expect a whole number. The equals sign initializes each new variable by giving it a starting value.',
+    analogy:
+      'A workshop form has a text box for a part name and a numbered box for its quantity. Each label tells the clerk what kind of value belongs in that space.',
+    type: 'prediction',
+    prompt: 'What line will the two typed variables produce when they are displayed together?',
+    displayCode:
+      'std::string part_name = "bolts";\nint quantity = 4;\n\nstd::cout << part_name << ": " << quantity;',
+    choices: [
+      {
+        id: 'a',
+        label: 'bolts: 4',
+        detail: 'part_name stores the text bolts, and quantity stores the whole number 4.',
+      },
+      {
+        id: 'b',
+        label: 'part_name: quantity',
+        detail: 'C++ retrieves the values stored by the variable names instead of printing the names themselves.',
+      },
+      {
+        id: 'c',
+        label: '4: bolts',
+        detail: 'The output instruction reads part_name first and quantity second.',
+      },
+    ],
+    correctChoice: 'a',
+    output: 'bolts: 4',
+    hint: 'Replace each variable name in the output instruction with the starting value stored under that name.',
+    recap: 'A declaration gives a variable a type, and initialization supplies the starting value that its name retrieves later.',
+    xp: 8,
+  },
+  {
+    id: 'cpprecords3-struct-purpose',
+    conceptId: 'cpp-structs',
+    eyebrow: 'Record workshop 2 of 5',
+    title: 'Meet a record shape',
+    explanation:
+      'A record keeps related values together. In C++, struct defines a reusable user-defined type for that record shape. Each named variable inside the struct is a field. Part part{"bolts", 4}; uses aggregate initialization: the braces provide one starting value for each field in the order those fields were defined.',
+    analogy:
+      'Instead of carrying a loose name card and quantity card, the workshop uses one Part form with two labeled fields. Every completed Part form follows the same shape.',
+    type: 'choice',
+    prompt: 'What job does the Part struct perform in this program?',
+    displayCode:
+      'struct Part {\n    std::string name;\n    int quantity;\n};\n\nPart part{"bolts", 4};',
+    choices: [
+      {
+        id: 'a',
+        label: 'Defines one reusable record type with name and quantity fields',
+        detail: 'Part becomes a user-defined type, and each Part value keeps its related name and quantity together.',
+      },
+      {
+        id: 'b',
+        label: 'Displays bolts and 4 automatically',
+        detail: 'The struct and initialization create a value. Console output still needs a separate std::cout instruction.',
+      },
+      {
+        id: 'c',
+        label: 'Creates two unrelated global variables',
+        detail: 'name and quantity are fields of each Part record rather than unrelated values floating outside it.',
+      },
+    ],
+    correctChoice: 'a',
+    hint: 'Choose the answer about defining one named shape that can keep two related values together.',
+    recap: 'A struct defines a reusable record type. Its fields name the related values, and aggregate-initialization braces supply their starting values in order.',
+    xp: 10,
+  },
+  {
+    id: 'cpprecords3-predict-fields',
+    conceptId: 'cpp-struct-fields',
+    eyebrow: 'Field trace 3 of 5',
+    title: 'Read a part record',
+    explanation:
+      'The dot operator selects one field from one record value. part.name reads the text field named name from part, while part.quantity reads the whole-number field named quantity from that same Part record.',
+    analogy:
+      'The dot acts like pointing to one labeled box on a completed Part form. Pointing to the name box retrieves bolts, and pointing to the quantity box retrieves 4.',
+    type: 'prediction',
+    prompt: 'What line reaches the console when both fields are read with the dot operator?',
+    displayCode:
+      'struct Part {\n    std::string name;\n    int quantity;\n};\n\nPart part{"bolts", 4};\nstd::cout << part.name << ": " << part.quantity;',
+    choices: [
+      {
+        id: 'a',
+        label: 'bolts: 4',
+        detail: 'The two dot expressions retrieve the name and quantity stored in part.',
+      },
+      {
+        id: 'b',
+        label: 'name: quantity',
+        detail: 'name and quantity are field labels. The dot expressions retrieve their stored values.',
+      },
+      {
+        id: 'c',
+        label: 'Part: bolts',
+        detail: 'Part is the record type, but the output instruction reads the two fields from the value named part.',
+      },
+    ],
+    correctChoice: 'a',
+    output: 'bolts: 4',
+    hint: 'Read the aggregate values in field order, then replace part.name and part.quantity with those stored values.',
+    recap: 'Use record.field to select a field from one record value. The dot connects the particular record to the field being read.',
+    xp: 14,
+  },
+  {
+    id: 'cpprecords3-fix-field-access',
+    conceptId: 'cpp-struct-fields',
+    eyebrow: 'Debugging bench 4 of 5',
+    title: 'Repair the field name',
+    explanation:
+      'The supplied Part struct defines fields named name and quantity. The output instruction asks for part.label, but Part has no field named label, so the compiler cannot complete that access. The record and its stored values are already correct.',
+    analogy:
+      'The clerk asks for the label box on a form that only has name and quantity boxes. Correcting the requested box name is enough to finish the lookup.',
+    type: 'bugfix',
+    prompt: 'Repair the field access so the program displays the stored part name and compiles.',
+    starterCode:
+      '#include <iostream>\n#include <string>\n\nstruct Part {\n    std::string name;\n    int quantity;\n};\n\nint main() {\n    Part part{"bolts", 4};\n    std::cout << part.label;\n    return 0;\n}',
+    focus: 'Change only part.label to part.name. Keep the supplied struct definition and initialized Part value unchanged.',
+    codeGuide: [
+      {
+        code: 'struct Part { ... };',
+        plain: 'This supplied definition creates the Part record type. The semicolon after the closing brace finishes the type definition.',
+      },
+      {
+        code: 'Part part{"bolts", 4};',
+        plain: 'This creates one Part value. The braces initialize name with bolts and quantity with 4 in the defined field order.',
+      },
+      {
+        code: 'part.label',
+        plain: 'This is the faulty access because the supplied Part shape has no field named label.',
+      },
+      {
+        code: 'part.name',
+        plain: 'This repaired dot expression selects the existing text field named name from the record named part.',
+      },
+    ],
+    checks: [
+      {
+        pattern: 'struct\\s+Part\\s*\\{\\s*std::string\\s+name\\s*;\\s*int\\s+quantity\\s*;\\s*\\}\\s*;',
+        message: 'Keep the supplied Part struct with its name and quantity fields.',
+      },
+      {
+        pattern: 'Part\\s+part\\s*\\{\\s*"bolts"\\s*,\\s*4\\s*\\}\\s*;',
+        message: 'Keep the supplied Part value initialized with bolts and quantity 4.',
+      },
+      {
+        pattern: 'std::cout\\s*<<\\s*part\\.name\\s*;',
+        message: 'Use the dot operator to display the existing name field from part.',
+      },
+    ],
+    output: 'bolts',
+    hint: 'Look inside the Part definition for the exact field that stores text, then use that name after part and the dot.',
+    recap: 'A field access must use a field name defined by the record type. part.name reads the supplied Part record’s name field.',
+    xp: 16,
+  },
+  {
+    id: 'cpprecords3-build-part-record',
+    conceptId: 'cpp-record-construction',
+    eyebrow: 'Inventory record 5 of 5',
+    title: 'Build and store a part record',
+    explanation:
+      'A vector can use a user-defined record as its element type. First, aggregate initialization creates one complete Part value. Then push_back appends a copy of that value to the vector. This lesson deliberately uses no reference syntax yet.',
+    analogy:
+      'Complete one Part form with a name and quantity, then place a copy of that finished form in the inventory tray. The tray now holds one complete record.',
+    type: 'code',
+    prompt: 'Complete the two field values so the Part record stores bolts and quantity 4 before it enters the vector.',
+    starterCode:
+      '#include <iostream>\n#include <string>\n#include <vector>\n\nstruct Part {\n    std::string name;\n    int quantity;\n};\n\nint main() {\n    std::vector<Part> parts;\n    Part part{_____, _____};\n    parts.push_back(part);\n\n    for (Part stored_part : parts) {\n        std::cout << stored_part.name << ": " << stored_part.quantity << "\\n";\n    }\n    return 0;\n}',
+    focus: 'Replace the first _____ with the quoted string "bolts" and the second _____ with the whole number 4. Do not change the supplied vector or loop.',
+    codeGuide: [
+      {
+        code: 'std::vector<Part> parts;',
+        plain: 'This declares a growable vector whose element type is the user-defined Part record. It begins empty.',
+      },
+      {
+        code: 'Part part{"bolts", 4};',
+        plain: 'This completed aggregate initialization creates one Part. The first value initializes name, and the second initializes quantity.',
+      },
+      {
+        code: 'parts.push_back(part);',
+        plain: 'The supplied member-function call appends a copy of the completed Part value to the vector.',
+      },
+      {
+        code: 'for (Part stored_part : parts)',
+        plain: 'The supplied range-based loop visits the vector record by record. It does not use a reference, which arrives in the next module.',
+      },
+    ],
+    checks: [
+      {
+        pattern: 'std::vector\\s*<\\s*Part\\s*>\\s+parts\\s*;',
+        message: 'Keep the supplied empty vector whose element type is Part.',
+      },
+      {
+        pattern: 'Part\\s+part\\s*\\{\\s*"bolts"\\s*,\\s*4\\s*\\}\\s*;',
+        message: 'Initialize part with the quoted name "bolts" followed by the whole number 4.',
+      },
+      {
+        pattern: 'parts\\.push_back\\s*\\(\\s*part\\s*\\)\\s*;',
+        message: 'Keep the supplied push_back call that stores the completed Part in the vector.',
+      },
+      {
+        pattern: 'for\\s*\\(\\s*Part\\s+stored_part\\s*:\\s*parts\\s*\\)',
+        message: 'Keep the supplied copy-based loop that reports each stored Part record.',
+      },
+    ],
+    output: 'bolts: 4',
+    hint: 'Inside the braces, write the two field values in their defined order: "bolts" first, followed by 4.',
+    recap: 'A vector can store records as its elements. Create a complete Part with aggregate initialization, then append it with push_back.',
+    xp: 22,
+  },
+]
+
+const recordUpdateExercises: Exercise[] = [
+  {
+    id: 'cpprecords4-retrieve-vector-loop',
+    conceptId: 'cpp-vector-functions',
+    eyebrow: 'Memory check 1 of 5',
+    title: 'Recall a vector loop',
+    explanation:
+      'A vector of Part records can be visited with the familiar range-based loop. On each pass, the copy-based loop variable part receives one record, and the dot operator reads that record’s name and quantity fields.',
+    analogy:
+      'The clerk copies each inventory form onto a reading card, reports its two fields, then moves to the next form in the tray.',
+    type: 'prediction',
+    prompt: 'What two lines will this read-only loop display from the supplied vector?',
+    displayCode:
+      'std::vector<Part> parts = {{"bolts", 4}, {"seals", 2}};\n\nfor (Part part : parts) {\n    std::cout << part.name << ": " << part.quantity << "\\n";\n}',
+    choices: [
+      {
+        id: 'a',
+        label: 'bolts: 4 then seals: 2',
+        detail: 'The loop visits both records in order and reads the two fields from each copied record.',
+      },
+      {
+        id: 'b',
+        label: 'Part twice',
+        detail: 'Part names the record type. The dot expressions retrieve the values stored in each record.',
+      },
+      {
+        id: 'c',
+        label: 'Only bolts: 4',
+        detail: 'A range-based loop continues until it has visited both vector elements.',
+      },
+    ],
+    correctChoice: 'a',
+    output: 'bolts: 4\nseals: 2',
+    hint: 'Trace one pass using the bolts record, then a second pass using the seals record.',
+    recap: 'A range-based loop can visit a vector of records, and the dot operator reads fields from the current record.',
+    xp: 8,
+  },
+  {
+    id: 'cpprecords4-reference-purpose',
+    conceptId: 'cpp-references',
+    eyebrow: 'Update workshop 2 of 5',
+    title: 'Meet a reference',
+    explanation:
+      'A normal Part parameter or loop variable receives a copy, so changing it does not change the original record. An ampersand in a declaration, such as Part& part, makes part a reference: another name for the original Part. The same declaration shape works for a function parameter and a range-based loop variable.',
+    analogy:
+      'Writing on a photocopy leaves the inventory form unchanged. A reference is permission to write on the original form through another temporary name.',
+    type: 'choice',
+    prompt: 'Why does this code place an ampersand after Part in both declarations?',
+    displayCode:
+      'void add_one(Part& part) {\n    part.quantity = part.quantity + 1;\n}\n\nfor (Part& part : parts) {\n    add_one(part);\n}',
+    choices: [
+      {
+        id: 'a',
+        label: 'Each part name refers to an original record instead of a copy',
+        detail: 'The loop reaches each stored Part, and the function parameter continues referring to that same original record.',
+      },
+      {
+        id: 'b',
+        label: 'The ampersand adds one to the quantity',
+        detail: 'The assignment performs the addition. The ampersand controls whether the original record or a copy is updated.',
+      },
+      {
+        id: 'c',
+        label: 'The ampersand displays the changed record',
+        detail: 'A reference does not print anything. Output still requires a separate std::cout instruction.',
+      },
+    ],
+    correctChoice: 'a',
+    hint: 'Choose the answer that contrasts another name for the original Part with an independent copied Part.',
+    recap: 'Part& declares a reference to an original Part. Updating a field through that name changes the original record rather than a temporary copy.',
+    xp: 10,
+  },
+  {
+    id: 'cpprecords4-predict-update',
+    conceptId: 'cpp-reference-updates',
+    eyebrow: 'Reference trace 3 of 5',
+    title: 'Follow an original record update',
+    explanation:
+      'The range-based loop variable is declared as Part& current, so current refers to the original vector element during that pass. Assigning a new quantity through current therefore changes the quantity stored inside parts.',
+    analogy:
+      'The clerk writes two more units directly on the original bolts form. Reading that same form afterward reveals the updated quantity.',
+    type: 'prediction',
+    prompt: 'What line reaches the console after the reference loop updates the stored record?',
+    displayCode:
+      'std::vector<Part> parts = {{"bolts", 4}};\n\nfor (Part& current : parts) {\n    current.quantity = current.quantity + 2;\n}\n\nstd::cout << parts[0].name << ": " << parts[0].quantity;',
+    choices: [
+      {
+        id: 'a',
+        label: 'bolts: 6',
+        detail: 'current refers to the original vector element, so adding 2 changes its stored quantity from 4 to 6.',
+      },
+      {
+        id: 'b',
+        label: 'bolts: 4',
+        detail: 'That result would come from changing a copy. The ampersand makes current a reference to the original.',
+      },
+      {
+        id: 'c',
+        label: 'current: 2',
+        detail: 'The assignment updates a field value, and the output reads the stored record through parts[0].',
+      },
+    ],
+    correctChoice: 'a',
+    output: 'bolts: 6',
+    hint: 'Because current is a reference, begin with the original quantity 4 and add 2 to that stored value.',
+    recap: 'A reference loop variable can update an original vector element. Later reads through the vector observe the changed field value.',
+    xp: 14,
+  },
+  {
+    id: 'cpprecords4-fix-copy-update',
+    conceptId: 'cpp-reference-updates',
+    eyebrow: 'Debugging bench 4 of 5',
+    title: 'Repair the copy mistake',
+    explanation:
+      'The loop currently declares Part current without an ampersand, so each pass changes only a temporary copy. The program compiles, but the original record in parts remains unchanged. Adding the reference marker connects current to that stored record.',
+    analogy:
+      'The clerk correctly adds three on a photocopy, then throws the copy away. Marking current as a reference moves the same edit onto the original inventory form.',
+    type: 'bugfix',
+    prompt: 'Add the missing reference marker so the loop changes the original bolts quantity from 4 to 7.',
+    starterCode:
+      '#include <iostream>\n#include <string>\n#include <vector>\n\nstruct Part {\n    std::string name;\n    int quantity;\n};\n\nint main() {\n    std::vector<Part> parts = {{"bolts", 4}};\n\n    for (Part current : parts) {\n        current.quantity = current.quantity + 3;\n    }\n\n    std::cout << parts[0].name << ": " << parts[0].quantity;\n    return 0;\n}',
+    focus: 'Change only Part current to Part& current in the supplied loop header. Keep the update and final vector report unchanged.',
+    codeGuide: [
+      {
+        code: 'for (Part current : parts)',
+        plain: 'This faulty header copies each Part into current. Updating that copy cannot change the original vector element.',
+      },
+      {
+        code: 'for (Part& current : parts)',
+        plain: 'The ampersand declares current as another name for the original Part visited during each loop pass.',
+      },
+      {
+        code: 'current.quantity = current.quantity + 3;',
+        plain: 'This supplied assignment reads the original quantity through the reference, adds 3, and stores the result back in that field.',
+      },
+      {
+        code: 'parts[0].quantity',
+        plain: 'The final output reads the original vector record, proving whether the loop updated stored data or only a copy.',
+      },
+    ],
+    checks: [
+      {
+        pattern: 'std::vector\\s*<\\s*Part\\s*>\\s+parts\\s*=\\s*\\{\\s*\\{\\s*"bolts"\\s*,\\s*4\\s*\\}\\s*\\}\\s*;',
+        message: 'Keep the supplied vector containing the bolts record with quantity 4.',
+      },
+      {
+        pattern: 'for\\s*\\(\\s*Part\\s*&\\s*current\\s*:\\s*parts\\s*\\)',
+        message: 'Add an ampersand after Part so current refers to each original vector record.',
+      },
+      {
+        pattern: 'current\\.quantity\\s*=\\s*current\\.quantity\\s*\\+\\s*3\\s*;',
+        message: 'Keep the supplied expanded update that adds 3 to the current quantity.',
+      },
+      {
+        pattern: 'std::cout\\s*<<\\s*parts\\s*\\[\\s*0\\s*\\]\\.name\\s*<<\\s*": "\\s*<<\\s*parts\\s*\\[\\s*0\\s*\\]\\.quantity\\s*;',
+        message: 'Keep the supplied final report that reads the original vector element.',
+      },
+    ],
+    output: 'bolts: 7',
+    hint: 'Place one ampersand between the type Part and the loop variable current: Part& current.',
+    recap: 'Without &, a range-based loop changes a copy. Declaring Part& current lets the same assignment update the original stored record.',
+    xp: 16,
+  },
+  {
+    id: 'cpprecords4-restock-part',
+    conceptId: 'cpp-record-updates',
+    eyebrow: 'Restock helper 5 of 5',
+    title: 'Restock a named part',
+    explanation:
+      'A function can receive a reference to an entire vector as std::vector<Part>& parts. That means the function works with the caller’s original collection. Inside it, Part& part refers to each original record. The condition finds the matching name, and the assignment adds the supplied amount to that record’s quantity.',
+    analogy:
+      'The restock helper receives the original inventory tray, checks each original form for the requested name, then writes the delivered amount into the matching quantity field.',
+    type: 'code',
+    prompt: 'Complete the matching condition and quantity assignment so the function adds 3 seals to the original record.',
+    starterCode:
+      '#include <iostream>\n#include <string>\n#include <vector>\n\nstruct Part {\n    std::string name;\n    int quantity;\n};\n\nvoid restock(std::vector<Part>& parts, std::string target, int amount) {\n    for (Part& part : parts) {\n        if (_____) {\n            _____;\n        }\n    }\n}\n\nint main() {\n    std::vector<Part> parts = {{"bolts", 4}, {"seals", 2}};\n    restock(parts, "seals", 3);\n    std::cout << parts[1].name << ": " << parts[1].quantity;\n    return 0;\n}',
+    focus: 'Replace the first _____ with part.name == target and the second _____ with part.quantity = part.quantity + amount. Keep both reference declarations in place.',
+    codeGuide: [
+      {
+        code: 'std::vector<Part>& parts',
+        plain: 'This is a reference parameter for the whole vector. The function name parts refers to the caller’s original collection instead of a copied vector.',
+      },
+      {
+        code: 'for (Part& part : parts)',
+        plain: 'This reference loop variable refers to each original Part record so a field assignment can persist after the loop.',
+      },
+      {
+        code: 'if (part.name == target)',
+        plain: 'The completed condition compares the current record’s name with the requested target name. The body runs only for a match.',
+      },
+      {
+        code: 'part.quantity = part.quantity + amount;',
+        plain: 'The completed expanded assignment reads the matching quantity, adds the supplied amount, and stores the result in the original field.',
+      },
+      {
+        code: 'restock(parts, "seals", 3);',
+        plain: 'This supplied call passes the original vector, the target name seals, and the amount 3 into the helper.',
+      },
+    ],
+    checks: [
+      {
+        pattern: 'void\\s+restock\\s*\\(\\s*std::vector\\s*<\\s*Part\\s*>\\s*&\\s*parts\\s*,\\s*std::string\\s+target\\s*,\\s*int\\s+amount\\s*\\)',
+        message: 'Keep the supplied restock function and its vector reference parameter.',
+      },
+      {
+        pattern: 'for\\s*\\(\\s*Part\\s*&\\s*part\\s*:\\s*parts\\s*\\)',
+        message: 'Keep the supplied Part reference loop so updates reach the original records.',
+      },
+      {
+        pattern: 'if\\s*\\(\\s*part\\.name\\s*==\\s*target\\s*\\)',
+        message: 'Compare the current part name with target inside the supplied if condition.',
+      },
+      {
+        pattern: 'part\\.quantity\\s*=\\s*part\\.quantity\\s*\\+\\s*amount\\s*;',
+        message: 'Add amount to the current quantity with the expanded assignment shown in the lesson.',
+      },
+      {
+        pattern: 'restock\\s*\\(\\s*parts\\s*,\\s*"seals"\\s*,\\s*3\\s*\\)\\s*;',
+        message: 'Keep the supplied call that restocks seals by 3.',
+      },
+    ],
+    output: 'seals: 5',
+    hint: 'First compare part.name with target using ==. Then assign part.quantity + amount back to part.quantity.',
+    recap: 'A vector reference parameter gives a helper access to the original collection, and a Part reference loop can update the matching original record.',
+    xp: 22,
+  },
+]
+
+// These authored modules remain outside the public course registry and runner
 // registry until all six modules, runner assignments, and release gates pass.
 export const cppCollectionsRecordsReturnValuesModule: Mission = {
   id: 'cpp-records-return-values',
@@ -459,7 +903,35 @@ export const cppCollectionsRecordsVectorsModule: Mission = {
   exercises: vectorExercises,
 }
 
+export const cppCollectionsRecordsStructsModule: Mission = {
+  id: 'cpp-records-structs',
+  language: 'cpp',
+  chapter: 3,
+  title: 'Records with struct',
+  subtitle: 'Keep related values together',
+  description: 'Define a small record shape, create one Part, and store that record in a vector.',
+  duration: '8 min',
+  icon: 'package',
+  status: 'locked',
+  exercises: structExercises,
+}
+
+export const cppCollectionsRecordsUpdatesModule: Mission = {
+  id: 'cpp-records-updates',
+  language: 'cpp',
+  chapter: 4,
+  title: 'Updating stored records',
+  subtitle: 'Change the original, not a copy',
+  description: 'Use references to find and update original Part records inside a vector.',
+  duration: '9 min',
+  icon: 'terminal',
+  status: 'locked',
+  exercises: recordUpdateExercises,
+}
+
 export const cppCollectionsRecordsDraftModules: readonly Mission[] = [
   cppCollectionsRecordsReturnValuesModule,
   cppCollectionsRecordsVectorsModule,
+  cppCollectionsRecordsStructsModule,
+  cppCollectionsRecordsUpdatesModule,
 ]

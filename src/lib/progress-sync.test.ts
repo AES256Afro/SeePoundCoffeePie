@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
+import { cppCollectionsRecordsManifest } from '../data/cpp-collections-records-manifest'
 import { pythonInteractiveProject } from '../data/python-interactive-project'
 import { cppCompiledProject } from '../data/cpp-compiled-project'
 import { trackById } from '../data/curriculum'
@@ -213,6 +214,54 @@ describe('durable progress synchronization', () => {
       'pydata1-return-purpose',
       'pydata1-subtotal',
     ])
+  })
+
+  it('unions Phase 5B partial and module completion without inventing additive rewards', () => {
+    const moduleId = 'cpp-records-vectors'
+    const lessonIds = cppCollectionsRecordsManifest[moduleId].map((lesson) => lesson.id)
+    const local = {
+      ...initialProgress('cpp'),
+      xp: 22,
+      completedLessons: [lessonIds[0]],
+      conceptProgress: {
+        'cpp-vectors': { strength: 1, correct: 1, incorrect: 0, dueAt: '2026-08-27' },
+      },
+    }
+    const remote = {
+      ...initialProgress('cpp'),
+      xp: 70,
+      completedMissions: [moduleId],
+      conceptProgress: {
+        'cpp-vectors': { strength: 2, correct: 3, incorrect: 1, dueAt: '2026-08-30' },
+      },
+    }
+
+    const merged = mergeLearnerProgress(local, remote)
+    expect(merged.xp).toBe(70)
+    expect(merged.completedMissions).toEqual([moduleId])
+    expect(merged.completedLessons).toEqual([...lessonIds].sort())
+    expect(merged.conceptProgress['cpp-vectors']).toEqual({
+      strength: 2,
+      correct: 3,
+      incorrect: 1,
+      dueAt: '2026-08-30',
+    })
+  })
+
+  it('canonically matches Phase 5B module closure with an explicit lesson list', () => {
+    const moduleId = 'cpp-records-structs'
+    const lessonIds = cppCollectionsRecordsManifest[moduleId].map((lesson) => lesson.id)
+    const missionOnly = {
+      ...initialProgress('cpp'),
+      completedMissions: [moduleId],
+    }
+    const explicit = {
+      ...missionOnly,
+      completedLessons: [...lessonIds].reverse(),
+    }
+
+    expect(progressRecordsMatch(missionOnly, explicit)).toBe(true)
+    expect(hasMeaningfulProgress(missionOnly)).toBe(true)
   })
 
   it('matches semantically equal records regardless of set and concept insertion order', () => {

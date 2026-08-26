@@ -4,6 +4,7 @@ import {
   courseDefinitionForSlug,
   courseDefinitions,
   courseIsAvailable,
+  courseMissionLessonIds,
   foundationCourseId,
   missingCoursePrerequisites,
   type CourseKind,
@@ -87,6 +88,15 @@ export interface CourseCardModel {
 
 export interface CourseModel extends CourseCardModel {
   modules: CourseModuleModel[]
+}
+
+export function resumeLessonId(
+  moduleLessonIds: readonly string[],
+  completedLessonIds: ReadonlySet<string>,
+): string | null {
+  return moduleLessonIds.find((lessonId) => !completedLessonIds.has(lessonId))
+    ?? moduleLessonIds.at(-1)
+    ?? null
 }
 
 function percentage(completed: number, total: number): number {
@@ -336,9 +346,8 @@ export function buildRegisteredCourseCard(
     ? -1
     : definition.missionIds.findIndex((missionId) => !completedMissionIds.has(missionId))
   const currentModuleId = currentModuleIndex >= 0 ? definition.missionIds[currentModuleIndex] : null
-  const currentLessonId = currentModuleIndex >= 0
-    ? definition.lessonIds.slice(currentModuleIndex * 5, (currentModuleIndex + 1) * 5)
-      .find((lessonId) => !completedLessonIds.has(lessonId)) ?? definition.lessonIds[(currentModuleIndex + 1) * 5 - 1] ?? null
+  const currentLessonId = currentModuleId
+    ? resumeLessonId(courseMissionLessonIds(courseId, currentModuleId), completedLessonIds)
     : null
   const status: CourseStatus = complete ? 'complete' : hasActivity ? 'in-progress' : 'not-started'
 

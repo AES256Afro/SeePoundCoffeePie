@@ -67,10 +67,11 @@ const lesson = (
   introduces,
 })
 
-// Phase 5B design-locked identifiers and curriculum intent. This file is not
-// imported by the public course registry, route parser, progress schema, or
-// runner assignment registry. Its tests deliberately require the course to
-// remain unpublished until all teaching copy and protected checks are ready.
+// Phase 5B design-locked identifiers and curriculum intent. This complete plan
+// is not imported by the public course registry, route parser, progress schema,
+// or runner assignment registry. Progress uses a separate identifier-only
+// compatibility manifest. Tests keep the course unpublished until all teaching
+// copy and protected checks are ready.
 export const cppCollectionsRecordsPlan = {
   status: 'unpublished',
   id: 'cpp-collections-records',
@@ -83,7 +84,7 @@ export const cppCollectionsRecordsPlan = {
   outcome:
     'Build and explain a Workshop Stock Report that stores part records, updates quantities, totals units, and identifies low-stock parts.',
   publicationPolicy:
-    'Keep this course outside the public registry, routes, runner assignments, progress allowlists, sitemap, and production bundles until every blocker below passes together.',
+    'Keep this course outside the public registry, routes, runner assignments, sitemap, and teaching-content bundles until every blocker below passes together. A compact identifier-only manifest may enter progress allowlists first as the documented compatibility floor.',
   publicationBlockers: [
     'all six modules contain complete reviewed learner teaching copy',
     'all twelve editable lessons have registered C++ runner assignments and specific diagnostics',

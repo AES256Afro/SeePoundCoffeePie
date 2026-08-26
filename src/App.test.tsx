@@ -32,6 +32,7 @@ vi.mock('./lib/runner-client', () => ({
 
 const progressKey = 'see-pound-coffee-pie-progress'
 const progressV2Key = 'see-pound-coffee-pie-progress-v2'
+const progressV3Key = 'see-pound-coffee-pie-progress-v3'
 const pythonMissionIds = trackById('python').missions.map((mission) => mission.id)
 const cppMissionIds = trackById('cpp').missions.map((mission) => mission.id)
 const practicalPythonTitle = 'Practical Python: Data Tools'
@@ -84,6 +85,7 @@ function storeTestProgress(progress: ReturnType<typeof initialProgress>): void {
   const serialized = JSON.stringify(progress)
   window.localStorage.setItem(progressKey, serialized)
   window.localStorage.setItem(progressV2Key, serialized)
+  window.localStorage.setItem(progressV3Key, serialized)
 }
 
 describe('beginner lesson interactions', () => {
@@ -867,6 +869,9 @@ describe('beginner lesson interactions', () => {
     })
     await waitFor(() => {
       expect(JSON.parse(window.localStorage.getItem(progressKey) ?? '{}')).toEqual(initialProgress())
+      expect(JSON.parse(
+        window.localStorage.getItem('see-pound-coffee-pie-progress-v3-reset') ?? '{}',
+      )).toEqual({ version: 1, active: true })
     })
   })
 
@@ -1094,7 +1099,8 @@ describe('beginner lesson interactions', () => {
       completedProjectCheckpoints: [pythonInteractiveProject.checkpoints[0].id],
     })
     window.localStorage.setItem(progressKey, continuedProjectProgress)
-    window.localStorage.setItem('see-pound-coffee-pie-progress-v2', continuedProjectProgress)
+    window.localStorage.setItem(progressV2Key, continuedProjectProgress)
+    window.localStorage.setItem(progressV3Key, continuedProjectProgress)
 
     render(<App />)
 

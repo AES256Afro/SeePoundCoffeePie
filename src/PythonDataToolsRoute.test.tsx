@@ -276,4 +276,30 @@ describe('Practical Python route components', () => {
       'Module completed. 25 star shards saved. Module 2 is now available.',
     )
   })
+
+  it('keeps the concrete Supply Tracker completion message', () => {
+    const finalMission = pythonDataToolsCourse.missions.at(-1)
+    if (!finalMission) throw new Error('Expected the final Practical Python module.')
+    const priorMissionIds = pythonDataToolsCourse.missions.slice(0, -1).map((mission) => mission.id)
+    const allLessonIds = pythonDataToolsCourse.missions.flatMap((mission) => (
+      mission.exercises.map((exercise) => exercise.id)
+    ))
+    const progress = progressWithPrerequisites({
+      completedLessons: allLessonIds,
+      completedMissions: [...foundationMissionIds, ...priorMissionIds],
+    })
+
+    render(
+      <PythonDataToolsCoursePage
+        onNavigate={vi.fn()}
+        onProgress={progressDispatcher()}
+        progress={progress}
+      />,
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: /Finish module/iu }))
+    expect(screen.getByRole('status').textContent).toBe(
+      'Course completed. 25 star shards saved. Your Supply Tracker is ready to review.',
+    )
+  })
 })

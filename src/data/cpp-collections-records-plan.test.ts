@@ -6,6 +6,11 @@ import {
   cppCollectionsRecordsLessons,
   cppCollectionsRecordsPlan,
 } from './cpp-collections-records-plan'
+import {
+  cppCollectionsRecordsLessons as cppCollectionsRecordsProgressLessons,
+  cppCollectionsRecordsManifest,
+  cppCollectionsRecordsMissionIds,
+} from './cpp-collections-records-manifest'
 import { projectManifests } from './project-manifests'
 import { tracks } from './curriculum'
 import { parseAppRoute } from '../lib/routes'
@@ -42,6 +47,19 @@ describe('Phase 5B Practical C++ course plan', () => {
     expect(cppCollectionsRecordsPlan.modules).toHaveLength(6)
     expect(cppCollectionsRecordsLessons).toHaveLength(30)
     expect(new Set(cppCollectionsRecordsLessons.map((lesson) => lesson.id)).size).toBe(30)
+  })
+
+  it('keeps the compact progress manifest identical to the unpublished plan', () => {
+    expect(cppCollectionsRecordsMissionIds).toEqual(expectedModuleIds)
+    expect(Object.keys(cppCollectionsRecordsManifest)).toEqual(expectedModuleIds)
+    expect(cppCollectionsRecordsProgressLessons).toEqual(
+      cppCollectionsRecordsLessons.map((currentLesson) => ({
+        conceptId: currentLesson.conceptId,
+        id: currentLesson.id,
+        missionId: currentLesson.moduleId,
+        xp: currentLesson.xp,
+      })),
+    )
   })
 
   it('keeps every planned identifier separate from published courses and projects', () => {

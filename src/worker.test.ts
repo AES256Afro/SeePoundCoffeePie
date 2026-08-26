@@ -6,6 +6,8 @@ vi.mock('@cloudflare/sandbox', () => ({
 }))
 
 import worker, { handleRequest } from './worker'
+import { cppCollectionsRecordsManifest } from './data/cpp-collections-records-manifest'
+import { cppCollectionsRecordsLessons } from './data/cpp-collections-records-plan'
 import { trackById } from './data/curriculum'
 import { initialProgress } from './lib/progress'
 
@@ -634,6 +636,77 @@ describe('production Worker', () => {
     }
   })
 
+  it('stores and returns Phase 5B identifiers through the unchanged version 1 record', async () => {
+    const sessionCookie = await sessionCookieFor()
+    const database = new MemoryD1()
+    const progressEnv = { ...htmlEnv, LEARNER_DB: database }
+    const headers = {
+      Cookie: `__Host-spp_session=${sessionCookie}`,
+      Origin: 'https://seepoundcoffeepie.com',
+      'Content-Type': 'application/json',
+    }
+    const moduleId = 'cpp-records-summaries'
+    const moduleLessons = cppCollectionsRecordsManifest[moduleId]
+    const progress = {
+      ...initialProgress('cpp'),
+      callsign: 'Compatibility Cadet',
+      completedLessons: moduleLessons.map((lesson) => lesson.id),
+      completedMissions: [moduleId],
+      conceptProgress: {
+        'cpp-record-aggregation': {
+          strength: 2,
+          correct: 3,
+          incorrect: 1,
+          dueAt: '2026-08-29',
+        },
+      },
+      onboardingComplete: true,
+    }
+    const created = await handleRequest(
+      new Request('https://seepoundcoffeepie.com/api/progress', {
+        method: 'PUT',
+        headers,
+        body: JSON.stringify({ version: 1, revision: 0, progress }),
+      }),
+      progressEnv,
+    )
+
+    expect(created.status).toBe(200)
+    await expect(created.json()).resolves.toMatchObject({
+      version: 1,
+      record: {
+        version: 1,
+        revision: 1,
+        progress: {
+          completedLessons: moduleLessons.map((lesson) => lesson.id),
+          completedMissions: [moduleId],
+          conceptProgress: progress.conceptProgress,
+        },
+      },
+    })
+    expect(database.row?.schema_version).toBe(1)
+
+    const loaded = await handleRequest(
+      new Request('https://seepoundcoffeepie.com/api/progress', {
+        headers: { Cookie: `__Host-spp_session=${sessionCookie}` },
+      }),
+      progressEnv,
+    )
+    expect(loaded.status).toBe(200)
+    await expect(loaded.json()).resolves.toMatchObject({
+      version: 1,
+      record: {
+        version: 1,
+        revision: 1,
+        progress: {
+          completedLessons: moduleLessons.map((lesson) => lesson.id),
+          completedMissions: [moduleId],
+          conceptProgress: progress.conceptProgress,
+        },
+      },
+    })
+  })
+
   it('requires authentication and same-origin confirmation for account progress changes', async () => {
     const database = new MemoryD1()
     const unauthenticated = await handleRequest(
@@ -710,6 +783,39 @@ describe('production Worker', () => {
       languages: ['python', 'cpp', 'csharp', 'java'],
     })
     expect(response.headers.get('Set-Cookie')).toBeNull()
+  })
+
+  it('does not issue runner grants for any unpublished Phase 5B editable lesson', async () => {
+    const runnerEnv = {
+      ...htmlEnv,
+      RUNNER_ENABLED: 'true',
+      RUNNER_CONTROL: {
+        getByName: vi.fn(),
+      },
+    }
+    const editableLessonIds = cppCollectionsRecordsLessons
+      .filter((lesson) => lesson.runnerBacked)
+      .map((lesson) => lesson.id)
+    expect(editableLessonIds).toHaveLength(12)
+
+    for (const exerciseId of editableLessonIds) {
+      const response = await handleRequest(
+        new Request('https://seepoundcoffeepie.com/api/runner/grants', {
+          method: 'POST',
+          headers: {
+            Origin: 'https://seepoundcoffeepie.com',
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ exerciseId }),
+        }),
+        runnerEnv,
+      )
+      expect(response.status, exerciseId).toBe(404)
+      await expect(response.json()).resolves.toEqual({
+        error: 'That exercise does not support live execution.',
+      })
+    }
+    expect(runnerEnv.RUNNER_CONTROL.getByName).not.toHaveBeenCalled()
   })
 
   it('issues a scoped guest grant and submits only validated source to the coordinator', async () => {

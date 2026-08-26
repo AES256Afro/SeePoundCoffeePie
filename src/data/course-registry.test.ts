@@ -4,6 +4,8 @@ import {
   courseDefinitions,
   courseIsAvailable,
   courseIsComplete,
+  courseMissionLessonIds,
+  courseMissionOwnsLesson,
   foundationCourseId,
   missingCoursePrerequisites,
 } from './course-registry'
@@ -61,5 +63,28 @@ describe('course registry', () => {
       expect(course.moduleTitles).toHaveLength(6)
       expect(course.moduleKinds).toHaveLength(6)
     }
+  })
+
+  it('resolves exact lesson ownership for foundation and continuing modules', () => {
+    expect(courseMissionLessonIds('python-data-tools', 'py-data-return-values')).toEqual([
+      'pydata1-retrieve-call',
+      'pydata1-return-purpose',
+      'pydata1-predict-result',
+      'pydata1-fix-return',
+      'pydata1-subtotal',
+    ])
+    expect(courseMissionOwnsLesson(
+      'python-data-tools',
+      'py-data-return-values',
+      'pydata1-return-purpose',
+    )).toBe(true)
+    expect(courseMissionOwnsLesson(
+      'python-data-tools',
+      'py-data-text-cleanup',
+      'pydata1-return-purpose',
+    )).toBe(false)
+    expect(courseMissionOwnsLesson('cpp-foundations', 'cpp-reactor', 'cpp-output')).toBe(true)
+    expect(courseMissionOwnsLesson('cpp-foundations', 'cpp-routing', 'cpp-output')).toBe(false)
+    expect(courseMissionLessonIds('python-data-tools', 'not-a-module')).toEqual([])
   })
 })

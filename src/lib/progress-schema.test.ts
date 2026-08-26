@@ -1,4 +1,9 @@
 import { describe, expect, it } from 'vitest'
+import {
+  cppCollectionsRecordsManifest,
+  cppCollectionsRecordsMissionIds,
+} from '../data/cpp-collections-records-manifest'
+import { cppCollectionsRecordsPlan } from '../data/cpp-collections-records-plan'
 import { trackById } from '../data/curriculum'
 import { initialProgress } from './progress'
 import { normalizeLocalLearnerProgress, parseLearnerProgress } from './progress-schema'
@@ -86,6 +91,66 @@ describe('learner progress schema', () => {
         'pydata1-subtotal',
       ],
     })
+  })
+
+  it('keeps the compact Phase 5B progress manifest aligned with the unpublished course plan', () => {
+    expect(cppCollectionsRecordsMissionIds).toEqual(
+      cppCollectionsRecordsPlan.modules.map((module) => module.id),
+    )
+    for (const module of cppCollectionsRecordsPlan.modules) {
+      expect(cppCollectionsRecordsManifest[module.id]).toEqual(
+        module.lessons.map(({ id, conceptId, xp }) => ({ id, conceptId, xp })),
+      )
+    }
+  })
+
+  it('strictly accepts Phase 5B identifiers and closes one completed module over its five lessons', () => {
+    const moduleId = 'cpp-records-return-values'
+    const moduleLessons = cppCollectionsRecordsManifest[moduleId]
+    const progress = {
+      ...initialProgress('cpp'),
+      completedMissions: [moduleId],
+      conceptProgress: {
+        'cpp-return-values': {
+          strength: 1,
+          correct: 1,
+          incorrect: 0,
+          dueAt: '2026-08-27',
+        },
+      },
+    }
+
+    expect(parseLearnerProgress(progress)).toMatchObject({
+      completedMissions: [moduleId],
+      completedLessons: moduleLessons.map((lesson) => lesson.id),
+      conceptProgress: progress.conceptProgress,
+    })
+  })
+
+  it('tolerantly preserves known Phase 5B progress while filtering unknown local values', () => {
+    const moduleId = 'cpp-records-vectors'
+    const lessonId = cppCollectionsRecordsManifest[moduleId][0].id
+    const concept = {
+      strength: 2,
+      correct: 3,
+      incorrect: 1,
+      dueAt: '2026-08-29',
+    }
+    const normalized = normalizeLocalLearnerProgress({
+      ...initialProgress('cpp'),
+      completedMissions: [moduleId, 'unknown-module', moduleId],
+      completedLessons: [lessonId, 'unknown-lesson', lessonId],
+      conceptProgress: {
+        'cpp-vectors': concept,
+        'unknown-concept': concept,
+      },
+    }, initialProgress('cpp'))
+
+    expect(normalized.completedMissions).toEqual([moduleId])
+    expect(normalized.completedLessons).toEqual(
+      cppCollectionsRecordsManifest[moduleId].map((lesson) => lesson.id),
+    )
+    expect(normalized.conceptProgress).toEqual({ 'cpp-vectors': concept })
   })
 
   it.each([

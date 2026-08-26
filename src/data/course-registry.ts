@@ -1,9 +1,8 @@
 import { durableCurriculumV1 } from './durable-curriculum-v1'
 import {
-  pythonDataToolsLessons,
-  pythonDataToolsManifest,
-  pythonDataToolsMissionIds,
-} from './python-data-tools-manifest'
+  publishedContinuingCourseLessonIds,
+  publishedContinuingCourseManifest,
+} from './published-continuing-course-manifests'
 import type { CourseId, LanguageId, LearnerProgress } from '../types'
 
 export type CourseSymbol = 'pi' | 'eye' | 'hash' | 'coffee'
@@ -26,6 +25,7 @@ export interface CourseDefinition {
   level: string
   symbol: CourseSymbol
   symbolLabel: string
+  completionReviewLabel?: string
   missionIds: readonly string[]
   lessonIds: readonly string[]
   moduleTitles: readonly string[]
@@ -78,6 +78,9 @@ const python = foundationOwnership('python')
 const cpp = foundationOwnership('cpp')
 const csharp = foundationOwnership('csharp')
 const java = foundationOwnership('java')
+const pythonDataTools = publishedContinuingCourseManifest('python-data-tools')
+
+if (!pythonDataTools) throw new Error('Published Practical Python manifest is missing.')
 
 export const courseDefinitions: readonly CourseDefinition[] = [
   {
@@ -164,8 +167,9 @@ export const courseDefinitions: readonly CourseDefinition[] = [
     level: 'Beginner II',
     symbol: 'pi',
     symbolLabel: 'Pi',
-    missionIds: pythonDataToolsMissionIds,
-    lessonIds: pythonDataToolsLessons.map((lesson) => lesson.id),
+    completionReviewLabel: 'Your Supply Tracker',
+    missionIds: pythonDataTools.modules.map((module) => module.id),
+    lessonIds: pythonDataTools.modules.flatMap((module) => module.lessonIds),
     moduleTitles: [
       'Functions that return answers',
       'Cleaning and normalizing text',
@@ -233,18 +237,22 @@ export function courseOwnsLesson(courseId: CourseId, lessonId: string): boolean 
   return courseDefinition(courseId).lessonIds.includes(lessonId)
 }
 
+export function courseMissionLessonIds(
+  courseId: CourseId,
+  missionId: string,
+): readonly string[] {
+  const course = courseDefinition(courseId)
+  if (!course.missionIds.includes(missionId)) return []
+  if (course.kind === 'continuing') {
+    return publishedContinuingCourseLessonIds(courseId, missionId) ?? []
+  }
+  return durableCurriculumV1[`${course.language}/${missionId}` as keyof typeof durableCurriculumV1] ?? []
+}
+
 export function courseMissionOwnsLesson(
   courseId: CourseId,
   missionId: string,
   lessonId: string,
 ): boolean {
-  const course = courseDefinition(courseId)
-  if (!course.missionIds.includes(missionId)) return false
-  if (courseId === 'python-data-tools') {
-    return Object.entries(pythonDataToolsManifest).some(([owner, lessons]) => (
-      owner === missionId && lessons.some((lesson) => lesson.id === lessonId)
-    ))
-  }
-  const lessons = durableCurriculumV1[`${course.language}/${missionId}` as keyof typeof durableCurriculumV1]
-  return Boolean(lessons?.some((candidate) => candidate === lessonId))
+  return courseMissionLessonIds(courseId, missionId).includes(lessonId)
 }

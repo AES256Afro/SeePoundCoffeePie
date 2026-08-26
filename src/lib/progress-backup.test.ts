@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { cppCollectionsRecordsManifest } from '../data/cpp-collections-records-manifest'
 import { pythonInteractiveProject } from '../data/python-interactive-project'
 import { cppCompiledProject } from '../data/cpp-compiled-project'
 import { trackById } from '../data/curriculum'
@@ -184,6 +185,36 @@ describe('local progress backups', () => {
     }
 
     expect(parseProgressBackup(serializeProgressBackup(progress, exportedAt))).toEqual({
+      ok: true,
+      progress,
+      exportedAt: exportedAt.toISOString(),
+    })
+  })
+
+  it('round-trips Phase 5B completion and review state in backup version 1', () => {
+    const moduleId = 'cpp-records-updates'
+    const moduleLessons = cppCollectionsRecordsManifest[moduleId]
+    const progress = {
+      ...initialProgress('cpp'),
+      xp: 280,
+      completedLessons: moduleLessons.map((lesson) => lesson.id),
+      completedMissions: [moduleId],
+      conceptProgress: {
+        'cpp-reference-updates': {
+          strength: 2,
+          correct: 3,
+          incorrect: 1,
+          dueAt: '2026-08-29',
+        },
+      },
+    }
+    const serialized = serializeProgressBackup(progress, exportedAt)
+
+    expect(JSON.parse(serialized)).toMatchObject({
+      format: PROGRESS_BACKUP_FORMAT,
+      version: 1,
+    })
+    expect(parseProgressBackup(serialized)).toEqual({
       ok: true,
       progress,
       exportedAt: exportedAt.toISOString(),

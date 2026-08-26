@@ -9,6 +9,7 @@ import {
   coursePath,
   courseSlugFor,
   languageForCourseSlug,
+  resumeLessonId,
 } from './course-model'
 
 describe('course presentation model', () => {
@@ -68,6 +69,37 @@ describe('course presentation model', () => {
       'Complete Python Foundations',
       'Complete Your First Interactive Program',
     ])
+  })
+
+  it('resumes registered courses from the current module ownership map', () => {
+    const progress = {
+      ...initialProgress('python'),
+      completedMissions: ['py-data-return-values'],
+      completedLessons: [
+        'pydata1-retrieve-call',
+        'pydata1-return-purpose',
+        'pydata1-predict-result',
+        'pydata1-fix-return',
+        'pydata1-subtotal',
+        'pydata2-retrieve-format',
+      ],
+    }
+    const practicalPython = buildCourseCards(progress).find((course) => (
+      course.id === 'python-data-tools'
+    ))
+
+    expect(practicalPython).toMatchObject({
+      currentModuleId: 'py-data-text-cleanup',
+      currentLessonId: 'pydata2-strip-purpose',
+      completedModuleCount: 1,
+      completedLessonCount: 6,
+    })
+  })
+
+  it('finds a resume lesson without assuming every module has five lessons', () => {
+    expect(resumeLessonId(['one', 'two', 'three'], new Set(['one']))).toBe('two')
+    expect(resumeLessonId(['one', 'two', 'three'], new Set(['one', 'two', 'three']))).toBe('three')
+    expect(resumeLessonId([], new Set())).toBeNull()
   })
 
   it('maps every mission to one display module without changing curriculum IDs', () => {
