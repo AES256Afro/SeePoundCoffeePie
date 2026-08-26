@@ -21,12 +21,13 @@ The current vertical slice includes:
 - a bookmarkable course catalog and separate outlines for Python, C++, C#, and Java Foundations;
 - six fully playable five-lesson modules for each language;
 - four bookmarkable 12-checkpoint projects: a Python Coffee Counter, C++ Observation Desk, C# Community Workshop Check-In, and Java Community Picnic Planner;
+- a private portfolio preview for each completed project with a deliberate, script-free HTML download;
 - plain-language explanations and concrete analogies;
 - guided choices, output prediction, code ordering, bug repair, and editable code exercises;
 - immediate, specific feedback and optional hints;
 - an end-of-module memory-repair round that brings missed ideas back once and awards no repair XP;
 - real isolated execution for all 48 editable Python, C++, C#, and Java exercises;
-- XP, adjustable daily goal, streak, star-shard, module-completion, and accuracy tracking;
+- XP, adjustable daily goal, streak, star-shard, lesson-completion, module-completion, and accuracy tracking;
 - a spaced-review scheduler that weighs correct and incorrect attempts;
 - Practice that builds a short review of up to five familiar questions from completed modules, starting with ideas that are due or need another pass and awarding no XP or shards;
 - a searchable 50-term beginner Codebook and a learner record with progression-unlocked examples and separate progress for all four courses;
@@ -51,6 +52,7 @@ The academy uses clean application URLs instead of separate `.html` files. Cloud
 - `/projects/cpp/first-compiled-program` is the C++ project overview, and adding a checkpoint ID opens that exact C++ checkpoint;
 - `/projects/csharp/workshop-check-in` is the C# project overview, and adding a checkpoint ID opens that exact C# checkpoint;
 - `/projects/java/picnic-planner` is the Java project overview, and adding a checkpoint ID opens that exact Java checkpoint;
+- `/portfolio/:language/:project-id` is the browser-local portfolio preview for one matching completed project. The route is bookmarkable, but project source remains in the browser where it was written;
 - `/practice/:language` is the selected course’s Practice page;
 - `/practice/:language/session` opens a private adaptive set assembled from completed modules;
 - `/practice/:language/session/:step` preserves the current question while navigating inside the same open tab without exposing weak concept identifiers;
@@ -60,7 +62,7 @@ The academy uses clean application URLs instead of separate `.html` files. Cloud
 - `/academy/:language` and `/academy/:language/missions/:mission-id` remain supported compatibility routes for existing bookmarks;
 - older focused Practice bookmarks under `/practice/:language/missions/:mission-id` remain available only for completed missions. New adaptive sets keep the bounded exercise queue in tab-scoped session storage instead of putting learner weaknesses in the URL.
 
-The browser Back and Forward buttons follow these routes normally. Browsing another course does not silently change the learner’s active course, and selecting another active course does not erase progress in the other languages. Existing mission and exercise identifiers remain unchanged behind the new course, module, and lesson presentation so saved progress, backups, evaluator assignments, and old bookmarks stay compatible.
+The browser Back and Forward buttons follow these routes normally. A bookmarked course controls the course selector, Practice link, and Codebook link on that page without silently replacing the learner’s saved default course. Selecting another active course does not erase progress in the other languages. Existing mission and exercise identifiers remain unchanged behind the course, module, and lesson presentation. Authored exercise identifiers now also provide durable per-lesson completion, so a learner resumes at the first unfinished lesson without replaying credited work. A separate allowlisted browser-local lesson journal protects that partial progress from an already-open older tab that does not know the new field.
 
 Each module unlocks only after the previous module is complete in the same language. Module 2 retrieves output and variable skills before introducing Booleans, comparisons, `if`, and `else`. Module 3 retrieves that decision work before introducing collections, arrays or lists, and zero-based indexing. Module 4 retrieves an indexed item before explaining loops, tracing repeated output, assembling a loop, and applying it to the whole collection. Module 5 retrieves that loop before introducing reusable functions or methods, parameters, arguments, definitions, and calls. Module 6 then combines storage, conditions, collections, loops, and reusable code in an integrative capstone without adding another syntax burden.
 
@@ -106,7 +108,7 @@ npm run check:runner:image
 ```
 
 The production bundle is written to `dist/`.
-`npm run check:bundle` enforces raw and gzip budgets for the emitted JavaScript, CSS, and HTML so curriculum growth cannot silently create an oversized first load.
+`npm run check:bundle` enforces raw and gzip budgets for emitted JavaScript, CSS, and HTML. It also gives the lazy portfolio JavaScript and CSS their own limits, so route growth cannot silently create an oversized first load.
 `npm run check:social-preview` verifies the Open Graph and large-card metadata plus the exact 1200 by 630 share image used by Discord and other social platforms.
 
 ## Production hosting
@@ -160,7 +162,7 @@ The authorization flow uses an exact callback, a cryptographic state value, PKCE
 
 GitHub sign-in verifies identity and can synchronize one private Cadet Record after the learner explicitly chooses how to handle existing browser and account progress. Guests keep the complete browser-only experience. Signed-in learners can save or combine a browser record, use an existing account record, continue safely while offline, resolve revision conflicts, and delete the server copy without deleting the browser copy.
 
-The synchronized record includes learning settings, XP, streak, mission achievements, aggregate answer counts, memory strength, and review dates. It does not retain submitted code, raw attempts, GitHub access tokens, email, raw IP addresses, or social data. A dedicated `LEARNER_DATA_SECRET` pseudonymizes the GitHub account ID and must remain stable across normal `SESSION_SECRET` rotations.
+The synchronized record includes learning settings, XP, streak, known lesson and mission achievements, aggregate answer counts, memory strength, and review dates. It does not retain submitted code, raw attempts, GitHub access tokens, email, raw IP addresses, or social data. A dedicated `LEARNER_DATA_SECRET` pseudonymizes the GitHub account ID and must remain stable across normal `SESSION_SECRET` rotations.
 
 Apply the versioned D1 schema before deploying Worker code that uses it:
 
@@ -199,7 +201,7 @@ Read the full [product and curriculum blueprint](docs/PRODUCT_BLUEPRINT.md).
 The verified Phase 1 scope and handoff are recorded in the [Phase 1 learning foundation release](docs/PHASE_1_RELEASE.md).
 The verified Phase 2 execution boundary is recorded in the [Phase 2 real execution release](docs/PHASE_2_RELEASE.md).
 The Phase 3 account and durable-learning-data contract is recorded in the [Phase 3 release](docs/PHASE_3_RELEASE.md).
-The Python project studio, protected assessment, local-draft boundary, and Phase 4A verification are recorded in the [Phase 4A release](docs/PHASE_4A_RELEASE.md). The multi-project registry and first compiled C++ project are recorded in the [Phase 4B release](docs/PHASE_4B_RELEASE.md). The first complete C# project and its trusted Roslyn grading boundary are recorded in the [Phase 4C release](docs/PHASE_4C_RELEASE.md). The Java picnic project, compiler-tree grading boundary, and final four-language project parity are recorded in the [Phase 4D release](docs/PHASE_4D_RELEASE.md). The bounded cross-module review selector, private same-tab session routing, zero-reward Practice flow, and progress-schema hardening are recorded in the [Phase 4E release](docs/PHASE_4E_RELEASE.md).
+The Python project studio, protected assessment, local-draft boundary, and Phase 4A verification are recorded in the [Phase 4A release](docs/PHASE_4A_RELEASE.md). The multi-project registry and first compiled C++ project are recorded in the [Phase 4B release](docs/PHASE_4B_RELEASE.md). The first complete C# project and its trusted Roslyn grading boundary are recorded in the [Phase 4C release](docs/PHASE_4C_RELEASE.md). The Java picnic project, compiler-tree grading boundary, and final four-language project parity are recorded in the [Phase 4D release](docs/PHASE_4D_RELEASE.md). The bounded cross-module review selector, private same-tab session routing, zero-reward Practice flow, and progress-schema hardening are recorded in the [Phase 4E release](docs/PHASE_4E_RELEASE.md). Durable per-lesson resume, honest project completion semantics, and the private portfolio export boundary are recorded in the [Phase 4F release](docs/PHASE_4F_RELEASE.md).
 The course, lesson, navigation, accessibility, and visual direction is recorded in the [Open Learning Workshop milestone](docs/UI_REDESIGN_MOCKUPS.md). The milestone is live, and its release record includes the exact source commit, deployed Worker version, accessibility review, route checks, runner regressions, and production browser evidence.
 
 ## Research references

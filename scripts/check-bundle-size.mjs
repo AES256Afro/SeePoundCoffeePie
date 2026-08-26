@@ -7,18 +7,34 @@ const budgets = {
   // The first-load budget stays tight. Route-loaded teaching content gets a separate total cap.
   initial: {
     javascript: { raw: 485_000, gzip: 132_000 },
-    css: { raw: 70_000, gzip: 13_000 },
+    // Phase 4F adds visible lesson state, module recovery, and honest project
+    // completion semantics to the shared shell. Portfolio styles stay lazy.
+    css: { raw: 72_500, gzip: 13_500 },
     html: { raw: 5_000, gzip: 2_000 },
   },
   total: {
-    // Phase 4D adds a fourth complete route-loaded curriculum. The small
-    // manifests remain on the initial page, while each full language project
-    // stays in its own on-demand chunk.
-    javascript: { raw: 660_000, gzip: 180_000 },
-    css: { raw: 70_000, gzip: 13_000 },
+    // Phase 4F adds one route-loaded portfolio preview and exporter. The
+    // route receives its own caps below so it cannot silently bloat.
+    javascript: { raw: 685_000, gzip: 195_000 },
+    css: { raw: 76_000, gzip: 15_000 },
     html: { raw: 5_000, gzip: 2_000 },
   },
 }
+
+const routeBudgets = [
+  {
+    label: 'portfolio route javascript',
+    pattern: /^PortfolioPage-.*\.js$/u,
+    raw: 15_000,
+    gzip: 6_000,
+  },
+  {
+    label: 'portfolio route css',
+    pattern: /^PortfolioPage-.*\.css$/u,
+    raw: 4_500,
+    gzip: 1_500,
+  },
+]
 
 async function filesBelow(directory) {
   const entries = await readdir(directory, { withFileTypes: true })
@@ -96,6 +112,18 @@ function check(scope, sizesByKind) {
 
 check('initial', initial)
 check('total', totals)
+
+for (const budget of routeBudgets) {
+  const matches = [...fileSizes.entries()].filter(([fileName]) => budget.pattern.test(fileName))
+  if (matches.length !== 1) {
+    failures.push(`${budget.label} must be emitted as exactly one lazy asset`)
+    continue
+  }
+  const [, sizes] = matches[0]
+  console.log(`${budget.label}: ${kilobytes(sizes.raw)} raw, ${kilobytes(sizes.gzip)} gzip`)
+  if (sizes.raw > budget.raw) failures.push(`${budget.label} raw size exceeds ${kilobytes(budget.raw)}`)
+  if (sizes.gzip > budget.gzip) failures.push(`${budget.label} gzip size exceeds ${kilobytes(budget.gzip)}`)
+}
 
 if (failures.length > 0) {
   console.error('\nBundle budget failed:')

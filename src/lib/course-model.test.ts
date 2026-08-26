@@ -80,7 +80,7 @@ describe('course presentation model', () => {
     })
   })
 
-  it('derives lesson progress and the next lesson only from completed mission IDs', () => {
+  it('uses completed mission IDs as the backward-compatible lesson fallback', () => {
     const progress = {
       ...initialProgress('java'),
       completedMissions: ['java-coffee-protocol', 'java-routing-orders'],
@@ -121,6 +121,61 @@ describe('course presentation model', () => {
       id: 'java3-retrieve-route',
       current: true,
       completed: false,
+    })
+  })
+
+  it('shows partial lesson progress and resumes at the first unfinished lesson', () => {
+    const progress = {
+      ...initialProgress(),
+      completedLessons: ['py-console', 'py-print'],
+    }
+    const python = buildCourseModel(tracks[0], progress)
+
+    expect(python).toMatchObject({
+      completedModuleCount: 0,
+      completedLessonCount: 2,
+      lessonCount: 30,
+      progressPercent: 7,
+      status: 'in-progress',
+      currentModuleId: 'py-first-spark',
+      currentLessonId: 'py-string',
+      actionLabel: 'Continue course',
+    })
+    expect(python.modules[0]).toMatchObject({
+      completed: false,
+      completedLessonCount: 2,
+      progressPercent: 40,
+      current: true,
+      availability: 'available',
+    })
+    expect(python.modules[0].lessons.map((lesson) => ({
+      id: lesson.id,
+      completed: lesson.completed,
+      current: lesson.current,
+    }))).toEqual([
+      { id: 'py-console', completed: true, current: false },
+      { id: 'py-print', completed: true, current: false },
+      { id: 'py-string', completed: false, current: true },
+      { id: 'py-number', completed: false, current: false },
+      { id: 'py-launch', completed: false, current: false },
+    ])
+  })
+
+  it('returns to the final lesson when every lesson is done but the module is not closed', () => {
+    const firstMissionLessonIds = tracks[0].missions[0].exercises.map((exercise) => exercise.id)
+    const python = buildCourseModel(tracks[0], {
+      ...initialProgress(),
+      completedLessons: firstMissionLessonIds,
+    })
+
+    expect(python.currentLessonId).toBe('py-launch')
+    expect(python.completedModuleCount).toBe(0)
+    expect(python.completedLessonCount).toBe(5)
+    expect(python.modules[0]).toMatchObject({
+      completed: false,
+      completedLessonCount: 5,
+      progressPercent: 100,
+      currentLessonId: 'py-launch',
     })
   })
 

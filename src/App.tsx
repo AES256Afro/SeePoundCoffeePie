@@ -27,6 +27,7 @@ import {
   Compass,
   Download,
   Eye,
+  FileCode2,
   Flame,
   GitFork as Github,
   Home,
@@ -71,6 +72,7 @@ import {
 } from './lib/practice-session'
 import { parseProgressBackup, serializeProgressBackup } from './lib/progress-backup'
 import {
+  completeMission,
   dateKey,
   initialProgress,
   loadProgress,
@@ -97,6 +99,7 @@ import {
   practicePath,
   practiceSessionPath,
   projectPath,
+  type RoutePage,
 } from './lib/routes'
 import type {
   AuthUser,
@@ -110,6 +113,11 @@ type ViewId = 'home' | 'courses' | 'path' | 'practice' | 'spellbook' | 'profile'
 const ProjectStudio = lazy(async () => {
   const module = await import('./ProjectStudio')
   return { default: module.ProjectStudio }
+})
+
+const PortfolioPage = lazy(async () => {
+  const module = await import('./PortfolioPage')
+  return { default: module.PortfolioPage }
 })
 
 const LessonPlayer = lazy(async () => {
@@ -141,6 +149,29 @@ const languageSnippets: Record<LanguageId, string> = {
 interface BrowserLocation {
   pathname: string
   search: string
+}
+
+const languageContextPages: ReadonlySet<RoutePage> = new Set([
+  'academy',
+  'course',
+  'practice',
+  'practice-session',
+  'codebook',
+  'lesson',
+  'project',
+  'portfolio',
+])
+
+const languagePreferencePages: ReadonlySet<RoutePage> = new Set(
+  [...languageContextPages].filter((page) => page !== 'course'),
+)
+
+function routeHasLanguageContext(page: RoutePage): boolean {
+  return languageContextPages.has(page)
+}
+
+function routeSetsLanguagePreference(page: RoutePage): boolean {
+  return languagePreferencePages.has(page)
 }
 
 function readBrowserLocation(): BrowserLocation {
@@ -176,12 +207,23 @@ function AppLink({ children, onClick, target, to, ...props }: AppLinkProps) {
   return <a {...props} href={to} onClick={followLink} target={target}>{children}</a>
 }
 
-function LanguageSymbol({ language, size = 'medium' }: { language: LanguageId; size?: 'small' | 'medium' | 'large' }) {
+function LanguageSymbol({
+  decorative = false,
+  language,
+  size = 'medium',
+}: {
+  decorative?: boolean
+  language: LanguageId
+  size?: 'small' | 'medium' | 'large'
+}) {
   const className = `language-symbol language-symbol--${language} language-symbol--${size}`
-  if (language === 'cpp') return <span className={className} aria-label="C++"><Eye aria-hidden="true" /></span>
-  if (language === 'csharp') return <span className={className} aria-label="C#">#</span>
-  if (language === 'java') return <span className={className} aria-label="Java"><Coffee aria-hidden="true" /></span>
-  return <span className={className} aria-label="Python">π</span>
+  const accessibility = decorative
+    ? { 'aria-hidden': true as const }
+    : { 'aria-label': language === 'cpp' ? 'C++' : language === 'csharp' ? 'C#' : language === 'java' ? 'Java' : 'Python' }
+  if (language === 'cpp') return <span className={className} {...accessibility}><Eye aria-hidden="true" /></span>
+  if (language === 'csharp') return <span className={className} {...accessibility}>#</span>
+  if (language === 'java') return <span className={className} {...accessibility}><Coffee aria-hidden="true" /></span>
+  return <span className={className} {...accessibility}>π</span>
 }
 
 function SymbolStrip({ compact = false }: { compact?: boolean }) {
@@ -525,7 +567,7 @@ function AppShell({ authReady, authUser, progress, view, onLanguageChange, onSig
           </nav>
           <div className="workshop-topbar__tools">
             <label className="track-switcher">
-              <LanguageSymbol language={track.id} size="small" />
+              <LanguageSymbol decorative language={track.id} size="small" />
               <span className="sr-only">Active course</span>
               <select value={progress.activeLanguage} onChange={(event) => onLanguageChange(event.target.value as LanguageId)}>
                 {tracks.map((item) => <option key={item.id} value={item.id}>{item.shortName}</option>)}
@@ -573,7 +615,7 @@ function CourseCard({ course }: { course: CourseCardModel }) {
   const status = course.status === 'complete'
     ? 'Course complete'
     : course.status === 'in-progress'
-      ? `${course.completedModuleCount} of ${course.moduleCount} modules complete`
+      ? `${course.completedLessonCount} of ${course.lessonCount} lessons complete`
       : 'Ready when you are'
   return (
     <article className={`course-card course-card--${course.id}`}>
@@ -735,7 +777,7 @@ function LearnerHome({ progress }: { progress: LearnerProgress }) {
         {courses.map((course) => (
           <AppLink className="home-course-row" key={course.id} to={coursePath(course.id)}>
             <CourseSymbol course={course} />
-            <span><b>{course.title}</b><small>{course.status === 'not-started' ? 'Not started' : `${course.completedModuleCount} of ${course.moduleCount} modules complete`}</small></span>
+            <span><b>{course.title}</b><small>{course.status === 'not-started' ? 'Not started' : `${course.completedLessonCount} of ${course.lessonCount} lessons complete`}</small></span>
             <i aria-label={`${course.title} progress`} aria-valuemax={100} aria-valuemin={0} aria-valuenow={course.progressPercent} role="progressbar"><b style={{ width: `${course.progressPercent}%` }} /></i>
             <strong>{course.actionLabel} <ArrowRight size={15} /></strong>
           </AppLink>
@@ -745,10 +787,19 @@ function LearnerHome({ progress }: { progress: LearnerProgress }) {
   )
 }
 
-function MissionPath({ progress }: { progress: LearnerProgress }) {
+function MissionPath({
+  onProgress,
+  progress,
+}: {
+  onProgress: Dispatch<SetStateAction<LearnerProgress>>
+  progress: LearnerProgress
+}) {
   const track = trackById(progress.activeLanguage)
   const course = buildCourseModel(track, progress)
   const [expandedModule, setExpandedModule] = useState(course.currentModuleId ?? course.modules[0]?.id ?? '')
+  const [completionNotice, setCompletionNotice] = useState('')
+  const [focusModuleId, setFocusModuleId] = useState<string | null>(null)
+  const moduleSummaryRefs = useRef(new Map<string, HTMLButtonElement>())
   const currentModule = course.modules.find((module) => module.id === course.currentModuleId)
   const currentLesson = currentModule?.lessons.find((lesson) => lesson.id === course.currentLessonId)
   const continueTo = currentModule && currentLesson
@@ -756,25 +807,59 @@ function MissionPath({ progress }: { progress: LearnerProgress }) {
     : coursePath(track.id)
   const guidedProject = projectManifestForLanguage(track.id)
 
+  useEffect(() => {
+    if (!focusModuleId) return
+    const timer = window.setTimeout(() => {
+      moduleSummaryRefs.current.get(focusModuleId)?.focus({ preventScroll: true })
+      setFocusModuleId(null)
+    }, 0)
+    return () => window.clearTimeout(timer)
+  }, [course.currentModuleId, focusModuleId])
+
+  const handleFinishModule = (moduleId: string) => {
+    const moduleIndex = course.modules.findIndex((module) => module.id === moduleId)
+    const nextModule = course.modules[moduleIndex + 1]
+    const focusTarget = nextModule ?? course.modules[moduleIndex]
+    setExpandedModule(focusTarget?.id ?? '')
+    setFocusModuleId(focusTarget?.id ?? null)
+    setCompletionNotice(nextModule
+      ? `Module completed. 25 star shards saved. Module ${nextModule.number} is now available.`
+      : 'Module completed. 25 star shards saved. The guided project is now available.')
+    onProgress((current) => completeMission(current, moduleId))
+  }
+
   return (
     <main className="workshop-page course-outline">
       <AppLink className="back-link" to={coursesPath()}><ArrowLeft size={16} /> All courses</AppLink>
       <header className={`course-hero course-hero--${track.id}`}>
         <CourseSymbol course={course} size="large" />
         <div><p className="eyebrow">Beginner course</p><h1>{course.title}</h1><p>{course.description}</p><span>{course.moduleCount} modules · {course.lessonCount} short lessons · {course.level}</span></div>
-        <div className="course-hero__action"><b>{course.progressPercent}% complete</b><i aria-label={`${course.title} progress`} aria-valuemax={100} aria-valuemin={0} aria-valuenow={course.progressPercent} role="progressbar"><span style={{ width: `${course.progressPercent}%` }} /></i><AppLink className="primary-action" to={continueTo}>{course.actionLabel} <ArrowRight size={17} /></AppLink></div>
+        <div className="course-hero__action"><b>{course.completedLessonCount} of {course.lessonCount} lessons complete</b><small>{course.progressPercent}% of course</small><i aria-label={`${course.title} progress`} aria-valuemax={100} aria-valuemin={0} aria-valuenow={course.progressPercent} role="progressbar"><span style={{ width: `${course.progressPercent}%` }} /></i><AppLink className="primary-action" to={continueTo}>{course.actionLabel} <ArrowRight size={17} /></AppLink></div>
       </header>
 
       <section className="course-modules" aria-labelledby="course-content-title">
         <div className="section-heading-open"><div><p className="eyebrow">Course outline</p><h2 id="course-content-title">What you will learn</h2></div><p>Open a module to see its five short lessons.</p></div>
+        {completionNotice && <p className="module-completion-status" role="status">{completionNotice}</p>}
         {course.modules.map((module) => {
           const expanded = expandedModule === module.id
+          const readyToFinish = !module.completed
+            && module.availability === 'available'
+            && module.completedLessonCount === module.lessonCount
           return (
             <article className={`module-row ${module.completed ? 'is-complete' : ''} ${module.current ? 'is-current' : ''}`} key={module.id}>
-              <button className="module-row__summary" aria-controls={`module-${module.id}-lessons`} aria-expanded={expanded} onClick={() => setExpandedModule(expanded ? '' : module.id)}>
+              <button
+                className="module-row__summary"
+                aria-controls={`module-${module.id}-lessons`}
+                aria-expanded={expanded}
+                onClick={() => setExpandedModule(expanded ? '' : module.id)}
+                ref={(node) => {
+                  if (node) moduleSummaryRefs.current.set(module.id, node)
+                  else moduleSummaryRefs.current.delete(module.id)
+                }}
+              >
                 <span className="module-number">{module.completed ? <Check size={17} /> : module.availability === 'available' ? module.number : <LockKeyhole size={15} />}</span>
                 <span><small>{module.kind === 'guided-project' ? 'Guided project' : `Module ${module.number}`}</small><b>{module.title}</b><p>{module.description}</p></span>
-                <strong>{module.completedLessonCount} / {module.lessonCount} lessons</strong>
+                <strong>{module.completedLessonCount} of {module.lessonCount} lessons complete</strong>
                 <ChevronDown size={19} />
               </button>
               <div className="module-lessons" hidden={!expanded} id={`module-${module.id}-lessons`}>
@@ -782,13 +867,22 @@ function MissionPath({ progress }: { progress: LearnerProgress }) {
                     const canOpen = module.availability === 'available'
                     return canOpen ? (
                       <AppLink aria-current={lesson.current ? 'step' : undefined} className={lesson.current ? 'is-current' : ''} key={lesson.id} to={lessonPath(track.id, module.id, lesson.id)}>
-                        <span>{lesson.completed ? <Check size={15} /> : lesson.number}</span><b>{lesson.title}</b><small>{lesson.type === 'bugfix' ? 'Debugging' : lesson.type === 'choice' ? 'Guided check' : lesson.type === 'prediction' ? 'Prediction' : lesson.type === 'ordering' ? 'Ordering' : 'Code exercise'}</small><ArrowRight size={15} />
+                        <span>{lesson.completed ? <Check size={15} /> : lesson.number}</span><b>{lesson.title}</b><small>{lesson.completed ? 'Complete' : lesson.current ? 'Next lesson' : 'Start lesson'} · {lesson.type === 'bugfix' ? 'Debugging' : lesson.type === 'choice' ? 'Guided check' : lesson.type === 'prediction' ? 'Prediction' : lesson.type === 'ordering' ? 'Ordering' : 'Code exercise'}</small><ArrowRight size={15} />
                       </AppLink>
                     ) : (
                       <div className="is-locked" key={lesson.id}><span><LockKeyhole size={13} /></span><b>{lesson.title}</b><small>{module.availability === 'available' ? 'Complete this module in order' : 'Complete the previous module first'}</small></div>
                     )
                   })}
               </div>
+              {expanded && readyToFinish && (
+                <div className="module-finish-callout">
+                  <span>
+                    <b>Every lesson is complete.</b>
+                    <small>Finish this module to save the module reward and unlock what comes next.</small>
+                  </span>
+                  <button className="primary-action" onClick={() => handleFinishModule(module.id)}>Finish module <ArrowRight size={17} /></button>
+                </div>
+              )}
             </article>
           )
         })}
@@ -1358,7 +1452,7 @@ function AppContent() {
   const [progress, setProgress] = useState<LearnerProgress>(() => {
     const loaded = loadProgress()
     const initialRoute = parseAppRoute(window.location.pathname, window.location.search)
-    if (initialRoute.language && ['academy', 'practice', 'practice-session', 'codebook', 'lesson', 'project'].includes(initialRoute.page)) {
+    if (initialRoute.language && routeSetsLanguagePreference(initialRoute.page)) {
       return { ...loaded, activeLanguage: initialRoute.language }
     }
     return loaded
@@ -1385,7 +1479,7 @@ function AppContent() {
     ? 'practice'
     : route.page === 'codebook'
       ? 'spellbook'
-      : route.page === 'profile'
+      : route.page === 'profile' || route.page === 'portfolio'
         ? 'profile'
         : route.page === 'settings'
           ? 'settings'
@@ -1417,7 +1511,7 @@ function AppContent() {
     const track = route.language ? trackById(route.language) : null
     const mission = track?.missions.find((item) => item.id === route.missionId)
     const exercise = mission?.exercises.find((item) => item.id === route.exerciseId)
-    const routeProject = route.page === 'project' && route.language && route.projectId
+    const routeProject = (route.page === 'project' || route.page === 'portfolio') && route.language && route.projectId
       ? projectManifestByRoute(route.language, route.projectId)
       : undefined
     const projectCheckpoint = routeProject?.checkpoints.find((item) => item.id === route.checkpointId)
@@ -1439,6 +1533,8 @@ function AppContent() {
                 ? 'Settings'
                 : route.page === 'project'
                   ? projectCheckpoint?.title ?? routeProject?.title ?? 'Project'
+                : route.page === 'portfolio'
+                  ? routeProject ? `${routeProject.title} Portfolio` : 'Portfolio'
                 : route.page === 'lesson'
                   ? exercise?.title ?? mission?.title
                   : 'Page not found'
@@ -1450,7 +1546,7 @@ function AppContent() {
       const nextLocation = readBrowserLocation()
       const nextRoute = parseAppRoute(nextLocation.pathname, nextLocation.search)
       setLocation(nextLocation)
-      if (nextRoute.language && ['academy', 'practice', 'practice-session', 'codebook', 'lesson', 'project'].includes(nextRoute.page)) {
+      if (nextRoute.language && routeSetsLanguagePreference(nextRoute.page)) {
         setProgress((current) => current.activeLanguage === nextRoute.language
           ? current
           : { ...current, activeLanguage: nextRoute.language ?? current.activeLanguage })
@@ -1603,7 +1699,7 @@ function AppContent() {
 
   const normalizedProgress = useMemo(() => {
     const dailyProgress = progress.dailyXpDate === dateKey(new Date()) ? progress : { ...progress, dailyXp: 0 }
-    if (route.language && ['academy', 'practice', 'practice-session', 'codebook', 'lesson', 'project'].includes(route.page)) {
+    if (route.language && routeHasLanguageContext(route.page)) {
       return { ...dailyProgress, activeLanguage: route.language }
     }
     return dailyProgress
@@ -1886,6 +1982,51 @@ function AppContent() {
     )
   }
 
+  if (route.page === 'portfolio') {
+    const routeProject = route.language && route.projectId
+      ? projectManifestByRoute(route.language, route.projectId)
+      : undefined
+    if (!routeProject || !route.language || !route.projectId) {
+      return <NotFoundPage progress={normalizedProgress} />
+    }
+
+    return (
+      <>
+        {authNotice && <AuthNotice message={authNotice} onDismiss={() => setAuthNotice(null)} />}
+        {syncDialog}
+        <AppShell
+          authReady={authReady}
+          authUser={authUser}
+          progress={normalizedProgress}
+          view={view}
+          onLanguageChange={(language) => {
+            setProgress((current) => ({ ...current, activeLanguage: language }))
+            navigateTo(coursePath(language))
+          }}
+          onSignIn={signIn}
+        >
+          <Suspense fallback={(
+            <main className="content-page" aria-busy="true">
+              <section className="route-message-card route-message-card--inside">
+                <p className="kicker"><FileCode2 size={15} /> Portfolio preview</p>
+                <h1>Preparing the private preview</h1>
+                <p>Loading the project description and checking this browser for the final source.</p>
+              </section>
+            </main>
+          )}>
+            <PortfolioPage
+              key={`${route.language}:${route.projectId}`}
+              language={route.language}
+              onNavigate={navigateTo}
+              progress={normalizedProgress}
+              projectId={route.projectId}
+            />
+          </Suspense>
+        </AppShell>
+      </>
+    )
+  }
+
   if (route.page === 'project') {
     const routeProject = route.language && route.projectId
       ? projectManifestByRoute(route.language, route.projectId)
@@ -1958,6 +2099,8 @@ function AppContent() {
         {route.page === 'courses' && <CourseCatalog progress={normalizedProgress} />}
         {(route.page === 'course' || route.page === 'academy') && (
           <MissionPath
+            key={`course:${route.language ?? normalizedProgress.activeLanguage}`}
+            onProgress={updateProgress}
             progress={route.language ? { ...normalizedProgress, activeLanguage: route.language } : normalizedProgress}
           />
         )}

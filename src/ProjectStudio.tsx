@@ -11,6 +11,7 @@ import {
   Coffee,
   Download,
   Eye,
+  FileCode2,
   Hash,
   LockKeyhole,
   Play,
@@ -52,7 +53,7 @@ import {
   completeProjectCheckpoint,
   recordAttempt,
 } from './lib/progress'
-import { coursePath, projectPath } from './lib/routes'
+import { coursePath, portfolioPath, projectPath } from './lib/routes'
 import { runExercise, type RunnerClientStatus } from './lib/runner-client'
 import type { RunnerResult } from './lib/runner-contract'
 import type { EvaluationResult, LearnerProgress } from './types'
@@ -114,6 +115,12 @@ function nextProjectCheckpoint(project: GuidedProject, progress: LearnerProgress
   )) ?? project.checkpoints[0]
 }
 
+function scaffoldingLabel(value: GuidedProjectCheckpoint['scaffolding']): string {
+  if (value === 'guided') return 'Guided'
+  if (value === 'supported') return 'Some support'
+  return 'Independent'
+}
+
 function downloadSource(project: GuidedProject, source: string) {
   const type = {
     cpp: 'text/x-c++src;charset=utf-8',
@@ -169,7 +176,8 @@ function ProjectOverview({ onNavigate, progress, project }: Pick<ProjectContentP
           </div>
         </div>
         <div className="project-overview__action">
-          <strong>{percent}% complete</strong>
+          <strong>{completedCount} of {project.checkpoints.length} checkpoints complete</strong>
+          <small>{percent}% of project</small>
           <span
             aria-label="Project progress"
             aria-valuemax={100}
@@ -186,7 +194,7 @@ function ProjectOverview({ onNavigate, progress, project }: Pick<ProjectContentP
               onNavigate={onNavigate}
               to={projectPath(project.language, project.id, nextCheckpoint.id)}
             >
-              {completedCount > 0 ? 'Continue project' : 'Start project'} <ArrowRight size={17} />
+              {completed ? 'Review project' : completedCount > 0 ? 'Continue project' : 'Start project'} <ArrowRight size={17} />
             </StudioLink>
           ) : (
             <StudioLink className="primary-action" onNavigate={onNavigate} to={coursePath(project.language)}>
@@ -195,8 +203,17 @@ function ProjectOverview({ onNavigate, progress, project }: Pick<ProjectContentP
           )}
           {completed && finalDraft && (
             <button className="secondary-action" onClick={() => downloadSource(project, finalDraft)} type="button">
-              <Download size={16} /> Download your program
+              <Download size={16} /> Download {project.downloadFileName}
             </button>
+          )}
+          {completed && (
+            <StudioLink
+              className="secondary-action"
+              onNavigate={onNavigate}
+              to={portfolioPath(project.language, project.id)}
+            >
+              <FileCode2 size={16} /> Prepare portfolio page
+            </StudioLink>
           )}
         </div>
       </header>
@@ -238,8 +255,8 @@ function ProjectOverview({ onNavigate, progress, project }: Pick<ProjectContentP
                   <span className="project-checkpoint-list__number" aria-hidden="true">
                     {done ? <Check size={16} /> : available ? checkpoint.order : <LockKeyhole size={14} />}
                   </span>
-                  <span><small>{checkpoint.scaffolding} support</small><b>{checkpoint.title}</b><p>{checkpoint.objective}</p></span>
-                  <strong>{done ? 'Complete' : available ? 'Open' : unlocked ? 'Locked' : 'Preview'} {available && <ArrowRight size={15} />}</strong>
+                  <span><small>{scaffoldingLabel(checkpoint.scaffolding)}</small><b>{checkpoint.title}</b><p>{checkpoint.objective}</p></span>
+                  <strong>{done ? 'Completed' : available ? 'Open' : 'Locked'} {available && <ArrowRight size={15} />}</strong>
                 </>
               )
               return (
@@ -285,7 +302,10 @@ function CheckpointWorkspace({ checkpoint, onNavigate, onProgress, progress, pro
   const alreadyComplete = progress.completedProjectCheckpoints.includes(checkpoint.id)
   const finalCheckpoint = checkpoint.order === project.checkpoints.length
   const nextCheckpoint = project.checkpoints[checkpoint.order]
-  const percent = Math.round((checkpoint.order / project.checkpoints.length) * 100)
+  const completedCheckpointCount = project.checkpoints.filter((item) => (
+    progress.completedProjectCheckpoints.includes(item.id)
+  )).length
+  const completionPercent = Math.round((completedCheckpointCount / project.checkpoints.length) * 100)
 
   useEffect(() => {
     const currentStep = stepperRef.current?.querySelector<HTMLElement>('[aria-current="step"]')
@@ -483,48 +503,57 @@ function CheckpointWorkspace({ checkpoint, onNavigate, onProgress, progress, pro
           <small>{project.studioLabel}</small>
           <b>{project.title}</b>
         </div>
-        <span
-          aria-label="Checkpoint progress"
-          aria-valuemax={100}
-          aria-valuemin={0}
-          aria-valuenow={percent}
-          aria-valuetext={`Checkpoint ${checkpoint.order} of ${project.checkpoints.length}`}
-          className="project-workspace__progress"
-          role="progressbar"
-        >
-          <i style={{ width: `${percent}%` }} />
-        </span>
-        <strong>{checkpoint.order} / {project.checkpoints.length}</strong>
+        <div className="project-workspace__completion">
+          <span
+            aria-label="Project completion"
+            aria-valuemax={100}
+            aria-valuemin={0}
+            aria-valuenow={completionPercent}
+            aria-valuetext={`${completedCheckpointCount} of ${project.checkpoints.length} checkpoints complete`}
+            className="project-workspace__progress"
+            role="progressbar"
+          >
+            <i style={{ width: `${completionPercent}%` }} />
+          </span>
+          <small>{completedCheckpointCount} of {project.checkpoints.length} complete</small>
+        </div>
+        <strong>Checkpoint {checkpoint.order} of {project.checkpoints.length}</strong>
         <span><Zap size={15} /> {checkpoint.exercise.xp} XP</span>
       </header>
 
       <nav aria-label="Project checkpoints" className="project-stepper" ref={stepperRef}>
-        {project.checkpoints.map((step) => {
-          const done = progress.completedProjectCheckpoints.includes(step.id)
-          const available = checkpointAvailable(project, step, progress.completedProjectCheckpoints) || done
-          return available ? (
-            <StudioLink
-              aria-current={step.id === checkpoint.id ? 'step' : undefined}
-              aria-label={`Checkpoint ${step.order}: ${step.title}${done ? ', complete' : ''}`}
-              className={`${step.id === checkpoint.id ? 'is-current' : ''} ${done ? 'is-complete' : ''}`}
-              key={step.id}
-              onNavigate={onNavigate}
-              to={projectPath(project.language, project.id, step.id)}
-            >
-              {done ? <Check size={13} /> : step.order}
-            </StudioLink>
-          ) : (
-            <span key={step.id}>
-              <LockKeyhole aria-hidden="true" size={12} />
-              <span className="sr-only">Checkpoint {step.order}: {step.title}, locked</span>
-            </span>
-          )
-        })}
+        <ol>
+          {project.checkpoints.map((step) => {
+            const done = progress.completedProjectCheckpoints.includes(step.id)
+            const current = step.id === checkpoint.id
+            const available = checkpointAvailable(project, step, progress.completedProjectCheckpoints) || done
+            return (
+              <li key={step.id}>
+                {available ? (
+                  <StudioLink
+                    aria-current={current ? 'step' : undefined}
+                    aria-label={`Checkpoint ${step.order}: ${step.title}. ${current ? 'Current checkpoint, ' : ''}${done ? 'complete' : 'not complete'}.`}
+                    className={`${current ? 'is-current' : ''} ${done ? 'is-complete' : ''}`}
+                    onNavigate={onNavigate}
+                    to={projectPath(project.language, project.id, step.id)}
+                  >
+                    {done ? <Check size={13} /> : step.order}
+                  </StudioLink>
+                ) : (
+                  <span>
+                    <LockKeyhole aria-hidden="true" size={12} />
+                    <span className="sr-only">Checkpoint {step.order}: {step.title}. Locked.</span>
+                  </span>
+                )}
+              </li>
+            )
+          })}
+        </ol>
       </nav>
 
       <div className="project-workspace__layout">
         <section className="project-briefing">
-          <p className="kicker">Checkpoint {checkpoint.order} · {checkpoint.scaffolding} support</p>
+          <p className="kicker">Checkpoint {checkpoint.order} · {scaffoldingLabel(checkpoint.scaffolding)}</p>
           <h1>{checkpoint.title}</h1>
           <p className="project-objective">{checkpoint.objective}</p>
 

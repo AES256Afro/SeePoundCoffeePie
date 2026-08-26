@@ -90,6 +90,7 @@ export interface LearnerProgress {
   starShards: number
   streak: number
   lastStudyDate: string | null
+  completedLessons: string[]
   completedMissions: string[]
   completedProjectCheckpoints: string[]
   completedProjects: string[]

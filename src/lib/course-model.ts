@@ -146,7 +146,22 @@ function percentage(completed: number, total: number): number {
   return Math.round((completed / total) * 100)
 }
 
+function completedLessonIds(progress: LearnerProgress): Set<string> {
+  const completed = new Set(progress.completedLessons)
+  for (const track of tracks) {
+    for (const mission of track.missions) {
+      if (!progress.completedMissions.includes(mission.id)) continue
+      mission.exercises.forEach((exercise) => completed.add(exercise.id))
+    }
+  }
+  return completed
+}
+
 function courseHasRecordedActivity(track: LanguageTrack, progress: LearnerProgress): boolean {
+  const trackLessonIds = new Set(track.missions.flatMap((mission) => (
+    mission.exercises.map((exercise) => exercise.id)
+  )))
+  if (progress.completedLessons.some((lessonId) => trackLessonIds.has(lessonId))) return true
   const conceptIds = new Set(track.missions.flatMap((mission) => (
     mission.exercises.map((exercise) => exercise.conceptId)
   )))
@@ -195,7 +210,14 @@ function resolveCurrentLocation(
 
   const availability = moduleAvailability(track, moduleIndex, progress.completedMissions)
   if (availability !== 'available') return null
-  return { moduleIndex, lessonIndex: 0 }
+  const completedLessons = completedLessonIds(progress)
+  const lessonIndex = track.missions[moduleIndex].exercises.findIndex((exercise) => (
+    !completedLessons.has(exercise.id)
+  ))
+  return {
+    moduleIndex,
+    lessonIndex: lessonIndex >= 0 ? lessonIndex : track.missions[moduleIndex].exercises.length - 1,
+  }
 }
 
 /**
@@ -210,20 +232,23 @@ export function buildCourseModel(
   activeExerciseId?: string,
 ): CourseModel {
   const copy = COURSE_COPY[track.id]
+  const completedLessons = completedLessonIds(progress)
   const currentLocation = resolveCurrentLocation(track, progress, activeExerciseId)
   const completedModuleCount = track.missions.filter((mission) => (
     progress.completedMissions.includes(mission.id)
   )).length
   const lessonCount = track.missions.reduce((sum, mission) => sum + mission.exercises.length, 0)
   const completedLessonCount = track.missions.reduce((sum, mission) => (
-    progress.completedMissions.includes(mission.id) ? sum + mission.exercises.length : sum
+    sum + mission.exercises.filter((exercise) => completedLessons.has(exercise.id)).length
   ), 0)
 
   const modules = track.missions.map((mission, moduleIndex): CourseModuleModel => {
     const completed = progress.completedMissions.includes(mission.id)
     const availability = moduleAvailability(track, moduleIndex, progress.completedMissions)
     const current = currentLocation?.moduleIndex === moduleIndex
-    const completedLessonCountForModule = completed ? mission.exercises.length : 0
+    const completedLessonCountForModule = mission.exercises.filter((exercise) => (
+      completedLessons.has(exercise.id)
+    )).length
     const lessons = mission.exercises.map((exercise, lessonIndex): CourseLessonModel => ({
       id: exercise.id,
       conceptId: exercise.conceptId,
@@ -233,7 +258,7 @@ export function buildCourseModel(
       eyebrow: exercise.eyebrow,
       prompt: exercise.prompt,
       type: exercise.type,
-      completed,
+      completed: completedLessons.has(exercise.id),
       current: current && currentLocation.lessonIndex === lessonIndex,
       availability,
     }))

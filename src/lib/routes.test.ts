@@ -8,6 +8,7 @@ import {
   lessonPath,
   missionPath,
   parseAppRoute,
+  portfolioPath,
   practiceMissionPath,
   practicePath,
   practiceSessionPath,
@@ -45,6 +46,9 @@ describe('bookmarkable application routes', () => {
     )
     expect(projectPath('java', 'picnic-planner', 'project-java-final')).toBe(
       '/projects/java/picnic-planner/project-java-final',
+    )
+    expect(portfolioPath('python', 'first-interactive-program')).toBe(
+      '/portfolio/python/first-interactive-program',
     )
   })
 
@@ -183,6 +187,30 @@ describe('bookmarkable application routes', () => {
       checkpointId: 'project-java-final',
       conceptIds: [],
     })
+  })
+
+  it('parses only clean, allowlisted portfolio preview routes', () => {
+    expect(parseAppRoute('/portfolio/python/first-interactive-program')).toEqual({
+      page: 'portfolio',
+      language: 'python',
+      projectId: 'first-interactive-program',
+      conceptIds: [],
+    })
+    expect(parseAppRoute('/portfolio/cpp/first-compiled-program')).toMatchObject({
+      page: 'portfolio',
+      language: 'cpp',
+      projectId: 'first-compiled-program',
+    })
+
+    expect(parseAppRoute('/portfolio/python/first-compiled-program').page).toBe('not-found')
+    expect(parseAppRoute('/portfolio/ruby/first-interactive-program').page).toBe('not-found')
+    expect(parseAppRoute('/portfolio/python/not-a-project').page).toBe('not-found')
+    expect(parseAppRoute('/portfolio/python/first-interactive-program/extra').page).toBe('not-found')
+    expect(parseAppRoute('/portfolio/python/first-interactive-program', '?callsign=Chris').page).toBe('not-found')
+    expect(parseAppRoute('/portfolio/python/first%2Finteractive-program').page).toBe('not-found')
+    expect(parseAppRoute('/portfolio/python/first-interactive-program%00').page).toBe('not-found')
+    expect(parseAppRoute('/portfolio/python/first-interactive-program%ZZ').page).toBe('not-found')
+    expect(parseAppRoute(`/portfolio/python/${'a'.repeat(500)}`).page).toBe('not-found')
   })
 
   it('rejects misspelled languages and unknown paths', () => {

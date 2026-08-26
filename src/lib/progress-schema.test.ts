@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { trackById } from '../data/curriculum'
 import { initialProgress } from './progress'
 import { normalizeLocalLearnerProgress, parseLearnerProgress } from './progress-schema'
 
@@ -26,19 +27,38 @@ function validProgress() {
 }
 
 describe('learner progress schema', () => {
-  it('strictly parses the existing version 1 learner shape', () => {
+  const firstJavaLessonIds = trackById('java').missions[0].exercises.map((exercise) => exercise.id)
+
+  it('strictly parses version 1 records and closes completed missions over their lessons', () => {
     const progress = validProgress()
-    expect(parseLearnerProgress(progress)).toEqual(progress)
+    expect(parseLearnerProgress(progress)).toEqual({
+      ...progress,
+      completedLessons: firstJavaLessonIds,
+    })
   })
 
-  it('keeps the version 1 migration for omitted project completion arrays', () => {
+  it('keeps the version 1 migration for omitted lesson and project completion arrays', () => {
     const progress: Record<string, unknown> = { ...validProgress() }
+    delete progress.completedLessons
     delete progress.completedProjectCheckpoints
     delete progress.completedProjects
 
     expect(parseLearnerProgress(progress)).toMatchObject({
+      completedLessons: firstJavaLessonIds,
       completedProjectCheckpoints: [],
       completedProjects: [],
+    })
+  })
+
+  it('preserves valid partial lesson completion before a module is complete', () => {
+    const progress = {
+      ...initialProgress('python'),
+      completedLessons: ['py-console', 'py-print'],
+    }
+
+    expect(parseLearnerProgress(progress)).toMatchObject({
+      completedLessons: ['py-console', 'py-print'],
+      completedMissions: [],
     })
   })
 
@@ -52,6 +72,11 @@ describe('learner progress schema', () => {
     ['duplicate mission', () => ({
       ...validProgress(),
       completedMissions: ['java-coffee-protocol', 'java-coffee-protocol'],
+    })],
+    ['unknown lesson', () => ({ ...validProgress(), completedLessons: ['unknown-lesson'] })],
+    ['duplicate lesson', () => ({
+      ...validProgress(),
+      completedLessons: ['java-jvm', 'java-jvm'],
     })],
     ['unknown concept', () => ({
       ...validProgress(),
@@ -88,6 +113,7 @@ describe('learner progress schema', () => {
       ...validProgress(),
       xp: -1,
       completedMissions: ['java-coffee-protocol', 'unknown-mission', 'java-coffee-protocol'],
+      completedLessons: ['java-output', 'unknown-lesson', 'java-output'],
       conceptProgress: {
         'java-variables': validProgress().conceptProgress['java-variables'],
         'java-conditions': { strength: 99, correct: 1, incorrect: 0, dueAt: '2026-08-25' },
@@ -98,6 +124,7 @@ describe('learner progress schema', () => {
     expect(normalized.xp).toBe(0)
     expect(normalized.callsign).toBe('Schema Cadet')
     expect(normalized.completedMissions).toEqual(['java-coffee-protocol'])
+    expect(new Set(normalized.completedLessons)).toEqual(new Set(firstJavaLessonIds))
     expect(normalized.conceptProgress).toEqual({
       'java-variables': validProgress().conceptProgress['java-variables'],
     })

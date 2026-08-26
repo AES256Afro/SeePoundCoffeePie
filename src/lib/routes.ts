@@ -15,6 +15,7 @@ export type RoutePage =
   | 'settings'
   | 'lesson'
   | 'project'
+  | 'portfolio'
   | 'not-found'
 
 export interface AppRoute {
@@ -93,6 +94,10 @@ export function projectPath(language: LanguageId, projectId: string, checkpointI
   return checkpointId ? `${project}/${encodeURIComponent(checkpointId)}` : project
 }
 
+export function portfolioPath(language: LanguageId, projectId: string): string {
+  return `/portfolio/${language}/${encodeURIComponent(projectId)}`
+}
+
 export function practicePath(language: LanguageId): string {
   return `/practice/${language}`
 }
@@ -168,6 +173,23 @@ export function parseAppRoute(pathname: string, search = ''): AppRoute {
       language: projectLanguage,
       projectId,
       checkpointId: segments[3],
+      conceptIds: emptyConcepts,
+    }
+  }
+
+  if (segments[0] === 'portfolio' && segments.length === 3) {
+    if (search) return { page: 'not-found', conceptIds: emptyConcepts }
+    const projectLanguage = languageFromSegment(segments[1])
+    const projectId = segments[2]
+    const knownProject = projectLanguage
+      ? projectIdsByLanguage[projectLanguage]?.includes(projectId)
+      : false
+
+    if (!projectLanguage || !knownProject) return { page: 'not-found', conceptIds: emptyConcepts }
+    return {
+      page: 'portfolio',
+      language: projectLanguage,
+      projectId,
       conceptIds: emptyConcepts,
     }
   }

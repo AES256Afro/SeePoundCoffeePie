@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest'
 import { pythonInteractiveProject } from '../data/python-interactive-project'
 import { cppCompiledProject } from '../data/cpp-compiled-project'
+import { trackById } from '../data/curriculum'
 import {
   completeMission,
   completeProject,
@@ -11,13 +12,18 @@ import {
   loadProgress,
   nextStreak,
   recordAttempt,
+  recordLessonSuccess,
   saveProgress,
   updateConcept,
 } from './progress'
 
 describe('progress helpers', () => {
-  it('starts with no project completion metadata', () => {
+  const firstPythonLessonIds = trackById('python').missions[0].exercises.map((exercise) => exercise.id)
+  const firstJavaLessonIds = trackById('java').missions[0].exercises.map((exercise) => exercise.id)
+
+  it('starts with no lesson or project completion metadata', () => {
     expect(initialProgress()).toMatchObject({
+      completedLessons: [],
       completedProjectCheckpoints: [],
       completedProjects: [],
     })
@@ -80,11 +86,46 @@ describe('progress helpers', () => {
     })
   })
 
+  it('records a completed lesson once while later retrievals only strengthen memory', () => {
+    const now = new Date(2026, 7, 20)
+    const first = recordLessonSuccess(initialProgress(), 'py-print', true, now)
+    const replay = recordLessonSuccess(first, 'py-print', true, now)
+
+    expect(first.completedLessons).toEqual(['py-print'])
+    expect(first.xp).toBe(12)
+    expect(first.dailyXp).toBe(12)
+    expect(first.conceptProgress['python-print']).toMatchObject({
+      strength: 1,
+      correct: 1,
+      incorrect: 0,
+    })
+    expect(replay.completedLessons).toEqual(['py-print'])
+    expect(replay.xp).toBe(12)
+    expect(replay.dailyXp).toBe(12)
+    expect(replay.conceptProgress['python-print']).toMatchObject({
+      strength: 2,
+      correct: 2,
+      incorrect: 0,
+    })
+  })
+
+  it('can persist a first lesson completion without awarding XP', () => {
+    const now = new Date(2026, 7, 20)
+    const updated = recordLessonSuccess(initialProgress(), 'py-print', false, now)
+
+    expect(updated.completedLessons).toEqual(['py-print'])
+    expect(updated.xp).toBe(0)
+    expect(updated.dailyXp).toBe(0)
+    expect(updated.conceptProgress['python-print'].correct).toBe(1)
+    expect(recordLessonSuccess(updated, 'unknown-lesson', true, now)).toBe(updated)
+  })
+
   it('awards mission shards only on first completion', () => {
     const now = new Date(2026, 7, 20)
     const first = completeMission(initialProgress(), 'py-first-spark', now)
     const replay = completeMission(first, 'py-first-spark', now)
     expect(first.completedMissions).toEqual(['py-first-spark'])
+    expect(first.completedLessons).toEqual(firstPythonLessonIds)
     expect(first.starShards).toBe(25)
     expect(replay.completedMissions).toEqual(['py-first-spark'])
     expect(replay.starShards).toBe(25)
@@ -211,8 +252,10 @@ describe('progress helpers', () => {
     expect(projectComplete.starShards).toBe(maximum)
   })
 
-  it('migrates old browser records without project arrays to empty completion lists', () => {
+  it('migrates old browser records without lesson or project arrays', () => {
     const legacyProgress: Record<string, unknown> = { ...initialProgress('java') }
+    legacyProgress.completedMissions = ['java-coffee-protocol']
+    delete legacyProgress.completedLessons
     delete legacyProgress.completedProjectCheckpoints
     delete legacyProgress.completedProjects
     const localStorage = {
@@ -225,6 +268,8 @@ describe('progress helpers', () => {
       expect(loadProgress()).toMatchObject({
         callsign: 'Legacy Cadet',
         activeLanguage: 'java',
+        completedLessons: firstJavaLessonIds,
+        completedMissions: ['java-coffee-protocol'],
         completedProjectCheckpoints: [],
         completedProjects: [],
       })
@@ -240,6 +285,7 @@ describe('progress helpers', () => {
       xp: -10,
       dailyGoal: 999,
       completedMissions: ['py-first-spark', 'unknown-mission', 'py-first-spark'],
+      completedLessons: ['py-print', 'unknown-lesson', 'py-print'],
       completedProjectCheckpoints: ['unknown-checkpoint'],
       completedProjects: ['unknown-project'],
       conceptProgress: {
@@ -284,6 +330,7 @@ describe('progress helpers', () => {
           },
         },
       })
+      expect(new Set(loaded.completedLessons)).toEqual(new Set(firstPythonLessonIds))
       expect(loaded).not.toHaveProperty('rawAnswer')
       expect(() => Object.values(loaded.conceptProgress).map((concept) => isDue(concept))).not.toThrow()
     } finally {
@@ -324,6 +371,67 @@ describe('progress helpers', () => {
     try {
       expect(() => saveProgress({ ...initialProgress(), callsign: 'Memory only' })).not.toThrow()
       expect(localStorage.setItem).toHaveBeenCalledOnce()
+    } finally {
+      vi.unstubAllGlobals()
+    }
+  })
+
+  it('drops unknown lesson IDs before writing browser progress', () => {
+    const localStorage = {
+      setItem: vi.fn(),
+    }
+    vi.stubGlobal('window', { localStorage })
+
+    try {
+      saveProgress({
+        ...initialProgress(),
+        completedLessons: ['py-print', 'unknown-lesson', 'py-print'],
+      })
+      const mainRecordCall = localStorage.setItem.mock.calls.find(
+        ([key]) => key === 'see-pound-coffee-pie-progress',
+      )
+      const lessonJournalCall = localStorage.setItem.mock.calls.find(
+        ([key]) => key === 'see-pound-coffee-pie-completed-lessons-v1',
+      )
+      expect(mainRecordCall).toBeTruthy()
+      expect(lessonJournalCall).toBeTruthy()
+      const stored = JSON.parse(mainRecordCall?.[1] ?? '{}')
+      expect(stored.completedLessons).toEqual(['py-print'])
+      expect(JSON.parse(lessonJournalCall?.[1] ?? '[]')).toEqual(['py-print'])
+    } finally {
+      vi.unstubAllGlobals()
+    }
+  })
+
+  it('recovers lesson completion after an older tab overwrites the legacy browser record', () => {
+    const values = new Map<string, string>()
+    const localStorage = {
+      getItem: vi.fn((key: string) => values.get(key) ?? null),
+      setItem: vi.fn((key: string, value: string) => values.set(key, value)),
+    }
+    vi.stubGlobal('window', { localStorage })
+
+    try {
+      saveProgress({
+        ...initialProgress('python'),
+        callsign: 'Current Tab Cadet',
+        completedLessons: ['py-console'],
+      })
+
+      const legacyRecord = {
+        ...initialProgress('python'),
+        callsign: 'Older Tab Cadet',
+      } as Record<string, unknown>
+      delete legacyRecord.completedLessons
+      values.set('see-pound-coffee-pie-progress', JSON.stringify(legacyRecord))
+
+      expect(loadProgress()).toMatchObject({
+        callsign: 'Older Tab Cadet',
+        completedLessons: ['py-console'],
+      })
+
+      saveProgress(initialProgress('python'))
+      expect(loadProgress().completedLessons).toEqual([])
     } finally {
       vi.unstubAllGlobals()
     }

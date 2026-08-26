@@ -491,8 +491,14 @@ async function writeProgress(request: Request, env: WorkerEnv, ownerId: string):
   if (!Number.isInteger(input.revision) || Number(input.revision) < 0) {
     return json({ error: 'The learning record revision is missing or invalid.' }, 400)
   }
-  const progress = parseLearnerProgress(input.progress)
+  let progress = parseLearnerProgress(input.progress)
   if (!progress) return json({ error: 'The learning record contains missing, unknown, or unsafe values.' }, 400)
+  const includesCompletedLessons = Boolean(
+    input.progress
+    && typeof input.progress === 'object'
+    && !Array.isArray(input.progress)
+    && Object.prototype.hasOwnProperty.call(input.progress, 'completedLessons'),
+  )
 
   const expectedRevision = Number(input.revision)
   const current = await readProgressRow(env, ownerId)
@@ -507,6 +513,24 @@ async function writeProgress(request: Request, env: WorkerEnv, ownerId: string):
       error: 'The saved learning record no longer exists. Review this browser copy before creating it again.',
       record: null,
     }, 409)
+  }
+
+  // A pre-Phase 4F client still writes record version 1 but cannot echo the
+  // completedLessons field. Preserve partial lesson completion during a rolling
+  // client upgrade. Current clients always send the field, including [] when a
+  // learner intentionally clears progress.
+  if (current && !includesCompletedLessons) {
+    const currentProgress = progressRecord(current)?.progress
+    if (!currentProgress) {
+      return json({ error: 'The saved learning record could not be read safely.' }, 500)
+    }
+    progress = {
+      ...progress,
+      completedLessons: [...new Set([
+        ...currentProgress.completedLessons,
+        ...progress.completedLessons,
+      ])],
+    }
   }
 
   const now = new Date().toISOString()

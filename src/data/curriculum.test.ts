@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { findExercise, tracks } from './curriculum'
+import { durableCurriculumV1 } from './durable-curriculum-v1'
 
 describe('beginner curriculum scaffolding', () => {
   it('gives every editable exercise one clear focus and a plain-language code guide', () => {
@@ -127,6 +128,39 @@ describe('beginner curriculum scaffolding', () => {
       expect(exercise.recap.length, `${exercise.id} needs a retrieval recap`).toBeGreaterThan(30)
       expect(exercise.xp).toBeGreaterThan(0)
     }
+  })
+
+  it('keeps persisted mission and lesson identifiers globally unique with one stable owner', () => {
+    const missionIds = tracks.flatMap((track) => track.missions.map((mission) => mission.id))
+    const lessonOwners = new Map<string, string[]>()
+
+    for (const track of tracks) {
+      for (const mission of track.missions) {
+        for (const exercise of mission.exercises) {
+          const owners = lessonOwners.get(exercise.id) ?? []
+          owners.push(`${track.id}/${mission.id}`)
+          lessonOwners.set(exercise.id, owners)
+        }
+      }
+    }
+
+    expect(missionIds).toHaveLength(24)
+    expect(new Set(missionIds).size).toBe(missionIds.length)
+    expect(lessonOwners.size).toBe(120)
+    for (const [lessonId, owners] of lessonOwners) {
+      expect(owners, `${lessonId} must belong to exactly one track and mission`).toHaveLength(1)
+    }
+  })
+
+  it('matches the exact version 1 durable mission and lesson ownership manifest', () => {
+    const currentOwnership = Object.fromEntries(tracks.flatMap((track) => (
+      track.missions.map((mission) => [
+        `${track.id}/${mission.id}`,
+        mission.exercises.map((exercise) => exercise.id),
+      ])
+    )))
+
+    expect(currentOwnership).toEqual(durableCurriculumV1)
   })
 
   it('authors valid prediction and ordering data for every second mission', () => {

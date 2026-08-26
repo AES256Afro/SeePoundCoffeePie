@@ -6,6 +6,7 @@ vi.mock('@cloudflare/sandbox', () => ({
 }))
 
 import worker, { handleRequest } from './worker'
+import { trackById } from './data/curriculum'
 import { initialProgress } from './lib/progress'
 
 const htmlEnv = {
@@ -20,6 +21,7 @@ const htmlEnv = {
   LEARNER_DATA_SECRET: 'a-separate-learning-data-secret-for-stable-owner-ids',
 }
 const testVerifier = 'v'.repeat(43)
+const firstPythonLessonIds = trackById('python').missions[0].exercises.map((exercise) => exercise.id)
 
 function setCookies(response: Response): string[] {
   const headers = response.headers as Headers & { getSetCookie?: () => string[] }
@@ -462,6 +464,174 @@ describe('production Worker', () => {
       progressEnv,
     )
     await expect(deleted.json()).resolves.toEqual({ deleted: true, recordsRemoved: 1 })
+  })
+
+  it('reads an old version 1 D1 row without rewriting it, then persists the inferred lesson closure on save', async () => {
+    const sessionCookie = await sessionCookieFor()
+    const database = new MemoryD1()
+    const progressEnv = { ...htmlEnv, LEARNER_DB: database }
+    const headers = {
+      Cookie: `__Host-spp_session=${sessionCookie}`,
+      Origin: 'https://seepoundcoffeepie.com',
+      'Content-Type': 'application/json',
+    }
+    const created = await handleRequest(
+      new Request('https://seepoundcoffeepie.com/api/progress', {
+        method: 'PUT',
+        headers,
+        body: JSON.stringify({ version: 1, revision: 0, progress: progressFixture() }),
+      }),
+      progressEnv,
+    )
+    expect(created.status).toBe(200)
+    expect(database.row).not.toBeNull()
+
+    const legacyProgress = JSON.parse(database.row!.progress_json) as Record<string, unknown>
+    delete legacyProgress.completedLessons
+    database.row!.progress_json = JSON.stringify(legacyProgress)
+
+    const loaded = await handleRequest(
+      new Request('https://seepoundcoffeepie.com/api/progress', {
+        headers: { Cookie: `__Host-spp_session=${sessionCookie}` },
+      }),
+      progressEnv,
+    )
+    expect(loaded.status).toBe(200)
+    const loadedBody = await loaded.json() as {
+      record: { version: number; revision: number; progress: ReturnType<typeof progressFixture> }
+    }
+    expect(loadedBody.record).toMatchObject({ version: 1, revision: 1 })
+    expect(loadedBody.record.progress.completedLessons).toEqual(firstPythonLessonIds)
+    expect(JSON.parse(database.row!.progress_json)).not.toHaveProperty('completedLessons')
+
+    const saved = await handleRequest(
+      new Request('https://seepoundcoffeepie.com/api/progress', {
+        method: 'PUT',
+        headers,
+        body: JSON.stringify({
+          version: 1,
+          revision: loadedBody.record.revision,
+          progress: loadedBody.record.progress,
+        }),
+      }),
+      progressEnv,
+    )
+    expect(saved.status).toBe(200)
+    await expect(saved.json()).resolves.toMatchObject({ record: { revision: 2 } })
+    expect(JSON.parse(database.row!.progress_json)).toMatchObject({
+      completedLessons: firstPythonLessonIds,
+      completedMissions: ['py-first-spark'],
+    })
+  })
+
+  it('preserves partial lesson progress when a pre-Phase 4F client omits the new field', async () => {
+    const sessionCookie = await sessionCookieFor()
+    const database = new MemoryD1()
+    const progressEnv = { ...htmlEnv, LEARNER_DB: database }
+    const headers = {
+      Cookie: `__Host-spp_session=${sessionCookie}`,
+      Origin: 'https://seepoundcoffeepie.com',
+      'Content-Type': 'application/json',
+    }
+    const partialLesson = firstPythonLessonIds[0]
+    const currentProgress = {
+      ...initialProgress('python'),
+      callsign: 'Rolling Upgrade Cadet',
+      onboardingComplete: true,
+      completedLessons: [partialLesson],
+    }
+    const created = await handleRequest(
+      new Request('https://seepoundcoffeepie.com/api/progress', {
+        method: 'PUT',
+        headers,
+        body: JSON.stringify({ version: 1, revision: 0, progress: currentProgress }),
+      }),
+      progressEnv,
+    )
+    expect(created.status).toBe(200)
+
+    const legacyProgress: Record<string, unknown> = { ...currentProgress, xp: 9 }
+    delete legacyProgress.completedLessons
+    const legacySave = await handleRequest(
+      new Request('https://seepoundcoffeepie.com/api/progress', {
+        method: 'PUT',
+        headers,
+        body: JSON.stringify({ version: 1, revision: 1, progress: legacyProgress }),
+      }),
+      progressEnv,
+    )
+
+    expect(legacySave.status).toBe(200)
+    await expect(legacySave.json()).resolves.toMatchObject({
+      record: {
+        revision: 2,
+        progress: { xp: 9, completedLessons: [partialLesson] },
+      },
+    })
+    expect(JSON.parse(database.row!.progress_json)).toMatchObject({
+      xp: 9,
+      completedLessons: [partialLesson],
+    })
+
+    const explicitClear = await handleRequest(
+      new Request('https://seepoundcoffeepie.com/api/progress', {
+        method: 'PUT',
+        headers,
+        body: JSON.stringify({
+          version: 1,
+          revision: 2,
+          progress: {
+            ...currentProgress,
+            completedLessons: [],
+            completedMissions: [],
+          },
+        }),
+      }),
+      progressEnv,
+    )
+
+    expect(explicitClear.status).toBe(200)
+    await expect(explicitClear.json()).resolves.toMatchObject({
+      record: { revision: 3, progress: { completedLessons: [], completedMissions: [] } },
+    })
+    expect(JSON.parse(database.row!.progress_json)).toMatchObject({
+      completedLessons: [],
+      completedMissions: [],
+    })
+  })
+
+  it('rejects unknown and duplicate persisted lesson identifiers', async () => {
+    const sessionCookie = await sessionCookieFor()
+    const headers = {
+      Cookie: `__Host-spp_session=${sessionCookie}`,
+      Origin: 'https://seepoundcoffeepie.com',
+      'Content-Type': 'application/json',
+    }
+
+    for (const completedLessons of [
+      ['not-an-authored-lesson'],
+      [firstPythonLessonIds[0], firstPythonLessonIds[0]],
+    ]) {
+      const database = new MemoryD1()
+      const response = await handleRequest(
+        new Request('https://seepoundcoffeepie.com/api/progress', {
+          method: 'PUT',
+          headers,
+          body: JSON.stringify({
+            version: 1,
+            revision: 0,
+            progress: { ...progressFixture(), completedLessons },
+          }),
+        }),
+        { ...htmlEnv, LEARNER_DB: database },
+      )
+
+      expect(response.status).toBe(400)
+      await expect(response.json()).resolves.toEqual({
+        error: 'The learning record contains missing, unknown, or unsafe values.',
+      })
+      expect(database.row).toBeNull()
+    }
   })
 
   it('requires authentication and same-origin confirmation for account progress changes', async () => {

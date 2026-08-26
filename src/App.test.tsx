@@ -96,6 +96,40 @@ describe('beginner lesson interactions', () => {
     return screen.getByRole('textbox', { name: 'Code editor' })
   }
 
+  it('persists a passed lesson, resumes at the next lesson, and does not award replay XP', async () => {
+    await openFirstEditableStep()
+    await waitFor(() => {
+      const stored = JSON.parse(window.localStorage.getItem(progressKey) ?? '{}')
+      expect(stored.completedLessons).toEqual(['py-console'])
+      expect(stored.xp).toBe(8)
+    })
+
+    fireEvent.click(screen.getByRole('button', { name: 'Exit lesson' }))
+    expect(await screen.findByRole('heading', { name: 'Python Foundations' })).toBeTruthy()
+    cleanup()
+
+    window.history.replaceState({}, '', '/courses/python-foundations')
+    render(<App />)
+    expect(await screen.findByText('1 of 5 lessons complete')).toBeTruthy()
+    expect(screen.getByText('1 of 30 lessons complete')).toBeTruthy()
+    expect(screen.getByText('3% of course')).toBeTruthy()
+    const nextLesson = screen.getByRole('link', { name: /Send your first signal.*Next lesson/iu })
+    expect(nextLesson.getAttribute('aria-current')).toBe('step')
+    expect(nextLesson.getAttribute('href')).toBe('/learn/python-foundations/py-first-spark/py-print')
+
+    const completedLesson = screen.getByRole('link', { name: /Meet the console.*Complete/iu })
+    fireEvent.click(completedLesson)
+    fireEvent.click(await screen.findByRole('radio', { name: /Shows text from the program/iu }))
+    fireEvent.click(screen.getByRole('button', { name: 'Check answer' }))
+
+    await waitFor(() => {
+      const stored = JSON.parse(window.localStorage.getItem(progressKey) ?? '{}')
+      expect(stored.completedLessons).toEqual(['py-console'])
+      expect(stored.xp).toBe(8)
+      expect(stored.conceptProgress['python-console'].correct).toBe(2)
+    })
+  })
+
   it('runs an editor check with Ctrl+Enter and announces the result', async () => {
     const editor = await openFirstEditableStep()
     fireEvent.change(editor, {
@@ -526,6 +560,60 @@ describe('beginner lesson interactions', () => {
     })
   })
 
+  it('offers a no-repeat finish action after exiting a fully passed module', async () => {
+    const firstMission = trackById('python').missions[0]
+    window.localStorage.setItem(progressKey, JSON.stringify({
+      ...initialProgress('python'),
+      callsign: 'Almost Finished Cadet',
+      onboardingComplete: true,
+      completedLessons: firstMission.exercises.slice(0, -1).map((exercise) => exercise.id),
+    }))
+    window.history.replaceState({}, '', '/learn/python-foundations/py-first-spark/py-launch')
+
+    render(<App />)
+    const editor = await screen.findByRole('textbox', { name: 'Code editor' })
+    fireEvent.change(editor, {
+      target: { value: 'ship_name = "Wayfarer"\npower_cells = 3\n\nprint("Ship:", ship_name)\nprint("Cells:", power_cells)' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Run check' }))
+    expect(await screen.findByText('System online')).toBeTruthy()
+    fireEvent.click(screen.getByRole('button', { name: 'Exit lesson' }))
+
+    expect(await screen.findByRole('heading', { name: 'Python Foundations' })).toBeTruthy()
+    await waitFor(() => {
+      const stored = JSON.parse(window.localStorage.getItem(progressKey) ?? '{}')
+      expect(stored.completedLessons).toEqual(firstMission.exercises.map((exercise) => exercise.id))
+      expect(stored.completedMissions).toEqual([])
+      expect(stored.starShards).toBe(0)
+    })
+    expect(screen.getByText('5 of 5 lessons complete')).toBeTruthy()
+    expect(screen.getByText('Every lesson is complete.')).toBeTruthy()
+    fireEvent.click(screen.getByRole('button', { name: /Finish module/iu }))
+
+    await waitFor(() => {
+      const stored = JSON.parse(window.localStorage.getItem(progressKey) ?? '{}')
+      expect(stored.completedMissions).toEqual(['py-first-spark'])
+      expect(stored.starShards).toBe(25)
+    })
+    const completionNotice = await screen.findByRole('status')
+    expect(completionNotice.textContent).toContain(
+      'Module completed. 25 star shards saved. Module 2 is now available.',
+    )
+    const nextModule = screen.getByRole('button', { name: /Module 2.*Decisions/iu })
+    expect(nextModule.getAttribute('aria-expanded')).toBe('true')
+    await waitFor(() => expect(document.activeElement).toBe(nextModule))
+
+    act(() => {
+      window.history.pushState({}, '', '/courses/java-foundations')
+      window.dispatchEvent(new PopStateEvent('popstate'))
+    })
+
+    const javaHeading = await screen.findByRole('heading', { name: 'Java Foundations' })
+    expect(screen.queryByText('Module completed. 25 star shards saved. Module 2 is now available.')).toBeNull()
+    expect(screen.getByRole('button', { name: /Module 1.*Reading code and variables/iu }).getAttribute('aria-expanded')).toBe('true')
+    await waitFor(() => expect(document.activeElement).toBe(javaHeading))
+  })
+
   it('updates concept scheduling without awarding replay rewards for a completed module', async () => {
     const progressBeforeReplay = {
       ...initialProgress('python'),
@@ -717,7 +805,14 @@ describe('beginner lesson interactions', () => {
     expect(await screen.findByRole('heading', { name: 'Restored Cadet' })).toBeTruthy()
     expect(screen.getAllByText('140').length).toBeGreaterThan(0)
     await waitFor(() => {
-      expect(JSON.parse(window.localStorage.getItem(progressKey) ?? '{}')).toMatchObject(restored)
+      const stored = JSON.parse(window.localStorage.getItem(progressKey) ?? '{}')
+      const restoredFields: Partial<typeof restored> = { ...restored }
+      delete restoredFields.completedLessons
+      const expectedLessonIds = trackById('csharp').missions
+        .filter((mission) => restored.completedMissions.includes(mission.id))
+        .flatMap((mission) => mission.exercises.map((exercise) => exercise.id))
+      expect(stored).toMatchObject(restoredFields)
+      expect(new Set(stored.completedLessons)).toEqual(new Set(expectedLessonIds))
     })
   })
 
@@ -1006,6 +1101,23 @@ describe('beginner lesson interactions', () => {
     expect(document.title).toBe('Courses | SeePoundCoffeePie')
   })
 
+  it('reports partial catalog progress in lessons instead of completed modules', () => {
+    window.localStorage.setItem(progressKey, JSON.stringify({
+      ...initialProgress('python'),
+      callsign: 'Partial Course Cadet',
+      onboardingComplete: true,
+      completedLessons: ['py-console'],
+    }))
+    window.history.replaceState({}, '', '/courses')
+
+    render(<App />)
+
+    const pythonCard = screen.getByRole('heading', { name: 'Python Foundations' }).closest('article')
+    expect(pythonCard).toBeTruthy()
+    expect(within(pythonCard as HTMLElement).getByText('1 of 30 lessons complete')).toBeTruthy()
+    expect(within(pythonCard as HTMLElement).queryByText(/modules complete/iu)).toBeNull()
+  })
+
   it('lists the released Python, C++, C#, and Java projects with canonical catalog links', () => {
     window.history.replaceState({}, '', '/courses')
 
@@ -1108,10 +1220,14 @@ describe('beginner lesson interactions', () => {
     expect(screen.getByRole('link', { name: 'Back to project overview' }).getAttribute('href')).toBe(
       '/projects/python/first-interactive-program',
     )
-    expect(screen.getByRole('progressbar', { name: 'Checkpoint progress' }).getAttribute('aria-valuenow')).toBe('8')
-    expect(screen.getByRole('navigation', { name: 'Project checkpoints' })).toBeTruthy()
-    expect(screen.getByRole('link', { name: 'Checkpoint 1: Let the program speak' }).getAttribute('aria-current')).toBe('step')
-    expect(screen.getByText('Checkpoint 2: Recognize the text, locked')).toBeTruthy()
+    const completion = screen.getByRole('progressbar', { name: 'Project completion' })
+    expect(completion.getAttribute('aria-valuenow')).toBe('0')
+    expect(completion.getAttribute('aria-valuetext')).toBe('0 of 12 checkpoints complete')
+    expect(screen.getByText('Checkpoint 1 of 12')).toBeTruthy()
+    const checkpointNavigation = screen.getByRole('navigation', { name: 'Project checkpoints' })
+    expect(within(checkpointNavigation).getAllByRole('listitem')).toHaveLength(12)
+    expect(screen.getByRole('link', { name: /Checkpoint 1: Let the program speak.*Current checkpoint, not complete/iu }).getAttribute('aria-current')).toBe('step')
+    expect(screen.getByText(/Checkpoint 2: Recognize the text\. Locked\./iu)).toBeTruthy()
 
     const editor = screen.getByRole('textbox', { name: 'Project code editor' })
     expect(editor.getAttribute('aria-keyshortcuts')).toBe('Control+Enter Meta+Enter')
@@ -1121,6 +1237,18 @@ describe('beginner lesson interactions', () => {
     expect(screen.getByRole('button', { name: /Check checkpoint/iu })).toBeTruthy()
     expect(screen.getByLabelText('Program console')).toBeTruthy()
     expect(screen.getByText('I need a hint', { selector: 'summary' })).toBeTruthy()
+
+    fireEvent.change(editor, { target: { value: 'print("Coffee counter ready.")' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Run' }))
+    await waitFor(() => expect(vi.mocked(runExercise)).toHaveBeenCalled())
+    expect(completion.getAttribute('aria-valuenow')).toBe('0')
+
+    fireEvent.click(screen.getByRole('button', { name: /Check checkpoint/iu }))
+    expect(await screen.findByText('Checkpoint complete')).toBeTruthy()
+    await waitFor(() => {
+      expect(completion.getAttribute('aria-valuenow')).toBe('8')
+      expect(completion.getAttribute('aria-valuetext')).toBe('1 of 12 checkpoints complete')
+    })
   })
 
   it('opens an unlocked C++ checkpoint with a C++ editor and download', async () => {
@@ -1236,16 +1364,37 @@ describe('beginner lesson interactions', () => {
     expect((await screen.findByRole('textbox', { name: 'Project code editor' }) as HTMLTextAreaElement).value).toBe(savedDraft)
   })
 
-  it('does not change the active language when merely browsing another course', async () => {
+  it('uses a bookmarked course as page context without replacing the saved language preference', async () => {
     window.history.replaceState({}, '', '/courses/java-foundations')
 
     render(<App />)
 
     expect(screen.getByRole('heading', { name: 'Java Foundations' })).toBeTruthy()
+    expect((screen.getByRole('combobox', { name: 'Active course' }) as HTMLSelectElement).value).toBe('java')
+    expect(screen.getByRole('link', { name: 'Practice' }).getAttribute('href')).toBe('/practice/java')
+    expect(screen.getByRole('link', { name: 'Codebook' }).getAttribute('href')).toBe('/codebook/java')
     expect(window.location.pathname).toBe('/courses/java-foundations')
     await waitFor(() => {
       expect(JSON.parse(window.localStorage.getItem(progressKey) ?? '{}').activeLanguage).toBe('python')
     })
+  })
+
+  it('updates course context when browser history changes between bookmarked courses', async () => {
+    window.history.replaceState({}, '', '/courses/java-foundations')
+    render(<App />)
+
+    expect(screen.getByRole('heading', { name: 'Java Foundations' })).toBeTruthy()
+    expect((screen.getByRole('combobox', { name: 'Active course' }) as HTMLSelectElement).value).toBe('java')
+
+    act(() => {
+      window.history.pushState({}, '', '/courses/python-foundations')
+      window.dispatchEvent(new PopStateEvent('popstate'))
+    })
+
+    expect(await screen.findByRole('heading', { name: 'Python Foundations' })).toBeTruthy()
+    expect((screen.getByRole('combobox', { name: 'Active course' }) as HTMLSelectElement).value).toBe('python')
+    expect(screen.getByRole('link', { name: 'Practice' }).getAttribute('href')).toBe('/practice/python')
+    expect(screen.getByRole('link', { name: 'Codebook' }).getAttribute('href')).toBe('/codebook/python')
   })
 
   it('loads Settings directly and gives every main section a real URL', () => {

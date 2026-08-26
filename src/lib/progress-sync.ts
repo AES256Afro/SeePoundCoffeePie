@@ -1,4 +1,5 @@
 import { projectManifests } from '../data/project-manifests'
+import { tracks } from '../data/curriculum'
 import type { ConceptProgress, LearnerProgress } from '../types'
 import { parseLearnerProgress } from './progress-schema'
 
@@ -26,6 +27,12 @@ export type SaveProgressResult =
   | { ok: false; conflicted: boolean; conflict: RemoteProgressRecord | null; message: string }
 
 const projectIds = new Set(projectManifests.map((project) => project.id))
+const lessonIds = new Set(tracks.flatMap((track) => (
+  track.missions.flatMap((mission) => mission.exercises.map((exercise) => exercise.id))
+)))
+const missionLessonIds = new Map(tracks.flatMap((track) => track.missions.map((mission) => (
+  [mission.id, mission.exercises.map((exercise) => exercise.id)] as const
+))))
 const projectCheckpointIds = new Set(projectManifests.flatMap((project) => (
   project.checkpoints.map((checkpoint) => checkpoint.id)
 )))
@@ -55,7 +62,7 @@ function mergeConcept(
   }
 }
 
-function projectCompletionIds(
+function completionIds(
   value: unknown,
   knownIds: ReadonlySet<string>,
 ): string[] {
@@ -63,19 +70,27 @@ function projectCompletionIds(
   return [...new Set(value.filter((id): id is string => typeof id === 'string' && knownIds.has(id)))]
 }
 
-function withProjectCompletionDefaults(progress: LearnerProgress): LearnerProgress {
+function completedLessonsFor(progress: LearnerProgress): string[] {
+  return [...new Set([
+    ...completionIds(progress.completedLessons, lessonIds),
+    ...progress.completedMissions.flatMap((missionId) => missionLessonIds.get(missionId) ?? []),
+  ])]
+}
+
+function withCompletionDefaults(progress: LearnerProgress): LearnerProgress {
   return {
     ...progress,
-    completedProjectCheckpoints: projectCompletionIds(
+    completedLessons: completedLessonsFor(progress),
+    completedProjectCheckpoints: completionIds(
       progress.completedProjectCheckpoints,
       projectCheckpointIds,
     ),
-    completedProjects: projectCompletionIds(progress.completedProjects, projectIds),
+    completedProjects: completionIds(progress.completedProjects, projectIds),
   }
 }
 
 function canonicalProgress(progress: LearnerProgress): LearnerProgress {
-  const normalized = withProjectCompletionDefaults(progress)
+  const normalized = withCompletionDefaults(progress)
   return {
     callsign: normalized.callsign,
     activeLanguage: normalized.activeLanguage,
@@ -86,6 +101,7 @@ function canonicalProgress(progress: LearnerProgress): LearnerProgress {
     starShards: normalized.starShards,
     streak: normalized.streak,
     lastStudyDate: normalized.lastStudyDate,
+    completedLessons: [...normalized.completedLessons].sort(),
     completedMissions: [...normalized.completedMissions].sort(),
     completedProjectCheckpoints: [...normalized.completedProjectCheckpoints].sort(),
     completedProjects: [...normalized.completedProjects].sort(),
@@ -124,17 +140,21 @@ export function mergeLearnerProgress(
     starShards: Math.max(local.starShards, remote.starShards),
     streak: Math.max(local.streak, remote.streak),
     lastStudyDate: laterDate(local.lastStudyDate, remote.lastStudyDate),
+    completedLessons: [...new Set([
+      ...completedLessonsFor(remote),
+      ...completedLessonsFor(local),
+    ])].sort(),
     completedMissions: [...new Set([
       ...remote.completedMissions,
       ...local.completedMissions,
     ])].sort(),
     completedProjectCheckpoints: [...new Set([
-      ...projectCompletionIds(remote.completedProjectCheckpoints, projectCheckpointIds),
-      ...projectCompletionIds(local.completedProjectCheckpoints, projectCheckpointIds),
+      ...completionIds(remote.completedProjectCheckpoints, projectCheckpointIds),
+      ...completionIds(local.completedProjectCheckpoints, projectCheckpointIds),
     ])].sort(),
     completedProjects: [...new Set([
-      ...projectCompletionIds(remote.completedProjects, projectIds),
-      ...projectCompletionIds(local.completedProjects, projectIds),
+      ...completionIds(remote.completedProjects, projectIds),
+      ...completionIds(local.completedProjects, projectIds),
     ])].sort(),
     conceptProgress,
     onboardingComplete: local.onboardingComplete || remote.onboardingComplete || latestStudy.onboardingComplete,
@@ -144,9 +164,10 @@ export function mergeLearnerProgress(
 export function hasMeaningfulProgress(progress: LearnerProgress): boolean {
   return progress.onboardingComplete
     || progress.xp > 0
+    || completedLessonsFor(progress).length > 0
     || progress.completedMissions.length > 0
-    || projectCompletionIds(progress.completedProjectCheckpoints, projectCheckpointIds).length > 0
-    || projectCompletionIds(progress.completedProjects, projectIds).length > 0
+    || completionIds(progress.completedProjectCheckpoints, projectCheckpointIds).length > 0
+    || completionIds(progress.completedProjects, projectIds).length > 0
     || Object.keys(progress.conceptProgress).length > 0
 }
 
@@ -197,7 +218,7 @@ export async function saveRemoteProgress(
   progress: LearnerProgress,
   revision: number,
 ): Promise<SaveProgressResult> {
-  const normalizedProgress = withProjectCompletionDefaults(progress)
+  const normalizedProgress = withCompletionDefaults(progress)
   const response = await fetch('/api/progress', {
     method: 'PUT',
     credentials: 'same-origin',

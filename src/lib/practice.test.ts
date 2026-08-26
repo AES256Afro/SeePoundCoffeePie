@@ -54,6 +54,28 @@ describe('adaptive practice sessions', () => {
     expect(session.starterMission.id).toBe('py-first-spark')
   })
 
+  it('does not unlock Practice from partial lesson completion before the module closes', () => {
+    const lesson = python.missions[0].exercises[0]
+    const progress = {
+      ...initialProgress('python'),
+      completedLessons: [lesson.id],
+      conceptProgress: {
+        [lesson.conceptId]: concept(0),
+      },
+    }
+
+    const session = buildAdaptivePracticeSession(python, progress, now)
+
+    expect(session.mode).toBe('start')
+    expect(session.items).toEqual([])
+    expect(session.dueConcepts).toEqual([])
+    expect(countEligibleDueConcepts(python, progress, now)).toBe(0)
+    expect(resolveAdaptivePracticeSession(python, progress, [lesson.id], now)).toEqual({
+      ok: false,
+      reason: 'unknown-item',
+    })
+  })
+
   it('builds one bounded review across several completed missions', () => {
     const progress = progressForMissions(python, [0, 1, 2])
     const targetConcepts = [

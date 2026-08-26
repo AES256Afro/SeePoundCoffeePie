@@ -169,11 +169,12 @@ describe('C# guided project UI', () => {
     const checkpointNavigation = screen.getByRole('navigation', { name: 'Project checkpoints' })
     expect(within(checkpointNavigation).getAllByRole('link')).toHaveLength(12)
     expect(within(checkpointNavigation).getByRole('link', {
-      name: 'Checkpoint 12: Open the Community Workshop',
+      name: /Checkpoint 12: Open the Community Workshop.*Current checkpoint, not complete/iu,
     }).getAttribute('aria-current')).toBe('step')
-    expect(screen.getByRole('progressbar', { name: 'Checkpoint progress' }).getAttribute('aria-valuetext')).toBe(
-      'Checkpoint 12 of 12',
+    expect(screen.getByRole('progressbar', { name: 'Project completion' }).getAttribute('aria-valuetext')).toBe(
+      '11 of 12 checkpoints complete',
     )
+    expect(screen.getByText('Checkpoint 12 of 12')).toBeTruthy()
     expect((screen.getByRole('textbox', { name: 'Practice program input' }) as HTMLTextAreaElement).value).toBe(
       'Alex Kim\n4\n',
     )
@@ -212,7 +213,12 @@ describe('C# guided project UI', () => {
 
     render(<App />)
 
-    const downloadButton = await screen.findByRole('button', { name: 'Download your program' })
+    const downloadButton = await screen.findByRole('button', { name: 'Download community-workshop-check-in.cs' })
+    expect(screen.getByRole('link', { name: /Review project/iu })).toBeTruthy()
+    expect(screen.queryByRole('link', { name: /Continue project/iu })).toBeNull()
+    expect(screen.getByRole('link', { name: /Prepare portfolio page/iu }).getAttribute('href')).toBe(
+      '/portfolio/csharp/workshop-check-in',
+    )
     expect(screen.getByRole('progressbar', { name: 'Project progress' }).getAttribute('aria-valuenow')).toBe('100')
     fireEvent.click(downloadButton)
 

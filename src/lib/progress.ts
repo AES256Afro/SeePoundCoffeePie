@@ -1,12 +1,28 @@
 import { projectManifests } from '../data/project-manifests'
+import { tracks } from '../data/curriculum'
 import type { ConceptProgress, LanguageId, LearnerProgress } from '../types'
 import { normalizeLocalLearnerProgress } from './progress-schema'
 
 const REVIEW_INTERVALS = [0, 1, 3, 7, 14, 30]
+const lessons = tracks.flatMap((track) => track.missions.flatMap((mission) => (
+  mission.exercises.map((exercise) => ({
+    conceptId: exercise.conceptId,
+    id: exercise.id,
+    missionId: mission.id,
+    xp: exercise.xp,
+  }))
+)))
+const lessonsById = new Map(lessons.map((lesson) => [lesson.id, lesson]))
+const lessonIds: ReadonlySet<string> = new Set(lessonsById.keys())
+const missionLessons = new Map(tracks.flatMap((track) => track.missions.map((mission) => (
+  [mission.id, mission.exercises.map((exercise) => exercise.id)] as const
+))))
 const projectCheckpointIds = new Set(projectManifests.flatMap((project) => (
   project.checkpoints.map((checkpoint) => checkpoint.id)
 )))
 const projectIds: ReadonlySet<string> = new Set(projectManifests.map((project) => project.id))
+const progressStorageKey = 'see-pound-coffee-pie-progress'
+const lessonCompletionJournalKey = 'see-pound-coffee-pie-completed-lessons-v1'
 
 function addSafeCount(current: number, increment: number): number {
   const safeCurrent = Number.isSafeInteger(current) && current >= 0 ? current : 0
@@ -59,6 +75,7 @@ export function initialProgress(activeLanguage: LanguageId = 'python'): LearnerP
     starShards: 0,
     streak: 0,
     lastStudyDate: null,
+    completedLessons: [],
     completedMissions: [],
     completedProjectCheckpoints: [],
     completedProjects: [],
@@ -112,14 +129,45 @@ export function recordAttempt(
   }
 }
 
+export function recordLessonSuccess(
+  current: LearnerProgress,
+  lessonId: string,
+  awardXp = true,
+  now = new Date(),
+): LearnerProgress {
+  const lesson = lessonsById.get(lessonId)
+  if (!lesson) return current
+  const completedLessons = knownIds(current.completedLessons, lessonIds)
+  const alreadyCompleted = completedLessons.includes(lessonId)
+  const withAttempt = recordAttempt(
+    current,
+    lesson.conceptId,
+    true,
+    awardXp && !alreadyCompleted ? lesson.xp : 0,
+    now,
+  )
+  return {
+    ...withAttempt,
+    completedLessons: alreadyCompleted
+      ? completedLessons
+      : [...completedLessons, lessonId],
+  }
+}
+
 export function completeMission(
   current: LearnerProgress,
   missionId: string,
   now = new Date(),
 ): LearnerProgress {
+  const completedMissionLessons = missionLessons.get(missionId)
+  if (!completedMissionLessons) return current
   const alreadyCompleted = current.completedMissions.includes(missionId)
   return {
     ...current,
+    completedLessons: [...new Set([
+      ...knownIds(current.completedLessons, lessonIds),
+      ...completedMissionLessons,
+    ])],
     completedMissions: alreadyCompleted
       ? current.completedMissions
       : [...current.completedMissions, missionId],
@@ -174,20 +222,40 @@ export function isDue(concept: ConceptProgress, now = new Date()): boolean {
 }
 
 export function loadProgress(): LearnerProgress {
+  let restored = initialProgress()
   try {
-    const stored = window.localStorage.getItem('see-pound-coffee-pie-progress')
-    if (!stored) return initialProgress()
-    const parsed: unknown = JSON.parse(stored)
-    return normalizeLocalLearnerProgress(parsed, initialProgress())
+    const stored = window.localStorage.getItem(progressStorageKey)
+    if (stored) {
+      const parsed: unknown = JSON.parse(stored)
+      restored = normalizeLocalLearnerProgress(parsed, initialProgress())
+    }
   } catch {
-    return initialProgress()
+    restored = initialProgress()
+  }
+
+  try {
+    const journal = JSON.parse(window.localStorage.getItem(lessonCompletionJournalKey) ?? '[]')
+    return {
+      ...restored,
+      completedLessons: [...new Set([
+        ...restored.completedLessons,
+        ...knownIds(journal, lessonIds),
+      ])],
+    }
+  } catch {
+    return restored
   }
 }
 
 export function saveProgress(progress: LearnerProgress): void {
   try {
-    window.localStorage.setItem('see-pound-coffee-pie-progress', JSON.stringify({
+    const completedLessons = knownIds(progress.completedLessons, lessonIds)
+    // This separate journal survives writes from an already-open pre-Phase 4F
+    // tab, which knows the main key but cannot preserve per-lesson progress.
+    window.localStorage.setItem(lessonCompletionJournalKey, JSON.stringify(completedLessons))
+    window.localStorage.setItem(progressStorageKey, JSON.stringify({
       ...progress,
+      completedLessons,
       completedProjectCheckpoints: knownIds(progress.completedProjectCheckpoints, projectCheckpointIds),
       completedProjects: knownIds(progress.completedProjects, projectIds),
     }))

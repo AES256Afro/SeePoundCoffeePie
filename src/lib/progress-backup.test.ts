@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { pythonInteractiveProject } from '../data/python-interactive-project'
 import { cppCompiledProject } from '../data/cpp-compiled-project'
+import { trackById } from '../data/curriculum'
 import { initialProgress } from './progress'
 import {
   PROGRESS_BACKUP_FORMAT,
@@ -10,6 +11,10 @@ import {
 } from './progress-backup'
 
 const exportedAt = new Date('2026-08-24T15:30:00.000Z')
+const completedJavaMissionIds = ['java-coffee-protocol', 'java-routing-orders']
+const completedJavaLessonIds = trackById('java').missions
+  .filter((mission) => completedJavaMissionIds.includes(mission.id))
+  .flatMap((mission) => mission.exercises.map((exercise) => exercise.id))
 
 function completedProgress() {
   return {
@@ -21,7 +26,8 @@ function completedProgress() {
     starShards: 150,
     streak: 4,
     lastStudyDate: '2026-08-24',
-    completedMissions: ['java-coffee-protocol', 'java-routing-orders'],
+    completedLessons: completedJavaLessonIds,
+    completedMissions: completedJavaMissionIds,
     completedProjectCheckpoints: [pythonInteractiveProject.checkpoints[0].id],
     completedProjects: [pythonInteractiveProject.id],
     conceptProgress: {
@@ -95,8 +101,9 @@ describe('local progress backups', () => {
     expect(parseProgressBackup(JSON.stringify(envelope))).toMatchObject({ ok: false })
   })
 
-  it('migrates version 1 backups without project arrays to empty lists', () => {
+  it('migrates version 1 backups without lesson or project arrays', () => {
     const envelope = JSON.parse(serializeProgressBackup(initialProgress(), exportedAt))
+    delete envelope.progress.completedLessons
     delete envelope.progress.completedProjectCheckpoints
     delete envelope.progress.completedProjects
 
@@ -105,6 +112,42 @@ describe('local progress backups', () => {
       progress: initialProgress(),
       exportedAt: exportedAt.toISOString(),
     })
+  })
+
+  it('backfills lesson IDs when a legacy backup contains completed missions', () => {
+    const envelope = JSON.parse(serializeProgressBackup(completedProgress(), exportedAt))
+    delete envelope.progress.completedLessons
+
+    const parsed = parseProgressBackup(JSON.stringify(envelope))
+    expect(parsed).toMatchObject({ ok: true })
+    if (parsed.ok) {
+      expect(parsed.progress.completedLessons).toEqual(completedJavaLessonIds)
+      expect(parsed.progress.completedMissions).toEqual(completedJavaMissionIds)
+    }
+  })
+
+  it('round-trips partial lesson completion without completing a mission', () => {
+    const progress = {
+      ...initialProgress('python'),
+      callsign: 'Partial Cadet',
+      completedLessons: ['py-console', 'py-print'],
+    }
+
+    expect(parseProgressBackup(serializeProgressBackup(progress, exportedAt))).toEqual({
+      ok: true,
+      progress,
+      exportedAt: exportedAt.toISOString(),
+    })
+  })
+
+  it('rejects unknown or duplicate completed lesson IDs', () => {
+    const unknownLesson = JSON.parse(serializeProgressBackup(completedProgress(), exportedAt))
+    unknownLesson.progress.completedLessons.push('unknown-lesson')
+    expect(parseProgressBackup(JSON.stringify(unknownLesson))).toMatchObject({ ok: false })
+
+    const duplicateLesson = JSON.parse(serializeProgressBackup(completedProgress(), exportedAt))
+    duplicateLesson.progress.completedLessons.push(completedJavaLessonIds[0])
+    expect(parseProgressBackup(JSON.stringify(duplicateLesson))).toMatchObject({ ok: false })
   })
 
   it('rejects unknown or duplicate project completion identifiers', () => {

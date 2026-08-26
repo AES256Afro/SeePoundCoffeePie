@@ -250,9 +250,21 @@ Phase 4E turns the existing one-mission review scheduler into bounded adaptive p
 - Lesson and project runner tokens reject delayed results after internal navigation, exit, reset, overview changes, or unmount. A full learning-progress reset also clears every language's tab-scoped Practice queue.
 - The learner record, backup format, D1 schema, runner assignments, compiler images, and durable privacy boundary remain unchanged.
 
+Phase 4F makes lesson and project progress honest at the learner's actual position and adds a deliberate local portfolio handoff:
+
+- Every normal lesson completion is stored by its existing globally unique exercise identifier. Course and module outlines show complete, resume, and start states and resume at the first unfinished lesson.
+- Completing a lesson awards its authored XP once. Replaying a credited lesson can strengthen memory without awarding XP again. Practice and completed-module replay remain zero-reward flows.
+- A module with all five lessons credited but no module closure record shows an explicit `Finish module` action. The action records the module and awards its shard reward once without making the learner repeat the final lesson.
+- Older version 1 records that contain only completed mission identifiers infer the matching lesson closure in memory. The next normal save persists those inferred lesson identifiers. No D1 table migration is required.
+- During a rolling client upgrade, a pre-Phase 4F payload that omits the new lesson field cannot erase partial lesson progress already stored by the server. A current client uses an explicit empty array when progress is intentionally cleared.
+- A separate allowlisted browser-local lesson journal preserves those identifiers if an already-open pre-Phase 4F tab overwrites the older main local record. A current reset explicitly clears both records.
+- Project overviews distinguish completed checkpoints from percentage and use `Review project` after completion. Workspaces distinguish `Checkpoint N of 12` position from `N of 12 complete` progress and expose checkpoint state in an ordered navigation list.
+- Every completed project can open a matching `/portfolio/:language/:project-id` preview. The route uses only the local final draft and a narrow public project summary. It does not publish or synchronize source.
+- Portfolio download requires an explicit review of the current callsign and source. It creates a bounded, self-contained, script-free HTML file with a restrictive content policy, escaped content, no remote resources, and a clear statement that the snapshot is not a certificate or proof of authorship.
+- The portfolio route and its CSS load on demand. Dedicated bundle limits keep the feature from increasing the initial JavaScript cost or growing without review.
+
 The remaining Phase 4 work is to:
 
-- define a deliberate portfolio export instead of treating a raw source download as a public portfolio;
 - evaluate cooperative learning only after a separate privacy, child-safety, and moderation review, and before considering competitive leaderboards.
 
 ## Release gates

@@ -139,7 +139,7 @@ describe('ProjectStudio stale runner protection', () => {
       target: { value: 'customer_name = "Maya"\n\nprint(customer_name)' },
     })
     fireEvent.click(screen.getByRole('button', { name: /Check checkpoint/iu }))
-    fireEvent.click(screen.getByRole('link', { name: /Checkpoint 1: Let the program speak, complete/iu }))
+    fireEvent.click(screen.getByRole('link', { name: /Checkpoint 1: Let the program speak.*complete/iu }))
 
     expect(await screen.findByRole('heading', { level: 1, name: 'Let the program speak' })).toBeTruthy()
     await act(async () => {

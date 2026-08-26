@@ -30,7 +30,7 @@ import {
 import { orderedChoices } from './lib/choice-order'
 import { evaluateExercise } from './lib/evaluator'
 import { buildPracticeExercises, type AdaptivePracticeSession } from './lib/practice'
-import { completeMission, recordAttempt } from './lib/progress'
+import { completeMission, recordAttempt, recordLessonSuccess } from './lib/progress'
 import { buildReviewQueue, resetReviewAnswers } from './lib/review'
 import { runExercise, type RunnerClientStatus } from './lib/runner-client'
 import type { RunnerResult } from './lib/runner-contract'
@@ -49,7 +49,17 @@ export interface LessonPlayerProps {
 }
 
 export function LessonPlayer({ initialExerciseId, mission, onExerciseChange, onPracticeComplete, practiceConceptIds, practiceSession, progress, onProgress, onExit }: LessonPlayerProps) {
-  const initialStep = Math.max(0, mission.exercises.findIndex((item) => item.id === initialExerciseId))
+  const practiceMode = practiceSession !== undefined || practiceConceptIds !== undefined
+  const sessionExercises = practiceSession
+    ? practiceSession.items.map((item) => item.exercise)
+    : practiceConceptIds !== undefined
+      ? buildPracticeExercises(mission, practiceConceptIds)
+      : mission.exercises
+  const missionWasComplete = progress.completedMissions.includes(mission.id)
+  const initiallyCredited = !practiceMode && !missionWasComplete
+    ? sessionExercises.filter((exercise) => progress.completedLessons.includes(exercise.id)).map((exercise) => exercise.id)
+    : []
+  const initialStep = Math.max(0, sessionExercises.findIndex((item) => item.id === initialExerciseId))
   const [step, setStep] = useState(initialStep)
   const [answers, setAnswers] = useState<Record<string, string>>({})
   const [feedback, setFeedback] = useState<EvaluationResult | null>(null)
@@ -57,7 +67,9 @@ export function LessonPlayer({ initialExerciseId, mission, onExerciseChange, onP
   const [runnerStatus, setRunnerStatus] = useState<RunnerClientStatus | null>(null)
   const [runnerResult, setRunnerResult] = useState<RunnerResult | null>(null)
   const [runnerFailure, setRunnerFailure] = useState(false)
-  const [credited, setCredited] = useState<string[]>([])
+  const [credited, setCredited] = useState<string[]>(initiallyCredited)
+  const [awarded, setAwarded] = useState<string[]>([])
+  const [recordedSuccesses, setRecordedSuccesses] = useState<string[]>([])
   const [hintOpen, setHintOpen] = useState(false)
   const [finished, setFinished] = useState(false)
   const [mistakes, setMistakes] = useState<string[]>([])
@@ -66,13 +78,7 @@ export function LessonPlayer({ initialExerciseId, mission, onExerciseChange, onP
   const [orderingAnnouncement, setOrderingAnnouncement] = useState('')
   const lessonHeadingRef = useRef<HTMLHeadingElement>(null)
   const completionHeadingRef = useRef<HTMLHeadingElement>(null)
-  const [missionAlreadyComplete] = useState(() => progress.completedMissions.includes(mission.id))
-  const practiceMode = practiceSession !== undefined || practiceConceptIds !== undefined
-  const sessionExercises = practiceSession
-    ? practiceSession.items.map((item) => item.exercise)
-    : practiceConceptIds !== undefined
-      ? buildPracticeExercises(mission, practiceConceptIds)
-    : mission.exercises
+  const [missionAlreadyComplete] = useState(missionWasComplete)
   const reviewing = reviewQueue.length > 0
   const routeStep = initialExerciseId
     ? sessionExercises.findIndex((item) => item.id === initialExerciseId)
@@ -97,10 +103,9 @@ export function LessonPlayer({ initialExerciseId, mission, onExerciseChange, onP
     resetExerciseUi()
   }
   const rewardsDisabled = practiceMode || missionAlreadyComplete
-  const totalXp = rewardsDisabled ? 0 : sessionExercises.reduce((sum, item) => sum + item.xp, 0)
   const earnedXp = rewardsDisabled
     ? 0
-    : sessionExercises.filter((item) => credited.includes(item.id)).reduce((sum, item) => sum + item.xp, 0)
+    : sessionExercises.filter((item) => awarded.includes(item.id)).reduce((sum, item) => sum + item.xp, 0)
   const progressPercent = reviewing
     ? ((reviewIndex + 1) / reviewQueue.length) * 100
     : ((activeStep + 1) / sessionExercises.length) * 100
@@ -188,14 +193,18 @@ export function LessonPlayer({ initialExerciseId, mission, onExerciseChange, onP
 
     if (reviewing) {
       onProgress((current) => recordAttempt(current, exercise.conceptId, true, 0))
-    } else if (!credited.includes(exercise.id)) {
-      setCredited((current) => [...current, exercise.id])
-      onProgress((current) => recordAttempt(
-        current,
-        exercise.conceptId,
-        true,
-        rewardsDisabled ? 0 : exercise.xp,
-      ))
+    } else if (!recordedSuccesses.includes(exercise.id)) {
+      setRecordedSuccesses((current) => [...current, exercise.id])
+      if (!credited.includes(exercise.id)) {
+        setCredited((current) => [...current, exercise.id])
+      }
+      const lessonWasComplete = progress.completedLessons.includes(exercise.id)
+      if (rewardsDisabled || lessonWasComplete) {
+        onProgress((current) => recordAttempt(current, exercise.conceptId, true, 0))
+      } else {
+        setAwarded((current) => [...current, exercise.id])
+        onProgress((current) => recordLessonSuccess(current, exercise.id))
+      }
     }
   }
 
@@ -347,7 +356,7 @@ export function LessonPlayer({ initialExerciseId, mission, onExerciseChange, onP
           <div className="completion-stats">
             {practiceMode
               ? <><div><CheckCircle2 /><b>{sessionExercises.length}</b><span>questions completed</span></div><div><BookOpen /><b>{reviewedConcepts.length}</b><span>concepts reviewed</span></div></>
-              : <><div><Zap /><b>{earnedXp || totalXp}</b><span>XP earned</span></div><div><Gem /><b>{awardedShards}</b><span>star shards</span></div></>}
+              : <><div><Zap /><b>{earnedXp}</b><span>XP earned</span></div><div><Gem /><b>{awardedShards}</b><span>star shards</span></div></>}
             <div><RotateCcw /><b>{reviewQueue.length}</b><span>mistakes repaired</span></div>
           </div>
           <div className="what-learned"><h2>{practiceMode ? 'Memory strengthened' : 'Systems now familiar'}</h2><div>{reviewedConcepts.map((concept) => <span key={concept}><Check size={14} /> {concept}</span>)}</div></div>

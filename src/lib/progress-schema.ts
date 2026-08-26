@@ -4,6 +4,9 @@ import type { ConceptProgress, LanguageId, LearnerProgress } from '../types'
 
 const languages = new Set<LanguageId>(tracks.map((track) => track.id))
 const missionIds = new Set(tracks.flatMap((track) => track.missions.map((mission) => mission.id)))
+const lessonIds = new Set(tracks.flatMap((track) => (
+  track.missions.flatMap((mission) => mission.exercises.map((exercise) => exercise.id))
+)))
 const projectIds = new Set(projectManifests.map((project) => project.id))
 const projectCheckpointIds = new Set(projectManifests.flatMap((project) => (
   project.checkpoints.map((checkpoint) => checkpoint.id)
@@ -76,6 +79,22 @@ function normalizedConceptProgress(
   return normalized
 }
 
+function lessonsFromCompletedMissions(completedMissions: string[]): string[] {
+  const completed = new Set(completedMissions)
+  return tracks.flatMap((track) => (
+    track.missions.flatMap((mission) => (
+      completed.has(mission.id) ? mission.exercises.map((exercise) => exercise.id) : []
+    ))
+  ))
+}
+
+function withCompletedMissionLessons(completedLessons: string[], completedMissions: string[]): string[] {
+  return [...new Set([
+    ...completedLessons,
+    ...lessonsFromCompletedMissions(completedMissions),
+  ])]
+}
+
 export function parseLearnerProgress(value: unknown): LearnerProgress | null {
   if (!isRecord(value)) return null
   if (typeof value.callsign !== 'string' || value.callsign.length > 80) return null
@@ -88,9 +107,10 @@ export function parseLearnerProgress(value: unknown): LearnerProgress | null {
 
   if (!Array.isArray(value.completedMissions)) return null
   const completedMissions = readCompletionIds(value.completedMissions, missionIds)
+  const completedLessons = readCompletionIds(value.completedLessons, lessonIds)
   const completedProjectCheckpoints = readCompletionIds(value.completedProjectCheckpoints, projectCheckpointIds)
   const completedProjects = readCompletionIds(value.completedProjects, projectIds)
-  if (!completedMissions || !completedProjectCheckpoints || !completedProjects) return null
+  if (!completedMissions || !completedLessons || !completedProjectCheckpoints || !completedProjects) return null
 
   if (!isRecord(value.conceptProgress)) return null
   const restoredConcepts: Record<string, ConceptProgress> = {}
@@ -111,6 +131,7 @@ export function parseLearnerProgress(value: unknown): LearnerProgress | null {
     starShards: value.starShards,
     streak: value.streak,
     lastStudyDate: value.lastStudyDate as string | null,
+    completedLessons: withCompletedMissionLessons(completedLessons, completedMissions),
     completedMissions,
     completedProjectCheckpoints,
     completedProjects,
@@ -124,6 +145,13 @@ export function normalizeLocalLearnerProgress(
   fallback: LearnerProgress,
 ): LearnerProgress {
   if (!isRecord(value)) return { ...fallback, conceptProgress: { ...fallback.conceptProgress } }
+
+  const completedMissions = normalizedCompletionIds(value.completedMissions, fallback.completedMissions, missionIds)
+  const completedLessons = normalizedCompletionIds(
+    value.completedLessons,
+    fallback.completedLessons,
+    lessonIds,
+  )
 
   return {
     callsign: typeof value.callsign === 'string' && value.callsign.length <= 80
@@ -145,7 +173,8 @@ export function normalizeLocalLearnerProgress(
     lastStudyDate: value.lastStudyDate === null || isDateKey(value.lastStudyDate)
       ? value.lastStudyDate
       : fallback.lastStudyDate,
-    completedMissions: normalizedCompletionIds(value.completedMissions, fallback.completedMissions, missionIds),
+    completedLessons: withCompletedMissionLessons(completedLessons, completedMissions),
+    completedMissions,
     completedProjectCheckpoints: normalizedCompletionIds(
       value.completedProjectCheckpoints,
       fallback.completedProjectCheckpoints,

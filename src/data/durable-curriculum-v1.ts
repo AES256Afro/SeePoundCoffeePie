@@ -1,0 +1,28 @@
+// Persisted mission and lesson identifiers are part of the learner-record API.
+// Change this manifest only through an explicit versioned data migration.
+export const durableCurriculumV1 = {
+  'python/py-first-spark': ['py-console', 'py-print', 'py-string', 'py-number', 'py-launch'],
+  'python/py-signal-protocol': ['py2-retrieve-output', 'py2-boolean', 'py2-order-route', 'py2-fix-comparison', 'py2-signal-decision'],
+  'python/py-cargo-logic': ['py3-retrieve-route', 'py3-list-purpose', 'py3-first-index', 'py3-fix-index', 'py3-cargo-report'],
+  'python/py-looping-orbit': ['py4-retrieve-index', 'py4-loop-purpose', 'py4-predict-loop', 'py4-order-loop', 'py4-scan-manifest'],
+  'python/py-function-foundry': ['py5-retrieve-loop', 'py5-function-purpose', 'py5-predict-call', 'py5-order-function', 'py5-report-each'],
+  'python/py-void-wyrm': ['py6-trace-threat', 'py6-plan-system', 'py6-order-system', 'py6-repair-filter', 'py6-void-wyrm'],
+  'cpp/cpp-reactor': ['cpp-compiler', 'cpp-output', 'cpp-string', 'cpp-number', 'cpp-reactor-report'],
+  'cpp/cpp-hull-logic': ['cpp2-retrieve-output', 'cpp2-boolean', 'cpp2-order-repair', 'cpp2-fix-comparison', 'cpp2-hull-decision'],
+  'cpp/cpp-cargo-array': ['cpp3-retrieve-route', 'cpp3-array-purpose', 'cpp3-first-index', 'cpp3-fix-index', 'cpp3-parts-report'],
+  'cpp/cpp-engine-loop': ['cpp4-retrieve-index', 'cpp4-loop-purpose', 'cpp4-predict-loop', 'cpp4-order-loop', 'cpp4-inspect-parts'],
+  'cpp/cpp-command-function': ['cpp5-retrieve-loop', 'cpp5-function-purpose', 'cpp5-predict-call', 'cpp5-order-function', 'cpp5-report-each'],
+  'cpp/cpp-titan-forge': ['cpp6-trace-damage', 'cpp6-plan-system', 'cpp6-order-system', 'cpp6-repair-filter', 'cpp6-titan-forge'],
+  'csharp/cs-shield': ['cs-dotnet', 'cs-output', 'cs-string', 'cs-number', 'cs-shield-report'],
+  'csharp/cs-command-logic': ['cs2-retrieve-output', 'cs2-boolean', 'cs2-order-command', 'cs2-fix-comparison', 'cs2-shield-decision'],
+  'csharp/cs-crew-roster': ['cs3-retrieve-route', 'cs3-array-purpose', 'cs3-first-index', 'cs3-fix-index', 'cs3-roster-report'],
+  'csharp/cs-patrol-loop': ['cs4-retrieve-index', 'cs4-loop-purpose', 'cs4-predict-loop', 'cs4-order-loop', 'cs4-call-roster'],
+  'csharp/cs-command-method': ['cs5-retrieve-loop', 'cs5-method-purpose', 'cs5-predict-call', 'cs5-order-method', 'cs5-report-each'],
+  'csharp/cs-captains-trial': ['cs6-trace-scout', 'cs6-plan-system', 'cs6-order-system', 'cs6-repair-scout', 'cs6-captains-trial'],
+  'java/java-coffee-protocol': ['java-jvm', 'java-output', 'java-string', 'java-number', 'java-galley-report'],
+  'java/java-routing-orders': ['java2-retrieve-output', 'java2-boolean', 'java2-order-route', 'java2-fix-comparison', 'java2-pod-decision'],
+  'java/java-crew-array': ['java3-retrieve-route', 'java3-array-purpose', 'java3-first-index', 'java3-fix-index', 'java3-roster-report'],
+  'java/java-repeat-brew': ['java4-retrieve-index', 'java4-loop-purpose', 'java4-predict-loop', 'java4-order-loop', 'java4-check-roster'],
+  'java/java-droid-routine': ['java5-retrieve-loop', 'java5-method-purpose', 'java5-predict-call', 'java5-order-method', 'java5-report-each'],
+  'java/java-nebula-trial': ['java6-trace-power', 'java6-plan-system', 'java6-order-system', 'java6-repair-power', 'java6-nebula-trial'],
+} as const

@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest'
 import { pythonInteractiveProject } from '../data/python-interactive-project'
 import { cppCompiledProject } from '../data/cpp-compiled-project'
+import { trackById } from '../data/curriculum'
 import { initialProgress } from './progress'
 import {
   deleteRemoteProgress,
@@ -10,6 +11,9 @@ import {
   progressRecordsMatch,
   saveRemoteProgress,
 } from './progress-sync'
+
+const firstPythonLessonIds = trackById('python').missions[0].exercises.map((exercise) => exercise.id)
+const firstJavaLessonIds = trackById('java').missions[0].exercises.map((exercise) => exercise.id)
 
 function recordProgress() {
   return {
@@ -22,6 +26,7 @@ function recordProgress() {
     starShards: 25,
     streak: 2,
     lastStudyDate: '2026-08-25',
+    completedLessons: firstPythonLessonIds,
     completedMissions: ['py-first-spark'],
     completedProjectCheckpoints: [pythonInteractiveProject.checkpoints[0].id],
     completedProjects: [pythonInteractiveProject.id],
@@ -54,6 +59,7 @@ describe('durable progress synchronization', () => {
       xp: 60,
       dailyXp: 12,
       starShards: 50,
+      completedLessons: firstJavaLessonIds,
       completedMissions: ['py-first-spark', 'java-coffee-protocol'],
       completedProjectCheckpoints: [pythonInteractiveProject.checkpoints[1].id],
       completedProjects: [pythonInteractiveProject.id],
@@ -69,6 +75,7 @@ describe('durable progress synchronization', () => {
       xp: 60,
       dailyXp: 20,
       starShards: 50,
+      completedLessons: [...new Set([...firstJavaLessonIds, ...firstPythonLessonIds])].sort(),
       completedMissions: ['java-coffee-protocol', 'py-first-spark'],
       completedProjectCheckpoints: [
         pythonInteractiveProject.checkpoints[0].id,
@@ -163,9 +170,31 @@ describe('durable progress synchronization', () => {
     })
   })
 
+  it('unions partial lesson completion from two devices without inventing module completion', () => {
+    const local = {
+      ...initialProgress('python'),
+      completedLessons: ['py-console'],
+    }
+    const remote = {
+      ...initialProgress('python'),
+      completedLessons: ['py-print'],
+    }
+
+    const forward = mergeLearnerProgress(local, remote)
+    const reverse = mergeLearnerProgress(remote, local)
+
+    expect(forward).toMatchObject({
+      completedLessons: ['py-console', 'py-print'],
+      completedMissions: [],
+    })
+    expect(reverse.completedLessons).toEqual(forward.completedLessons)
+    expect(reverse.completedMissions).toEqual(forward.completedMissions)
+  })
+
   it('matches semantically equal records regardless of set and concept insertion order', () => {
     const left = {
       ...recordProgress(),
+      completedLessons: [...firstPythonLessonIds].reverse(),
       completedMissions: ['py-first-spark', 'java-coffee-protocol'],
       conceptProgress: {
         'python-print': { strength: 2, correct: 3, incorrect: 1, dueAt: '2026-08-28' },
@@ -174,6 +203,7 @@ describe('durable progress synchronization', () => {
     }
     const right = {
       ...recordProgress(),
+      completedLessons: firstPythonLessonIds,
       completedMissions: ['java-coffee-protocol', 'py-first-spark'],
       conceptProgress: {
         'java-output': { strength: 1, correct: 1, incorrect: 0, dueAt: '2026-08-26' },
@@ -185,8 +215,20 @@ describe('durable progress synchronization', () => {
     expect(progressRecordsMatch(left, { ...right, xp: right.xp + 1 })).toBe(false)
   })
 
-  it('migrates an old version 1 remote record that omits project arrays', async () => {
+  it('treats a legacy mission-only record as equal to its explicit lesson closure', () => {
+    const explicit = recordProgress()
+    const legacy: Record<string, unknown> = { ...explicit }
+    delete legacy.completedLessons
+
+    expect(progressRecordsMatch(
+      legacy as unknown as ReturnType<typeof recordProgress>,
+      explicit,
+    )).toBe(true)
+  })
+
+  it('migrates an old version 1 remote record that omits lesson and project arrays', async () => {
     const legacyProgress: Record<string, unknown> = { ...recordProgress() }
+    delete legacyProgress.completedLessons
     delete legacyProgress.completedProjectCheckpoints
     delete legacyProgress.completedProjects
     const record = {
@@ -200,6 +242,7 @@ describe('durable progress synchronization', () => {
     try {
       await expect(fetchRemoteProgress()).resolves.toMatchObject({
         progress: {
+          completedLessons: firstPythonLessonIds,
           completedProjectCheckpoints: [],
           completedProjects: [],
         },
