@@ -171,4 +171,50 @@ Rollback restores the prior compatible Worker version. Do not delete the D1 data
 
 ## Verified release evidence
 
-Release evidence is recorded after the exact `main` commit passes CI, staging, production deployment, runner regression, live route checks, and browser verification.
+### Source and continuous integration
+
+- Runtime source commit: `11ecb36021fae2e3903e7e0802d5cf14e5f7bd02`
+- GitHub `origin/main` matched that exact commit before deployment.
+- GitHub Actions run [32970508057](https://github.com/AES256Afro/SeePoundCoffeePie/actions/runs/32970508057) passed against that commit.
+- The independent security, learner-data, and learner-experience reviews reported no remaining P0, P1, or P2 findings.
+
+### Exact local release gate
+
+`npm run check:release` passed on the runtime source commit with 42 test files and 476 tests. The gate also passed lint, social-preview validation, the production build, the project lazy-load boundary, and every bundle cap.
+
+Measured release bundles were:
+
+```text
+initial JavaScript: 478.65 kB raw, 131.12 kB gzip
+initial CSS: 71.25 kB raw, 13.20 kB gzip
+total JavaScript: 681.28 kB raw, 190.68 kB gzip
+total CSS: 74.87 kB raw, 14.31 kB gzip
+portfolio JavaScript: 14.10 kB raw, 5.16 kB gzip
+portfolio CSS: 3.62 kB raw, 1.11 kB gzip
+```
+
+`npm run deploy:dry-run` passed with the expected Worker bindings and all four container images. `npm run check:runner:image` passed Python, C++, C#, Java, CPU, output, memory, disk, network, and cleanup checks against the local runner images.
+
+### Staging
+
+- Staging Worker version: `289d6296-43c4-42b2-8c12-867e2fe7ef4b`
+- The four-language runner and isolation suite passed.
+- The protected Python, C++, C#, and Java project suites passed.
+- Direct Java course refresh retained Java course context, navigation, module expansion, focus, responsive width, and a clean browser console.
+- The staging runner returned to `enabled: false` after verification and was confirmed through the public status endpoint.
+
+### Production
+
+- Production Worker version: `ed2a16f5-55cf-4b7f-90b4-c846cebce461`
+- Lesson execution was set to `enabled: false` before deployment while the public site continued returning HTTP 200.
+- The live verifier passed social previews, the apex domain, the `www` redirect, security headers, 28 canonical routes, and 2 legacy routes.
+- All four portfolio routes returned HTTP 200.
+- The four-language production runner suite passed Python, C++, C#, and Java execution plus network, CPU, isolation, output, memory, disk, diagnostics, saturation, and authorization controls.
+- The protected Python project passed all 10 checks, C++ passed all 12 checks, C# passed all 12 public-safe checks, and Java passed all 13 public-safe checks.
+- The final production runner smoke test passed. Execution was restored only after every suite succeeded. Cloudflare KV and the public status endpoint then both reported `enabled: true` with all four languages.
+
+Production browser verification covered the Java course and portfolio routes at 1280 and 390 CSS pixels. The Java course retained the Java selector, Java Practice and Codebook links, expanded first module, route-specific title, heading focus, and zero document overflow. The incomplete portfolio state stayed private and prevented export. A query attempting to add a callsign failed closed as a not-found route. Portfolio CSS loaded only on the portfolio route, and the browser console remained free of errors and warnings.
+
+The ready-state portfolio flow was also exercised against an isolated local production build. The consent gate produced the 4,112-byte `seepoundcoffeepie-first-interactive-program-portfolio.html` test artifact with SHA-256 `4e4d4b4a2171281f8502bbb4f9348d709265d4da556e879a30632200f0f1d531`. Static verification confirmed that the exact reviewed callsign and source were present, the disclosure and Content Security Policy were present, and no scripts, event handlers, external links, frames, forms, or remote resources were present. The in-app browser blocks navigation to `file:` URLs, so offline rendering in that browser surface was not claimed; the downloaded file itself was generated and inspected as a standalone artifact.
+
+No D1 migration, binding change, runner image change, or secret change was required for this release.
