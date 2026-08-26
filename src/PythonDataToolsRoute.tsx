@@ -177,7 +177,7 @@ export function ContinuingCoursePage({ courseId, onNavigate, onProgress, progres
   }
 
   return (
-    <main className="workshop-page course-outline">
+    <main className="workshop-page course-outline" id="main-content" tabIndex={-1}>
       <NavigateLink className="back-link" onNavigate={onNavigate} to={coursesPath()}><ArrowLeft size={16} /> All courses</NavigateLink>
       <header className={`course-hero course-hero--${definition.language} course-hero--continuing`}>
         <span aria-label={languageLabel(definition)} className={`language-symbol language-symbol--${definition.language} language-symbol--large`}>{courseSymbol(definition)}</span>

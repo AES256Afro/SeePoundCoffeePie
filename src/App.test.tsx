@@ -1254,7 +1254,8 @@ describe('beginner lesson interactions', () => {
 
     render(<App />)
 
-    expect(await screen.findByRole('heading', { level: 1, name: practicalPythonTitle })).toBeTruthy()
+    const courseHeading = await screen.findByRole('heading', { level: 1, name: practicalPythonTitle })
+    expect(courseHeading).toBeTruthy()
     expect(screen.getByText('Finish both prerequisites to start')).toBeTruthy()
     expect(screen.getByRole('heading', { name: 'Two earlier steps make this course feel gentle' })).toBeTruthy()
     for (const label of practicalPythonPrerequisiteLabels) {
@@ -1266,6 +1267,7 @@ describe('beginner lesson interactions', () => {
     expect(within(outline).getByRole('button', { name: /Supply Tracker capstone/iu })).toBeTruthy()
     await waitFor(() => {
       expect(document.title).toBe(`${practicalPythonTitle} | SeePoundCoffeePie`)
+      expect(document.activeElement).toBe(courseHeading)
     })
   })
 
