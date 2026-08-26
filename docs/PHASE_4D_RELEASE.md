@@ -156,4 +156,47 @@ Rollback restores the previous compatible Worker version and reviewed Java image
 
 ## Release evidence
 
-Source, CI, staging, production, image, runner, route, and browser evidence will be appended here after every release gate passes.
+Release verification completed on 2026-08-25 at 21:36 CDT.
+
+### Source and CI
+
+- Release source commit: `7336ca8b97fe7a86a1bdd163c9ab8bccdf0ab40f`.
+- GitHub `main` resolved to the same commit after publication.
+- [CI run 32921263148](https://github.com/AES256Afro/SeePoundCoffeePie/actions/runs/32921263148) passed dependency installation, 391 tests in 37 files, lint, the production build, and bundle budgets.
+- [Production monitor run 32921280188](https://github.com/AES256Afro/SeePoundCoffeePie/actions/runs/32921280188) passed against the pre-release production runner before deployment.
+- Independent adversarial review found no grading bypass. One low-severity protocol mismatch was fixed before release: the coordinator now rejects impossible parsed Java envelopes and incomplete straight-line fact frames as `system_error` after one VM.
+
+### Local release gates
+
+- `npm run check:release` passed with 391 tests in 37 files, lint, social-preview verification, the project bundle privacy boundary, the production build, and bundle budgets.
+- First-load JavaScript measured 482.93 kB raw and 128.88 kB gzip. Total route-aware JavaScript measured 647.08 kB raw and 174.34 kB gzip.
+- The route-loaded Java project curriculum measured 41.57 kB raw and 11.20 kB gzip. It is not included in the first-load bundle.
+- `npm run deploy:dry-run` passed with Wrangler 4.126.0 and all four container images.
+- The full runner image gate passed Python 11/11, C++ 14/14, Java 17/17, and C# 16/16, plus ordinary compilation, execution, limits, network denial, and repeated-case cleanup.
+- The pinned Java toolchain reported OpenJDK and `javac` 21.0.11. The local reviewed image was 631,379,171 bytes.
+- `git diff --check` and the U+2014 scan passed.
+
+### Staging
+
+- Worker version: `f628d626-eacf-4883-b496-4c87a7cc8b5f`, deployed at 100 percent.
+- All four container applications reached version 16 with two healthy instances and no health errors.
+- Published image digests:
+  - Python: `sha256:ff32f610024dfe0ed19d9ec7ca5edeb1e696cdaaae35bf59a706a902a855e0db`
+  - C++: `sha256:7d4b292ab94a1ef1d5f2e2095908b0c79bc321f381fd3ccf26e1292541901e58`
+  - C#: `sha256:9422500277240286911dbadc76bcf112e6fc0dfde1dde81d8cf645006b85167c`
+  - Java: `sha256:d1dc1b42eb2610584b0f49caf899ab904aee47400fb0ab6f5d3fbe601e1b4537`
+- The platform, Python project, C++ project, C# project, and Java project probes passed.
+- The Java probe rejected hardcoded visible output and passed the authentic solution with all 13 public-safe checks.
+- Staging execution was disabled before deployment, opened only for the probes after every container was ready, and returned to disabled afterward.
+
+### Production
+
+- Worker deployment ID: `6b2817d1-f797-4023-8c26-872e9d4f5933`.
+- Worker version: `c2dabc18-323d-42eb-89e3-10d5e49a42b7`, deployed at 100 percent.
+- The production Python, C++, C#, and Java applications reached version 5 with four healthy instances each and no health errors. Their image digests exactly matched staging.
+- Production execution was disabled during the Worker and container rollout. It was restored only after all four applications reported `ready` and remains enabled after verification.
+- The platform, Python project, C++ project, C# project, Java project, and smoke probes passed on `https://seepoundcoffeepie.com`.
+- The Java production probe rejected hardcoded visible output and passed the authentic solution with all 13 public-safe checks in 9,865 ms.
+- Live verification passed the social preview, apex domain, `www` redirect, security headers, 23 canonical routes, and two legacy routes.
+- Browser verification passed on the public Java project route at desktop and 390-pixel viewport widths. The route title was `Community Picnic Planner | SeePoundCoffeePie`, the Java chunk loaded without console errors, and neither viewport had horizontal overflow.
+- No D1 migration or secret rotation was performed or required.
