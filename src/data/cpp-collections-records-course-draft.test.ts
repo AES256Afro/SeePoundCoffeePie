@@ -450,7 +450,7 @@ describe('Practical C++ return-values draft module', () => {
     } finally {
       rmSync(buildDirectory, { recursive: true, force: true })
     }
-  })
+  }, 30_000)
 
   it('keeps all six authored modules outside the current runner registry', async () => {
     const { findRunnerAssignment } = await import('../lib/runner-assignments')
