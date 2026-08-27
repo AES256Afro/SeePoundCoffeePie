@@ -28,24 +28,44 @@ export class RunnerClientError extends Error {
   }
 }
 
+const PLAIN_SERVER_ERRORS: Record<string, string> = {
+  'The training queue is full. Try again shortly.': 'The code checker is busy. Try again shortly.',
+  'Two runs are already waiting for this learner.': 'Two checks are already waiting. Let one finish, then try again.',
+  'The runner is receiving too many requests. Try again in one minute.': 'The code checker is busy. Try again in one minute.',
+  'Runner coordinator endpoint not found.': 'The code checker could not complete this check. Try again.',
+  'Invalid internal runner request.': 'The code checker could not read this run. Reload the page and try again.',
+  'The exercise does not match the selected language.': 'The language for this check changed. Reload the lesson and try again.',
+  'Run identifier already exists.': 'The code checker could not start this check. Try again.',
+  'Run not found.': 'This check could not be found. Start it again.',
+}
+
+function plainServerError(value: unknown): string | null {
+  if (typeof value !== 'string') return null
+  const translated = PLAIN_SERVER_ERRORS[value]
+  if (translated) return translated
+  if (/^(?:The code checker|This (?:check|code|page|lesson)|The language for this check|Reload this page)/u.test(value)) {
+    return value
+  }
+  return 'The code checker could not complete this check. Try again.'
+}
+
 async function readJson(response: Response): Promise<Record<string, unknown>> {
   const contentType = response.headers.get('Content-Type') ?? ''
   if (!contentType.toLowerCase().includes('application/json')) {
-    throw new RunnerClientError('The live runner could not be reached. Your code was not marked wrong. Please try again.', true)
+    throw new RunnerClientError('The code checker could not be reached. Your code was not marked wrong. Please try again.', true)
   }
   try {
     return await response.json() as Record<string, unknown>
   } catch {
-    throw new RunnerClientError('The live runner sent an incomplete response. Your code was not marked wrong. Please try again.', true)
+    throw new RunnerClientError('The code checker sent an incomplete response. Your code was not marked wrong. Please try again.', true)
   }
 }
 
 async function expectJson(response: Response): Promise<Record<string, unknown>> {
   const body = await readJson(response)
   if (!response.ok) {
-    const message = typeof body.error === 'string'
-      ? body.error
-      : 'The training runner could not start this check. Please try again.'
+    const message = plainServerError(body.error)
+      ?? 'The code checker could not start this check. Please try again.'
     throw new RunnerClientError(message, body.retryable === true || response.status >= 500)
   }
   return body
@@ -94,7 +114,7 @@ export async function runExercise(
     body: JSON.stringify({ exerciseId, language }),
   }))
   if (typeof grantBody.grant !== 'string') {
-    throw new RunnerClientError('The training runner did not issue a valid run pass. Please try again.', true)
+    throw new RunnerClientError('The code checker could not start this run. Please try again.', true)
   }
 
   const acceptedBody = await expectJson(await fetch('/api/runner/runs', {
@@ -113,7 +133,7 @@ export async function runExercise(
     }),
   }))
   if (!isAccepted(acceptedBody)) {
-    throw new RunnerClientError('The training runner did not return a valid queue receipt. Please try again.', true)
+    throw new RunnerClientError('The code checker did not confirm the run. Please try again.', true)
   }
 
   onStatus?.('queued')
@@ -127,7 +147,7 @@ export async function runExercise(
     }))
     if (isResult(body)) return body
     if (!isPending(body)) {
-      throw new RunnerClientError('The training runner returned an unknown run state. Please try again.', true)
+      throw new RunnerClientError('The code checker returned an unknown result. Please try again.', true)
     }
     onStatus?.(body.status)
     pollAfterMs = body.pollAfterMs

@@ -135,19 +135,18 @@ describe('C# guided project UI', () => {
     render(<App />)
 
     expect(await screen.findByRole('heading', { level: 1, name: 'Community Workshop Check-In' })).toBeTruthy()
-    expect(screen.getByText('C# project studio')).toBeTruthy()
-    expect(screen.getByText('12 checkpoints')).toBeTruthy()
+    expect(screen.getByText('12 steps')).toBeTruthy()
     expect(screen.getByRole('link', { name: 'C# Foundations' }).getAttribute('href')).toBe('/courses/csharp-foundations')
     expect(screen.getByRole('link', { name: /Start project/iu }).getAttribute('href')).toBe(
       '/projects/csharp/workshop-check-in/project-csharp-dotnet-path',
     )
 
-    const checkpointHeading = screen.getByRole('heading', { name: 'Twelve small checkpoints' })
+    const checkpointHeading = screen.getByRole('heading', { name: '12 project steps' })
     const checkpointSection = checkpointHeading.closest('section')
     expect(checkpointSection).not.toBeNull()
     expect(within(checkpointSection!).getAllByRole('listitem')).toHaveLength(12)
     expect(screen.getByRole('progressbar', { name: 'Project progress' }).getAttribute('aria-valuetext')).toBe(
-      '0 of 12 checkpoints complete',
+      '0 of 12 steps complete',
     )
     expect(document.title).toBe('Community Workshop Check-In | SeePoundCoffeePie')
   })
@@ -161,21 +160,24 @@ describe('C# guided project UI', () => {
 
     const heading = await screen.findByRole('heading', { level: 1, name: 'Open the Community Workshop' })
     await waitFor(() => expect(document.activeElement).toBe(heading))
-    expect(screen.getByText('C# project studio')).toBeTruthy()
     expect(screen.getByText('community-workshop-check-in.cs')).toBeTruthy()
     expect(screen.getByRole('button', { name: 'Download .cs' })).toBeTruthy()
-    expect(screen.getByText('Practice console')).toBeTruthy()
+    expect(screen.getByText('Run output')).toBeTruthy()
+    expect(screen.getByRole('heading', { name: 'New terms' })).toBeTruthy()
+    expect(screen.getByRole('heading', { name: 'Explanation' })).toBeTruthy()
+    expect(screen.getByRole('heading', { name: 'Requirements' })).toBeTruthy()
+    expect(screen.getByText('Task')).toBeTruthy()
 
-    const checkpointNavigation = screen.getByRole('navigation', { name: 'Project checkpoints' })
+    const checkpointNavigation = screen.getByRole('navigation', { name: 'Project steps' })
     expect(within(checkpointNavigation).getAllByRole('link')).toHaveLength(12)
     expect(within(checkpointNavigation).getByRole('link', {
-      name: /Checkpoint 12: Open the Community Workshop.*Current checkpoint, not complete/iu,
+      name: /Step 12: Open the Community Workshop.*Current step, not complete/iu,
     }).getAttribute('aria-current')).toBe('step')
     expect(screen.getByRole('progressbar', { name: 'Project completion' }).getAttribute('aria-valuetext')).toBe(
-      '11 of 12 checkpoints complete',
+      '11 of 12 steps complete',
     )
-    expect(screen.getByText('Checkpoint 12 of 12')).toBeTruthy()
-    expect((screen.getByRole('textbox', { name: 'Practice program input' }) as HTMLTextAreaElement).value).toBe(
+    expect(screen.getByText('Step 12 of 12')).toBeTruthy()
+    expect((screen.getByRole('textbox', { name: 'Run input' }) as HTMLTextAreaElement).value).toBe(
       'Alex Kim\n4\n',
     )
 

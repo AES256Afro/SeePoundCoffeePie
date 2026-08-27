@@ -733,7 +733,7 @@ const supplyTrackerExercises: Exercise[] = [
   {
     id: 'pydata6-supply-tracker',
     conceptId: 'python-data-tool-capstone',
-    eyebrow: 'Guided capstone 5 of 5',
+    eyebrow: 'Final project 5 of 5',
     title: 'Complete the Supply Tracker',
     explanation:
       'This program combines four small jobs: normalize item names, add quantities, total all stored units, and collect items below a restock limit. Complete the five familiar expressions to connect the system.',
@@ -852,7 +852,7 @@ export const pythonDataToolsCourse = {
       'py-data-supply-tracker',
       6,
       'Supply Tracker',
-      'Guided data-tool capstone',
+      'Build the complete data tool',
       'Combine normalization, returned values, changing collections, totals, and filters in one complete console tool.',
       '40 min',
       'crown',

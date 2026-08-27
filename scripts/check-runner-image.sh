@@ -6,6 +6,7 @@ project_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
 python3 "$project_dir/runner/test_supervisor_analysis.py"
 PYTHONDONTWRITEBYTECODE=1 python3 "$project_dir/runner/test_python_data_tools_analyzer.py"
+PYTHONDONTWRITEBYTECODE=1 PYTHONPATH="$project_dir/runner" python3 "$project_dir/runner/test_cpp_collections_analyzer.py"
 
 docker build --platform linux/amd64 -t "$image_prefix-python:worker" -f "$project_dir/Dockerfile.runner.python" "$project_dir"
 docker run --rm \
@@ -44,6 +45,40 @@ ANALYSIS="$python_data_tools_analysis" node --input-type=module -e '
   }
 '
 docker build --platform linux/amd64 -t "$image_prefix-cpp:worker" -f "$project_dir/Dockerfile.runner.cpp" "$project_dir"
+docker run --rm \
+  --platform linux/amd64 \
+  --network none \
+  --memory 1g \
+  --pids-limit 256 \
+  --entrypoint /usr/bin/python3 \
+  -e PYTHONDONTWRITEBYTECODE=1 \
+  -e PYTHONPATH=/opt/runner \
+  -v "$project_dir/runner/test_cpp_collections_analyzer.py:/fixture/test_cpp_collections_analyzer.py:ro" \
+  -v "$project_dir/runner/fixtures:/fixture/fixtures:ro" \
+  "$image_prefix-cpp:worker" \
+  /fixture/test_cpp_collections_analyzer.py
+cpp_collections_analysis="$(docker run --rm \
+  --platform linux/amd64 \
+  --network none \
+  --memory 1g \
+  --pids-limit 256 \
+  --entrypoint /usr/bin/python3 \
+  -v "$project_dir/runner/fixtures/cpp-collections-reference.cpp.txt:/workspace/source.txt:ro" \
+  "$image_prefix-cpp:worker" \
+  -I -B /opt/runner/CppCollectionsAnalyzer.py /workspace/source.txt)"
+ANALYSIS="$cpp_collections_analysis" node --input-type=module -e '
+  const analysis = JSON.parse(process.env.ANALYSIS)
+  const facts = ["authored_frame", "part_record", "restock", "total_units", "low_stock", "supplied_harness"]
+  if (
+    analysis.version !== 1 ||
+    analysis.profile !== "cpp-collections-records-workshop-report-v1" ||
+    analysis.analyzed !== true ||
+    analysis.parsed !== true ||
+    !facts.every((fact) => analysis[fact] === true)
+  ) {
+    throw new Error("C++ Workshop Stock Report image analyzer rejected the authentic fixture")
+  }
+'
 docker run --rm \
   --platform linux/amd64 \
   --network none \
@@ -106,6 +141,37 @@ for language in cpp csharp java; do
     --entrypoint /bin/sh \
     "$image_prefix-$language:worker" \
     -c 'test ! -e /opt/runner/PythonDataToolsAnalyzer.py'
+done
+
+cpp_collections_analyzer_mode="$(docker run --rm \
+  --platform linux/amd64 \
+  --network none \
+  --entrypoint /usr/bin/stat \
+  "$image_prefix-cpp:worker" \
+  -c '%a' /opt/runner/CppCollectionsAnalyzer.py)"
+if [[ "$cpp_collections_analyzer_mode" != "500" ]]; then
+  echo "C++ collections analyzer must be installed root-only with mode 500, received $cpp_collections_analyzer_mode." >&2
+  exit 1
+fi
+
+if docker run --rm \
+  --platform linux/amd64 \
+  --network none \
+  --user 10001:10001 \
+  --entrypoint /bin/sh \
+  "$image_prefix-cpp:worker" \
+  -c 'test -r /opt/runner/CppCollectionsAnalyzer.py || test -x /opt/runner/CppCollectionsAnalyzer.py'; then
+  echo "C++ collections analyzer must not be readable or executable by the learner identity." >&2
+  exit 1
+fi
+
+for language in python csharp java; do
+  docker run --rm \
+    --platform linux/amd64 \
+    --network none \
+    --entrypoint /bin/sh \
+    "$image_prefix-$language:worker" \
+    -c 'test ! -e /opt/runner/CppCollectionsAnalyzer.py'
 done
 
 run_fixture() {

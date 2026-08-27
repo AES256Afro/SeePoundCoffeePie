@@ -66,7 +66,7 @@ describe('runExercise', () => {
     expect(submission).not.toHaveProperty('command')
   })
 
-  it('surfaces the safe API error and retry signal', async () => {
+  it('shows a plain retry message when the code checker is busy', async () => {
     vi.stubGlobal('fetch', vi.fn(async () => Response.json(
       { error: 'The training queue is full. Try again shortly.', retryable: true },
       { status: 503 },
@@ -74,7 +74,21 @@ describe('runExercise', () => {
 
     await expect(runExercise('py-print', 'python', 'print(1)')).rejects.toEqual(
       expect.objectContaining<Partial<RunnerClientError>>({
-        message: 'The training queue is full. Try again shortly.',
+        message: 'The code checker is busy. Try again shortly.',
+        retryable: true,
+      }),
+    )
+  })
+
+  it('does not show an unknown technical server message', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => Response.json(
+      { error: 'Internal coordinator lease mismatch.' },
+      { status: 500 },
+    )))
+
+    await expect(runExercise('py-print', 'python', 'print(1)')).rejects.toEqual(
+      expect.objectContaining<Partial<RunnerClientError>>({
+        message: 'The code checker could not complete this check. Try again.',
         retryable: true,
       }),
     )
@@ -87,20 +101,20 @@ describe('runExercise', () => {
 
     await expect(runExercise('py-print', 'python', 'print(1)')).rejects.toEqual(
       expect.objectContaining<Partial<RunnerClientError>>({
-        message: 'The live runner could not be reached. Your code was not marked wrong. Please try again.',
+        message: 'The code checker could not be reached. Your code was not marked wrong. Please try again.',
         retryable: true,
       }),
     )
   })
 
-  it('does not blame learner code when the runner returns incomplete JSON', async () => {
+  it('does not blame learner code when the code checker returns incomplete data', async () => {
     vi.stubGlobal('fetch', vi.fn(async () => new Response('{"grant":', {
       headers: { 'Content-Type': 'application/json' },
     })))
 
     await expect(runExercise('py-print', 'python', 'print(1)')).rejects.toEqual(
       expect.objectContaining<Partial<RunnerClientError>>({
-        message: 'The live runner sent an incomplete response. Your code was not marked wrong. Please try again.',
+        message: 'The code checker sent an incomplete response. Your code was not marked wrong. Please try again.',
         retryable: true,
       }),
     )

@@ -66,9 +66,13 @@ describe('standalone portfolio export', () => {
     expect(result.ok).toBe(true)
     if (!result.ok) return
 
-    expect(new DOMParser().parseFromString(result.html, 'text/html').body.textContent).toContain(
-      PORTFOLIO_INTEGRITY_NOTE,
-    )
+    const document = new DOMParser().parseFromString(result.html, 'text/html')
+    const visibleText = document.body.textContent ?? ''
+    expect(visibleText).toContain(PORTFOLIO_INTEGRITY_NOTE)
+    expect(visibleText).toContain('Displayed name: Careful Cadet')
+    expect(visibleText).toContain('Saved code')
+    expect(visibleText).not.toMatch(/callsign|current source|final source|null byte|byte portfolio limit/iu)
+    expect(document.querySelector('pre')?.getAttribute('aria-label')).toBe('Saved code for coffee-counter.py')
     expect(result.html).not.toMatch(/verified source|certified|proof of skill|proof of authorship/iu)
   })
 
@@ -80,26 +84,55 @@ describe('standalone portfolio export', () => {
 
     expect(exactAscii.ok).toBe(true)
     expect(exactUnicode.ok).toBe(true)
-    expect(overAscii).toMatchObject({ ok: false, message: expect.stringContaining('larger') })
-    expect(overUnicode).toMatchObject({ ok: false, message: expect.stringContaining('larger') })
+    expect(overAscii).toMatchObject({ ok: false, message: 'The saved code is too large to include in a portfolio download.' })
+    expect(overUnicode).toMatchObject({ ok: false, message: 'The saved code is too large to include in a portfolio download.' })
   })
 
   it('rejects blank source, null bytes, directional controls, unsafe callsign controls, and oversized output', () => {
-    expect(createPortfolioExport(snapshot({ source: '   ' }), 'first-interactive-program')).toMatchObject({ ok: false })
-    expect(createPortfolioExport(snapshot({ source: 'print("safe")\0' }), 'first-interactive-program')).toMatchObject({ ok: false })
+    expect(createPortfolioExport(snapshot({ source: '   ' }), 'first-interactive-program')).toMatchObject({
+      ok: false,
+      message: 'The saved code in this browser is empty.',
+    })
+    expect(createPortfolioExport(snapshot({ source: 'print("safe")\0' }), 'first-interactive-program')).toMatchObject({
+      ok: false,
+      message: 'The saved code contains a hidden character that cannot be included safely. Remove it before downloading.',
+    })
     expect(createPortfolioExport(snapshot({ source: 'print("Visual\u202espoof")' }), 'first-interactive-program')).toMatchObject({
       ok: false,
-      message: expect.stringContaining('invisible directional controls'),
+      message: 'The saved code contains hidden text formatting that changes how characters appear. Remove it before downloading.',
     })
     expect(createPortfolioExport(snapshot({ source: 'print("Visual\u2067spoof")' }), 'first-interactive-program')).toMatchObject({
       ok: false,
-      message: expect.stringContaining('invisible directional controls'),
+      message: 'The saved code contains hidden text formatting that changes how characters appear. Remove it before downloading.',
     })
-    expect(createPortfolioExport(snapshot({ callsign: 'Visual\u202eSpoof' }), 'first-interactive-program')).toMatchObject({ ok: false })
+    expect(createPortfolioExport(snapshot({ callsign: 'Visual\u202eSpoof' }), 'first-interactive-program')).toMatchObject({
+      ok: false,
+      message: 'The displayed name includes a line break or hidden character. Use one line of visible text.',
+    })
     expect(createPortfolioExport(snapshot({ description: 'z'.repeat(PORTFOLIO_HTML_MAX_BYTES) }), 'first-interactive-program')).toMatchObject({
       ok: false,
-      message: expect.stringContaining('document limit'),
+      message: 'The portfolio page is too large to download safely.',
     })
+  })
+
+  it('uses plain learner-facing messages without changing the saved field names', () => {
+    expect(createPortfolioExport(snapshot({ callsign: '' }), 'first-interactive-program')).toMatchObject({
+      ok: false,
+      message: 'Add a displayed name before preparing a portfolio page.',
+    })
+    expect(createPortfolioExport(snapshot(), '../private')).toMatchObject({
+      ok: false,
+      message: 'This project cannot be prepared as a download.',
+    })
+
+    const errors = [
+      createPortfolioExport(snapshot({ callsign: '' }), 'first-interactive-program'),
+      createPortfolioExport(snapshot({ source: '   ' }), 'first-interactive-program'),
+      createPortfolioExport(snapshot({ source: 'print("safe")\0' }), 'first-interactive-program'),
+      createPortfolioExport(snapshot({ source: 'x'.repeat(PORTFOLIO_SOURCE_MAX_BYTES + 1) }), 'first-interactive-program'),
+    ]
+    const visibleMessages = errors.flatMap((result) => result.ok ? [] : [result.message]).join(' ')
+    expect(visibleMessages).not.toMatch(/callsign|source|final source|null byte|byte portfolio limit/iu)
   })
 
   it('keeps legitimate Unicode callsigns and worst-case escaped source readable', () => {

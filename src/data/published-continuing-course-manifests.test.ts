@@ -15,12 +15,13 @@ describe('published continuing-course manifests', () => {
     expect(JSON.stringify(publishedContinuingCourseManifests)).not.toContain('cpp-collections-records')
   })
 
-  it('preserves the exact module-to-lesson ownership without teaching copy', () => {
+  it('preserves exact module, lesson, and concept ownership without teaching copy', () => {
     const manifest = publishedContinuingCourseManifest('python-data-tools')
     expect(manifest?.modules).toEqual(
       Object.entries(pythonDataToolsManifest).map(([id, lessons]) => ({
         id,
         lessonIds: lessons.map((lesson) => lesson.id),
+        conceptIds: [...new Set(lessons.map((lesson) => lesson.conceptId))],
       })),
     )
     expect(publishedContinuingCourseLessonIds(

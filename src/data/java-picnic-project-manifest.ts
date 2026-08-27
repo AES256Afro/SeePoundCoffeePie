@@ -10,18 +10,18 @@ export const javaPicnicProjectManifest = {
   title: 'Community Picnic Planner',
   subtitle: 'Build a friendly picnic plan that asks, decides, lists supplies, and prints one reusable summary.',
   description:
-    'This project turns familiar Java pieces into a useful picnic helper. The learner follows a .java file through javac and the JVM, collects two answers with Scanner, makes a table decision, visits an array, and calls a static summary method.',
+    'This project turns familiar Java pieces into a useful picnic helper. You follow a .java file through javac and the JVM, collect two answers with Scanner, make a table decision, visit an array, and call a static summary method.',
   outcome:
-    'By the end, the learner can explain how javac turns Java source into bytecode for the JVM, read complete console lines with Scanner, parse a whole number, choose with if and else, visit an array with an enhanced for loop, and pass arguments into a static method.',
+    'By the end, you can explain how javac turns Java source into bytecode for the JVM, read complete console lines with Scanner, parse a whole number, choose with if and else, visit an array with an enhanced for loop, and pass arguments into a static method.',
   duration: '50-70 minutes',
   route: '/projects/java/picnic-planner',
-  studioLabel: 'Java project studio',
-  sourcePrivacyLabel: 'Source stays in this browser',
+  studioLabel: 'Java project',
+  sourcePrivacyLabel: 'Code stays in this browser',
   downloadFileName: 'Main.java',
   downloadLabel: 'downloadable .java source file',
-  prerequisiteTitle: 'Finish Java Foundations, then plan a community picnic.',
+  prerequisiteTitle: 'Complete Java Foundations to start this project.',
   prerequisiteDescription:
-    'You can preview every checkpoint below now. The editor unlocks after the six foundation modules introduce the Java shapes this project retrieves and connects.',
+    'You can view the steps now. Complete Java Foundations to open the editor.',
   overviewTitle: 'A picnic helper that listens, decides, packs, and shares',
   overviewSteps: [
     { title: 'Ask', description: 'Read an organizer name and guest count as complete console lines.' },
@@ -30,7 +30,7 @@ export const javaPicnicProjectManifest = {
     { title: 'Share', description: 'Pass the organizer details into a reusable static summary method.' },
   ],
   completionDescription:
-    'Your Community Picnic Planner is complete. Reopen a checkpoint, download Main.java again, or explain how each answer reaches the table choice and final summary.',
+    'Your Community Picnic Planner is complete. Reopen a step, download Main.java again, or explain how each answer reaches the table choice and final summary.',
   checkpoints: [
     { id: 'project-java-build-path', order: 1, title: 'Follow Java from source to picnic', conceptId: 'project-java-compile-run-cycle', xp: 8 },
     { id: 'project-java-output', order: 2, title: 'Welcome the organizer', conceptId: 'project-java-console-output', xp: 10 },

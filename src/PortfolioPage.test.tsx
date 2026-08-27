@@ -33,7 +33,7 @@ function createMemoryStorage(): Storage {
   }
 }
 
-describe('browser-local portfolio preview', () => {
+describe('portfolio page privacy and download', () => {
   beforeEach(() => {
     Object.defineProperty(window, 'localStorage', {
       configurable: true,
@@ -72,22 +72,22 @@ describe('browser-local portfolio preview', () => {
     }))
   }
 
-  it('keeps an unfinished project unavailable and links to its first unfinished checkpoint', async () => {
+  it('keeps an unfinished project unavailable and links to its first unfinished step', async () => {
     saveProgress({ completedProjectCheckpoints: checkpointIds.slice(0, 3) })
 
     render(<App />)
 
-    const heading = await screen.findByRole('heading', { name: 'Your First Interactive Program portfolio preview' })
+    const heading = await screen.findByRole('heading', { name: 'Your First Interactive Program portfolio' })
     await waitFor(() => expect(document.activeElement).toBe(heading))
     expect(screen.getByRole('heading', { name: 'Finish the project before preparing a portfolio copy.' })).toBeTruthy()
-    expect(screen.getByText('3 of 12 checkpoints are complete in this learner record. A draft or bookmark alone does not count as completion.')).toBeTruthy()
+    expect(screen.getByText('3 of 12 steps are complete. A saved draft or bookmark does not finish a step.')).toBeTruthy()
     expect(screen.getByRole('link', { name: /Resume the project/iu }).getAttribute('href')).toBe(
       `/projects/python/first-interactive-program/${checkpointIds[3]}`,
     )
     expect(screen.queryByRole('button', { name: 'Download portfolio page' })).toBeNull()
   })
 
-  it('explains why a synchronized completion without local source cannot be exported', async () => {
+  it('explains why a finished project without code in this browser cannot be downloaded', async () => {
     saveProgress({
       completedProjectCheckpoints: checkpointIds,
       completedProjects: [pythonInteractiveProject.id],
@@ -96,15 +96,15 @@ describe('browser-local portfolio preview', () => {
     render(<App />)
 
     expect(await screen.findByRole('heading', {
-      name: 'This browser has the completion record, but not the final source.',
+      name: 'This browser knows the project is complete, but it does not have your final code.',
     })).toBeTruthy()
-    expect(screen.getByText(/Project source is intentionally not synchronized between browsers/iu)).toBeTruthy()
-    expect(screen.getByRole('link', { name: /Open the final checkpoint/iu }).getAttribute('href')).toBe(
+    expect(screen.getByText(/Project code is saved only in the browser where you wrote it/iu)).toBeTruthy()
+    expect(screen.getByRole('link', { name: /Open the final step/iu }).getAttribute('href')).toBe(
       `/projects/python/first-interactive-program/${finalCheckpoint.id}`,
     )
   })
 
-  it('previews current source and downloads only after an explicit disclosure confirmation', async () => {
+  it('previews current code and downloads only after an explicit disclosure confirmation', async () => {
     saveProgress({
       completedProjectCheckpoints: checkpointIds,
       completedProjects: [pythonInteractiveProject.id],
@@ -121,15 +121,19 @@ describe('browser-local portfolio preview', () => {
 
     render(<App />)
 
-    const heading = await screen.findByRole('heading', { name: 'Your First Interactive Program portfolio preview' })
+    const heading = await screen.findByRole('heading', { name: 'Your First Interactive Program portfolio' })
     const portfolioPage = heading.closest('main')
     expect(portfolioPage).not.toBeNull()
     expect(document.title).toBe('Your First Interactive Program Portfolio | SeePoundCoffeePie')
-    expect(screen.getByText(/Sharing or bookmarking this URL shares only the route/iu)).toBeTruthy()
-    expect(screen.getByText(/may be different from the source used during the last check/iu)).toBeTruthy()
-    expect(screen.getByText(/The app does not add your GitHub login/iu)).toBeTruthy()
-    expect(screen.getByText(/callsign and source are included exactly as shown/iu)).toBeTruthy()
-    expect(screen.getByLabelText(`Final source for ${pythonInteractiveProject.downloadFileName}`).textContent).toBe(finalSource)
+    expect(screen.queryByText('Portfolio preview')).toBeNull()
+    expect(screen.getByText(/Sharing or bookmarking this address does not share your code/iu)).toBeTruthy()
+    expect(screen.getByText(/may differ from the code used in your last check/iu)).toBeTruthy()
+    const technicalDetails = screen.getByText('Technical privacy details').closest('details') as HTMLDetailsElement | null
+    expect(technicalDetails).not.toBeNull()
+    expect(technicalDetails?.open).toBe(false)
+    expect(within(technicalDetails!).getByText(/The app does not add your GitHub login/iu)).toBeTruthy()
+    expect(within(technicalDetails!).getByText(/displayed name and code are included exactly as shown/iu)).toBeTruthy()
+    expect(screen.getByLabelText(`Code for ${pythonInteractiveProject.downloadFileName}`).textContent).toBe(finalSource)
     expect(screen.getAllByText(/not a certificate/iu).length).toBeGreaterThan(0)
     expect(within(portfolioPage!).queryByText('9,999')).toBeNull()
     expect(within(portfolioPage!).queryByText('365')).toBeNull()
@@ -137,7 +141,7 @@ describe('browser-local portfolio preview', () => {
     const downloadButton = screen.getByRole('button', { name: 'Download portfolio page' }) as HTMLButtonElement
     expect(downloadButton.disabled).toBe(true)
     expect(click).not.toHaveBeenCalled()
-    fireEvent.click(screen.getByRole('checkbox', { name: /I reviewed the callsign and source/iu }))
+    fireEvent.click(screen.getByRole('checkbox', { name: /I reviewed the displayed name and code/iu }))
     expect(downloadButton.disabled).toBe(false)
 
     const fetchMock = vi.mocked(fetch)
@@ -150,11 +154,11 @@ describe('browser-local portfolio preview', () => {
     expect(localWrite).not.toHaveBeenCalled()
     expect(createObjectUrl).toHaveBeenCalledOnce()
     expect(downloadedFileName).toBe('seepoundcoffeepie-first-interactive-program-portfolio.html')
-    expect(screen.getByRole('status').textContent).toContain('Your browser started the download')
+    expect(screen.getByRole('status').textContent).toContain('Your download started')
     expect(document.activeElement).toBe(downloadButton)
   })
 
-  it('requires a new confirmation when the reviewed callsign changes', () => {
+  it('requires a new confirmation when the displayed name changes', () => {
     expect(saveProjectDraft(pythonInteractiveProject.id, finalCheckpoint.id, finalSource)).toBe(true)
     const progress = {
       ...initialProgress('python'),
@@ -172,7 +176,7 @@ describe('browser-local portfolio preview', () => {
         projectId={pythonInteractiveProject.id}
       />,
     )
-    const confirmation = screen.getByRole('checkbox', { name: /I reviewed the callsign and source/iu }) as HTMLInputElement
+    const confirmation = screen.getByRole('checkbox', { name: /I reviewed the displayed name and code/iu }) as HTMLInputElement
     const downloadButton = screen.getByRole('button', { name: 'Download portfolio page' }) as HTMLButtonElement
 
     fireEvent.click(confirmation)
@@ -188,7 +192,31 @@ describe('browser-local portfolio preview', () => {
       />,
     )
 
-    expect((screen.getByRole('checkbox', { name: /I reviewed the callsign and source/iu }) as HTMLInputElement).checked).toBe(false)
+    expect((screen.getByRole('checkbox', { name: /I reviewed the displayed name and code/iu }) as HTMLInputElement).checked).toBe(false)
     expect((screen.getByRole('button', { name: 'Download portfolio page' }) as HTMLButtonElement).disabled).toBe(true)
+  })
+
+  it('uses displayed name and code wording when the portfolio copy cannot be prepared', () => {
+    expect(saveProjectDraft(pythonInteractiveProject.id, finalCheckpoint.id, finalSource)).toBe(true)
+
+    render(
+      <PortfolioPage
+        language="python"
+        onNavigate={vi.fn()}
+        progress={{
+          ...initialProgress('python'),
+          callsign: '',
+          onboardingComplete: true,
+          completedMissions: pythonMissionIds,
+          completedProjectCheckpoints: checkpointIds,
+          completedProjects: [pythonInteractiveProject.id],
+        }}
+        projectId={pythonInteractiveProject.id}
+      />,
+    )
+
+    expect(screen.getByRole('heading', { name: 'Check your saved code first.' })).toBeTruthy()
+    expect(screen.getByText('Add a displayed name before preparing a portfolio page.')).toBeTruthy()
+    expect(screen.queryByText(/callsign/iu)).toBeNull()
   })
 })

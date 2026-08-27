@@ -5,8 +5,8 @@ import type { RunnerDiagnostic, RunnerOutcome } from './runner-contract'
 // eslint-disable-next-line no-control-regex
 const ANSI_ESCAPE = /\u001B(?:\[[0-?]*[ -/]*[@-~]|\][^\u0007]*(?:\u0007|\u001B\\))/gu
 const HOST_PATHS = [
-  [/\/workspace\/(?:source\.txt|mission\.py)/gu, 'mission.py'],
-  [/\/workspace\/mission\.cpp/gu, 'mission.cpp'],
+  [/\/workspace\/(?:source\.txt|mission\.py)/gu, 'main.py'],
+  [/\/workspace\/mission\.cpp/gu, 'main.cpp'],
   [/\/workspace\/Main\.java/gu, 'Main.java'],
   [/\/workspace\/(?:Program\.cs|Cadet\.csproj)/gu, 'Program.cs'],
   [/\/workspace(?:\/[^\s:)]*)?/gu, 'the lesson workspace'],
@@ -20,7 +20,7 @@ export function sanitizeRunnerOutput(value: string, maximumBytes = 64_000): stri
 
   const bytes = new TextEncoder().encode(sanitized)
   if (bytes.byteLength <= maximumBytes) return sanitized
-  return `${new TextDecoder().decode(bytes.slice(0, maximumBytes))}\n[Output stopped at the academy limit.]`
+  return `${new TextDecoder().decode(bytes.slice(0, maximumBytes))}\n[Output stopped at the safety limit.]`
 }
 
 interface DiagnosticRule {
@@ -61,14 +61,14 @@ const rules: Record<LanguageId, DiagnosticRule[]> = {
     {
       pattern: /expected ['‘’`]?;|expected ‘;’/iu,
       title: 'C++ expected a semicolon',
-      explanation: 'Most C++ instructions end with a semicolon. It tells the compiler where that instruction stops.',
+      explanation: 'Most C++ instructions end with a semicolon. It tells C++ where that instruction stops.',
       suggestion: 'Look at the reported line and the line just above it for a missing semicolon.',
     },
     {
       pattern: /was not declared|not declared in this scope/iu,
       title: 'C++ does not know that name yet',
-      explanation: 'The compiler found a name that was not declared earlier with the same spelling and capitalization.',
-      suggestion: 'Check the variable name, its capital letters, and whether its declaration appears before this line.',
+      explanation: 'C++ found a name that was not created earlier with the same spelling and capitalization.',
+      suggestion: 'Check the variable name, its capital letters, and whether it is created before this line.',
     },
     {
       pattern: /expected ['‘’`]?\}|expected ‘\}’/iu,
@@ -101,14 +101,14 @@ const rules: Record<LanguageId, DiagnosticRule[]> = {
     {
       pattern: /';' expected/iu,
       title: 'Java expected a semicolon',
-      explanation: 'Most Java instructions end with a semicolon so the compiler can see where the instruction stops.',
+      explanation: 'Most Java instructions end with a semicolon so Java can see where the instruction stops.',
       suggestion: 'Look at the reported line and the line directly above it for a missing semicolon.',
     },
     {
       pattern: /cannot find symbol/iu,
       title: 'Java cannot find that name',
-      explanation: 'The compiler found a variable, method, or class name that has not been declared with that exact spelling.',
-      suggestion: 'Check capitalization and spelling, then make sure the name is declared before the reported line.',
+      explanation: 'Java found a variable, method, or class name that was not created with that exact spelling.',
+      suggestion: 'Check capitalization and spelling, then make sure the name is created before the reported line.',
     },
     {
       pattern: /reached end of file while parsing|class, interface, enum, or record expected/iu,
@@ -120,7 +120,7 @@ const rules: Record<LanguageId, DiagnosticRule[]> = {
 }
 
 function reportedLine(diagnostic: string): number | null {
-  const match = diagnostic.match(/(?:line\s+|\.(?:py|cpp|java|cs):)(\d+)/iu)
+  const match = diagnostic.match(/(?:line\s+|\.(?:py|cpp|java):|\.cs\()(\d+)/iu)
   if (!match) return null
   const line = Number(match[1])
   return Number.isSafeInteger(line) && line > 0 ? line : null
@@ -136,35 +136,35 @@ export function explainRunnerResult(
 
   if (outcome === 'completed') {
     return {
-      title: 'The program ran in a real sandbox',
-      explanation: 'The academy compiled or interpreted the code, ran it inside a disposable isolated environment, and collected its actual output.',
-      suggestion: 'Compare the real output with the visible test below.',
+      title: 'The program ran',
+      explanation: 'The code checker ran your code and collected what it printed.',
+      suggestion: 'Compare the output with the check below.',
       line: null,
     }
   }
 
   if (outcome === 'limit_exceeded') {
     const detail: Record<string, string> = {
-      wall_time: 'The program kept running past the five-second learner limit.',
-      cpu_time: 'The program used more processor time than one lesson run allows.',
-      memory: 'The program tried to use more than 256 MiB of working memory.',
-      writable_storage: 'The program created more than 32 MiB of temporary files.',
-      stdout_output: 'The program produced more than 64,000 bytes of normal output.',
-      stderr_output: 'The program produced more than 64,000 bytes of diagnostic output.',
+      wall_time: 'The program was still running after five seconds.',
+      cpu_time: 'The program did too much work for one check.',
+      memory: 'The program tried to use too much memory for one check.',
+      writable_storage: 'The program tried to save too much temporary data for one check.',
+      stdout_output: 'The program printed too much output for one check.',
+      stderr_output: 'The program reported too many errors at once.',
     }
     return {
-      title: 'The sandbox stopped this run safely',
-      explanation: detail[limit ?? ''] ?? 'The program reached one of the academy’s safety limits.',
-      suggestion: 'Check for a loop that never ends, repeated output, runaway file creation, or unexpectedly large data.',
+      title: 'The code checker stopped the program',
+      explanation: detail[limit ?? ''] ?? 'The program reached a safety limit.',
+      suggestion: 'Look for a loop that does not end, the same print instruction running many times, too many saved files, or a very large list or string.',
       line,
     }
   }
 
   if (outcome === 'system_error') {
     return {
-      title: 'The academy runner had a problem',
-      explanation: 'This was an academy infrastructure failure, not proof that the learner code is wrong.',
-      suggestion: 'Wait a moment and run the same code again. No XP or progress was removed.',
+      title: 'The code checker had a problem',
+      explanation: 'This was a service problem, not proof that your code is wrong.',
+      suggestion: 'Wait a moment and run the same code again. No points or progress were removed.',
       line: null,
     }
   }
@@ -174,11 +174,11 @@ export function explainRunnerResult(
   if (matched) return { ...matched, line }
 
   return {
-    title: outcome === 'compile_error' ? 'The language could not build this code yet' : 'The program stopped while it was running',
+    title: outcome === 'compile_error' ? 'The language could not read this code yet' : 'The program stopped while it was running',
     explanation: outcome === 'compile_error'
-      ? 'The compiler found code it could not translate. This usually means a required word or punctuation mark is missing or misplaced.'
+      ? 'A required word or punctuation mark may be missing or out of place.'
       : 'The code was valid enough to start, but an instruction failed while the program was running.',
-    suggestion: 'Open the full language message below, start with its first reported line, and compare that line with the supplied example.',
+    suggestion: 'Read the first error below, start at its line number, and compare that line with the example.',
     line,
   }
 }

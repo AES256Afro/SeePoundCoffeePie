@@ -1,12 +1,19 @@
+import { execFileSync } from 'node:child_process'
+import { mkdtempSync, rmSync, writeFileSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import path from 'node:path'
+
 import { describe, expect, it } from 'vitest'
 
 import { evaluateExercise, evaluateExerciseChecks } from '../lib/evaluator'
 import {
   cppCollectionsRecordsDraftModules,
   cppCollectionsRecordsReturnValuesModule,
+  cppCollectionsRecordsSummariesModule,
   cppCollectionsRecordsStructsModule,
   cppCollectionsRecordsUpdatesModule,
   cppCollectionsRecordsVectorsModule,
+  cppCollectionsRecordsWorkshopReportModule,
 } from './cpp-collections-records-course-draft'
 import { cppCollectionsRecordsPlan } from './cpp-collections-records-plan'
 
@@ -240,7 +247,212 @@ describe('Practical C++ return-values draft module', () => {
     expect(build.output).toBe('seals: 5')
   })
 
-  it('keeps all four authored modules outside the current runner registry', async () => {
+  it('authors Modules 5 and 6 against their design-locked manifests', () => {
+    const authoredModules = [
+      cppCollectionsRecordsSummariesModule,
+      cppCollectionsRecordsWorkshopReportModule,
+    ]
+
+    for (const [index, module] of authoredModules.entries()) {
+      const planned = cppCollectionsRecordsPlan.modules[index + 4]
+      expect(module.id).toBe(planned.id)
+      expect(module.exercises.map((exercise) => ({
+        id: exercise.id,
+        conceptId: exercise.conceptId,
+        type: exercise.type,
+        xp: exercise.xp,
+      }))).toEqual(planned.lessons.map((lesson) => ({
+        id: lesson.id,
+        conceptId: lesson.conceptId,
+        type: lesson.type,
+        xp: lesson.xp,
+      })))
+    }
+  })
+
+  it('defines Module 5 summary vocabulary before requiring the ordered and editable work', () => {
+    const exercises = cppCollectionsRecordsSummariesModule.exercises
+    const accumulatorIntroduction = exercises[1].explanation
+    const filterIntroduction = exercises[4].explanation
+    const learnerSource = exercises.flatMap((exercise) => [
+      exercise.displayCode ?? '',
+      exercise.starterCode ?? '',
+      ...(exercise.codeGuide?.map((entry) => entry.code) ?? []),
+    ]).join('\n')
+
+    expect(accumulatorIntroduction).toContain('accumulator')
+    expect(accumulatorIntroduction).toContain('Initialize it once before the loop')
+    expect(accumulatorIntroduction).toContain('total = total + part.quantity')
+    expect(exercises[2].explanation).toContain('Aggregation')
+    expect(filterIntroduction).toContain('filter')
+    expect(filterIntroduction).toContain('result collection')
+    expect(filterIntroduction).toContain('by value')
+    expect(filterIntroduction).toContain('copy')
+    expect(learnerSource).not.toContain('+=')
+    expect(learnerSource).not.toMatch(/\bauto\b/u)
+    expect(learnerSource).not.toContain('using namespace')
+  })
+
+  it('keeps both new ordering interactions complete, shuffled, and exactly checkable', () => {
+    const orderingExercises = [
+      cppCollectionsRecordsSummariesModule.exercises[2],
+      cppCollectionsRecordsWorkshopReportModule.exercises[2],
+    ]
+
+    for (const exercise of orderingExercises) {
+      const itemIds = exercise.orderItems?.map((item) => item.id) ?? []
+      expect(new Set(itemIds)).toEqual(new Set(exercise.correctOrder))
+      expect(itemIds, exercise.id + ' should not begin already solved').not.toEqual(exercise.correctOrder)
+      expect(evaluateExercise(exercise, exercise.correctOrder?.join('|') ?? '')).toMatchObject({
+        correct: true,
+        output: exercise.output,
+      })
+      expect(evaluateExercise(exercise, itemIds.join('|')).correct).toBe(false)
+    }
+  })
+
+  it('accepts the authentic Module 5 solutions and rejects both supplied mistakes', () => {
+    const exercises = cppCollectionsRecordsSummariesModule.exercises
+    const repair = exercises[3]
+    const build = exercises[4]
+    const repairedSource = repair.starterCode?.replace(
+      '    for (Part part : parts) {\n        int total = 0;',
+      '    int total = 0;\n    for (Part part : parts) {',
+    ) ?? ''
+    const completedSource = build.starterCode
+      ?.replace('_____', 'part.quantity < limit')
+      .replace('_____', 'names.push_back(part.name)') ?? ''
+
+    expect(evaluateExerciseChecks(repair, repairedSource).every((check) => check.passed)).toBe(true)
+    expect(evaluateExerciseChecks(repair, repair.starterCode ?? '').some((check) => !check.passed)).toBe(true)
+    expect(evaluateExerciseChecks(build, completedSource).every((check) => check.passed)).toBe(true)
+    expect(evaluateExerciseChecks(build, build.starterCode ?? '').some((check) => !check.passed)).toBe(true)
+    expect(repair.output).toBe('14')
+    expect(build.output).toBe('seals\nclips')
+  })
+
+  it('defines Module 6 responsibility and boundary rules before the capstone requires them', () => {
+    const exercises = cppCollectionsRecordsWorkshopReportModule.exercises
+    const planningIntroduction = exercises[1].explanation
+    const boundaryRepair = exercises[3]
+    const capstone = exercises[4]
+
+    expect(planningIntroduction).toContain('helper responsibility')
+    expect(planningIntroduction).toContain('Data flow')
+    expect(exercises[2].explanation).toContain('Dependency order')
+    expect(boundaryRepair.explanation).toContain('strictly less than')
+    expect(boundaryRepair.explanation).toContain('equal to the limit is not included')
+    expect(capstone.explanation).toContain('by value')
+    expect(capstone.explanation).toContain('copies')
+    expect(capstone.explanation).toContain('does not introduce const-reference syntax')
+    expect(capstone.starterCode?.match(/_____/gu)).toHaveLength(5)
+    expect(capstone.checks).toHaveLength(5)
+  })
+
+  it('accepts the authentic Module 6 repairs and rejects incorrect source', () => {
+    const exercises = cppCollectionsRecordsWorkshopReportModule.exercises
+    const repair = exercises[3]
+    const capstone = exercises[4]
+    const repairedSource = repair.starterCode?.replace(
+      'part.quantity > limit',
+      'part.quantity < limit',
+    ) ?? ''
+    const completedSource = capstone.starterCode
+      ?.replace('_____', 'part.quantity = part.quantity + amount;')
+      .replace('_____', 'total = total + part.quantity;')
+      .replace('_____', 'part.quantity < limit')
+      .replace('_____', 'names.push_back(part.name);')
+      .replace('_____', 'total_units(parts)') ?? ''
+    const incorrectSources = [
+      capstone.starterCode ?? '',
+      completedSource.replace(
+        'part.quantity = part.quantity + amount;',
+        'part.quantity = amount;',
+      ),
+      completedSource.replace(
+        'total = total + part.quantity;',
+        'total = part.quantity;',
+      ),
+      completedSource.replace('part.quantity < limit', 'part.quantity <= limit'),
+      completedSource.replace(
+        'names.push_back(part.name);',
+        'names.push_back("seals");',
+      ),
+      completedSource.replace('total_units(parts)', '17'),
+    ]
+
+    expect(evaluateExerciseChecks(repair, repairedSource).every((check) => check.passed)).toBe(true)
+    expect(evaluateExerciseChecks(repair, repair.starterCode ?? '').some((check) => !check.passed)).toBe(true)
+    expect(evaluateExerciseChecks(capstone, completedSource).every((check) => check.passed)).toBe(true)
+    for (const incorrectSource of incorrectSources) {
+      expect(
+        evaluateExerciseChecks(capstone, incorrectSource).some((check) => !check.passed),
+        'Each incomplete or incorrect capstone source should fail at least one public check.',
+      ).toBe(true)
+    }
+    expect(repair.output).toBe('Low stock: seals')
+    expect(capstone.output).toBe('Parts: 3\nTotal units: 17\nLow stock: seals')
+  })
+
+  it('compiles and runs all four new authentic C++20 solutions', () => {
+    const module5Repair = cppCollectionsRecordsSummariesModule.exercises[3]
+    const module5Build = cppCollectionsRecordsSummariesModule.exercises[4]
+    const module6Repair = cppCollectionsRecordsWorkshopReportModule.exercises[3]
+    const module6Capstone = cppCollectionsRecordsWorkshopReportModule.exercises[4]
+    const authenticSources = [
+      {
+        exercise: module5Repair,
+        source: module5Repair.starterCode?.replace(
+          '    for (Part part : parts) {\n        int total = 0;',
+          '    int total = 0;\n    for (Part part : parts) {',
+        ) ?? '',
+      },
+      {
+        exercise: module5Build,
+        source: module5Build.starterCode
+          ?.replace('_____', 'part.quantity < limit')
+          .replace('_____', 'names.push_back(part.name)') ?? '',
+      },
+      {
+        exercise: module6Repair,
+        source: module6Repair.starterCode?.replace(
+          'part.quantity > limit',
+          'part.quantity < limit',
+        ) ?? '',
+      },
+      {
+        exercise: module6Capstone,
+        source: module6Capstone.starterCode
+          ?.replace('_____', 'part.quantity = part.quantity + amount;')
+          .replace('_____', 'total = total + part.quantity;')
+          .replace('_____', 'part.quantity < limit')
+          .replace('_____', 'names.push_back(part.name);')
+          .replace('_____', 'total_units(parts)') ?? '',
+      },
+    ]
+    const buildDirectory = mkdtempSync(path.join(tmpdir(), 'seepoundcoffeepie-cpp-records-'))
+
+    try {
+      for (const { exercise, source } of authenticSources) {
+        const sourcePath = path.join(buildDirectory, `${exercise.id}.cpp`)
+        const executablePath = path.join(buildDirectory, exercise.id)
+        writeFileSync(sourcePath, source, 'utf8')
+        execFileSync('c++', ['-std=c++20', sourcePath, '-o', executablePath], {
+          encoding: 'utf8',
+          timeout: 15_000,
+        })
+        const output = execFileSync(executablePath, [], {
+          encoding: 'utf8',
+          timeout: 5_000,
+        }).trimEnd()
+        expect(output, `${exercise.id} should produce its authored output`).toBe(exercise.output)
+      }
+    } finally {
+      rmSync(buildDirectory, { recursive: true, force: true })
+    }
+  })
+
+  it('keeps all six authored modules outside the current runner registry', async () => {
     const { findRunnerAssignment } = await import('../lib/runner-assignments')
 
     for (const exercise of draftedExercises.filter((candidate) => (
@@ -250,19 +462,24 @@ describe('Practical C++ return-values draft module', () => {
     }
   })
 
-  it('keeps the four authored draft modules ordered and unpublished', () => {
+  it('keeps the six authored draft modules ordered and unpublished', () => {
     expect(cppCollectionsRecordsDraftModules.map((module) => module.id)).toEqual([
       'cpp-records-return-values',
       'cpp-records-vectors',
       'cpp-records-structs',
       'cpp-records-updates',
+      'cpp-records-summaries',
+      'cpp-records-workshop-report',
     ])
-    expect(draftedExercises).toHaveLength(20)
-    expect(draftedExercises.reduce((total, exercise) => total + exercise.xp, 0)).toBe(280)
+    expect(draftedExercises).toHaveLength(30)
+    expect(draftedExercises.reduce((total, exercise) => total + exercise.xp, 0)).toBe(420)
 
-    for (const exercise of draftedExercises.filter((candidate) => (
+    const editableExercises = draftedExercises.filter((candidate) => (
       candidate.type === 'bugfix' || candidate.type === 'code'
-    ))) {
+    ))
+    expect(editableExercises).toHaveLength(12)
+
+    for (const exercise of editableExercises) {
       expect(exercise.starterCode?.length, `${exercise.id} needs starter source`).toBeGreaterThan(150)
       expect(exercise.focus?.length, `${exercise.id} needs a focus boundary`).toBeGreaterThan(70)
       expect(exercise.codeGuide?.length, `${exercise.id} needs a line guide`).toBeGreaterThanOrEqual(4)

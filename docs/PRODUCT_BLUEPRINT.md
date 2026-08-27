@@ -209,7 +209,13 @@ Every authored lesson must:
 - The production interface uses open document layouts, a readable light palette, normal sentence-case labels, modest corners, and the eye, `#`, coffee cup, and `π` symbols. It does not rely on space scenes, gradients, glows, glass effects, or a permanent sidebar.
 - Source commit `6cbba1d` and Cloudflare Worker version `658fcb18-970c-41e4-a614-839998d7c23e` were published on 2026-08-25. The automated release gate, accessibility review, paused-runner deployment, live canonical-route checks, full four-language production runner regression, production browser exercise, and final smoke test all passed.
 
-### Phase 4: Projects and adaptive practice (in progress)
+#### Current local teaching-first refinement (unpublished)
+
+- Active lessons and project workspaces use the full desktop height below a compact header. Teaching and working panes scroll independently only when their own content needs it, and the layout becomes one readable column at 1100 CSS pixels for smaller screens and browser zoom.
+- Learner-facing work uses direct labels such as `Task`, `Question`, `Step`, and `Output`. Reward, implementation, and runner wording stays out of the normal teaching path. Extra execution-safety detail remains available in a closed disclosure.
+- Practice fits one desktop screen for a short set. The Code Reference initially shows 16 compact definitions, keeps the full definition list searchable, and reveals more only when the learner asks, reducing its default height from more than 10,000 CSS pixels to about 1,234 at 1440 by 900.
+
+### Phase 4: Projects and adaptive practice (core complete; cooperative learning deferred)
 
 Phase 4A establishes the project system with one complete Python path:
 
@@ -271,12 +277,12 @@ Phase 4F makes lesson and project progress honest at the learner's actual positi
 - Older version 1 records that contain only completed mission identifiers infer the matching lesson closure in memory. The next normal save persists those inferred lesson identifiers. No D1 table migration is required.
 - During a rolling client upgrade, a pre-Phase 4F payload that omits the new lesson field cannot erase partial lesson progress already stored by the server. A current client uses an explicit empty array when progress is intentionally cleared.
 - A separate allowlisted browser-local lesson journal preserves those identifiers if an already-open pre-Phase 4F tab overwrites the older main local record. A current reset explicitly clears both records.
-- Project overviews distinguish completed checkpoints from percentage and use `Review project` after completion. Workspaces distinguish `Checkpoint N of 12` position from `N of 12 complete` progress and expose checkpoint state in an ordered navigation list.
+- Project overviews distinguish completed steps from percentage and use `Review project` after completion. Workspaces distinguish `Step N of 12` position from `N of 12 complete` progress and expose step state in an ordered navigation list.
 - Every completed project can open a matching `/portfolio/:language/:project-id` preview. The route uses only the local final draft and a narrow public project summary. It does not publish or synchronize source.
 - Portfolio download requires an explicit review of the current callsign and source. It creates a bounded, self-contained, script-free HTML file with a restrictive content policy, escaped content, no remote resources, and a clear statement that the snapshot is not a certificate or proof of authorship.
 - The portfolio route and its CSS load on demand. Dedicated bundle limits keep the feature from increasing the initial JavaScript cost or growing without review.
 
-The remaining Phase 4 work is to:
+Future cooperative-learning work is deferred until it receives its own release plan:
 
 - evaluate cooperative learning only after a separate privacy, child-safety, and moderation review, and before considering competitive leaderboards.
 
@@ -294,12 +300,12 @@ The remaining Phase 4 work is to:
 - The compatibility floor and controlled staging and production procedure are specified in [the Phase 5A release record](PHASE_5A_RELEASE.md).
 - Source commit `a5ce1327beb0275ab1625c1962887375419b52d2` was deployed to production on 2026-08-26. The release evidence, deployed Worker versions, runner state, container readiness, automated gates, and manual browser verification are recorded in [the Phase 5A release record](PHASE_5A_RELEASE.md).
 
-### Phase 5B: Practical C++: Collections and Records (planned and unpublished)
+### Phase 5B: Practical C++: Collections and Records (authored and unpublished)
 
 - The next continuing course follows both C++ Foundations and `Your First Compiled Program`. It introduces returned helper values, vectors, data-only structs, references, record updates, accumulators, and filters without introducing pointers, manual memory management, custom template definitions, files, packages, build systems, or object-oriented design.
-- Six module IDs and 30 lesson IDs are reserved in an unpublished TypeScript contract. The course uses the same 70 XP per module and 420 XP total rhythm as Practical Python, with exactly 12 planned runner-backed edits.
-- Modules 1 and 2 are authored as a hidden ten-lesson vertical slice and remain outside the public course registry, routes, progress allowlists, Practice, Codebook, runner assignments, sitemap, and production bundles.
-- The final Workshop Stock Report uses fixed in-memory records and requires a separate pinned C++ collections analyzer. The existing Observation Desk analyzer remains narrow and unchanged.
+- All six modules and 30 lessons are authored in a hidden TypeScript draft. The course uses the same 70 XP per module and 420 XP total rhythm as Practical Python, with exactly 12 editable exercises.
+- The full hidden course remains outside the public course registry, routes, Practice, Codebook, public runner assignments, sitemap, and browser bundles. Its compact identifier-only manifest remains the compatibility boundary for progress.
+- The final Workshop Stock Report uses fixed in-memory records and now has a separate pinned Clang-based collections analyzer with a server-owned profile, protected facts, authentic solutions, and adversarial tests. The existing Observation Desk analyzer remains narrow and unchanged.
 - No partial course or `coming soon` card may reach production. The complete curriculum, compatibility floor, protected assessment, release gates, staged implementation slices, and manual learner checks are specified in [the Phase 5B plan](PHASE_5B_PLAN.md).
 
 ## Release gates

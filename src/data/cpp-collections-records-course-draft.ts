@@ -875,6 +875,468 @@ const recordUpdateExercises: Exercise[] = [
   },
 ]
 
+const recordSummaryExercises: Exercise[] = [
+  {
+    id: 'cpprecords5-retrieve-return',
+    conceptId: 'cpp-returned-calculations',
+    eyebrow: 'Memory check 1 of 5',
+    title: 'Recall a returned calculation',
+    explanation:
+      'A helper function can read a field from a Part record, calculate a whole number, and return that number to its caller. The caller finishes the function call first, then stores the returned result in its own integer variable.',
+    analogy:
+      'A workshop counter reads the quantity on one parts card, doubles it, and hands the finished number to the clerk who requested the count.',
+    type: 'prediction',
+    prompt: 'What whole number reaches the console after the returned calculation is stored?',
+    displayCode:
+      'struct Part {\n    std::string name;\n    int quantity;\n};\n\nint doubled_units(Part part) {\n    return part.quantity * 2;\n}\n\nPart seals = {"seals", 3};\nint units = doubled_units(seals);\nstd::cout << units;',
+    choices: [
+      {
+        id: 'a',
+        label: '6',
+        detail: 'The function reads quantity 3, returns 3 times 2, and units stores the resulting 6.',
+      },
+      {
+        id: 'b',
+        label: '3',
+        detail: 'Three is the stored field value before the helper performs its multiplication.',
+      },
+      {
+        id: 'c',
+        label: 'part.quantity * 2',
+        detail: 'C++ evaluates the expression and returns its numeric result instead of displaying the written expression.',
+      },
+    ],
+    correctChoice: 'a',
+    output: '6',
+    hint: 'Read seals.quantity as 3 inside the function, multiply that value by 2, then follow the returned result into units.',
+    recap: 'A returned calculation can use a record field, and the caller can store the resulting value in a matching typed variable.',
+    xp: 8,
+  },
+  {
+    id: 'cpprecords5-accumulator-purpose',
+    conceptId: 'cpp-accumulators',
+    eyebrow: 'Summary workshop 2 of 5',
+    title: 'Meet a running total',
+    explanation:
+      'An accumulator is a variable that remembers a growing result. Initialize it once before the loop, then use the expanded update total = total + part.quantity during each pass so every record contributes to the same running total. The parts parameter is by value, so this small read-only helper deliberately works with a copy while the syntax stays beginner-sized.',
+    analogy:
+      'A stock clerk writes zero once at the top of a count sheet, then adds each parts-card quantity to the number already written there.',
+    type: 'choice',
+    prompt: 'Which description explains the job of total in this read-only helper?',
+    displayCode:
+      'int total_units(std::vector<Part> parts) {\n    int total = 0;\n    for (Part part : parts) {\n        total = total + part.quantity;\n    }\n    return total;\n}',
+    choices: [
+      {
+        id: 'a',
+        label: 'It starts once and keeps the sum from every loop pass',
+        detail: 'The zero setup runs before the loop, and each expanded update builds on the earlier total.',
+      },
+      {
+        id: 'b',
+        label: 'It resets to zero for every record',
+        detail: 'A reset inside the loop would discard the quantities already counted during earlier passes.',
+      },
+      {
+        id: 'c',
+        label: 'It changes the original Part records',
+        detail: 'This helper reads copied Part values and changes only its local integer accumulator.',
+      },
+    ],
+    correctChoice: 'a',
+    hint: 'Notice that int total = 0 appears before the loop and the update uses the old total on its right side.',
+    recap: 'An accumulator is initialized once before a loop and updated during each pass so one result can summarize the complete collection.',
+    xp: 10,
+  },
+  {
+    id: 'cpprecords5-order-total',
+    conceptId: 'cpp-record-aggregation',
+    eyebrow: 'Summary plan 3 of 5',
+    title: 'Put the total in order',
+    explanation:
+      'Aggregation means combining several values into one summary. This function receives a small fixed vector by value, which makes a copy for simple read-only practice. It initializes one accumulator, visits every copied Part, adds each quantity, and returns the finished total.',
+    analogy:
+      'Set up the counting job, write one starting zero, visit every inventory card, close the counting walk, and only then hand over the final number.',
+    type: 'ordering',
+    prompt: 'Arrange these pieces into a complete function that returns the sum of every part quantity.',
+    orderItems: [
+      { id: 'return', code: '    return total;' },
+      { id: 'add', code: '        total = total + part.quantity;' },
+      { id: 'function-close', code: '}' },
+      { id: 'header', code: 'int total_units(std::vector<Part> parts) {' },
+      { id: 'loop-close', code: '    }' },
+      { id: 'start', code: '    int total = 0;' },
+      { id: 'loop', code: '    for (Part part : parts) {' },
+    ],
+    correctOrder: ['header', 'start', 'loop', 'add', 'loop-close', 'return', 'function-close'],
+    incorrectMessage:
+      'Open the function, initialize total once, open the loop, add the current quantity, close the loop, return total, then close the function.',
+    output: '14',
+    hint: 'The accumulator must exist before the loop, and return total belongs after the loop has visited every Part.',
+    recap: 'Record aggregation initializes one summary value, updates it for each record, and returns the completed result after iteration ends.',
+    xp: 14,
+  },
+  {
+    id: 'cpprecords5-fix-total-reset',
+    conceptId: 'cpp-record-aggregation',
+    eyebrow: 'Summary repair 4 of 5',
+    title: 'Keep the total between passes',
+    explanation:
+      'The accumulator is currently declared inside the loop, so every pass creates a fresh total at zero and the name disappears when that pass ends. Move the complete declaration before the loop so one total can remember all three quantities and still be returned afterward.',
+    analogy:
+      'The clerk keeps starting a new count sheet for each parts card and throws it away after one row. One sheet must be opened before the inspection begins.',
+    type: 'bugfix',
+    prompt: 'Move the total declaration before the loop so the function returns the complete quantity sum of 14.',
+    starterCode:
+      '#include <iostream>\n#include <string>\n#include <vector>\n\nstruct Part {\n    std::string name;\n    int quantity;\n};\n\nint total_units(std::vector<Part> parts) {\n    for (Part part : parts) {\n        int total = 0;\n        total = total + part.quantity;\n    }\n    return total;\n}\n\nint main() {\n    std::vector<Part> parts = {{"bolts", 4}, {"seals", 3}, {"cables", 7}};\n    std::cout << total_units(parts);\n    return 0;\n}',
+    focus: 'Move only the complete line int total = 0; so it appears immediately before the for loop. Keep the expanded update indented inside the loop.',
+    codeGuide: [
+      {
+        code: 'int total_units(std::vector<Part> parts)',
+        plain: 'This read-only helper receives a small fixed vector by value. That deliberately makes a copy while the course keeps the syntax beginner-sized.',
+      },
+      {
+        code: 'int total = 0;',
+        plain: 'This creates the accumulator. It must run once before the loop so the same total remains available for every pass and the final return.',
+      },
+      {
+        code: 'for (Part part : parts)',
+        plain: 'This loop gives part one copied record during each pass. Reading a copied quantity is enough because the helper does not update records.',
+      },
+      {
+        code: 'total = total + part.quantity;',
+        plain: 'This expanded update keeps the quantities already counted and adds the current record quantity.',
+      },
+      {
+        code: 'return total;',
+        plain: 'After all three passes finish, this sends the completed accumulator back to std::cout in main.',
+      },
+    ],
+    checks: [
+      {
+        pattern: 'int\\s+total_units\\s*\\(\\s*std::vector\\s*<\\s*Part\\s*>\\s+parts\\s*\\)\\s*\\{\\s*int\\s+total\\s*=\\s*0\\s*;\\s*for',
+        message: 'Move int total = 0; before the for loop inside total_units.',
+      },
+      {
+        pattern: 'for\\s*\\(\\s*Part\\s+part\\s*:\\s*parts\\s*\\)\\s*\\{\\s*total\\s*=\\s*total\\s*\\+\\s*part\\.quantity\\s*;',
+        message: 'Keep the expanded total update inside the loop over the copied Part records.',
+      },
+      {
+        pattern: 'return\\s+total\\s*;',
+        message: 'Keep return total; after the loop so the completed sum reaches the caller.',
+      },
+    ],
+    output: '14',
+    hint: 'Cut int total = 0; from the loop body and place it directly above for (Part part : parts).',
+    recap: 'Initialize an accumulator once before a loop, update the same variable during each pass, and return it after the loop finishes.',
+    xp: 16,
+  },
+  {
+    id: 'cpprecords5-low-stock',
+    conceptId: 'cpp-filtering-records',
+    eyebrow: 'Useful filters 5 of 5',
+    title: 'Collect low-stock names',
+    explanation:
+      'A filter checks every available record but keeps only the records that match one condition. The names vector is the result collection: when a Part quantity is below limit, push_back adds that Part name. This read-only helper accepts the small fixed parts vector by value, so it deliberately reads a copy and returns a new vector whose element type is std::string.',
+    analogy:
+      'A workshop clerk reads every stock card but copies only the names below the marked restock line onto a separate action list.',
+    type: 'code',
+    prompt: 'Complete the below-limit condition and the result-collection update so both low-stock names are returned.',
+    starterCode:
+      '#include <iostream>\n#include <string>\n#include <vector>\n\nstruct Part {\n    std::string name;\n    int quantity;\n};\n\nstd::vector<std::string> low_stock(std::vector<Part> parts, int limit) {\n    std::vector<std::string> names;\n    for (Part part : parts) {\n        if (_____) {\n            _____;\n        }\n    }\n    return names;\n}\n\nint main() {\n    std::vector<Part> parts = {{"bolts", 4}, {"seals", 2}, {"clips", 1}};\n    for (std::string name : low_stock(parts, 3)) {\n        std::cout << name << "\\n";\n    }\n    return 0;\n}',
+    focus: 'Replace the first _____ with part.quantity < limit and the second _____ with names.push_back(part.name). Keep the supplied return and report loop.',
+    codeGuide: [
+      {
+        code: 'std::vector<std::string> low_stock(std::vector<Part> parts, int limit)',
+        plain: 'The first vector type promises a returned collection of names. The parts parameter is a deliberate beginner-sized copy for this read-only helper.',
+      },
+      {
+        code: 'std::vector<std::string> names;',
+        plain: 'This empty vector is the result collection. Matching names will be added while the loop visits the Part records.',
+      },
+      {
+        code: 'if (part.quantity < limit)',
+        plain: 'This condition is true only when the current quantity is strictly below the supplied limit.',
+      },
+      {
+        code: 'names.push_back(part.name);',
+        plain: 'For a matching record, push_back copies the current Part name into the result collection.',
+      },
+      {
+        code: 'return names;',
+        plain: 'After every record has been checked, the completed vector of matching names returns to the caller.',
+      },
+    ],
+    checks: [
+      {
+        pattern: 'std::vector\\s*<\\s*std::string\\s*>\\s+low_stock\\s*\\(\\s*std::vector\\s*<\\s*Part\\s*>\\s+parts\\s*,\\s*int\\s+limit\\s*\\)',
+        message: 'Keep low_stock as a function that returns a vector of strings and reads the supplied Part vector by value.',
+      },
+      {
+        pattern: 'if\\s*\\(\\s*part\\.quantity\\s*<\\s*limit\\s*\\)',
+        message: 'Compare the current part quantity with limit using the below operator <.',
+      },
+      {
+        pattern: 'names\\.push_back\\s*\\(\\s*part\\.name\\s*\\)\\s*;',
+        message: 'Add the matching part name to the names result collection with push_back.',
+      },
+      {
+        pattern: 'return\\s+names\\s*;',
+        message: 'Keep return names; after the loop so the completed result collection reaches the caller.',
+      },
+      {
+        pattern: 'low_stock\\s*\\(\\s*parts\\s*,\\s*3\\s*\\)',
+        message: 'Keep the supplied report loop that calls low_stock with the visible limit 3.',
+      },
+    ],
+    output: 'seals\nclips',
+    hint: 'Ask whether part.quantity is less than limit, then push part.name into names when that condition is true.',
+    recap: 'A filter checks each record, adds every match to a separate result collection, and returns that completed collection to its caller.',
+    xp: 22,
+  },
+]
+
+const workshopReportExercises: Exercise[] = [
+  {
+    id: 'cpprecords6-trace-stock-update',
+    conceptId: 'cpp-record-updates',
+    eyebrow: 'System recall 1 of 5',
+    title: 'Trace a stock update',
+    explanation:
+      'The restock helper receives the original vector through a reference, and its Part reference loop finds the matching original record. Two calls for bolts therefore build on the same stored quantity instead of changing temporary copies.',
+    analogy:
+      'Two deliveries reach the same bolts card. The clerk writes both amounts onto the original card, so the second update begins with the first updated number.',
+    type: 'prediction',
+    prompt: 'What line reaches the console after both familiar restock calls finish?',
+    displayCode:
+      'void restock(std::vector<Part>& parts, std::string name, int amount) {\n    for (Part& part : parts) {\n        if (part.name == name) {\n            part.quantity = part.quantity + amount;\n        }\n    }\n}\n\nstd::vector<Part> parts = {{"bolts", 4}};\nrestock(parts, "bolts", 2);\nrestock(parts, "bolts", 1);\nstd::cout << parts[0].name << ": " << parts[0].quantity;',
+    choices: [
+      {
+        id: 'a',
+        label: 'bolts: 7',
+        detail: 'The original quantity moves from 4 to 6 during the first call and from 6 to 7 during the second.',
+      },
+      {
+        id: 'b',
+        label: 'bolts: 5',
+        detail: 'That would ignore the first delivery instead of building on the same original record.',
+      },
+      {
+        id: 'c',
+        label: 'bolts: 4',
+        detail: 'The vector and Part reference declarations make both changes persist in the original stored record.',
+      },
+    ],
+    correctChoice: 'a',
+    output: 'bolts: 7',
+    hint: 'Begin at 4, follow the first reference update by 2, then use that new quantity for the update by 1.',
+    recap: 'Repeated calls through vector and record references update the same stored Part, so later calls build on earlier changes.',
+    xp: 8,
+  },
+  {
+    id: 'cpprecords6-plan-report',
+    conceptId: 'cpp-program-planning',
+    eyebrow: 'Capstone plan 2 of 5',
+    title: 'Assign each report job',
+    explanation:
+      'A helper responsibility is the one clear job assigned to a helper function. Data flow is the path values follow between those jobs. Here, Part describes each record, a vector stores records, restock updates original data, total_units calculates one summary, low_stock filters names, and main displays the final report.',
+    analogy:
+      'A small workshop stays understandable when storage, receiving, counting, restock review, and the printed report each have a clearly labeled station.',
+    type: 'choice',
+    prompt: 'Which plan gives every report tool one clear responsibility and a sensible data flow?',
+    choices: [
+      {
+        id: 'a',
+        label: 'Store Parts, restock originals, total units, filter names, display in main',
+        detail: 'Each helper performs one taught job, and main connects their results into the report.',
+      },
+      {
+        id: 'b',
+        label: 'Use std::cout as storage, update, total, and filter',
+        detail: 'std::cout can display finished values, but it does not store Part records or perform every helper job.',
+      },
+      {
+        id: 'c',
+        label: 'Make every helper print and change every record',
+        detail: 'That mixes responsibilities and makes the data path harder to trace than the focused helpers already learned.',
+      },
+    ],
+    correctChoice: 'a',
+    hint: 'Match each job to the tool already built: vector storage, restock update, total calculation, filter, then display.',
+    recap: 'Clear responsibilities let each helper do one job, while a visible data flow connects stored records to the final report.',
+    xp: 10,
+  },
+  {
+    id: 'cpprecords6-order-report',
+    conceptId: 'cpp-record-tool-assembly',
+    eyebrow: 'Dependency order 3 of 5',
+    title: 'Put the report flow in order',
+    explanation:
+      'Dependency order means a type or helper must be defined before later code uses it. After the familiar definitions exist, main can create fixed data, update it, calculate a total, collect low-stock names, and display results in that data-flow order.',
+    analogy:
+      'Build and label the workshop stations first, place the stock cards second, process deliveries third, then count, review, and print the report.',
+    type: 'ordering',
+    prompt: 'Arrange these familiar sections into a dependable top-to-bottom Workshop Stock Report flow.',
+    orderItems: [
+      { id: 'filter-call', code: 'std::vector<std::string> names = low_stock(parts, 3);' },
+      { id: 'update-helper', code: 'void restock(std::vector<Part>& parts, ...) { ... }' },
+      { id: 'report', code: 'std::cout << total;\nfor (std::string name : names) { ... }' },
+      { id: 'record', code: 'struct Part { std::string name; int quantity; };' },
+      { id: 'data', code: 'std::vector<Part> parts = {{"bolts", 4}, ...};' },
+      { id: 'filter-helper', code: 'std::vector<std::string> low_stock(std::vector<Part> parts, ...) { ... }' },
+      { id: 'update-call', code: 'restock(parts, "bolts", 3);' },
+      { id: 'total-helper', code: 'int total_units(std::vector<Part> parts) { ... }' },
+      { id: 'total-call', code: 'int total = total_units(parts);' },
+    ],
+    correctOrder: [
+      'record',
+      'update-helper',
+      'total-helper',
+      'filter-helper',
+      'data',
+      'update-call',
+      'total-call',
+      'filter-call',
+      'report',
+    ],
+    incorrectMessage:
+      'Define Part and all helpers first. Then create fixed data, update it, calculate the total, collect filtered names, and display the report.',
+    output: '17\nseals',
+    hint: 'Definitions come before uses. Inside main, each later result depends on the data created or changed by the stage before it.',
+    recap: 'Dependency order places definitions before calls, then lets data flow through creation, update, calculation, filtering, and display.',
+    xp: 14,
+  },
+  {
+    id: 'cpprecords6-fix-low-stock-check',
+    conceptId: 'cpp-record-tool-debugging',
+    eyebrow: 'Integrated repair 4 of 5',
+    title: 'Repair the low-stock boundary',
+    explanation:
+      'The authored rule says a part is low stock only when its quantity is below the limit. Below means strictly less than, so a quantity equal to the limit is not included. The current greater-than comparison reverses that rule and selects well-stocked records instead.',
+    analogy:
+      'A restock card says to flag shelves below three units. A shelf holding exactly three stays off the list, while a shelf holding two belongs on it.',
+    type: 'bugfix',
+    prompt: 'Change the reversed comparison so only seals appears below the visible limit of 3.',
+    starterCode:
+      '#include <iostream>\n#include <string>\n#include <vector>\n\nstruct Part {\n    std::string name;\n    int quantity;\n};\n\nstd::vector<std::string> low_stock(std::vector<Part> parts, int limit) {\n    std::vector<std::string> names;\n    for (Part part : parts) {\n        if (part.quantity > limit) {\n            names.push_back(part.name);\n        }\n    }\n    return names;\n}\n\nint main() {\n    std::vector<Part> parts = {{"bolts", 4}, {"seals", 2}, {"clips", 3}};\n    for (std::string name : low_stock(parts, 3)) {\n        std::cout << "Low stock: " << name << "\\n";\n    }\n    return 0;\n}',
+    focus: 'Change only the > operator in part.quantity > limit to the < operator. Keep the limit, result collection, fixed records, and report unchanged.',
+    codeGuide: [
+      {
+        code: 'part.quantity > limit',
+        plain: 'This faulty comparison selects quantities greater than the limit, which is the opposite of the written low-stock rule.',
+      },
+      {
+        code: 'part.quantity < limit',
+        plain: 'This repaired comparison selects only quantities strictly below the limit.',
+      },
+      {
+        code: '{"clips", 3}',
+        plain: 'Clips sits exactly on the limit. Because equality is not below, clips must remain outside the result collection.',
+      },
+      {
+        code: 'names.push_back(part.name);',
+        plain: 'This supplied update adds only the names whose repaired condition evaluates to true.',
+      },
+      {
+        code: 'low_stock(parts, 3)',
+        plain: 'The visible boundary value is 3, so seals at 2 is included while bolts at 4 and clips at 3 are excluded.',
+      },
+    ],
+    checks: [
+      {
+        pattern: 'if\\s*\\(\\s*part\\.quantity\\s*<\\s*limit\\s*\\)',
+        message: 'Use < so the condition follows the authored below-limit rule.',
+      },
+      {
+        pattern: 'names\\.push_back\\s*\\(\\s*part\\.name\\s*\\)\\s*;',
+        message: 'Keep the supplied push_back call that collects the matching name.',
+      },
+      {
+        pattern: '\\{\\s*"clips"\\s*,\\s*3\\s*\\}',
+        message: 'Keep the supplied equality boundary record so the repaired rule remains visible.',
+      },
+      {
+        pattern: 'low_stock\\s*\\(\\s*parts\\s*,\\s*3\\s*\\)',
+        message: 'Keep the supplied low_stock call with its visible limit of 3.',
+      },
+    ],
+    output: 'Low stock: seals',
+    hint: 'The phrase below the limit maps to the < operator. Equal quantities must remain outside the result.',
+    recap: 'A below-limit boundary uses <, which includes smaller quantities and excludes values that are equal to or greater than the limit.',
+    xp: 16,
+  },
+  {
+    id: 'cpprecords6-workshop-stock-report',
+    conceptId: 'cpp-record-tool-capstone',
+    eyebrow: 'Workshop capstone 5 of 5',
+    title: 'Build the Workshop Stock Report',
+    explanation:
+      'This final program connects only familiar pieces: a Part record, a vector, a reference update helper, a returned accumulator, a filter, and console output. The two read-only helpers accept the small fixed vector by value, deliberately making simple copies so this beginner capstone does not introduce const-reference syntax. Fill five narrow blanks to complete the existing data flow.',
+    analogy:
+      'The workshop stations are already built and connected. You finish five labeled connections so deliveries, counting, restock review, and the printed report share the same stock cards.',
+    type: 'code',
+    prompt: 'Complete the five familiar edits so the fixed Workshop Stock Report produces its exact three-line result.',
+    starterCode:
+      '#include <iostream>\n#include <string>\n#include <vector>\n\nstruct Part {\n    std::string name;\n    int quantity;\n};\n\nvoid restock(std::vector<Part>& parts, std::string name, int amount) {\n    for (Part& part : parts) {\n        if (part.name == name) {\n            _____\n        }\n    }\n}\n\nint total_units(std::vector<Part> parts) {\n    int total = 0;\n    for (Part part : parts) {\n        _____\n    }\n    return total;\n}\n\nstd::vector<std::string> low_stock(std::vector<Part> parts, int limit) {\n    std::vector<std::string> names;\n    for (Part part : parts) {\n        if (_____) {\n            _____\n        }\n    }\n    return names;\n}\n\nint main() {\n    std::vector<Part> parts = {\n        {"bolts", 4},\n        {"seals", 2},\n        {"cables", 7}\n    };\n\n    restock(parts, "bolts", 3);\n    restock(parts, "cables", 1);\n\n    std::cout << "Parts: " << parts.size() << "\\n";\n    std::cout << "Total units: " << _____ << "\\n";\n    for (std::string name : low_stock(parts, 3)) {\n        std::cout << "Low stock: " << name << "\\n";\n    }\n    return 0;\n}',
+    focus: 'Replace the five _____ blanks, in order, with the taught quantity update, total update, below-limit condition, name collection, and total_units(parts) call.',
+    codeGuide: [
+      {
+        code: 'part.quantity = part.quantity + amount;',
+        plain: 'The first edit updates the matching original record through the supplied Part reference.',
+      },
+      {
+        code: 'total = total + part.quantity;',
+        plain: 'The second edit adds every copied record quantity to the accumulator initialized before the loop.',
+      },
+      {
+        code: 'part.quantity < limit',
+        plain: 'The third edit applies the strict below-limit rule. It is an expression inside the supplied if parentheses, so it has no semicolon.',
+      },
+      {
+        code: 'names.push_back(part.name);',
+        plain: 'The fourth edit adds each matching name to the result collection returned after the loop.',
+      },
+      {
+        code: 'total_units(parts)',
+        plain: 'The fifth edit calls the total helper. std::cout receives and displays the returned integer result.',
+      },
+      {
+        code: 'std::vector<Part> parts = { ... };',
+        plain: 'The supplied fixed data contains three records. Keep these names and starting quantities unchanged.',
+      },
+      {
+        code: 'restock(parts, "bolts", 3);',
+        plain: 'The supplied updates change bolts from 4 to 7 and cables from 7 to 8 before any summary is calculated.',
+      },
+    ],
+    checks: [
+      {
+        pattern: 'part\\.quantity\\s*=\\s*part\\.quantity\\s*\\+\\s*amount\\s*;',
+        message: 'Complete the restock body with the taught expanded quantity update.',
+      },
+      {
+        pattern: 'total\\s*=\\s*total\\s*\\+\\s*part\\.quantity\\s*;',
+        message: 'Complete the total loop with the taught expanded accumulator update.',
+      },
+      {
+        pattern: 'if\\s*\\(\\s*part\\.quantity\\s*<\\s*limit\\s*\\)',
+        message: 'Complete the low-stock condition with part.quantity < limit.',
+      },
+      {
+        pattern: 'names\\.push_back\\s*\\(\\s*part\\.name\\s*\\)\\s*;',
+        message: 'Complete the filter body by adding part.name to names.',
+      },
+      {
+        pattern: '<<\\s*total_units\\s*\\(\\s*parts\\s*\\)\\s*<<\\s*"\\\\n"',
+        message: 'Call total_units(parts) in the supplied Total units output statement.',
+      },
+    ],
+    output: 'Parts: 3\nTotal units: 17\nLow stock: seals',
+    hint: 'Work from the first blank downward: update quantity, add to total, compare below limit, collect the name, then call total_units.',
+    recap: 'The capstone connects original-record updates, returned aggregation, filtering, and output into one small fixed-data C++ program.',
+    xp: 22,
+  },
+]
+
 // These authored modules remain outside the public course registry and runner
 // registry until all six modules, runner assignments, and release gates pass.
 export const cppCollectionsRecordsReturnValuesModule: Mission = {
@@ -929,9 +1391,37 @@ export const cppCollectionsRecordsUpdatesModule: Mission = {
   exercises: recordUpdateExercises,
 }
 
+export const cppCollectionsRecordsSummariesModule: Mission = {
+  id: 'cpp-records-summaries',
+  language: 'cpp',
+  chapter: 5,
+  title: 'Totals and low-stock filters',
+  subtitle: 'Summarize and select records',
+  description: 'Calculate a running quantity total and collect the names below a visible stock limit.',
+  duration: '9 min',
+  icon: 'package',
+  status: 'locked',
+  exercises: recordSummaryExercises,
+}
+
+export const cppCollectionsRecordsWorkshopReportModule: Mission = {
+  id: 'cpp-records-workshop-report',
+  language: 'cpp',
+  chapter: 6,
+  title: 'Build the Workshop Stock Report',
+  subtitle: 'Connect every familiar tool',
+  description: 'Assemble stored records, updates, totals, filtering, and output in one fixed-data report.',
+  duration: '11 min',
+  icon: 'crown',
+  status: 'locked',
+  exercises: workshopReportExercises,
+}
+
 export const cppCollectionsRecordsDraftModules: readonly Mission[] = [
   cppCollectionsRecordsReturnValuesModule,
   cppCollectionsRecordsVectorsModule,
   cppCollectionsRecordsStructsModule,
   cppCollectionsRecordsUpdatesModule,
+  cppCollectionsRecordsSummariesModule,
+  cppCollectionsRecordsWorkshopReportModule,
 ]

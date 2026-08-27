@@ -135,19 +135,18 @@ describe('Java guided project UI', () => {
     render(<App />)
 
     expect(await screen.findByRole('heading', { level: 1, name: 'Community Picnic Planner' })).toBeTruthy()
-    expect(screen.getByText('Java project studio')).toBeTruthy()
-    expect(screen.getByText('12 checkpoints')).toBeTruthy()
+    expect(screen.getByText('12 steps')).toBeTruthy()
     expect(screen.getByRole('link', { name: 'Java Foundations' }).getAttribute('href')).toBe('/courses/java-foundations')
     expect(screen.getByRole('link', { name: /Start project/iu }).getAttribute('href')).toBe(
       '/projects/java/picnic-planner/project-java-build-path',
     )
 
-    const checkpointHeading = screen.getByRole('heading', { name: 'Twelve small checkpoints' })
+    const checkpointHeading = screen.getByRole('heading', { name: '12 project steps' })
     const checkpointSection = checkpointHeading.closest('section')
     expect(checkpointSection).not.toBeNull()
     expect(within(checkpointSection!).getAllByRole('listitem')).toHaveLength(12)
     expect(screen.getByRole('progressbar', { name: 'Project progress' }).getAttribute('aria-valuetext')).toBe(
-      '0 of 12 checkpoints complete',
+      '0 of 12 steps complete',
     )
     expect(document.title).toBe('Community Picnic Planner | SeePoundCoffeePie')
   })
@@ -166,7 +165,7 @@ describe('Java guided project UI', () => {
       name: 'Community Picnic Planner',
     })).toBeTruthy()
     expect(screen.getByRole('heading', {
-      name: 'Finish Java Foundations, then plan a community picnic.',
+      name: 'Complete Java Foundations to start this project.',
     })).toBeTruthy()
     expect(screen.queryByRole('textbox', { name: 'Project code editor' })).toBeNull()
     expect(screen.getByRole('link', { name: /Continue Java Foundations/iu }).getAttribute('href')).toBe(
@@ -183,21 +182,24 @@ describe('Java guided project UI', () => {
 
     const heading = await screen.findByRole('heading', { level: 1, name: 'Plan the Community Picnic' })
     await waitFor(() => expect(document.activeElement).toBe(heading))
-    expect(screen.getByText('Java project studio')).toBeTruthy()
     expect(screen.getByText('Main.java')).toBeTruthy()
     expect(screen.getByRole('button', { name: 'Download .java' })).toBeTruthy()
-    expect(screen.getByText('Practice console')).toBeTruthy()
+    expect(screen.getByText('Run output')).toBeTruthy()
+    expect(screen.getByRole('heading', { name: 'New terms' })).toBeTruthy()
+    expect(screen.getByRole('heading', { name: 'Explanation' })).toBeTruthy()
+    expect(screen.getByRole('heading', { name: 'Requirements' })).toBeTruthy()
+    expect(screen.getByText('Task')).toBeTruthy()
 
-    const checkpointNavigation = screen.getByRole('navigation', { name: 'Project checkpoints' })
+    const checkpointNavigation = screen.getByRole('navigation', { name: 'Project steps' })
     expect(within(checkpointNavigation).getAllByRole('link')).toHaveLength(12)
     expect(within(checkpointNavigation).getByRole('link', {
-      name: /Checkpoint 12: Plan the Community Picnic.*Current checkpoint, not complete/iu,
+      name: /Step 12: Plan the Community Picnic.*Current step, not complete/iu,
     }).getAttribute('aria-current')).toBe('step')
     expect(screen.getByRole('progressbar', { name: 'Project completion' }).getAttribute('aria-valuetext')).toBe(
-      '11 of 12 checkpoints complete',
+      '11 of 12 steps complete',
     )
-    expect(screen.getByText('Checkpoint 12 of 12')).toBeTruthy()
-    expect((screen.getByRole('textbox', { name: 'Practice program input' }) as HTMLTextAreaElement).value).toBe(
+    expect(screen.getByText('Step 12 of 12')).toBeTruthy()
+    expect((screen.getByRole('textbox', { name: 'Run input' }) as HTMLTextAreaElement).value).toBe(
       'Alex Kim\n10\n',
     )
 

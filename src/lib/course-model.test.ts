@@ -44,7 +44,7 @@ describe('course presentation model', () => {
       kind: 'continuing',
       level: 'Beginner II',
       availability: 'locked',
-      actionLabel: 'View prerequisites',
+      actionLabel: 'View course',
       moduleCount: 6,
       lessonCount: 30,
     })
@@ -63,7 +63,7 @@ describe('course presentation model', () => {
       availability: 'locked',
       status: 'in-progress',
       completedLessonCount: 1,
-      actionLabel: 'View prerequisites',
+      actionLabel: 'View course',
     })
     expect(practicalPython?.missingPrerequisites.map((item) => item.label)).toEqual([
       'Complete Python Foundations',
@@ -130,16 +130,16 @@ describe('course presentation model', () => {
       'Collections',
       'Loops',
       'Functions',
-      'Guided project',
+      'Build a complete program',
     ])
     expect(python.modules[0]).toMatchObject({
       id: 'py-first-spark',
-      sourceTitle: 'First Spark',
+      sourceTitle: 'Code and variables',
     })
     expect(java.modules[4]).toMatchObject({
       id: 'java-droid-routine',
       title: 'Methods',
-      sourceTitle: 'Droid Routine',
+      sourceTitle: 'Methods',
     })
   })
 

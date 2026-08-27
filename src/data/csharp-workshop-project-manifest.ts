@@ -10,18 +10,18 @@ export const csharpWorkshopProjectManifest = {
   title: 'Community Workshop Check-In',
   subtitle: 'Build a welcoming check-in program that asks, decides, lists available areas, and prints a visitor badge.',
   description:
-    'This project turns familiar C# pieces into a useful front-desk program. The learner follows source through .NET, collects two answers, makes an access decision, visits an array with a loop, and calls a reusable badge method.',
+    'This project turns familiar C# pieces into a useful front-desk program. You follow source through .NET, collect two answers, make an access decision, visit an array with a loop, and call a reusable badge method.',
   outcome:
-    'By the end, the learner can explain how .NET builds and runs C# source, read console input safely, parse a whole number, choose with if and else, visit an array with foreach, and pass values into a method.',
+    'By the end, you can explain how .NET builds and runs C# source, read console input safely, parse a whole number, choose with if and else, visit an array with foreach, and pass values into a method.',
   duration: '45-65 minutes',
   route: '/projects/csharp/workshop-check-in',
-  studioLabel: 'C# project studio',
-  sourcePrivacyLabel: 'Source stays in this browser',
+  studioLabel: 'C# project',
+  sourcePrivacyLabel: 'Code stays in this browser',
   downloadFileName: 'community-workshop-check-in.cs',
   downloadLabel: 'downloadable C# source file',
-  prerequisiteTitle: 'Finish C# Foundations, then run the community welcome desk.',
+  prerequisiteTitle: 'Complete C# Foundations to start this project.',
   prerequisiteDescription:
-    'You can preview every checkpoint below now. The editor unlocks after the six foundation modules introduce the C# shapes this project retrieves and connects.',
+    'You can view the steps now. Complete C# Foundations to open the editor.',
   overviewTitle: 'A check-in desk that listens, decides, repeats, and welcomes',
   overviewSteps: [
     { title: 'Ask', description: 'Read a visitor name and completed visit count from the console.' },
@@ -30,7 +30,7 @@ export const csharpWorkshopProjectManifest = {
     { title: 'Welcome', description: 'Pass the visitor details into a reusable badge method.' },
   ],
   completionDescription:
-    'Your Community Workshop Check-In is complete. Reopen a checkpoint, download the C# source again, or explain how each stored value reaches the final badge.',
+    'Your Community Workshop Check-In is complete. Reopen a step, download the C# source again, or explain how each stored value reaches the final badge.',
   checkpoints: [
     { id: 'project-csharp-dotnet-path', order: 1, title: 'Follow C# from source to screen', conceptId: 'project-csharp-dotnet-build-run', xp: 8 },
     { id: 'project-csharp-output', order: 2, title: 'Write a welcome line', conceptId: 'project-csharp-console-output', xp: 10 },

@@ -114,7 +114,7 @@ export function validateRunnerRequest(input: unknown): RunnerRequestValidation {
     return {
       ok: false,
       issue: 'unexpected_field',
-      message: `Remove the unsupported field "${unexpectedField}". Compiler commands and flags are selected by the runner, not by learners.`,
+      message: `Remove the unsupported field "${unexpectedField}". The code checker chooses compiler commands and settings.`,
     }
   }
 
@@ -167,7 +167,7 @@ export function validateRunnerRequest(input: unknown): RunnerRequestValidation {
     return {
       ok: false,
       issue: 'invalid_body',
-      message: 'Choose either a practice run or an official checkpoint check.',
+      message: 'Choose either Run or Check work.',
     }
   }
 

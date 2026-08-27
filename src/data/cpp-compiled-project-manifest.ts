@@ -10,18 +10,18 @@ export const cppCompiledProjectManifest = {
   title: 'Your First Compiled Program',
   subtitle: 'Build an observation scorecard that compiles, asks two questions, calculates focus points, and reports what it saw.',
   description:
-    'This project opens the C++ build process one piece at a time. The learner follows source code through the compiler, reads a first diagnostic, collects typed input, and connects the pieces into a complete Observation Desk program.',
+    'This project opens the C++ build process one piece at a time. You follow source code through the compiler, read a first error, collect typed input, and connect the pieces into a complete Observation Desk program.',
   outcome:
-    'By the end, the learner can explain how C++ source becomes a running program, recognize the main frame, read a basic compiler diagnostic, collect text and numeric input, calculate with typed variables, and build a console report.',
+    'By the end, you can explain how C++ source becomes a running program, recognize the main frame, read a basic compiler error, collect text and numeric input, calculate with typed variables, and build a console report.',
   duration: '40-60 minutes',
   route: '/projects/cpp/first-compiled-program',
-  studioLabel: 'C++ project studio',
-  sourcePrivacyLabel: 'Source stays in this browser',
+  studioLabel: 'C++ project',
+  sourcePrivacyLabel: 'Code stays in this browser',
   downloadFileName: 'observation-desk.cpp',
   downloadLabel: 'downloadable C++ source file',
-  prerequisiteTitle: 'Finish C++ Foundations, then build a complete compiled program.',
+  prerequisiteTitle: 'Complete C++ Foundations to start this project.',
   prerequisiteDescription:
-    'You can preview every checkpoint below now. The editor unlocks after the six foundation modules introduce the C++ shapes this project retrieves and extends.',
+    'You can view the steps now. Complete C++ Foundations to open the editor.',
   overviewTitle: 'An observation desk that compiles, listens, and calculates',
   overviewSteps: [
     { title: 'Compile', description: 'See how human-readable source becomes a program the computer can run.' },
@@ -30,7 +30,7 @@ export const cppCompiledProjectManifest = {
     { title: 'Report', description: 'Chain text and typed values into one personal observation summary.' },
   ],
   completionDescription:
-    'Your Observation Desk is complete. Reopen any checkpoint, download the C++ source again, or explain what the compiler does before main begins.',
+    'Your Observation Desk is complete. Reopen any step, download the C++ source again, or explain what the compiler does before main begins.',
   checkpoints: [
     { id: 'project-cpp-compiler-path', order: 1, title: 'Turn source into a program', conceptId: 'project-cpp-compile-run-cycle', xp: 8 },
     { id: 'project-cpp-program-frame', order: 2, title: 'Find the starting doorway', conceptId: 'project-cpp-program-frame', xp: 8 },

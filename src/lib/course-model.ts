@@ -83,7 +83,7 @@ export interface CourseCardModel {
   currentModuleTitle: string | null
   currentLessonId: string | null
   currentLessonTitle: string | null
-  actionLabel: 'Start course' | 'Continue course' | 'Review course' | 'View prerequisites'
+  actionLabel: 'Start course' | 'Continue course' | 'Review course' | 'View course'
 }
 
 export interface CourseModel extends CourseCardModel {
@@ -377,7 +377,7 @@ export function buildRegisteredCourseCard(
     currentLessonId,
     currentLessonTitle: null,
     actionLabel: !available
-      ? 'View prerequisites'
+      ? 'View course'
       : complete
         ? 'Review course'
         : hasActivity

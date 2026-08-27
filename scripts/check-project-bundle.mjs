@@ -29,11 +29,17 @@ const privateMarkers = [
   'python-data-tools-supply-tracker-v1',
   'supply-tracker-visible-report',
   'Keep the four supplied functions and report steps in their taught order without extra or unreachable statements.',
+  'cpp-collections-records-workshop-report-v1',
+  'workshop-stock-report-visible',
+  'Keep the three supplied headers, Part record, helpers, and main function in their taught order without extra or unreachable code.',
+  'CppCollectionsAnalyzer.py',
   'cpp-collections-records',
   'A workshop calculator has a label promising a whole-number result.',
   'A vector is a standard C++ collection that can grow after it is created.',
   'A record keeps related values together. In C++, struct defines a reusable user-defined type for that record shape.',
   'A normal Part parameter or loop variable receives a copy, so changing it does not change the original record.',
+  'A stock clerk writes zero once at the top of a count sheet',
+  'The workshop stations are already built and connected.',
 ]
 const teachingMarkers = [
   'A sequence of instructions that a computer follows.',

@@ -12,18 +12,18 @@ export const pythonInteractiveProjectManifest = {
   title: 'Your First Interactive Program',
   subtitle: 'Build a coffee order calculator that listens, remembers, calculates, and replies.',
   description:
-    'This project starts with one familiar line and grows into a complete interactive Python program. Every checkpoint explains the new pieces before asking the learner to use them.',
+    'You start with one familiar line and grow it into a complete interactive Python program. Each step explains the new pieces before asking you to use them.',
   outcome:
-    'By the end, the learner can explain how input becomes stored text, convert that text to an integer, calculate a total, and report the result with an f-string.',
+    'By the end, you can explain how input becomes stored text, convert that text to an integer, calculate a total, and report the result with an f-string.',
   duration: '35-50 minutes',
   route: '/projects/python/first-interactive-program',
-  studioLabel: 'Python project studio',
-  sourcePrivacyLabel: 'Source stays in this browser',
+  studioLabel: 'Python project',
+  sourcePrivacyLabel: 'Code stays in this browser',
   downloadFileName: 'coffee-counter.py',
   downloadLabel: 'downloadable Python file',
-  prerequisiteTitle: 'Finish Python Foundations, then build without training wheels.',
+  prerequisiteTitle: 'Complete Python Foundations to start this project.',
   prerequisiteDescription:
-    'You can preview every checkpoint below now. The editor unlocks after the six foundation modules introduce the code this project expects you to recognize.',
+    'You can view the steps now. Complete Python Foundations to open the editor.',
   overviewTitle: 'A coffee counter that listens and calculates',
   overviewSteps: [
     { title: 'Ask', description: 'Collect a customer name and cup count with input.' },
@@ -32,7 +32,7 @@ export const pythonInteractiveProjectManifest = {
     { title: 'Reply', description: 'Build a personal receipt with an f-string.' },
   ],
   completionDescription:
-    'Your Coffee Counter is complete. Reopen any checkpoint, download the program again, or explain how each piece works.',
+    'Your Coffee Counter is complete. Reopen any step, download the program again, or explain how each piece works.',
   checkpoints: [
     { id: 'project-py-print', order: 1, title: 'Let the program speak', conceptId: 'project-python-print', xp: 8 },
     { id: 'project-py-string', order: 2, title: 'Recognize the text', conceptId: 'project-python-strings', xp: 8 },

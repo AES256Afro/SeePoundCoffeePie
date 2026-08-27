@@ -683,27 +683,31 @@ async function runnerOwner(
 }
 
 async function runnerGrant(request: Request, env: WorkerEnv): Promise<Response> {
-  if (!sameOrigin(request, env)) return json({ error: 'Runner grants require a same-origin request.' }, 403)
-  if (!env.SESSION_SECRET || env.SESSION_SECRET.length < 32 || !env.RUNNER_CONTROL) {
-    return json({ error: 'Live code execution is not configured.' }, 503)
+  if (!sameOrigin(request, env)) {
+    return json({ error: 'Reload this page before starting the check again.' }, 403)
   }
-  if (!await runnerEnabled(env)) return json({ error: 'Live code execution is temporarily paused.' }, 503)
+  if (!env.SESSION_SECRET || env.SESSION_SECRET.length < 32 || !env.RUNNER_CONTROL) {
+    return json({ error: 'The code checker is not available right now. Try again later.' }, 503)
+  }
+  if (!await runnerEnabled(env)) return json({ error: 'The code checker is paused right now. Try again later.' }, 503)
 
   let body: unknown
   try {
     body = await request.json()
   } catch {
-    return json({ error: 'Send one exercise identifier.' }, 400)
+    return json({ error: 'The code checker could not tell what to check. Reload the page and try again.' }, 400)
   }
   const exerciseId = body && typeof body === 'object' && 'exerciseId' in body
     ? (body as { exerciseId?: unknown }).exerciseId
     : null
-  if (typeof exerciseId !== 'string') return json({ error: 'Choose one editable academy exercise.' }, 400)
+  if (typeof exerciseId !== 'string') {
+    return json({ error: 'The code checker could not tell what to check. Reload the page and try again.' }, 400)
+  }
 
   const assignment = findRunnerAssignment(exerciseId)
-  if (!assignment) return json({ error: 'That exercise does not support live execution.' }, 404)
+  if (!assignment) return json({ error: 'This page does not have a code check yet.' }, 404)
   const owner = await runnerOwner(request, env, true)
-  if (!owner) return json({ error: 'The runner could not create a private learner session.' }, 503)
+  if (!owner) return json({ error: 'The code checker could not start. Reload the page and try again.' }, 503)
 
   const payload: RunnerGrantPayload = {
     ownerId: owner.ownerId,
@@ -732,36 +736,45 @@ async function readRunnerGrant(request: Request, env: WorkerEnv): Promise<Runner
 }
 
 async function submitRunnerRun(request: Request, env: WorkerEnv): Promise<Response> {
-  if (!sameOrigin(request, env)) return json({ error: 'Code runs require a same-origin request.' }, 403)
-  if (!env.SESSION_SECRET || !env.RUNNER_CONTROL) return json({ error: 'Live code execution is not configured.' }, 503)
-  if (!await runnerEnabled(env)) return json({ error: 'Live code execution is temporarily paused.' }, 503)
+  if (!sameOrigin(request, env)) {
+    return json({ error: 'Reload this page before starting the check again.' }, 403)
+  }
+  if (!env.SESSION_SECRET || !env.RUNNER_CONTROL) {
+    return json({ error: 'The code checker is not available right now. Try again later.' }, 503)
+  }
+  if (!await runnerEnabled(env)) return json({ error: 'The code checker is paused right now. Try again later.' }, 503)
 
   const grant = await readRunnerGrant(request, env)
   const owner = await runnerOwner(request, env, false)
   if (!grant || !owner || grant.ownerId !== owner.ownerId) {
-    return json({ error: 'This short-lived run grant is missing or expired. Request a new one.' }, 401)
+    return json({ error: 'This check expired. Start the check again.' }, 401)
   }
 
   const contentLength = Number(request.headers.get('Content-Length') ?? '0')
   if (Number.isFinite(contentLength) && contentLength > 25_000) {
-    return json({ error: 'The runner request is too large.' }, 413)
+    return json({ error: 'This code is too long for one check.' }, 413)
   }
 
   let body: unknown
   try {
     body = await request.json()
   } catch {
-    return json({ error: 'Send the code run as JSON.' }, 400)
+    return json({ error: 'The code checker could not read this run. Start the check again.' }, 400)
   }
   const validation = validateRunnerRequest(body)
-  if (!validation.ok) return json({ error: validation.message, issue: validation.issue }, 400)
+  if (!validation.ok) {
+    return json({
+      error: 'The code checker could not read this run. Reload the page and try again.',
+      issue: validation.issue,
+    }, 400)
+  }
   if (validation.request.language !== grant.language) {
-    return json({ error: 'The run language must match the current exercise.' }, 400)
+    return json({ error: 'The language for this check changed. Reload the page and try again.' }, 400)
   }
 
   const assignment = findRunnerAssignment(grant.exerciseId)
   if (!assignment || assignment.language !== grant.language) {
-    return json({ error: 'The run grant no longer matches an academy exercise.' }, 400)
+    return json({ error: 'This lesson changed while you were working. Reload the page and try again.' }, 400)
   }
 
   const address = request.headers.get('CF-Connecting-IP') ?? 'unknown'
@@ -782,9 +795,11 @@ async function submitRunnerRun(request: Request, env: WorkerEnv): Promise<Respon
 }
 
 async function runnerResult(request: Request, env: WorkerEnv, runId: string): Promise<Response> {
-  if (!env.RUNNER_CONTROL) return json({ error: 'Live code execution is not configured.' }, 503)
+  if (!env.RUNNER_CONTROL) {
+    return json({ error: 'The code checker is not available right now. Try again later.' }, 503)
+  }
   const owner = await runnerOwner(request, env, false)
-  if (!owner) return json({ error: 'Run not found.' }, 404)
+  if (!owner) return json({ error: 'This check could not be found. Start it again.' }, 404)
 
   const stub = env.RUNNER_CONTROL.getByName('global-v1')
   const response = await stub.fetch(`https://runner.internal/result/${encodeURIComponent(runId)}`, {
@@ -815,7 +830,7 @@ async function runnerRequest(request: Request, env: WorkerEnv): Promise<Response
     if (request.method !== 'GET') return methodNotAllowed('GET')
     return runnerResult(request, env, url.pathname.slice('/api/runner/runs/'.length))
   }
-  return json({ error: 'Runner endpoint not found.' }, 404)
+  return json({ error: 'Code checker page not found.' }, 404)
 }
 
 function withBrowserSecurityHeaders(response: Response, url: URL): Response {
@@ -890,7 +905,7 @@ export async function handleRequest(
     try {
       return await runnerRequest(request, env)
     } catch {
-      return json({ error: 'The academy runner had an infrastructure problem. Learner code was not blamed.' }, 500)
+      return json({ error: 'The code checker had a service problem. Your code was not marked wrong.' }, 500)
     }
   }
 

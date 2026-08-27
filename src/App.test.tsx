@@ -142,7 +142,7 @@ describe('beginner lesson interactions', () => {
     expect(await screen.findByText('1 of 5 lessons complete')).toBeTruthy()
     expect(screen.getByText('1 of 30 lessons complete')).toBeTruthy()
     expect(screen.getByText('3% of course')).toBeTruthy()
-    const nextLesson = screen.getByRole('link', { name: /Send your first signal.*Next lesson/iu })
+    const nextLesson = screen.getByRole('link', { name: /Print your first message.*Next lesson/iu })
     expect(nextLesson.getAttribute('aria-current')).toBe('step')
     expect(nextLesson.getAttribute('href')).toBe('/learn/python-foundations/py-first-spark/py-print')
 
@@ -162,13 +162,15 @@ describe('beginner lesson interactions', () => {
   it('runs an editor check with Ctrl+Enter and announces the result', async () => {
     const editor = await openFirstEditableStep()
     fireEvent.change(editor, {
-      target: { value: '# Tell the bridge our signal is ready\nprint("Signal online")' },
+      target: { value: '# Show a message\nprint("Signal online")' },
     })
     fireEvent.keyDown(editor, { key: 'Enter', ctrlKey: true })
 
-    expect(await screen.findByText('System online')).toBeTruthy()
+    expect(await screen.findByText('Correct')).toBeTruthy()
     expect(screen.getByText('Signal online', { selector: 'pre' })).toBeTruthy()
-    expect(screen.getByLabelText('Real runner report').textContent).toContain('fresh sandbox destroyed after run')
+    const runResults = screen.getByLabelText('Run results')
+    expect(runResults.textContent).not.toMatch(/Checked in \d+ ms/iu)
+    expect(runResults.textContent).not.toContain('fresh sandbox destroyed after run')
     expect(screen.getAllByRole('status').filter((status) => status.textContent?.trim())).toHaveLength(1)
     expect(editor.getAttribute('aria-keyshortcuts')).toBe('Control+Enter Meta+Enter')
     expect(screen.getByRole('button', { name: 'Exit lesson' })).toBeTruthy()
@@ -180,6 +182,19 @@ describe('beginner lesson interactions', () => {
 
     expect(tabWasNotCancelled).toBe(true)
     expect(screen.getByLabelText('Code editor keyboard controls').textContent).toContain('Tab moves out of the editor normally')
+  })
+
+  it('uses plain teaching labels in the editable lesson workspace', async () => {
+    await openFirstEditableStep()
+
+    expect(screen.getByText('Task', { selector: 'small' })).toBeTruthy()
+    expect(screen.getByText('Change this', { selector: 'small' })).toBeTruthy()
+    expect(screen.getByRole('heading', { name: 'What the code means' })).toBeTruthy()
+    expect(screen.getByText('Output')).toBeTruthy()
+    expect(screen.queryByText(/SHIPBOARD VERSION/iu)).toBeNull()
+    expect(screen.queryByText(/LIVE ISOLATED RUNNER/iu)).toBeNull()
+    expect(screen.queryByText(/REAL CONSOLE OUTPUT/iu)).toBeNull()
+    expect(screen.queryByText(/fresh sandbox destroyed/iu)).toBeNull()
   })
 
   it('ignores a runner response after routing to another exercise', async () => {
@@ -194,9 +209,9 @@ describe('beginner lesson interactions', () => {
     })
     const editor = await openFirstEditableStep()
     fireEvent.change(editor, {
-      target: { value: '# Tell the bridge our signal is ready\nprint("Signal online")' },
+      target: { value: '# Show a message\nprint("Signal online")' },
     })
-    fireEvent.click(screen.getByRole('button', { name: 'Run check' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Check my code' }))
     fireEvent.click(screen.getByRole('button', { name: 'Back' }))
 
     expect(await screen.findByRole('heading', { name: 'Meet the console' })).toBeTruthy()
@@ -222,8 +237,8 @@ describe('beginner lesson interactions', () => {
 
     const firstAnswer = screen.getByRole('radio', { name: /Shows text from the program/iu }) as HTMLInputElement
     const firstCheck = screen.getByRole('button', { name: 'Check answer' }) as HTMLButtonElement
-    expect(screen.queryByText('System online')).toBeNull()
-    expect(screen.queryByLabelText('Real runner report')).toBeNull()
+    expect(screen.queryByText('Correct')).toBeNull()
+    expect(screen.queryByLabelText('Run results')).toBeNull()
     expect(firstAnswer.disabled).toBe(false)
     expect(firstCheck.disabled).toBe(false)
   })
@@ -266,9 +281,9 @@ describe('beginner lesson interactions', () => {
     })
     const progressBeforeRun = JSON.parse(window.localStorage.getItem(progressKey) ?? '{}')
     fireEvent.change(editor, {
-      target: { value: '# Tell the bridge our signal is ready\nprint("Signal online")' },
+      target: { value: '# Show a message\nprint("Signal online")' },
     })
-    fireEvent.click(screen.getByRole('button', { name: 'Run check' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Check my code' }))
     fireEvent.click(screen.getByRole('button', { name: 'Back' }))
 
     expect(await screen.findByRole('heading', { name: 'Meet the console' })).toBeTruthy()
@@ -298,8 +313,8 @@ describe('beginner lesson interactions', () => {
     expect(progressAfterRun.dailyXp).toBe(20)
     expect(progressAfterRun.starShards).toBe(25)
     expect(progressAfterRun.conceptProgress['python-print']).toBeUndefined()
-    expect(screen.queryByText('System online')).toBeNull()
-    expect(screen.queryByLabelText('Real runner report')).toBeNull()
+    expect(screen.queryByText('Correct')).toBeNull()
+    expect(screen.queryByLabelText('Run results')).toBeNull()
     expect(screen.getByRole('button', { name: 'Check answer' })).toBeTruthy()
   })
 
@@ -321,9 +336,9 @@ describe('beginner lesson interactions', () => {
     })
     const progressBeforeExit = JSON.parse(window.localStorage.getItem(progressKey) ?? '{}')
     fireEvent.change(editor, {
-      target: { value: '# Tell the bridge our signal is ready\nprint("Signal online")' },
+      target: { value: '# Show a message\nprint("Signal online")' },
     })
-    fireEvent.click(screen.getByRole('button', { name: 'Run check' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Check my code' }))
     fireEvent.click(screen.getByRole('button', { name: 'Exit lesson' }))
 
     expect(await screen.findByRole('heading', { name: 'Python Foundations' })).toBeTruthy()
@@ -350,8 +365,8 @@ describe('beginner lesson interactions', () => {
     const progressAfterExit = JSON.parse(window.localStorage.getItem(progressKey) ?? '{}')
     expect(progressAfterExit).toEqual(progressBeforeExit)
     expect(screen.getByRole('heading', { name: 'Python Foundations' })).toBeTruthy()
-    expect(screen.queryByText('System online')).toBeNull()
-    expect(screen.queryByLabelText('Real runner report')).toBeNull()
+    expect(screen.queryByText('Correct')).toBeNull()
+    expect(screen.queryByLabelText('Run results')).toBeNull()
   })
 
   it('repairs a missed adaptive answer without awarding XP, shards, or completion', async () => {
@@ -387,36 +402,38 @@ describe('beginner lesson interactions', () => {
 
     const reviewLink = screen.getByRole('link', { name: 'Start 2-question review' })
     expect(reviewLink.getAttribute('href')).toBe('/practice/java/session')
-    expect(screen.getByRole('heading', { name: 'What you will practice' })).toBeTruthy()
+    expect(screen.getByRole('heading', { name: 'Questions' })).toBeTruthy()
     const reviewPlan = screen.getByRole('list', { name: 'Practice questions' })
     expect(within(reviewPlan).getAllByRole('listitem')).toHaveLength(2)
-    expect(screen.getByText(/awards no XP or star shards/iu)).toBeTruthy()
+    expect(screen.getByText(/does not change course completion or rewards/iu)).toBeTruthy()
+    const practiceExplainer = screen.getByText('How Practice chooses questions').closest('details')
+    expect(practiceExplainer?.open).toBe(false)
     fireEvent.click(reviewLink)
 
-    expect(await screen.findByRole('heading', { name: 'Ask a routing question' })).toBeTruthy()
-    expect(screen.getByText('PRACTICE · QUESTION 1 OF 2')).toBeTruthy()
+    expect(await screen.findByRole('heading', { name: 'Meet a true-or-false value' })).toBeTruthy()
+    expect(screen.getByText('Practice, question 1 of 2')).toBeTruthy()
     expect(screen.getByRole('button', { name: 'Exit practice' })).toBeTruthy()
 
     fireEvent.click(screen.getByRole('radio', { name: /up and downThose can/iu }))
     fireEvent.click(screen.getByRole('button', { name: 'Check answer' }))
-    expect(screen.getByText(/inspect that/iu)).toBeTruthy()
+    expect(screen.getByText('Try again')).toBeTruthy()
     fireEvent.click(screen.getByRole('radio', { name: /true and falseJava writes/iu }))
     fireEvent.click(screen.getByRole('button', { name: 'Check answer' }))
     fireEvent.click(screen.getByRole('button', { name: 'Continue' }))
 
-    expect(await screen.findByRole('heading', { name: 'Read the galley count' })).toBeTruthy()
+    expect(await screen.findByRole('heading', { name: 'Predict what the code displays' })).toBeTruthy()
     fireEvent.click(screen.getByRole('radio', { name: /Pods: 12Java joins/iu }))
     fireEvent.click(screen.getByRole('button', { name: 'Check answer' }))
-    fireEvent.click(screen.getByRole('button', { name: 'Repair missed concepts' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Review missed questions' }))
 
-    expect(await screen.findByRole('heading', { name: 'Ask a routing question' })).toBeTruthy()
-    expect(screen.getByText('MEMORY REPAIR · 1 OF 1')).toBeTruthy()
+    expect(await screen.findByRole('heading', { name: 'Meet a true-or-false value' })).toBeTruthy()
+    expect(screen.getByText('Try again, question 1 of 1')).toBeTruthy()
     fireEvent.click(screen.getByRole('radio', { name: /true and falseJava writes/iu }))
     fireEvent.click(screen.getByRole('button', { name: 'Check answer' }))
-    fireEvent.click(screen.getByRole('button', { name: 'Complete memory repair' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Finish review' }))
 
-    expect(screen.getByText('PRACTICE COMPLETE')).toBeTruthy()
-    expect(screen.getByText('concepts reviewed')).toBeTruthy()
+    expect(screen.getByText('Practice complete')).toBeTruthy()
+    expect(screen.getByText('ideas reviewed')).toBeTruthy()
     expect(screen.queryByText('XP earned')).toBeNull()
     expect(screen.queryByText('star shards')).toBeNull()
     await waitFor(() => {
@@ -467,35 +484,35 @@ describe('beginner lesson interactions', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Check answer' }))
     fireEvent.click(screen.getByRole('button', { name: 'Continue' }))
 
-    expect(await screen.findByRole('heading', { name: 'Read the galley count' })).toBeTruthy()
+    expect(await screen.findByRole('heading', { name: 'Predict what the code displays' })).toBeTruthy()
     const wrongAnswer = screen.getByRole('radio', { name: /Pods: podCountWithout quotes/iu }) as HTMLInputElement
     fireEvent.click(wrongAnswer)
     fireEvent.click(screen.getByRole('button', { name: 'I need a hint' }))
     fireEvent.click(screen.getByRole('button', { name: 'Check answer' }))
-    expect(screen.getByText(/inspect that/iu)).toBeTruthy()
+    expect(screen.getByText('Try again')).toBeTruthy()
     expect(wrongAnswer.checked).toBe(true)
 
     window.history.back()
 
-    expect(await screen.findByRole('heading', { name: 'Ask a routing question' })).toBeTruthy()
-    await waitFor(() => expect(screen.queryByText(/inspect that/iu)).toBeNull())
+    expect(await screen.findByRole('heading', { name: 'Meet a true-or-false value' })).toBeTruthy()
+    await waitFor(() => expect(screen.queryByText('Try again')).toBeNull())
     const firstAnswer = screen.getByRole('radio', { name: /true and falseJava writes/iu }) as HTMLInputElement
     const firstCheck = screen.getByRole('button', { name: 'Check answer' }) as HTMLButtonElement
     expect(firstAnswer.checked).toBe(true)
     expect(firstAnswer.disabled).toBe(false)
     expect(firstCheck.disabled).toBe(false)
-    expect(screen.queryByText('Small nudge')).toBeNull()
+    expect(screen.queryByText('Hint')).toBeNull()
 
     window.history.forward()
 
-    expect(await screen.findByRole('heading', { name: 'Read the galley count' })).toBeTruthy()
-    await waitFor(() => expect(screen.queryByText(/inspect that/iu)).toBeNull())
+    expect(await screen.findByRole('heading', { name: 'Predict what the code displays' })).toBeTruthy()
+    await waitFor(() => expect(screen.queryByText('Try again')).toBeNull())
     const restoredWrongAnswer = screen.getByRole('radio', { name: /Pods: podCountWithout quotes/iu }) as HTMLInputElement
     const secondCheck = screen.getByRole('button', { name: 'Check answer' }) as HTMLButtonElement
     expect(restoredWrongAnswer.checked).toBe(true)
     expect(restoredWrongAnswer.disabled).toBe(false)
     expect(secondCheck.disabled).toBe(false)
-    expect(screen.queryByText('Small nudge')).toBeNull()
+    expect(screen.queryByText('Hint')).toBeNull()
   })
 
   it('requires every selected question before a direct final practice step can finish', async () => {
@@ -523,32 +540,32 @@ describe('beginner lesson interactions', () => {
     window.history.replaceState({}, '', '/practice/java/session/2')
 
     const firstRender = render(<App />)
-    expect(await screen.findByRole('heading', { name: 'Read the galley count' })).toBeTruthy()
+    expect(await screen.findByRole('heading', { name: 'Predict what the code displays' })).toBeTruthy()
     firstRender.unmount()
 
     render(<App />)
     fireEvent.click(await screen.findByRole('radio', { name: /Pods: 12Java joins/iu }))
     fireEvent.click(screen.getByRole('button', { name: 'Check answer' }))
-    expect(screen.queryByText('PRACTICE COMPLETE')).toBeNull()
+    expect(screen.queryByText('Practice complete')).toBeNull()
     fireEvent.click(screen.getByRole('button', { name: 'Continue' }))
 
     expect(window.location.pathname).toBe('/practice/java/session')
-    expect(await screen.findByRole('heading', { name: 'Ask a routing question' })).toBeTruthy()
+    expect(await screen.findByRole('heading', { name: 'Meet a true-or-false value' })).toBeTruthy()
     fireEvent.click(screen.getByRole('radio', { name: /up and downThose can describe/iu }))
     fireEvent.click(screen.getByRole('button', { name: 'Check answer' }))
-    expect(screen.getByText(/inspect that/iu)).toBeTruthy()
+    expect(screen.getByText('Try again')).toBeTruthy()
     fireEvent.click(screen.getByRole('radio', { name: /true and falseJava writes/iu }))
     fireEvent.click(screen.getByRole('button', { name: 'Check answer' }))
-    fireEvent.click(screen.getByRole('button', { name: 'Repair missed concepts' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Review missed questions' }))
 
-    expect(screen.getByText('MEMORY REPAIR · 1 OF 1')).toBeTruthy()
+    expect(screen.getByText('Try again, question 1 of 1')).toBeTruthy()
     const repairedAnswer = screen.getByRole('radio', { name: /true and falseJava writes/iu }) as HTMLInputElement
     expect(repairedAnswer.checked).toBe(false)
     fireEvent.click(repairedAnswer)
     fireEvent.click(screen.getByRole('button', { name: 'Check answer' }))
-    fireEvent.click(screen.getByRole('button', { name: 'Complete memory repair' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Finish review' }))
 
-    expect(screen.getByText('PRACTICE COMPLETE')).toBeTruthy()
+    expect(screen.getByText('Practice complete')).toBeTruthy()
     expect(screen.getByText('questions completed').previousSibling?.textContent).toBe('2')
   })
 
@@ -562,23 +579,23 @@ describe('beginner lesson interactions', () => {
 
     render(<App />)
     const editor = await screen.findByRole('textbox', { name: 'Code editor' })
-    fireEvent.click(screen.getByRole('button', { name: 'Run check' }))
-    expect(screen.getByText(/inspect that/iu)).toBeTruthy()
+    fireEvent.click(screen.getByRole('button', { name: 'Check my code' }))
+    expect(screen.getByText('Try again')).toBeTruthy()
     fireEvent.change(editor, {
       target: {
         value: 'ship_name = "Wayfarer"\npower_cells = 3\n\nprint("Ship:", ship_name)\nprint("Cells:", power_cells)',
       },
     })
-    fireEvent.click(screen.getByRole('button', { name: 'Run check' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Check my code' }))
 
-    expect(await screen.findByText('System online')).toBeTruthy()
+    expect(await screen.findByText('Correct')).toBeTruthy()
     expect(screen.getByRole('button', { name: 'Complete remaining lessons' })).toBeTruthy()
-    expect(screen.queryByRole('button', { name: 'Repair missed concepts' })).toBeNull()
+    expect(screen.queryByRole('button', { name: 'Review missed questions' })).toBeNull()
     fireEvent.click(screen.getByRole('button', { name: 'Complete remaining lessons' }))
 
     expect(await screen.findByRole('heading', { name: 'Meet the console' })).toBeTruthy()
-    expect(screen.queryByText(/MEMORY REPAIR/iu)).toBeNull()
-    expect(screen.queryByText('MISSION COMPLETE')).toBeNull()
+    expect(screen.queryByText(/Try again, question/iu)).toBeNull()
+    expect(screen.queryByText('Module complete')).toBeNull()
     await waitFor(() => {
       const stored = JSON.parse(window.localStorage.getItem(progressKey) ?? '{}')
       expect(stored.completedMissions).toEqual([])
@@ -604,8 +621,8 @@ describe('beginner lesson interactions', () => {
     fireEvent.change(editor, {
       target: { value: 'ship_name = "Wayfarer"\npower_cells = 3\n\nprint("Ship:", ship_name)\nprint("Cells:", power_cells)' },
     })
-    fireEvent.click(screen.getByRole('button', { name: 'Run check' }))
-    expect(await screen.findByText('System online')).toBeTruthy()
+    fireEvent.click(screen.getByRole('button', { name: 'Check my code' }))
+    expect(await screen.findByText('Correct')).toBeTruthy()
     fireEvent.click(screen.getByRole('button', { name: 'Exit lesson' }))
 
     expect(await screen.findByRole('heading', { name: 'Python Foundations' })).toBeTruthy()
@@ -626,7 +643,7 @@ describe('beginner lesson interactions', () => {
     })
     const completionNotice = await screen.findByRole('status')
     expect(completionNotice.textContent).toContain(
-      'Module completed. 25 star shards saved. Module 2 is now available.',
+      'Module complete. Module 2 is ready.',
     )
     const nextModule = screen.getByRole('button', { name: /Module 2.*Decisions/iu })
     expect(nextModule.getAttribute('aria-expanded')).toBe('true')
@@ -638,7 +655,7 @@ describe('beginner lesson interactions', () => {
     })
 
     const javaHeading = await screen.findByRole('heading', { name: 'Java Foundations' })
-    expect(screen.queryByText('Module completed. 25 star shards saved. Module 2 is now available.')).toBeNull()
+    expect(screen.queryByText('Module complete. Module 2 is ready.')).toBeNull()
     expect(screen.getByRole('button', { name: /Module 1.*Reading code and variables/iu }).getAttribute('aria-expanded')).toBe('true')
     await waitFor(() => expect(document.activeElement).toBe(javaHeading))
   })
@@ -670,13 +687,14 @@ describe('beginner lesson interactions', () => {
     fireEvent.change(editor, {
       target: { value: 'ship_name = "Wayfarer"\npower_cells = 3\n\nprint("Ship:", ship_name)\nprint("Cells:", power_cells)' },
     })
-    fireEvent.click(screen.getByRole('button', { name: 'Run check' }))
-    expect(await screen.findByText('System online')).toBeTruthy()
-    fireEvent.click(screen.getByRole('button', { name: 'Finish mission' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Check my code' }))
+    expect(await screen.findByText('Correct')).toBeTruthy()
+    fireEvent.click(screen.getByRole('button', { name: 'Finish module' }))
 
-    expect(screen.getByText('MISSION COMPLETE')).toBeTruthy()
-    expect(screen.getByText('XP earned').previousSibling?.textContent).toBe('0')
-    expect(screen.getByText('star shards').previousSibling?.textContent).toBe('0')
+    expect(screen.getByText('Module complete')).toBeTruthy()
+    expect(screen.getByText('lessons completed').previousSibling?.textContent).toBe('5')
+    expect(screen.queryByText('XP earned')).toBeNull()
+    expect(screen.queryByText('star shards')).toBeNull()
     await waitFor(() => {
       const stored = JSON.parse(window.localStorage.getItem(progressKey) ?? '{}')
       expect(stored.xp).toBe(progressBeforeReplay.xp)
@@ -696,7 +714,7 @@ describe('beginner lesson interactions', () => {
 
     render(<App />)
 
-    expect(await screen.findByRole('heading', { name: 'Practice what you have learned' })).toBeTruthy()
+    expect(await screen.findByRole('heading', { name: 'Finish a module to use Practice' })).toBeTruthy()
     expect((await screen.findByRole('link', { name: 'Start your first lesson' })).getAttribute('href')).toBe(
       '/learn/python-foundations/py-first-spark/py-console',
     )
@@ -722,13 +740,43 @@ describe('beginner lesson interactions', () => {
 
     render(<App />)
 
-    expect(screen.getByRole('heading', { name: 'Nothing is due yet' })).toBeTruthy()
-    expect(screen.getByRole('link', { name: 'See how practice works' }).getAttribute('href')).toBe('/practice/python')
+    expect(screen.getByRole('heading', { name: 'Nothing to review yet' })).toBeTruthy()
+    expect(screen.getByRole('link', { name: 'Open practice' }).getAttribute('href')).toBe('/practice/python')
 
     fireEvent.change(screen.getByRole('combobox'), { target: { value: 'java' } })
 
-    expect(await screen.findByRole('heading', { name: /concepts? (?:is|are) ready/iu })).toBeTruthy()
-    expect(screen.getByRole('link', { name: 'Start a short review' }).getAttribute('href')).toBe('/practice/java')
+    expect(await screen.findByRole('heading', { name: /ideas? (?:is|are) ready/iu })).toBeTruthy()
+    expect(screen.getByRole('link', { name: 'Start practice' }).getAttribute('href')).toBe('/practice/java')
+  })
+
+  it('counts review concepts from the published continuing-course manifest', () => {
+    storeTestProgress({
+      ...initialProgress('python'),
+      callsign: 'Review Cadet',
+      onboardingComplete: true,
+      completedMissions: [practicalPythonFirstMissionId],
+    })
+    window.history.replaceState({}, '', '/home')
+
+    render(<App />)
+
+    expect(screen.getByRole('heading', { name: '3 ideas are ready' })).toBeTruthy()
+    expect(screen.getByRole('link', { name: 'Start practice' }).getAttribute('href')).toBe('/practice/python')
+  })
+
+  it('does not count compatibility-only C++ identifiers as published review material', () => {
+    storeTestProgress({
+      ...initialProgress('cpp'),
+      callsign: 'Compatibility Cadet',
+      onboardingComplete: true,
+      completedMissions: ['cpp-records-return-values'],
+    })
+    window.history.replaceState({}, '', '/home')
+
+    render(<App />)
+
+    expect(screen.getByRole('heading', { name: 'Nothing to review yet' })).toBeTruthy()
+    expect(screen.queryByText(/Practical C\+\+/iu)).toBeNull()
   })
 
   it('restores a frozen practice queue at its bookmarkable step URL after remount', async () => {
@@ -762,14 +810,14 @@ describe('beginner lesson interactions', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Continue' }))
 
     expect(window.location.pathname).toBe('/practice/java/session/2')
-    expect(await screen.findByRole('heading', { name: 'Read the galley count' })).toBeTruthy()
+    expect(await screen.findByRole('heading', { name: 'Predict what the code displays' })).toBeTruthy()
     expect(screen.getByRole('progressbar', { name: 'Practice progress' }).getAttribute('aria-valuetext')).toBe('Question 2 of 2')
 
     firstRender.unmount()
     render(<App />)
 
-    expect(await screen.findByRole('heading', { name: 'Read the galley count' })).toBeTruthy()
-    expect(screen.getByText('PRACTICE · QUESTION 2 OF 2')).toBeTruthy()
+    expect(await screen.findByRole('heading', { name: 'Predict what the code displays' })).toBeTruthy()
+    expect(screen.getByText('Practice, question 2 of 2')).toBeTruthy()
   })
 
   it('does not let a direct or legacy practice route unlock unfinished material', async () => {
@@ -782,7 +830,7 @@ describe('beginner lesson interactions', () => {
     window.history.replaceState({}, '', '/practice/python/missions/py-first-spark?concepts=python-console')
     render(<App />)
 
-    expect(await screen.findByRole('heading', { name: 'Complete First Spark before reviewing it' })).toBeTruthy()
+    expect(await screen.findByRole('heading', { name: 'Complete Code and variables before reviewing it' })).toBeTruthy()
   })
 
   it('rejects unknown and mixed legacy practice concepts instead of broadening the review', () => {
@@ -795,12 +843,12 @@ describe('beginner lesson interactions', () => {
 
     window.history.replaceState({}, '', '/practice/java/missions/java-routing-orders?concepts=bogus')
     const unknownOnly = render(<App />)
-    expect(screen.getByRole('heading', { name: 'That page is not on the academy map' })).toBeTruthy()
+    expect(screen.getByRole('heading', { name: 'We could not find that page' })).toBeTruthy()
     unknownOnly.unmount()
 
     window.history.replaceState({}, '', '/practice/java/missions/java-routing-orders?concepts=java-booleans,bogus')
     render(<App />)
-    expect(screen.getByRole('heading', { name: 'That page is not on the academy map' })).toBeTruthy()
+    expect(screen.getByRole('heading', { name: 'We could not find that page' })).toBeTruthy()
   })
 
   it('restores a validated local progress backup from Settings', async () => {
@@ -859,7 +907,7 @@ describe('beginner lesson interactions', () => {
 
     render(<App />)
     fireEvent.click(screen.getByRole('link', { name: 'Settings' }))
-    expect(screen.getByText(/Saved project code and local check summaries stay/iu)).toBeTruthy()
+    expect(screen.getByText(/Saved project code and check summaries stay in this browser/iu)).toBeTruthy()
     fireEvent.click(screen.getByRole('button', { name: 'Reset learning progress' }))
 
     await waitFor(() => expect(window.location.pathname).toBe('/start'))
@@ -886,10 +934,14 @@ describe('beginner lesson interactions', () => {
     render(<App />)
     fireEvent.click(screen.getByRole('link', { name: 'Learner record' }))
 
-    expect(screen.getByRole('heading', { name: 'Course records' })).toBeTruthy()
+    expect(screen.getByRole('heading', { name: 'Courses' })).toBeTruthy()
+    expect(screen.getByText('5 courses. Practical Python progress is tracked separately from its beginner course.')).toBeTruthy()
     expect(await screen.findByLabelText('Python Foundations 100% complete')).toBeTruthy()
     expect(await screen.findByLabelText(`${practicalPythonTitle} 17% complete`)).toBeTruthy()
     expect(await screen.findByLabelText('Java Foundations 17% complete')).toBeTruthy()
+    const practicalRecord = screen.getByText(practicalPythonTitle, { selector: 'b' }).closest('article')
+    expect(practicalRecord).toBeTruthy()
+    expect(within(practicalRecord as HTMLElement).getByText('Continuing course')).toBeTruthy()
     const cppRecord = screen.getByText('C++ Foundations', { selector: 'b' }).closest('article')
     expect(cppRecord).toBeTruthy()
     fireEvent.click(within(cppRecord as HTMLElement).getByRole('button', { name: 'Start course' }))
@@ -918,11 +970,11 @@ describe('beginner lesson interactions', () => {
 
     render(<App />)
     fireEvent.click(screen.getByRole('link', { name: 'Settings' }))
-    const fifteenXp = screen.getByRole('button', { name: '15 XP' })
-    expect(fifteenXp.getAttribute('aria-pressed')).toBe('false')
-    fireEvent.click(fifteenXp)
+    const fifteenPoints = screen.getByRole('button', { name: '15 points' })
+    expect(fifteenPoints.getAttribute('aria-pressed')).toBe('false')
+    fireEvent.click(fifteenPoints)
 
-    expect(fifteenXp.getAttribute('aria-pressed')).toBe('true')
+    expect(fifteenPoints.getAttribute('aria-pressed')).toBe('true')
     expect(screen.getByText(/Missing it never locks a lesson/iu)).toBeTruthy()
     await waitFor(() => {
       const stored = JSON.parse(window.localStorage.getItem(progressKey) ?? '{}')
@@ -935,7 +987,7 @@ describe('beginner lesson interactions', () => {
     })
   })
 
-  it('asks before migrating guest progress and then synchronizes the chosen browser record', async () => {
+  it('asks before saving guest progress to the account', async () => {
     window.history.replaceState({}, '', '/settings')
     let savedBody: { revision: number; progress: ReturnType<typeof initialProgress> } | null = null
     const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
@@ -968,7 +1020,7 @@ describe('beginner lesson interactions', () => {
     expect(screen.queryByText(/Nothing will be overwritten/iu)).toBeNull()
     fireEvent.click(screen.getByRole('button', { name: 'Save progress to account' }))
 
-    expect(await screen.findByText(/Cadet Record synchronized at/iu)).toBeTruthy()
+    expect(await screen.findByText(/Progress saved to your account at/iu)).toBeTruthy()
     expect(savedBody).toMatchObject({
       revision: 0,
       progress: { callsign: 'Test Cadet', onboardingComplete: true },
@@ -1002,8 +1054,8 @@ describe('beginner lesson interactions', () => {
     vi.stubGlobal('fetch', fetchMock)
 
     render(<App />)
-    expect(await screen.findByRole('heading', { name: 'Choose which progress to continue' })).toBeTruthy()
-    fireEvent.click(screen.getByRole('button', { name: 'Use saved account' }))
+    expect(await screen.findByRole('heading', { name: 'Choose which progress to keep' })).toBeTruthy()
+    fireEvent.click(screen.getByRole('button', { name: 'Use progress saved to account' }))
     fireEvent.click(screen.getByRole('link', { name: /Learner record for cloud-cadet/iu }))
 
     expect(await screen.findByRole('heading', { name: 'Cloud Cadet' })).toBeTruthy()
@@ -1011,7 +1063,7 @@ describe('beginner lesson interactions', () => {
     expect(fetchMock.mock.calls.filter(([, init]) => init?.method === 'PUT')).toHaveLength(0)
   })
 
-  it('deletes only the synchronized account record and keeps the browser copy', async () => {
+  it('deletes only progress saved to the account and keeps the browser copy', async () => {
     window.history.replaceState({}, '', '/settings')
     const localProgress = {
       ...initialProgress('python'),
@@ -1038,10 +1090,10 @@ describe('beginner lesson interactions', () => {
     vi.spyOn(window, 'confirm').mockReturnValue(true)
 
     render(<App />)
-    expect(await screen.findByText(/Cadet Record synchronized at/iu)).toBeTruthy()
-    fireEvent.click(screen.getByRole('button', { name: 'Delete account learning data' }))
+    expect(await screen.findByText(/Progress saved to your account at/iu)).toBeTruthy()
+    fireEvent.click(screen.getByRole('button', { name: 'Delete saved account progress' }))
 
-    expect(await screen.findByText(/Account learning data deleted/iu)).toBeTruthy()
+    expect(await screen.findByText(/Saved account progress deleted/iu)).toBeTruthy()
     const deleteCall = fetchMock.mock.calls.find(([, init]) => init?.method === 'DELETE')
     expect(deleteCall?.[1]).toMatchObject({ method: 'DELETE', credentials: 'same-origin' })
     expect(String(deleteCall?.[1]?.body)).toContain('DELETE MY LEARNING DATA')
@@ -1053,7 +1105,7 @@ describe('beginner lesson interactions', () => {
 
     render(<App />)
 
-    expect(screen.getByRole('heading', { name: 'The code academy for absolute beginners' })).toBeTruthy()
+    expect(screen.getByRole('heading', { name: 'Learn Python, C++, C#, or Java from the beginning' })).toBeTruthy()
     expect(screen.getByRole('link', { name: 'Continue as Test Cadet' }).getAttribute('href')).toBe('/home')
     expect(screen.queryByRole('heading', { name: 'Welcome back, Test Cadet.' })).toBeNull()
     expect(document.title).toBe('SeePoundCoffeePie | Programming from the beginning.')
@@ -1069,6 +1121,7 @@ describe('beginner lesson interactions', () => {
     expect(screen.getByRole('link', { name: /Continue lesson/iu }).getAttribute('href')).toBe(
       '/learn/python-foundations/py-first-spark/py-console',
     )
+    expect(screen.getByRole('heading', { name: 'Your courses' })).toBeTruthy()
     expect(screen.getByRole('link', { name: /Browse all courses/iu }).getAttribute('href')).toBe('/courses')
     expect(document.title).toBe('Learning Home | SeePoundCoffeePie')
   })
@@ -1105,7 +1158,7 @@ describe('beginner lesson interactions', () => {
     render(<App />)
 
     expect(screen.getByText('Continue your project')).toBeTruthy()
-    expect(screen.getByText('1 of 12 checkpoints complete. Your browser saved the code for your next small step.')).toBeTruthy()
+    expect(screen.getByText('1 of 12 project steps complete. Your browser saved the code for your next step.')).toBeTruthy()
     expect(screen.getByRole('link', { name: /Continue project/iu }).getAttribute('href')).toBe(
       '/projects/python/first-interactive-program/project-py-string',
     )
@@ -1127,7 +1180,7 @@ describe('beginner lesson interactions', () => {
     const practicalHeading = screen.getByRole('heading', { name: practicalPythonTitle })
     const practicalPanel = practicalHeading.closest('section')
     expect(practicalPanel).toBeTruthy()
-    expect(screen.getByText('Functions that return answers is the next module in your practical Python path.')).toBeTruthy()
+    expect(screen.getByText('Next module: Functions that return answers.')).toBeTruthy()
     expect(within(practicalPanel as HTMLElement).getByRole('link', { name: /Start course/iu }).getAttribute('href')).toBe(
       practicalPythonFirstLessonPath,
     )
@@ -1164,13 +1217,14 @@ describe('beginner lesson interactions', () => {
     expect(within(courseGrid).getByRole('heading', { name: 'C# Foundations' })).toBeTruthy()
     expect(within(courseGrid).getByRole('heading', { name: 'Java Foundations' })).toBeTruthy()
     expect(within(courseGrid).getByRole('heading', { name: practicalPythonTitle })).toBeTruthy()
+    expect(screen.getByText('The 4 foundation courses start from the beginning. Practical Python lists the earlier work you need before starting. Your progress is saved separately for each course.')).toBeTruthy()
     expect(screen.getAllByRole('link', { name: /^Start course/iu }).map((link) => link.getAttribute('href'))).toEqual([
       '/courses/python-foundations',
       '/courses/cpp-foundations',
       '/courses/csharp-foundations',
       '/courses/java-foundations',
     ])
-    expect(screen.getByRole('link', { name: /^View prerequisites/iu }).getAttribute('href')).toBe(
+    expect(screen.getByRole('link', { name: /^View course/iu }).getAttribute('href')).toBe(
       practicalPythonCoursePath,
     )
     expect(document.title).toBe('Courses | SeePoundCoffeePie')
@@ -1183,11 +1237,11 @@ describe('beginner lesson interactions', () => {
 
     const practicalCard = screen.getByRole('heading', { name: practicalPythonTitle }).closest('article')
     expect(practicalCard).toBeTruthy()
-    expect(within(practicalCard as HTMLElement).getByText('Complete the prerequisites to start')).toBeTruthy()
+    expect(within(practicalCard as HTMLElement).getByText('Complete the items below to start')).toBeTruthy()
     for (const label of practicalPythonPrerequisiteLabels) {
       expect(within(practicalCard as HTMLElement).getByText(label)).toBeTruthy()
     }
-    expect(within(practicalCard as HTMLElement).getByRole('link', { name: /^View prerequisites/iu }).getAttribute('href')).toBe(
+    expect(within(practicalCard as HTMLElement).getByRole('link', { name: /^View course/iu }).getAttribute('href')).toBe(
       practicalPythonCoursePath,
     )
   })
@@ -1227,7 +1281,9 @@ describe('beginner lesson interactions', () => {
       })
       window.history.replaceState({}, '', practicalPythonFirstLessonPath)
 
-      render(<App />)
+      await act(async () => {
+        render(<App />)
+      })
 
       const expectedHeading = unlocked
         ? practicalPythonFirstLessonTitle
@@ -1256,15 +1312,15 @@ describe('beginner lesson interactions', () => {
 
     const courseHeading = await screen.findByRole('heading', { level: 1, name: practicalPythonTitle })
     expect(courseHeading).toBeTruthy()
-    expect(screen.getByText('Finish both prerequisites to start')).toBeTruthy()
-    expect(screen.getByRole('heading', { name: 'Two earlier steps make this course feel gentle' })).toBeTruthy()
+    expect(screen.getByText('Complete both items below to start')).toBeTruthy()
+    expect(screen.getByRole('heading', { name: 'Complete these first' })).toBeTruthy()
     for (const label of practicalPythonPrerequisiteLabels) {
       expect(screen.getByText(label)).toBeTruthy()
     }
-    const outline = screen.getByRole('region', { name: 'What you will learn' })
+    const outline = screen.getByRole('region', { name: 'Modules' })
     expect(within(outline).getAllByRole('button')).toHaveLength(6)
     expect(within(outline).getByRole('button', { name: /Functions that return answers/iu })).toBeTruthy()
-    expect(within(outline).getByRole('button', { name: /Supply Tracker capstone/iu })).toBeTruthy()
+    expect(within(outline).getByRole('button', { name: /Build a Supply Tracker/iu })).toBeTruthy()
     await waitFor(() => {
       expect(document.title).toBe(`${practicalPythonTitle} | SeePoundCoffeePie`)
       expect(document.activeElement).toBe(courseHeading)
@@ -1325,7 +1381,7 @@ describe('beginner lesson interactions', () => {
     )
   })
 
-  it('lists the released Python, C++, C#, and Java projects with canonical catalog links', () => {
+  it('keeps projects out of All courses and shows both project collections after selecting Projects', () => {
     window.history.replaceState({}, '', '/courses')
 
     render(<App />)
@@ -1334,7 +1390,17 @@ describe('beginner lesson interactions', () => {
     expect(screen.getByRole('button', { name: 'Open navigation' }).getAttribute('aria-controls')).toBe('primary-navigation')
     expect(screen.getByRole('button', { name: 'Open navigation' }).getAttribute('aria-expanded')).toBe('false')
     expect(screen.getByRole('button', { name: 'All courses' }).getAttribute('aria-pressed')).toBe('true')
-    expect(screen.getByRole('button', { name: 'Guided projects' })).toBeTruthy()
+    expect(screen.getByRole('region', { name: 'Courses' })).toBeTruthy()
+    expect(screen.queryByRole('region', { name: 'Projects' })).toBeNull()
+    expect(screen.queryByRole('link', { name: /Your First Interactive Program/iu })).toBeNull()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Projects' }))
+
+    expect(screen.getByRole('button', { name: 'Projects' }).getAttribute('aria-pressed')).toBe('true')
+    expect(screen.queryByRole('region', { name: 'Courses' })).toBeNull()
+    const projects = screen.getByRole('region', { name: 'Projects' })
+    expect(within(projects).getAllByRole('link')).toHaveLength(8)
+    expect(within(projects).getAllByText(/final project$/iu)).toHaveLength(4)
     expect(screen.getByRole('link', { name: /Your First Interactive Program/iu }).getAttribute('href')).toBe(
       '/projects/python/first-interactive-program',
     )
@@ -1355,6 +1421,9 @@ describe('beginner lesson interactions', () => {
     render(<App />)
 
     expect(screen.getByRole('heading', { name: 'C++ Foundations' })).toBeTruthy()
+    expect(screen.getByRole('region', { name: 'Modules' })).toBeTruthy()
+    expect(screen.queryByText('Course outline')).toBeNull()
+    expect(screen.queryByRole('heading', { name: 'What you will learn' })).toBeNull()
     expect(screen.getByRole('heading', { name: cppCompiledProject.title })).toBeTruthy()
     expect(screen.getByText(/downloadable C\+\+ source file/iu)).toBeTruthy()
     expect(screen.getByRole('link', { name: /Preview project/iu }).getAttribute('href')).toBe(
@@ -1382,7 +1451,7 @@ describe('beginner lesson interactions', () => {
 
     expect(await screen.findByRole('heading', { name: 'Your First Interactive Program' })).toBeTruthy()
     expect(screen.getByRole('heading', {
-      name: 'Finish Python Foundations, then build without training wheels.',
+      name: 'Complete Python Foundations to start this project.',
     })).toBeTruthy()
     expect(screen.queryByRole('textbox', { name: 'Project code editor' })).toBeNull()
     expect(screen.getByRole('progressbar', { name: 'Project progress' }).getAttribute('aria-valuenow')).toBe('0')
@@ -1399,7 +1468,7 @@ describe('beginner lesson interactions', () => {
 
     expect(await screen.findByRole('heading', { name: cppCompiledProject.title })).toBeTruthy()
     expect(screen.getByRole('heading', {
-      name: 'Finish C++ Foundations, then build a complete compiled program.',
+      name: 'Complete C++ Foundations to start this project.',
     })).toBeTruthy()
     expect(screen.queryByRole('textbox', { name: 'Project code editor' })).toBeNull()
     expect(screen.getByRole('link', { name: /Continue C\+\+ Foundations/iu }).getAttribute('href')).toBe(
@@ -1429,20 +1498,20 @@ describe('beginner lesson interactions', () => {
     )
     const completion = screen.getByRole('progressbar', { name: 'Project completion' })
     expect(completion.getAttribute('aria-valuenow')).toBe('0')
-    expect(completion.getAttribute('aria-valuetext')).toBe('0 of 12 checkpoints complete')
-    expect(screen.getByText('Checkpoint 1 of 12')).toBeTruthy()
-    const checkpointNavigation = screen.getByRole('navigation', { name: 'Project checkpoints' })
+    expect(completion.getAttribute('aria-valuetext')).toBe('0 of 12 steps complete')
+    expect(screen.getByText('Step 1 of 12')).toBeTruthy()
+    const checkpointNavigation = screen.getByRole('navigation', { name: 'Project steps' })
     expect(within(checkpointNavigation).getAllByRole('listitem')).toHaveLength(12)
-    expect(screen.getByRole('link', { name: /Checkpoint 1: Let the program speak.*Current checkpoint, not complete/iu }).getAttribute('aria-current')).toBe('step')
-    expect(screen.getByText(/Checkpoint 2: Recognize the text\. Locked\./iu)).toBeTruthy()
+    expect(screen.getByRole('link', { name: /Step 1: Let the program speak.*Current step, not complete/iu }).getAttribute('aria-current')).toBe('step')
+    expect(screen.getByText(/Step 2: Recognize the text\. Locked\./iu)).toBeTruthy()
 
     const editor = screen.getByRole('textbox', { name: 'Project code editor' })
     expect(editor.getAttribute('aria-keyshortcuts')).toBe('Control+Enter Meta+Enter')
     expect(screen.getByRole('button', { name: 'Run' })).toBeTruthy()
-    expect(screen.getByRole('button', { name: 'Reset checkpoint' })).toBeTruthy()
+    expect(screen.getByRole('button', { name: 'Reset code' })).toBeTruthy()
     expect(screen.getByRole('button', { name: 'Download .py' })).toBeTruthy()
-    expect(screen.getByRole('button', { name: /Check checkpoint/iu })).toBeTruthy()
-    expect(screen.getByLabelText('Program console')).toBeTruthy()
+    expect(screen.getByRole('button', { name: /Check work/iu })).toBeTruthy()
+    expect(screen.getByLabelText('Program output')).toBeTruthy()
     expect(screen.getByText('I need a hint', { selector: 'summary' })).toBeTruthy()
 
     fireEvent.change(editor, { target: { value: 'print("Coffee counter ready.")' } })
@@ -1450,11 +1519,11 @@ describe('beginner lesson interactions', () => {
     await waitFor(() => expect(vi.mocked(runExercise)).toHaveBeenCalled())
     expect(completion.getAttribute('aria-valuenow')).toBe('0')
 
-    fireEvent.click(screen.getByRole('button', { name: /Check checkpoint/iu }))
-    expect(await screen.findByText('Checkpoint complete')).toBeTruthy()
+    fireEvent.click(screen.getByRole('button', { name: /Check work/iu }))
+    expect(await screen.findByText('Step complete')).toBeTruthy()
     await waitFor(() => {
       expect(completion.getAttribute('aria-valuenow')).toBe('8')
-      expect(completion.getAttribute('aria-valuetext')).toBe('1 of 12 checkpoints complete')
+      expect(completion.getAttribute('aria-valuetext')).toBe('1 of 12 steps complete')
     })
   })
 
@@ -1471,7 +1540,7 @@ describe('beginner lesson interactions', () => {
     render(<App />)
 
     expect(await screen.findByRole('heading', { level: 1, name: 'Send one clear line' })).toBeTruthy()
-    expect(screen.getByText('C++ project studio')).toBeTruthy()
+    expect(screen.getByText(cppCompiledProject.title)).toBeTruthy()
     expect(screen.getByText('observation-desk.cpp')).toBeTruthy()
     expect(screen.getByRole('button', { name: 'Download .cpp' })).toBeTruthy()
     expect(screen.getByRole('link', { name: 'Back to project overview' }).getAttribute('href')).toBe(
@@ -1518,7 +1587,7 @@ describe('beginner lesson interactions', () => {
     expect(screen.getByText(/Look at the end of the output statement and add one semicolon\./u)).toBeTruthy()
     expect(screen.getByText('Look near line 4')).toBeTruthy()
     expect(screen.getByText("Show the language's exact message", { selector: 'summary' })).toBeTruthy()
-    expect(screen.getByLabelText('Program console').textContent).not.toContain('mission.cpp')
+    expect(screen.getByLabelText('Program output').textContent).not.toContain('mission.cpp')
   })
 
   it('falls back to the project overview when a known checkpoint is not available yet', async () => {
@@ -1545,8 +1614,8 @@ describe('beginner lesson interactions', () => {
 
     render(<App />)
 
-    expect(screen.getByRole('heading', { name: 'That page is not on the academy map' })).toBeTruthy()
-    expect(screen.getByRole('link', { name: 'Return to your learning home' }).getAttribute('href')).toBe('/home')
+    expect(screen.getByRole('heading', { name: 'We could not find that page' })).toBeTruthy()
+    expect(screen.getByRole('link', { name: 'Go to learning home' }).getAttribute('href')).toBe('/home')
     expect(screen.queryByRole('textbox', { name: 'Project code editor' })).toBeNull()
   })
 
@@ -1579,7 +1648,7 @@ describe('beginner lesson interactions', () => {
     expect(screen.getByRole('heading', { name: 'Java Foundations' })).toBeTruthy()
     expect((screen.getByRole('combobox', { name: 'Active language' }) as HTMLSelectElement).value).toBe('java')
     expect(screen.getByRole('link', { name: 'Practice' }).getAttribute('href')).toBe('/practice/java')
-    expect(screen.getByRole('link', { name: 'Codebook' }).getAttribute('href')).toBe('/codebook/java')
+    expect(screen.getByRole('link', { name: 'Code reference' }).getAttribute('href')).toBe('/codebook/java')
     expect(window.location.pathname).toBe('/courses/java-foundations')
     await waitFor(() => {
       expect(JSON.parse(window.localStorage.getItem(progressKey) ?? '{}').activeLanguage).toBe('python')
@@ -1601,7 +1670,7 @@ describe('beginner lesson interactions', () => {
     expect(await screen.findByRole('heading', { name: 'Python Foundations' })).toBeTruthy()
     expect((screen.getByRole('combobox', { name: 'Active language' }) as HTMLSelectElement).value).toBe('python')
     expect(screen.getByRole('link', { name: 'Practice' }).getAttribute('href')).toBe('/practice/python')
-    expect(screen.getByRole('link', { name: 'Codebook' }).getAttribute('href')).toBe('/codebook/python')
+    expect(screen.getByRole('link', { name: 'Code reference' }).getAttribute('href')).toBe('/codebook/python')
   })
 
   it('loads Settings directly and gives every main section a real URL', () => {
@@ -1609,12 +1678,18 @@ describe('beginner lesson interactions', () => {
 
     render(<App />)
 
-    expect(screen.getByRole('heading', { name: 'Academy settings' })).toBeTruthy()
+    expect(screen.getByRole('heading', { name: 'Settings' })).toBeTruthy()
+    expect(screen.queryByText('Settings', { selector: '.kicker' })).toBeNull()
+    expect(screen.getByRole('heading', { name: 'Daily goal' })).toBeTruthy()
+    expect(screen.getByRole('heading', { name: 'Progress backup' })).toBeTruthy()
+    expect(screen.getByText(/A backup is a small \.json text file/iu)).toBeTruthy()
+    expect(screen.getByRole('button', { name: 'Download backup file' })).toBeTruthy()
+    expect(screen.getByRole('button', { name: 'Restore from file' })).toBeTruthy()
     expect(document.title).toBe('Settings | SeePoundCoffeePie')
     expect(screen.getByRole('link', { name: 'Home' }).getAttribute('href')).toBe('/home')
     expect(screen.getByRole('link', { name: 'Courses' }).getAttribute('href')).toBe('/courses')
     expect(screen.getByRole('link', { name: 'Practice' }).getAttribute('href')).toBe('/practice/python')
-    expect(screen.getByRole('link', { name: 'Codebook' }).getAttribute('href')).toBe('/codebook/python')
+    expect(screen.getByRole('link', { name: 'Code reference' }).getAttribute('href')).toBe('/codebook/python')
     expect(screen.getByRole('link', { name: 'Learner record' }).getAttribute('href')).toBe('/profile')
     expect(screen.getByRole('link', { name: 'Settings' }).getAttribute('href')).toBe('/settings')
   })
@@ -1624,10 +1699,15 @@ describe('beginner lesson interactions', () => {
 
     render(<App />)
 
-    expect(await screen.findByRole('heading', { level: 1, name: 'Cadet codebook' })).toBeTruthy()
-    expect(screen.getByRole('searchbox', { name: 'Search the codebook' })).toBeTruthy()
+    expect(await screen.findByRole('heading', { level: 1, name: 'Code reference' })).toBeTruthy()
+    const codebookSearch = screen.getByRole('searchbox', { name: 'Search the code reference' })
+    expect(codebookSearch).toBeTruthy()
+    expect(screen.getByText(/Showing \d+ of \d+ definitions/iu)).toBeTruthy()
+    fireEvent.change(codebookSearch, { target: { value: 'return value' } })
     expect(screen.getByRole('heading', { name: 'Return value' })).toBeTruthy()
-    expect(document.title).toBe('Python Codebook | SeePoundCoffeePie')
+    expect(screen.getByText(/\d+ of \d+ available/iu)).toBeTruthy()
+    expect(screen.queryByText(/EXAMPLE LOCKED/iu)).toBeNull()
+    expect(document.title).toBe('Python Code reference | SeePoundCoffeePie')
   })
 
   it('opens a bookmarked language school and keeps that school active', async () => {
@@ -1677,10 +1757,10 @@ describe('beginner lesson interactions', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Check answer' }))
     fireEvent.click(screen.getByRole('button', { name: 'Continue' }))
 
-    expect(await screen.findByRole('heading', { name: 'Send your first signal' })).toBeTruthy()
+    expect(await screen.findByRole('heading', { name: 'Print your first message' })).toBeTruthy()
     expect(window.location.pathname).toBe('/learn/python-foundations/py-first-spark/py-print')
     await waitFor(() => {
-      expect(document.title).toBe('Send your first signal | SeePoundCoffeePie')
+      expect(document.title).toBe('Print your first message | SeePoundCoffeePie')
     })
   })
 

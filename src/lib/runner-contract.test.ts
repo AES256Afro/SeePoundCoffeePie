@@ -63,7 +63,7 @@ describe('isolated runner request contract', () => {
     })
 
     expect(result).toMatchObject({ ok: false, issue: 'unexpected_field' })
-    if (!result.ok) expect(result.message).toContain('selected by the runner')
+    if (!result.ok) expect(result.message).toContain('code checker chooses')
   })
 
   it('measures source and input limits as UTF-8 bytes', () => {

@@ -6,6 +6,23 @@ const expectedTitle = '<title>SeePoundCoffeePie | Programming from the beginning
 const socialImageUrl = 'https://seepoundcoffeepie.com/social-card-v7.jpg'
 const practicalPythonCourseUrl = 'https://seepoundcoffeepie.com/courses/python-data-tools'
 const practicalPythonLessonUrl = 'https://seepoundcoffeepie.com/learn/python-data-tools/py-data-return-values/pydata1-retrieve-call'
+const unpublishedCppCoursePath = '/courses/cpp-collections-records'
+const unpublishedCppLessonPrefix = '/learn/cpp-collections-records/'
+const unpublishedCppLessonPath = '/learn/cpp-collections-records/cpp-records-return-values/cpprecords1-retrieve-call'
+const unpublishedCppEditableLessonIds = [
+  'cpprecords1-fix-return',
+  'cpprecords1-part-total',
+  'cpprecords2-fix-push-back',
+  'cpprecords2-add-parts',
+  'cpprecords3-fix-field-access',
+  'cpprecords3-build-part-record',
+  'cpprecords4-fix-copy-update',
+  'cpprecords4-restock-part',
+  'cpprecords5-fix-total-reset',
+  'cpprecords5-low-stock',
+  'cpprecords6-fix-low-stock-check',
+  'cpprecords6-workshop-stock-report',
+]
 
 async function requestWithFreshDns(input, init = {}) {
   try {
@@ -21,6 +38,7 @@ async function requestWithFreshDns(input, init = {}) {
     return await new Promise((resolve, reject) => {
       const request = httpsRequest(url, {
         method: init.method ?? 'GET',
+        headers: init.headers,
         lookup: (_hostname, options, callback) => {
           if (options?.all) {
             callback(null, [{ address, family: 4 }])
@@ -48,6 +66,7 @@ async function requestWithFreshDns(input, init = {}) {
         })
       })
       request.on('error', reject)
+      if (init.body !== undefined) request.write(init.body)
       request.end()
     })
   }
@@ -80,7 +99,13 @@ if (
   throw new Error('The deployed application entry does not contain the Practical Python course registry')
 }
 
-async function verifyPracticalPythonAsset(pattern, marker, label) {
+for (const unpublishedRouteMarker of [unpublishedCppCoursePath, unpublishedCppLessonPrefix]) {
+  if (entryAsset.includes(unpublishedRouteMarker)) {
+    throw new Error(`The deployed application entry publicly registers the unpublished C++ route ${unpublishedRouteMarker}`)
+  }
+}
+
+async function verifyPracticalPythonAsset(pattern, markers, label) {
   const assetPath = entryAsset.match(pattern)?.[0]
   if (!assetPath) {
     throw new Error(`The deployed application entry does not reference the ${label}`)
@@ -88,10 +113,11 @@ async function verifyPracticalPythonAsset(pattern, marker, label) {
 
   const assetResponse = await requestWithFreshDns(new URL(assetPath, canonical), { redirect: 'manual' })
   const asset = await assetResponse.text()
+  const acceptedMarkers = Array.isArray(markers) ? markers : [markers]
   if (
     assetResponse.status !== 200
     || !(assetResponse.headers.get('content-type') ?? '').includes('javascript')
-    || !asset.includes(marker)
+    || !acceptedMarkers.some((marker) => asset.includes(marker))
   ) {
     throw new Error(`The deployed ${label} is missing or does not match Phase 5A`)
   }
@@ -99,7 +125,7 @@ async function verifyPracticalPythonAsset(pattern, marker, label) {
 
 await verifyPracticalPythonAsset(
   /assets\/PythonDataToolsRoute-[A-Za-z0-9_-]+\.js/u,
-  'python-data-tools-course-',
+  ['Course complete.', 'python-data-tools-course-'],
   'Practical Python route asset',
 )
 await verifyPracticalPythonAsset(
@@ -117,6 +143,73 @@ if (
   || !sitemap.includes(`<loc>${practicalPythonLessonUrl}</loc>`)
 ) {
   throw new Error('The live sitemap does not publish the Practical Python course and first lesson')
+}
+
+for (const unpublishedRoutePrefix of [unpublishedCppCoursePath, unpublishedCppLessonPrefix]) {
+  const unpublishedUrlPrefix = new URL(unpublishedRoutePrefix, canonical).href
+  if (sitemap.includes(`<loc>${unpublishedUrlPrefix}`)) {
+    throw new Error(`The live sitemap publishes an unpublished C++ route under ${unpublishedRoutePrefix}`)
+  }
+}
+
+for (const unpublishedRoute of [unpublishedCppCoursePath, unpublishedCppLessonPath]) {
+  // Static hosting returns the application shell for unknown browser paths.
+  // The route stays private when the shell has no route registration and the
+  // sitemap does not publish it.
+  const unpublishedUrl = new URL(unpublishedRoute, canonical)
+  const unpublishedResponse = await requestWithFreshDns(unpublishedUrl, { redirect: 'manual' })
+  const unpublishedBody = await unpublishedResponse.text()
+  if (
+    unpublishedResponse.status !== 200
+    || !unpublishedBody.includes(expectedTitle)
+    || !unpublishedBody.includes('<div id="root"></div>')
+  ) {
+    throw new Error(`The unpublished C++ path did not remain behind the ordinary application fallback: ${unpublishedRoute}`)
+  }
+}
+
+const grantUrl = new URL('/api/runner/grants', canonical)
+const grantOrigin = new URL(canonical).origin
+let hiddenGrantCheck = 'runner assignments rejected'
+for (const exerciseId of unpublishedCppEditableLessonIds) {
+  const grantResponse = await requestWithFreshDns(grantUrl, {
+    method: 'POST',
+    redirect: 'manual',
+    headers: {
+      Origin: grantOrigin,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ exerciseId }),
+  })
+  const grantBody = await grantResponse.text()
+  let grantResult
+  try {
+    grantResult = JSON.parse(grantBody)
+  } catch {
+    throw new Error(`The runner returned unreadable JSON while checking unpublished exercise ${exerciseId}`)
+  }
+
+  const rejectedAsUnpublished = grantResponse.status === 404
+    && [
+      'That exercise does not support live execution.',
+      'This page does not have a code check yet.',
+    ].includes(grantResult?.error)
+  const runnerClosed = grantResponse.status === 503
+    && [
+      'Live code execution is not configured.',
+      'Live code execution is temporarily paused.',
+      'The code checker is not available right now. Try again later.',
+      'The code checker is paused right now. Try again later.',
+    ].includes(grantResult?.error)
+
+  if (
+    (!rejectedAsUnpublished && !runnerClosed)
+    || typeof grantResult?.grant === 'string'
+    || grantResponse.headers.has('set-cookie')
+  ) {
+    throw new Error(`The unpublished C++ exercise ${exerciseId} crossed the public run-grant boundary`)
+  }
+  if (runnerClosed) hiddenGrantCheck = 'no grants issued while the code checker was closed'
 }
 
 const robotsResponse = await requestWithFreshDns(new URL('/robots.txt', canonical), { redirect: 'manual' })
@@ -221,4 +314,4 @@ for (const route of [...canonicalRoutes, ...legacyRoutes]) {
   }
 }
 
-console.log(`Live verification passed for Phase 5A assets, sitemap, robots, social previews, apex, www redirect, headers, ${canonicalRoutes.length} canonical routes, and ${legacyRoutes.length} legacy routes.`)
+console.log(`Live verification passed for Phase 5A assets, sitemap, robots, social previews, apex, www redirect, headers, ${canonicalRoutes.length} canonical routes, ${legacyRoutes.length} legacy routes, 2 unpublished C++ route boundaries, and ${unpublishedCppEditableLessonIds.length} unpublished C++ exercises (${hiddenGrantCheck}).`)

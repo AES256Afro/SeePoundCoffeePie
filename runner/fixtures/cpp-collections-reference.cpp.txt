@@ -1,0 +1,52 @@
+#include <iostream>
+#include <string>
+#include <vector>
+
+struct Part {
+    std::string name;
+    int quantity;
+};
+
+void restock(std::vector<Part>& parts, std::string name, int amount) {
+    for (Part& part : parts) {
+        if (part.name == name) {
+            part.quantity = part.quantity + amount;
+        }
+    }
+}
+
+int total_units(std::vector<Part> parts) {
+    int total = 0;
+    for (Part part : parts) {
+        total = total + part.quantity;
+    }
+    return total;
+}
+
+std::vector<std::string> low_stock(std::vector<Part> parts, int limit) {
+    std::vector<std::string> names;
+    for (Part part : parts) {
+        if (part.quantity < limit) {
+            names.push_back(part.name);
+        }
+    }
+    return names;
+}
+
+int main() {
+    std::vector<Part> parts = {
+        {"bolts", 4},
+        {"seals", 2},
+        {"cables", 7}
+    };
+
+    restock(parts, "bolts", 3);
+    restock(parts, "cables", 1);
+
+    std::cout << "Parts: " << parts.size() << "\n";
+    std::cout << "Total units: " << total_units(parts) << "\n";
+    for (std::string name : low_stock(parts, 3)) {
+        std::cout << "Low stock: " << name << "\n";
+    }
+    return 0;
+}

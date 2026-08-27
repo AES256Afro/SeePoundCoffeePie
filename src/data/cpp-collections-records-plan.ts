@@ -421,7 +421,7 @@ export const cppCollectionsRecordsPlan = {
     },
     {
       id: 'cpp-records-workshop-report',
-      title: 'Workshop Stock Report capstone',
+      title: 'Build the Workshop Stock Report',
       purpose: 'Retrieve and assemble familiar return, vector, struct, reference, total, and filter shapes.',
       lessons: [
         lesson(

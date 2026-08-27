@@ -5,7 +5,6 @@ import { trackById } from './data/curriculum'
 import { loadProjectDraft } from './lib/project-drafts'
 import {
   createPortfolioExport,
-  PORTFOLIO_INTEGRITY_NOTE,
   type PortfolioSnapshot,
 } from './lib/portfolio-export'
 import { projectPath } from './lib/routes'
@@ -17,6 +16,15 @@ interface PortfolioPageProps {
   onNavigate: (path: string) => void
   progress: LearnerProgress
   projectId: string
+}
+
+const portfolioIntegrityNote = 'This file is a project sample, not a certificate. It shows the displayed name and code currently saved in this browser. The code may have changed since the last project check. SeePoundCoffeePie has not verified the learner\'s identity, who wrote the code, whether the code is original, or whether it still works.'
+
+function preparationMessage(message: string): string {
+  return message
+    .replace('Add a callsign', 'Add a displayed name')
+    .replace('The callsign', 'The displayed name')
+    .replace('The final source', 'The saved code')
 }
 
 function PortfolioLink({
@@ -107,7 +115,7 @@ export function PortfolioPage({ language, onNavigate, progress, projectId }: Por
   const download = () => {
     setDownloadStatus('')
     if (!confirmed) {
-      setDownloadStatus('Review the current callsign and source, then select the confirmation box.')
+      setDownloadStatus('Review the displayed name and code, then select the confirmation box.')
       return
     }
     if (!prepared?.ok) {
@@ -122,24 +130,23 @@ export function PortfolioPage({ language, onNavigate, progress, projectId }: Por
     link.click()
     link.remove()
     window.setTimeout(() => URL.revokeObjectURL(url), 0)
-    setDownloadStatus(`Your browser started the download for ${prepared.filename}.`)
+    setDownloadStatus(`Your download started: ${prepared.filename}.`)
   }
 
   return (
     <main className="portfolio-page workshop-page">
       <PortfolioLink className="back-link" onNavigate={onNavigate} to="/profile">
-        <ArrowLeft size={16} /> Back to learner record
+        <ArrowLeft size={16} /> Back to profile
       </PortfolioLink>
 
       <header className="portfolio-hero">
         <div>
-          <p className="eyebrow">Portfolio preview</p>
-          <h1 ref={headingRef} tabIndex={-1}>{project.title} portfolio preview</h1>
-          <p>This page prepares a private, browser-local snapshot of one completed project. Nothing has been published.</p>
+          <h1 ref={headingRef} tabIndex={-1}>{project.title} portfolio</h1>
+          <p>Review and download a copy of this completed project. Your code is not published or uploaded from this page.</p>
         </div>
         <div className="portfolio-hero__identity">
           <FileCode2 aria-hidden="true" />
-          <span><small>Displayed callsign</small><b><bdi dir="auto">{progress.callsign}</bdi></b></span>
+          <span><small>Displayed name</small><b><bdi dir="auto">{progress.callsign}</bdi></b></span>
         </div>
       </header>
 
@@ -149,7 +156,7 @@ export function PortfolioPage({ language, onNavigate, progress, projectId }: Por
           <div>
             <p className="eyebrow">Project still in progress</p>
             <h2 id="portfolio-state-title">Finish the project before preparing a portfolio copy.</h2>
-            <p>{completion.completedCount} of {project.checkpoints.length} checkpoints are complete in this learner record. A draft or bookmark alone does not count as completion.</p>
+            <p>{completion.completedCount} of {project.checkpoints.length} steps are complete. A saved draft or bookmark does not finish a step.</p>
             <PortfolioLink className="primary-action" onNavigate={onNavigate} to={nextProjectPath}>
               {completion.completedCount > 0 ? 'Resume the project' : 'Open the project'} <ArrowRight size={17} />
             </PortfolioLink>
@@ -159,11 +166,11 @@ export function PortfolioPage({ language, onNavigate, progress, projectId }: Por
         <section className="portfolio-state" aria-labelledby="portfolio-state-title">
           <TriangleAlert aria-hidden="true" />
           <div>
-            <p className="eyebrow">Final source missing here</p>
-            <h2 id="portfolio-state-title">This browser has the completion record, but not the final source.</h2>
-            <p>Project source is intentionally not synchronized between browsers. Open the final checkpoint on the browser where you wrote the project, or add the source again here.</p>
+            <p className="eyebrow">Code not found in this browser</p>
+            <h2 id="portfolio-state-title">This browser knows the project is complete, but it does not have your final code.</h2>
+            <p>Project code is saved only in the browser where you wrote it. Open the final step there, or add the code again in this browser.</p>
             <PortfolioLink className="primary-action" onNavigate={onNavigate} to={nextProjectPath}>
-              Open the final checkpoint <ArrowRight size={17} />
+              Open the final step <ArrowRight size={17} />
             </PortfolioLink>
           </div>
         </section>
@@ -172,10 +179,10 @@ export function PortfolioPage({ language, onNavigate, progress, projectId }: Por
           <TriangleAlert aria-hidden="true" />
           <div>
             <p className="eyebrow">Portfolio copy unavailable</p>
-            <h2 id="portfolio-state-title">The current source needs attention first.</h2>
-            <p>{prepared.message}</p>
+            <h2 id="portfolio-state-title">Check your saved code first.</h2>
+            <p>{preparationMessage(prepared.message)}</p>
             <PortfolioLink className="primary-action" onNavigate={onNavigate} to={nextProjectPath}>
-              Review the final checkpoint <ArrowRight size={17} />
+              Review the final step <ArrowRight size={17} />
             </PortfolioLink>
           </div>
         </section>
@@ -184,9 +191,8 @@ export function PortfolioPage({ language, onNavigate, progress, projectId }: Por
           <section className="portfolio-local-notice" aria-labelledby="portfolio-local-title">
             <Shield aria-hidden="true" />
             <div>
-              <p className="eyebrow">Private preview</p>
-              <h2 id="portfolio-local-title">This route does not publish or transfer your source.</h2>
-              <p>Sharing or bookmarking this URL shares only the route. Another browser will not receive this source. The app can still check your private account session as it normally does, but the export action does not upload the source.</p>
+              <h2 id="portfolio-local-title">This page does not upload your code.</h2>
+              <p>Sharing or bookmarking this address does not share your code. Another browser cannot get the code from this page. The app may still check whether you are signed in, but downloading the portfolio page does not send your code anywhere.</p>
             </div>
           </section>
 
@@ -203,31 +209,37 @@ export function PortfolioPage({ language, onNavigate, progress, projectId }: Por
             </section>
 
             <section className="portfolio-source" aria-labelledby="portfolio-source-title">
-              <p className="eyebrow">Current final source</p>
+              <p className="eyebrow">Code to download</p>
               <h2 id="portfolio-source-title">{project.downloadFileName}</h2>
-              <p>This is the exact final-checkpoint source currently saved in this browser. It may be different from the source used during the last check.</p>
-              <pre aria-label={`Final source for ${project.downloadFileName}`}><code>{snapshot.source}</code></pre>
+              <p>This is the code currently saved for the final step in this browser. It may differ from the code used in your last check.</p>
+              <pre aria-label={`Code for ${project.downloadFileName}`}><code>{snapshot.source}</code></pre>
             </section>
           </div>
 
           <section className="portfolio-disclosure" aria-labelledby="portfolio-disclosure-title">
             <p className="eyebrow">Before you download</p>
-            <h2 id="portfolio-disclosure-title">Know exactly what leaves this browser.</h2>
+            <h2 id="portfolio-disclosure-title">Check what the file contains.</h2>
             <ul>
-              <li>The file includes the displayed callsign and the exact source shown above.</li>
-              <li>Comments and text inside source code can contain names, credentials, or other personal information. Review them first.</li>
-              <li>Anyone who receives the HTML file can read, copy, and redistribute it.</li>
-              <li>The app does not add your GitHub login, account email, access tokens, IP address, XP, streak, review schedule, console output, check history, or practice input. Your displayed callsign and source are included exactly as shown, so those values may themselves contain personal or sensitive information.</li>
-              <li>The download is a self-contained, script-free HTML file. The export action performs no upload.</li>
+              <li>The downloaded file includes the displayed name and exact code shown above.</li>
+              <li>Review comments and text in the code. They may contain a name, password, secret, or other personal information.</li>
+              <li>Anyone who receives the file can read, copy, and share it.</li>
             </ul>
-            <div className="portfolio-certificate-note"><TriangleAlert aria-hidden="true" /><p>{PORTFOLIO_INTEGRITY_NOTE}</p></div>
+            <details>
+              <summary>Technical privacy details</summary>
+              <ul>
+                <li>The app does not add your GitHub login, account email, access tokens, IP address, points, streak, review schedule, program output, check history, or practice answers.</li>
+                <li>Your displayed name and code are included exactly as shown, so they may contain personal or sensitive information.</li>
+                <li>The downloaded page is one HTML file with no scripts. Downloading it does not upload your code.</li>
+              </ul>
+            </details>
+            <div className="portfolio-certificate-note"><TriangleAlert aria-hidden="true" /><p>{portfolioIntegrityNote}</p></div>
             <label className="portfolio-confirmation">
               <input
                 checked={confirmed}
                 onChange={(event) => setReviewedKey(event.target.checked ? reviewKey : null)}
                 type="checkbox"
               />
-              <span>I reviewed the callsign and source above and understand that the file is not a certificate.</span>
+              <span>I reviewed the displayed name and code above and understand that the file is not a certificate.</span>
             </label>
             <button className="primary-action portfolio-download" disabled={!confirmed} onClick={download} type="button">
               <Download size={17} /> Download portfolio page

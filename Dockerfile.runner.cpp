@@ -22,8 +22,10 @@ RUN useradd --uid 10001 --no-create-home --home-dir /nonexistent --shell /usr/sb
     && chmod 0700 /workspace
 
 COPY runner/supervisor.py /opt/runner/supervisor.py
+COPY runner/CppCollectionsAnalyzer.py /opt/runner/CppCollectionsAnalyzer.py
 
 RUN chmod 0555 /opt/runner/supervisor.py \
+    && chmod 0500 /opt/runner/CppCollectionsAnalyzer.py \
     && find /opt/runner -type d -exec chmod 0555 {} + \
     && g++ --version | head -1 \
     && clang++-14 --version | head -1

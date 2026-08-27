@@ -812,7 +812,7 @@ describe('production Worker', () => {
       )
       expect(response.status, exerciseId).toBe(404)
       await expect(response.json()).resolves.toEqual({
-        error: 'That exercise does not support live execution.',
+        error: 'This page does not have a code check yet.',
       })
     }
     expect(runnerEnv.RUNNER_CONTROL.getByName).not.toHaveBeenCalled()
@@ -868,6 +868,23 @@ describe('production Worker', () => {
 
     expect(runResponse.status).toBe(200)
     await expect(runResponse.json()).resolves.toMatchObject({ status: 'queued' })
+
+    const unreadableResponse = await handleRequest(
+      new Request('https://seepoundcoffeepie.com/api/runner/runs', {
+        method: 'POST',
+        headers: {
+          ...originHeaders,
+          Cookie: `__Host-spp_runner_guest=${guestCookie}`,
+          'X-Runner-Grant': grantBody.grant,
+        },
+        body: 'not a code check',
+      }),
+      runnerEnv,
+    )
+    expect(unreadableResponse.status).toBe(400)
+    await expect(unreadableResponse.json()).resolves.toEqual({
+      error: 'The code checker could not read this run. Start the check again.',
+    })
     expect(coordinatorFetch).toHaveBeenCalledOnce()
   })
 
@@ -927,6 +944,9 @@ describe('production Worker', () => {
       runnerEnv,
     )
     expect(crossSite.status).toBe(403)
+    await expect(crossSite.json()).resolves.toEqual({
+      error: 'Reload this page before starting the check again.',
+    })
 
     const invalid = await handleRequest(
       new Request('https://seepoundcoffeepie.com/api/runner/runs', {
@@ -941,6 +961,9 @@ describe('production Worker', () => {
       runnerEnv,
     )
     expect(invalid.status).toBe(401)
+    await expect(invalid.json()).resolves.toEqual({
+      error: 'This check expired. Start the check again.',
+    })
     expect(coordinatorFetch).not.toHaveBeenCalled()
   })
 })

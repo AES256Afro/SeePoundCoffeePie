@@ -1,13 +1,12 @@
 import {
   lazy,
   Suspense,
+  use,
   useEffect,
   useMemo,
   useRef,
   useState,
-  type AnchorHTMLAttributes,
   type Dispatch,
-  type MouseEvent,
   type SetStateAction,
 } from 'react'
 import {
@@ -20,15 +19,19 @@ import {
   Eye,
   LockKeyhole,
 } from 'lucide-react'
-import { pythonDataToolsCourse } from './data/python-data-tools-course'
 import {
   courseDefinition,
   courseIsAvailable,
   missingCoursePrerequisites,
   type CourseDefinition,
 } from './data/course-registry'
+import {
+  publishedContinuingCourseContentRequest,
+  type ContinuingCourseContent,
+} from './data/published-continuing-course-loaders'
 import { completeMission } from './lib/progress'
 import { coursePath, coursesPath, lessonPath } from './lib/routes'
+import { RouteLink as NavigateLink, RouteNotFoundPage } from './RouteNotFoundPage'
 import type { CourseId, LearnerProgress, Mission } from './types'
 import './python-data-tools.css'
 
@@ -37,46 +40,21 @@ const LessonPlayer = lazy(async () => {
   return { default: module.LessonPlayer }
 })
 
-interface NavigateLinkProps extends AnchorHTMLAttributes<HTMLAnchorElement> {
-  onNavigate: (path: string) => void
-  to: string
-}
-
-function NavigateLink({ children, onNavigate, onClick, to, ...props }: NavigateLinkProps) {
-  const handleClick = (event: MouseEvent<HTMLAnchorElement>) => {
-    onClick?.(event)
-    if (event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return
-    event.preventDefault()
-    onNavigate(to)
-  }
-  return <a {...props} href={to} onClick={handleClick}>{children}</a>
-}
-
 function percent(completed: number, total: number): number {
   return total > 0 ? Math.round((completed / total) * 100) : 0
 }
 
 function exerciseLabel(type: Mission['exercises'][number]['type']): string {
-  if (type === 'bugfix') return 'Debugging'
-  if (type === 'choice') return 'Guided check'
-  if (type === 'prediction') return 'Prediction'
-  if (type === 'ordering') return 'Ordering'
-  return 'Code exercise'
+  if (type === 'bugfix') return 'Fix a problem'
+  if (type === 'choice') return 'Choose an answer'
+  if (type === 'prediction') return 'Predict the result'
+  if (type === 'ordering') return 'Put steps in order'
+  return 'Edit code'
 }
 
-interface ContinuingCourseContent {
-  id: CourseId
-  missions: Mission[]
-}
-
-const publishedContinuingCourseContent: Partial<Record<CourseId, ContinuingCourseContent>> = {
-  'python-data-tools': pythonDataToolsCourse,
-}
-
-function continuingCourseContent(courseId: CourseId): ContinuingCourseContent {
-  const course = publishedContinuingCourseContent[courseId]
-  if (!course) throw new Error(`Continuing course content is not published for ${courseId}.`)
-  return course
+function useContinuingCourseContent(courseId: string): ContinuingCourseContent | null {
+  const request = publishedContinuingCourseContentRequest(courseId)
+  return request ? use(request) : null
 }
 
 function languageLabel(definition: CourseDefinition): string {
@@ -126,9 +104,15 @@ interface ContinuingCoursePageProps extends CoursePageProps {
   courseId: CourseId
 }
 
-export function ContinuingCoursePage({ courseId, onNavigate, onProgress, progress }: ContinuingCoursePageProps) {
+interface ContinuingCoursePageContentProps extends ContinuingCoursePageProps {
+  course: ContinuingCourseContent
+}
+
+function ContinuingCoursePageContent({ course, courseId, onNavigate, onProgress, progress }: ContinuingCoursePageContentProps) {
   const definition = courseDefinition(courseId)
-  const course = continuingCourseContent(courseId)
+  const prerequisiteCount = definition.prerequisites.length
+  const singlePrerequisite = prerequisiteCount === 1
+  const prerequisiteQuantity = singlePrerequisite ? 'the' : prerequisiteCount === 2 ? 'both' : `all ${prerequisiteCount}`
   const prerequisiteReady = courseIsAvailable(definition.id, progress)
   const missing = missingCoursePrerequisites(definition.id, progress)
   const completedMissions = new Set(progress.completedMissions)
@@ -173,8 +157,8 @@ export function ContinuingCoursePage({ courseId, onNavigate, onProgress, progres
     setExpandedModule(focusTarget?.id ?? '')
     setFocusModuleId(focusTarget?.id ?? null)
     setCompletionNotice(next
-      ? `Module completed. 25 star shards saved. Module ${index + 2} is now available.`
-      : `Course completed. 25 star shards saved. ${definition.completionReviewLabel ?? definition.title} is ready to review.`)
+      ? `Module complete. Module ${index + 2} is now available.`
+      : `Course complete. ${definition.completionReviewLabel ?? definition.title} is ready to review.`)
     onProgress((current) => completeMission(current, missionId))
   }
 
@@ -184,10 +168,10 @@ export function ContinuingCoursePage({ courseId, onNavigate, onProgress, progres
       <header className={`course-hero course-hero--${definition.language} course-hero--continuing`}>
         <span aria-label={languageLabel(definition)} className={`language-symbol language-symbol--${definition.language} language-symbol--large`}>{courseSymbol(definition)}</span>
         <div>
-          <p className="eyebrow">Next-step {languageLabel(definition)} course</p>
+          <p className="eyebrow">{languageLabel(definition)} course</p>
           <h1 ref={courseHeadingRef} tabIndex={-1}>{definition.title}</h1>
           <p>{definition.description}</p>
-          <span>{definition.missionIds.length} modules · {definition.lessonIds.length} short lessons · {definition.level}</span>
+          <span>{definition.missionIds.length} modules · {definition.lessonIds.length} short lessons</span>
         </div>
         <div className="course-hero__action">
           <b>{completedLessonCount} of {definition.lessonIds.length} lessons complete</b>
@@ -197,25 +181,26 @@ export function ContinuingCoursePage({ courseId, onNavigate, onProgress, progres
             <NavigateLink className="primary-action" onNavigate={onNavigate} to={continueTo}>
               {courseComplete ? 'Review course' : hasActivity ? 'Continue course' : 'Start course'} <ArrowRight size={17} />
             </NavigateLink>
-          ) : <span className="course-locked-label"><LockKeyhole size={15} /> Finish both prerequisites to start</span>}
+          ) : <span className="course-locked-label"><LockKeyhole size={15} /> Complete {prerequisiteQuantity} item{singlePrerequisite ? '' : 's'} below to start</span>}
         </div>
       </header>
 
       {!prerequisiteReady && (
         <section className="course-prerequisites" aria-labelledby={`${definition.id}-prerequisites`}>
-          <div><p className="eyebrow">Before you begin</p><h2 id={`${definition.id}-prerequisites`}>Two earlier steps make this course feel gentle</h2><p>You can preview every module now. Lessons unlock after both steps are complete.</p></div>
+          <div><h2 id={`${definition.id}-prerequisites`}>Complete these first</h2><p>You can view the modules now. Complete {singlePrerequisite ? 'the item below' : prerequisiteQuantity === 'both' ? 'both items below' : `all ${prerequisiteCount} items below`} to open the lessons.</p></div>
           <ol>
             {definition.prerequisites.map((prerequisite) => {
               const incomplete = missing.some((item) => item.kind === prerequisite.kind && item.id === prerequisite.id)
               const path = prerequisite.kind === 'course' ? coursePath(prerequisite.id) : prerequisite.path
-              return <li className={incomplete ? '' : 'is-complete'} key={`${prerequisite.kind}:${prerequisite.id}`}><span>{incomplete ? <LockKeyhole size={15} /> : <Check size={15} />}</span><b>{prerequisite.label}</b><NavigateLink onNavigate={onNavigate} to={path}>{incomplete ? 'Open step' : 'Review'} <ArrowRight size={14} /></NavigateLink></li>
+              const openLabel = prerequisite.kind === 'course' ? 'Open course' : 'Open project'
+              return <li className={incomplete ? '' : 'is-complete'} key={`${prerequisite.kind}:${prerequisite.id}`}><span>{incomplete ? <LockKeyhole size={15} /> : <Check size={15} />}</span><b>{prerequisite.label}</b><NavigateLink onNavigate={onNavigate} to={path}>{openLabel} <ArrowRight size={14} /></NavigateLink></li>
             })}
           </ol>
         </section>
       )}
 
       <section className="course-modules" aria-labelledby={`${definition.id}-content-title`}>
-        <div className="section-heading-open"><div><p className="eyebrow">Course outline</p><h2 id={`${definition.id}-content-title`}>What you will learn</h2></div><p>Open a module to preview its short lessons.</p></div>
+        <div className="section-heading-open"><div><h2 id={`${definition.id}-content-title`}>Modules</h2></div><p>Complete the modules in order.</p></div>
         {completionNotice && <p className="module-completion-status" role="status">{completionNotice}</p>}
         {course.missions.map((mission, moduleIndex) => {
           const moduleComplete = completedMissions.has(mission.id)
@@ -238,7 +223,7 @@ export function ContinuingCoursePage({ courseId, onNavigate, onProgress, progres
                 }}
               >
                 <span className="module-number">{moduleComplete ? <Check size={17} /> : moduleAvailable ? moduleIndex + 1 : <LockKeyhole size={15} />}</span>
-                <span><small>{definition.moduleKinds[moduleIndex] === 'capstone' ? 'Guided capstone' : `Module ${moduleIndex + 1}`}</small><b>{definition.moduleTitles[moduleIndex]}</b><p>{mission.description}</p></span>
+                <span><small>{definition.moduleKinds[moduleIndex] === 'capstone' ? 'Final project' : `Module ${moduleIndex + 1}`}</small><b>{definition.moduleTitles[moduleIndex]}</b>{expanded && <p>{mission.description}</p>}</span>
                 <strong>{moduleCompletedLessons} of {mission.exercises.length} lessons complete</strong>
                 <ChevronDown size={19} />
               </button>
@@ -256,16 +241,23 @@ export function ContinuingCoursePage({ courseId, onNavigate, onProgress, progres
                     >
                       <span>{completed ? <Check size={15} /> : lessonIndex + 1}</span><b>{exercise.title}</b><small>{completed ? 'Complete' : current && currentLesson?.id === exercise.id ? 'Next lesson' : 'Start lesson'} · {exerciseLabel(exercise.type)}</small><ArrowRight size={15} />
                     </NavigateLink>
-                  ) : <div className="is-locked" key={exercise.id}><span><LockKeyhole size={13} /></span><b>{exercise.title}</b><small>{prerequisiteReady ? 'Complete the previous module first' : 'Complete both course prerequisites first'}</small></div>
+                  ) : <div className="is-locked" key={exercise.id}><span><LockKeyhole size={13} /></span><b>{exercise.title}</b><small>{prerequisiteReady ? 'Complete the previous module first' : `Complete ${prerequisiteQuantity} item${singlePrerequisite ? '' : 's'} below first`}</small></div>
                 })}
               </div>
-              {expanded && readyToFinish && <div className="module-finish-callout"><span><b>Every lesson is complete.</b><small>Finish this module to save the module reward and unlock what comes next.</small></span><button className="primary-action" onClick={() => finishModule(mission.id)}>Finish module <ArrowRight size={17} /></button></div>}
+              {expanded && readyToFinish && <div className="module-finish-callout"><span><b>Every lesson is complete.</b><small>Finish this module to open the next one.</small></span><button className="primary-action" onClick={() => finishModule(mission.id)}>Finish module <ArrowRight size={17} /></button></div>}
             </article>
           )
         })}
       </section>
     </main>
   )
+}
+
+export function ContinuingCoursePage(props: ContinuingCoursePageProps) {
+  const course = useContinuingCourseContent(props.courseId)
+  return course
+    ? <ContinuingCoursePageContent {...props} course={course} />
+    : <RouteNotFoundPage onNavigate={props.onNavigate} progress={props.progress} />
 }
 
 interface LessonPageProps {
@@ -280,16 +272,20 @@ interface ContinuingCourseLessonPageProps extends LessonPageProps {
   courseId: CourseId
 }
 
-export function ContinuingCourseLessonPage({
+interface ContinuingCourseLessonPageContentProps extends ContinuingCourseLessonPageProps {
+  course: ContinuingCourseContent
+}
+
+function ContinuingCourseLessonPageContent({
+  course,
   courseId,
   exerciseId,
   missionId,
   onNavigate,
   onProgress,
   progress,
-}: ContinuingCourseLessonPageProps) {
+}: ContinuingCourseLessonPageContentProps) {
   const definition = courseDefinition(courseId)
-  const course = continuingCourseContent(courseId)
   const missionIndex = course.missions.findIndex((mission) => mission.id === missionId)
   const mission = course.missions[missionIndex]
   const exercise = mission?.exercises.find((candidate) => candidate.id === exerciseId)
@@ -314,7 +310,7 @@ export function ContinuingCourseLessonPage({
           <h1>{exercise.title} is still ahead</h1>
           <p>{!prerequisiteReady
             ? prerequisiteSentence(definition)
-            : `Complete ${course.missions[missionIndex - 1]?.title ?? 'the previous module'} first. Each module retrieves ideas that the next one uses.`}</p>
+            : `Complete ${course.missions[missionIndex - 1]?.title ?? 'the previous module'} first. Each module uses ideas from the one before it.`}</p>
           {!prerequisiteReady && <ul className="locked-route-prerequisites">{missing.map((item) => (
             <li key={`${item.kind}:${item.id}`}>
               <NavigateLink onNavigate={onNavigate} to={item.kind === 'course' ? coursePath(item.id) : item.path}>{item.label}</NavigateLink>
@@ -339,6 +335,13 @@ export function ContinuingCourseLessonPage({
       />
     </Suspense>
   )
+}
+
+export function ContinuingCourseLessonPage(props: ContinuingCourseLessonPageProps) {
+  const course = useContinuingCourseContent(props.courseId)
+  return course
+    ? <ContinuingCourseLessonPageContent {...props} course={course} />
+    : <RouteNotFoundPage onNavigate={props.onNavigate} progress={props.progress} />
 }
 
 export function PythonDataToolsCoursePage(props: CoursePageProps) {

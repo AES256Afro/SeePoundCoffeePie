@@ -249,7 +249,7 @@ export const codebookEntries: CodebookEntry[] = [
     keywords: ['note', 'ignore', 'documentation'],
     unlockAfter: 1,
     examples: {
-      python: '# Tell the bridge our signal is ready',
+      python: '# Show a message',
       cpp: '// Tell engineering the reactor is ready',
       csharp: '// Tell the captain the shields are ready',
       java: '// Tell the galley the coffee is ready',
@@ -716,7 +716,6 @@ export function codebookMatches(entry: CodebookEntry, query: string, language: L
   const searchable = [
     entry.term,
     entry.plain,
-    entry.ship,
     ...entry.keywords,
     entry.examples?.[language] ?? '',
   ].join(' ').toLocaleLowerCase()

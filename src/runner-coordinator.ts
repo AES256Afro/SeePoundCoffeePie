@@ -17,6 +17,7 @@ import {
   type CsharpLocalFunctionFact,
   type CsharpParameterFact,
   type CsharpWriteFact,
+  type CppCollectionsAnalysis,
   type CppAnalysis,
   type CppDeclarationFact,
   type JavaAnalysis,
@@ -63,6 +64,8 @@ const DESTROY_TIMEOUT_MS = 8_000
 const STALE_RUN_MS = 2 * 60_000
 const PYTHON_DATA_TOOLS_ANALYZER_COMMAND = '/usr/bin/python3 -I -B /opt/runner/PythonDataToolsAnalyzer.py /workspace/source.txt'
 const PYTHON_DATA_TOOLS_ASSESSMENT_PROFILE = 'python-data-tools-supply-tracker-v1'
+const CPP_COLLECTIONS_ANALYZER_COMMAND = '/usr/bin/python3 -I -B /opt/runner/CppCollectionsAnalyzer.py /workspace/source.txt'
+const CPP_COLLECTIONS_ASSESSMENT_PROFILE = 'cpp-collections-records-workshop-report-v1'
 const textEncoder = new TextEncoder()
 
 interface RunnerCoordinatorEnv {
@@ -272,6 +275,50 @@ function parsePythonDataToolsAnalysis(value: string): PythonDataToolsAnalysis | 
     )) return null
     if (!parsed.analyzed && parsed.parsed) return null
     return parsed as PythonDataToolsAnalysis
+  } catch {
+    return null
+  }
+}
+
+function parseCppCollectionsAnalysis(value: string): CppCollectionsAnalysis | null {
+  if (value.length > 2_048) return null
+  try {
+    const parsed = JSON.parse(value) as Partial<CppCollectionsAnalysis>
+    if (!parsed || typeof parsed !== 'object' || !hasExactKeys(parsed, [
+      'version',
+      'profile',
+      'analyzed',
+      'parsed',
+      'authored_frame',
+      'part_record',
+      'restock',
+      'total_units',
+      'low_stock',
+      'supplied_harness',
+    ])) return null
+    if (
+      parsed.version !== 1
+      || parsed.profile !== CPP_COLLECTIONS_ASSESSMENT_PROFILE
+      || typeof parsed.analyzed !== 'boolean'
+      || typeof parsed.parsed !== 'boolean'
+      || typeof parsed.authored_frame !== 'boolean'
+      || typeof parsed.part_record !== 'boolean'
+      || typeof parsed.restock !== 'boolean'
+      || typeof parsed.total_units !== 'boolean'
+      || typeof parsed.low_stock !== 'boolean'
+      || typeof parsed.supplied_harness !== 'boolean'
+    ) return null
+    const facts = [
+      parsed.authored_frame,
+      parsed.part_record,
+      parsed.restock,
+      parsed.total_units,
+      parsed.low_stock,
+      parsed.supplied_harness,
+    ]
+    if ((!parsed.analyzed || !parsed.parsed) && facts.some(Boolean)) return null
+    if (!parsed.analyzed && parsed.parsed) return null
+    return parsed as CppCollectionsAnalysis
   } catch {
     return null
   }
@@ -1377,6 +1424,7 @@ export class RunnerCoordinator {
       : null
     let supervisorRuns: SupervisorResult[] = []
     let pythonDataToolsAnalysis: PythonDataToolsAnalysis | null = null
+    let cppCollectionsAnalysis: CppCollectionsAnalysis | null = null
     let cleanupSucceeded = true
     for (const [caseIndex, stdin] of inputs.entries()) {
       // Every protected case gets a different VM. Learner-created processes,
@@ -1394,12 +1442,17 @@ export class RunnerCoordinator {
         await sandbox.writeFile('/workspace/source.txt', record.source)
         await sandbox.writeFile('/workspace/stdin.txt', stdin)
         const projectAnalysisRequested = (
-          officialAssessment?.language === 'cpp'
-          || officialAssessment?.language === 'csharp'
-          || officialAssessment?.language === 'java'
+          officialAssessment?.analysisProfile === undefined
+          && (
+            officialAssessment?.language === 'cpp'
+            || officialAssessment?.language === 'csharp'
+            || officialAssessment?.language === 'java'
+          )
         ) && caseIndex === 0
         const pythonDataToolsAnalysisRequested = officialAssessment?.analysisProfile
           === PYTHON_DATA_TOOLS_ASSESSMENT_PROFILE && caseIndex === 0
+        const cppCollectionsAnalysisRequested = officialAssessment?.analysisProfile
+          === CPP_COLLECTIONS_ASSESSMENT_PROFILE && caseIndex === 0
         let profileAnalysisFailed = false
         if (pythonDataToolsAnalysisRequested) {
           if (record.language !== 'python') {
@@ -1412,6 +1465,19 @@ export class RunnerCoordinator {
               ? parsePythonDataToolsAnalysis(analysisExecution.stdout)
               : null
             profileAnalysisFailed = !pythonDataToolsAnalysis?.analyzed
+          }
+        }
+        if (cppCollectionsAnalysisRequested) {
+          if (record.language !== 'cpp') {
+            profileAnalysisFailed = true
+          } else {
+            const analysisExecution = await sandbox.exec(CPP_COLLECTIONS_ANALYZER_COMMAND, {
+              timeout: TRUSTED_ANALYZER_TIMEOUT_MS,
+            })
+            cppCollectionsAnalysis = analysisExecution.success
+              ? parseCppCollectionsAnalysis(analysisExecution.stdout)
+              : null
+            profileAnalysisFailed = !cppCollectionsAnalysis?.analyzed
           }
         }
         if (profileAnalysisFailed) {
@@ -1466,6 +1532,8 @@ export class RunnerCoordinator {
           })),
           officialAssessment.analysisProfile === PYTHON_DATA_TOOLS_ASSESSMENT_PROFILE
             ? pythonDataToolsAnalysis
+            : officialAssessment.analysisProfile === CPP_COLLECTIONS_ASSESSMENT_PROFILE
+              ? cppCollectionsAnalysis
             : officialAssessment.language === 'cpp'
             ? sanitizedRuns[0]?.cpp_analysis
             : officialAssessment.language === 'csharp'

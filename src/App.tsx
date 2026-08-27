@@ -6,10 +6,8 @@ import {
   useMemo,
   useRef,
   useState,
-  type AnchorHTMLAttributes,
   type ChangeEvent,
   type Dispatch,
-  type MouseEvent as ReactMouseEvent,
   type SetStateAction,
 } from 'react'
 import {
@@ -22,12 +20,10 @@ import {
   CircleHelp,
   Clock3,
   Cloud,
-  Code2,
   Coffee,
   Compass,
   Download,
   Eye,
-  FileCode2,
   Flame,
   GitFork as Github,
   Home,
@@ -35,7 +31,6 @@ import {
   LockKeyhole,
   LogOut,
   Menu,
-  Orbit,
   RefreshCw,
   RotateCcw,
   Settings,
@@ -50,7 +45,8 @@ import {
 } from 'lucide-react'
 import { courseDefinition, foundationCourseId } from './data/course-registry'
 import { trackById, tracks } from './data/curriculum'
-import { pythonDataToolsManifest } from './data/python-data-tools-manifest'
+import { publishedContinuingCourseContentRequestForLanguage } from './data/published-continuing-course-loaders'
+import { publishedContinuingCourseManifests } from './data/published-continuing-course-manifests'
 import {
   projectManifestByRoute,
   projectManifestForLanguage,
@@ -99,6 +95,7 @@ import {
   projectPath,
   type RoutePage,
 } from './lib/routes'
+import { RouteLink as AppLink, RouteNotFoundPage } from './RouteNotFoundPage'
 import type {
   AuthUser,
   CourseId,
@@ -140,21 +137,12 @@ const CodebookRoute = lazy(async () => {
   return { default: module.CodebookRoute }
 })
 
-const continuingPracticeLoaders: Partial<Record<LanguageId, () => Promise<Mission[]>>> = {
-  python: async () => {
-    const module = await import('./data/python-data-tools-course')
-    return module.pythonDataToolsCourse.missions
-  },
-}
-
 function LessonPlayerFallback({ practice = false }: { practice?: boolean }) {
   return (
     <div className="lesson-overlay">
       <main className="route-message-page" aria-busy="true" id="main-content" tabIndex={-1}>
         <section className="route-message-card">
-          <p className="kicker"><BookOpen size={15} /> {practice ? 'Practice' : 'Lesson'}</p>
-          <h1>Opening your {practice ? 'practice set' : 'lesson'}</h1>
-          <p>Loading the explanation, exercise, and code workspace.</p>
+          <h1>Loading {practice ? 'practice' : 'lesson'}</h1>
         </section>
       </main>
     </div>
@@ -162,10 +150,10 @@ function LessonPlayerFallback({ practice = false }: { practice?: boolean }) {
 }
 
 const languageSnippets: Record<LanguageId, string> = {
-  python: 'print("Hello, cosmos!")',
-  cpp: 'std::cout << "Hello, cosmos!";',
-  csharp: 'Console.WriteLine("Hello, cosmos!");',
-  java: 'System.out.println("Hello, cosmos!");',
+  python: 'print("Hello!")',
+  cpp: 'std::cout << "Hello!";',
+  csharp: 'Console.WriteLine("Hello!");',
+  java: 'System.out.println("Hello!");',
 }
 
 interface BrowserLocation {
@@ -203,30 +191,6 @@ function readBrowserLocation(): BrowserLocation {
 function navigateTo(to: string, replace = false) {
   window.history[replace ? 'replaceState' : 'pushState']({}, '', to)
   window.dispatchEvent(new PopStateEvent('popstate'))
-}
-
-interface AppLinkProps extends Omit<AnchorHTMLAttributes<HTMLAnchorElement>, 'href'> {
-  to: string
-}
-
-function AppLink({ children, onClick, target, to, ...props }: AppLinkProps) {
-  const followLink = (event: ReactMouseEvent<HTMLAnchorElement>) => {
-    onClick?.(event)
-    if (
-      event.defaultPrevented
-      || event.button !== 0
-      || event.metaKey
-      || event.ctrlKey
-      || event.shiftKey
-      || event.altKey
-      || target === '_blank'
-    ) return
-
-    event.preventDefault()
-    navigateTo(to)
-  }
-
-  return <a {...props} href={to} onClick={followLink} target={target}>{children}</a>
 }
 
 function LanguageSymbol({
@@ -279,16 +243,16 @@ function LaunchStory({ language }: { language: LanguageId }) {
     <section className="onboarding__story">
       <BrandMark />
       <div className="hero-copy">
-        <p className="kicker"><BookOpen size={15} /> No experience required</p>
-        <h1>Programming starts with one small idea.</h1>
+        <h1>Your first programming lesson</h1>
         <p>
-          We explain the words, symbols, punctuation, and hidden assumptions that most courses skip.
-          Then you use each idea in a short lesson and meet it again before it fades.
+          We explain every new word, symbol, and punctuation mark before you use it.
+          In each short lesson, you make one change, run the code, and read the result.
+          Earlier ideas return in short reviews.
         </p>
         <div className="hero-console" aria-label={`${track.shortName} example code`}>
           <span className="hero-console__label"><LanguageSymbol language={language} size="small" /> A first line in {track.shortName}</span>
           <code>{languageSnippets[language]}</code>
-          <span className="console-result">Hello, cosmos!</span>
+          <span className="console-result">Hello!</span>
         </div>
       </div>
       <div className="brand-meaning" aria-label="What the name means">
@@ -298,7 +262,6 @@ function LaunchStory({ language }: { language: LanguageId }) {
         <div><LanguageSymbol language="java" /><span><b>Coffee</b><small>Java</small></span></div>
         <div><LanguageSymbol language="python" /><span><b>Pie</b><small>Python</small></span></div>
       </div>
-      <p className="story-note">Four beginner courses. One patient way to learn.</p>
     </section>
   )
 }
@@ -319,23 +282,22 @@ function LandingPage({ authReady, authUser, progress, onSignIn }: LandingPagePro
       <LaunchStory language={previewLanguage} />
       <section className="onboarding__form landing-page__overview">
         <div className="landing-card">
-          <p className="kicker"><Compass size={15} /> Welcome aboard</p>
-          <h2>The code academy for absolute beginners</h2>
+          <h2>Learn Python, C++, C#, or Java from the beginning</h2>
           <p className="setup-intro">
             SeePoundCoffeePie teaches Python, C++, C#, and Java from the first building block.
             You do not need to know what code is, what a variable means, or why punctuation matters.
             We explain each piece before asking you to use it.
           </p>
 
-          <div className="landing-promises" id="how-it-works" aria-label="How the academy teaches">
-            <article><CircleHelp size={20} /><span><b>Mystery removed</b><small>Every new word, symbol, and code shape gets a plain-language explanation.</small></span></article>
-            <article><TerminalSquare size={20} /><span><b>Practice it for real</b><small>Type code, run it safely, see what happened, and repair mistakes with guidance.</small></span></article>
-            <article><Orbit size={20} /><span><b>Remember it later</b><small>Short reviews bring ideas back before they drift out of memory.</small></span></article>
+          <div className="landing-promises" id="how-it-works" aria-label="How lessons work">
+            <article><CircleHelp size={20} /><span><b>Plain explanations</b><small>Each new word, symbol, and code shape is explained before you use it.</small></span></article>
+            <article><TerminalSquare size={20} /><span><b>Write and run code</b><small>Make one small change, run it, read the result, and fix mistakes with help.</small></span></article>
+            <article><RotateCcw size={20} /><span><b>Short reviews</b><small>Completed ideas return in a few questions so you can remember them.</small></span></article>
           </div>
 
           <div className="landing-section-heading">
-            <div><small>FOUR SCHOOLS, ONE FOUNDATION</small><h3>Preview a learning path</h3></div>
-            <p>You can visit every school. Your first choice does not lock you in.</p>
+            <div><small>COURSES</small><h3>Choose a language to preview</h3></div>
+            <p>You can try every language. Your first choice does not limit the others.</p>
           </div>
           <div className="landing-schools">
             {tracks.map((track) => (
@@ -347,9 +309,8 @@ function LandingPage({ authReady, authUser, progress, onSignIn }: LandingPagePro
                 style={{ '--track-accent': track.accent } as React.CSSProperties}
                 to={coursePath(track.id)}
               >
-                <Code2 size={18} />
-                <span><b>{track.shortName}</b><small>{track.role}</small></span>
-                {track.id === 'python' && <em>GENTLE START</em>}
+                <LanguageSymbol language={track.id} size="small" />
+                <span><b>{track.shortName}</b><small>Beginner course</small></span>
               </AppLink>
             ))}
           </div>
@@ -360,14 +321,14 @@ function LandingPage({ authReady, authUser, progress, onSignIn }: LandingPagePro
             ) : (
               <AppLink className="primary-action" to="/start">Start from the beginning <ArrowRight size={18} /></AppLink>
             )}
-            <a className="secondary-action" href="#how-it-works">How the academy works</a>
+            <a className="secondary-action" href="#how-it-works">How lessons work</a>
           </div>
 
           <div className={`github-intake landing-identity ${authUser ? 'is-connected' : ''}`}>
             <span><Github size={21} /></span>
             <div>
               <b>{authUser ? `Signed in as ${authUser.login}` : 'GitHub sign-in is optional'}</b>
-              <p>{authUser ? 'Your identity is verified and your Cadet Record can synchronize.' : 'Start as a guest, or sign in to carry progress between devices.'}</p>
+              <p>{authUser ? 'GitHub is connected. Your progress can be saved to your account.' : 'Start as a guest, or sign in to carry progress between devices.'}</p>
             </div>
             {!authUser && <button type="button" onClick={onSignIn} disabled={!authReady}><Github size={16} /> {authReady ? 'Sign in' : 'Checking'}</button>}
           </div>
@@ -420,7 +381,7 @@ function Onboarding({ authReady, authUser, initialLanguage, onComplete, onSignIn
   const finish = () => {
     onComplete({
       ...initialProgress(language),
-      callsign: callsign.trim() || authUser?.name || authUser?.login || 'Cadet',
+      callsign: callsign.trim() || authUser?.name || authUser?.login || 'Learner',
       dailyGoal: goal,
       onboardingComplete: true,
     })
@@ -494,20 +455,20 @@ function Onboarding({ authReady, authUser, initialLanguage, onComplete, onSignIn
 
           {step === 3 && (
             <div className="intake-question intake-finish">
-              <h2>Make the learning space yours</h2>
-              <p>Choose a name and a small daily XP target. Neither choice changes what you are allowed to learn.</p>
+              <h2>Choose your settings</h2>
+              <p>Choose a name and a small daily point goal. These settings do not change which lessons you can open.</p>
               <div className={`github-intake ${authUser ? 'is-connected' : ''}`}>
                 <span><Github size={21} /></span>
-                <div><b>{authUser ? `Signed in as ${authUser.login}` : 'GitHub sign-in is optional'}</b><p>{authUser ? 'You will choose how existing progress is synchronized.' : 'Stay a guest, or sign in to carry progress between devices.'}</p></div>
+                <div><b>{authUser ? `Signed in as ${authUser.login}` : 'GitHub sign-in is optional'}</b><p>{authUser ? 'You will choose which progress to save to your account.' : 'Stay a guest, or sign in to carry progress between devices.'}</p></div>
                 {!authUser && <button type="button" onClick={onSignIn} disabled={!authReady}><Github size={16} /> {authReady ? 'Sign in' : 'Checking'}</button>}
               </div>
               <label className="field-label" htmlFor="callsign">What should we call you?</label>
               <input id="callsign" className="text-input" value={callsign} onChange={(event) => setCallsign(event.target.value)} placeholder={authUser ? authUser.name || authUser.login : 'Your name or nickname'} maxLength={24} />
               <fieldset className="goal-picker">
-                <legend>Daily XP goal</legend>
+                <legend>Daily point goal</legend>
                 <div>
-                  {[5, 10, 15].map((xp) => (
-                    <button key={xp} className={goal === xp ? 'is-selected' : ''} aria-pressed={goal === xp} onClick={() => setGoal(xp)} type="button"><Clock3 size={16} /><b>{xp} XP</b><span>{xp === 5 ? 'Gentle' : xp === 10 ? 'Steady' : 'Focused'}</span></button>
+                  {[5, 10, 15].map((points) => (
+                    <button key={points} className={goal === points ? 'is-selected' : ''} aria-pressed={goal === points} onClick={() => setGoal(points)} type="button"><Clock3 size={16} /><b>{points} points</b><span>{points === 5 ? 'Short' : points === 10 ? 'Regular' : 'Longer'}</span></button>
                   ))}
                 </div>
               </fieldset>
@@ -543,7 +504,7 @@ function AppShell({ authReady, authUser, progress, view, onLanguageChange, onSig
     { id: 'home', label: 'Home', icon: Home, to: homePath() },
     { id: 'courses', label: 'Courses', icon: BookOpen, to: coursesPath() },
     { id: 'practice', label: 'Practice', icon: RotateCcw, to: practicePath(progress.activeLanguage) },
-    { id: 'spellbook', label: 'Codebook', icon: LibraryBig, to: codebookPath(progress.activeLanguage) },
+    { id: 'spellbook', label: 'Code reference', icon: LibraryBig, to: codebookPath(progress.activeLanguage) },
   ]
 
   useEffect(() => {
@@ -597,7 +558,7 @@ function AppShell({ authReady, authUser, progress, view, onLanguageChange, onSig
               <ChevronDown size={14} aria-hidden="true" />
             </label>
             <span aria-label={`${progress.streak} day study streak`} className="workshop-stat"><Flame size={16} aria-hidden="true" /><b>{progress.streak}</b></span>
-            <span aria-label={`${progress.xp} experience points`} className="workshop-stat"><Zap size={16} aria-hidden="true" /><b>{progress.xp} XP</b></span>
+            <span aria-label={`${progress.xp} points`} className="workshop-stat"><Zap size={16} aria-hidden="true" /><b>{progress.xp} points</b></span>
             {authUser ? (
             <AppLink aria-current={view === 'profile' ? 'page' : undefined} className={`identity-chip ${view === 'profile' ? 'is-active' : ''}`} to="/profile" aria-label={`Learner record for ${authUser.login}`} title={`Signed in as ${authUser.login}`}>
               <Github size={15} aria-hidden="true" /><span>{authUser.login}</span>
@@ -633,18 +594,14 @@ function CourseSymbol({ course, size = 'medium' }: { course: Pick<CourseCardMode
   return <LanguageSymbol language={course.language} size={size} />
 }
 
-function lowerFirst(value: string): string {
-  return value ? `${value[0].toLocaleLowerCase()}${value.slice(1)}` : value
-}
-
 function CourseCard({ course }: { course: CourseCardModel }) {
   const status = course.availability === 'locked'
-    ? 'Complete the prerequisites to start'
+    ? `Complete the ${course.missingPrerequisites.length === 1 ? 'item' : 'items'} below to start`
     : course.status === 'complete'
     ? 'Course complete'
     : course.status === 'in-progress'
       ? `${course.completedLessonCount} of ${course.lessonCount} lessons complete`
-      : 'Ready when you are'
+      : 'Not started'
   return (
     <article className={`course-card course-card--${course.language} course-card--${course.kind} ${course.availability === 'locked' ? 'course-card--locked' : ''}`}>
       <div className="course-card__heading">
@@ -658,7 +615,7 @@ function CourseCard({ course }: { course: CourseCardModel }) {
       </dl>
       {course.missingPrerequisites.length > 0 && (
         <div className="course-card__prerequisites">
-          <b><LockKeyhole size={15} /> Before you begin</b>
+          <b><LockKeyhole size={15} /> Before you start</b>
           <ul>{course.missingPrerequisites.map((prerequisite) => (
             <li key={`${prerequisite.kind}:${prerequisite.id}`}>{prerequisite.label}</li>
           ))}</ul>
@@ -673,8 +630,21 @@ function CourseCard({ course }: { course: CourseCardModel }) {
   )
 }
 
+function lessonActivityLabel(type: Mission['exercises'][number]['type']): string {
+  if (type === 'bugfix') return 'Fix a problem'
+  if (type === 'choice') return 'Choose an answer'
+  if (type === 'prediction') return 'Predict the result'
+  if (type === 'ordering') return 'Put steps in order'
+  return 'Edit code'
+}
+
 function CourseCatalog({ progress }: { progress: LearnerProgress }) {
   const courses = buildCourseCards(progress)
+  const foundationCourseCount = courses.filter((course) => course.kind === 'foundation').length
+  const continuingCourses = courses.filter((course) => course.kind === 'continuing')
+  const continuingCourseCopy = continuingCourses.length === 1
+    ? `${continuingCourses[0].shortName} lists the earlier work you need before starting.`
+    : 'Each next-step course lists the earlier work you need before starting.'
   const [filter, setFilter] = useState<'all' | 'foundations' | 'continuing' | 'projects'>('all')
   const filteredCourses = filter === 'foundations'
     ? courses.filter((course) => course.kind === 'foundation')
@@ -682,27 +652,26 @@ function CourseCatalog({ progress }: { progress: LearnerProgress }) {
       ? courses.filter((course) => course.kind === 'continuing')
       : courses
   const showCourses = filter !== 'projects'
-  const showProjects = filter === 'all' || filter === 'projects'
+  const showProjects = filter === 'projects'
   return (
     <main className="workshop-page course-catalog">
       <header className="workshop-page-heading">
-        <p className="eyebrow">Course catalog</p>
-        <h1>Start with a foundation. Keep building from there.</h1>
-        <p>The four foundation courses assume no experience. Practical Python unlocks after you finish its two earlier steps, and every course keeps its own progress.</p>
+        <h1>Choose a course</h1>
+        <p>The {foundationCourseCount} foundation {foundationCourseCount === 1 ? 'course starts' : 'courses start'} from the beginning. {continuingCourseCopy} Your progress is saved separately for each course.</p>
       </header>
       <nav className="catalog-filters" aria-label="Course filters">
         <button aria-pressed={filter === 'all'} className={filter === 'all' ? 'is-active' : ''} onClick={() => setFilter('all')} type="button">All courses</button>
-        <button aria-pressed={filter === 'foundations'} className={filter === 'foundations' ? 'is-active' : ''} onClick={() => setFilter('foundations')} type="button">Foundations</button>
-        <button aria-pressed={filter === 'continuing'} className={filter === 'continuing' ? 'is-active' : ''} onClick={() => setFilter('continuing')} type="button">Next-step courses</button>
-        <button aria-pressed={filter === 'projects'} className={filter === 'projects' ? 'is-active' : ''} onClick={() => setFilter('projects')} type="button">Guided projects</button>
+        <button aria-pressed={filter === 'foundations'} className={filter === 'foundations' ? 'is-active' : ''} onClick={() => setFilter('foundations')} type="button">Foundation courses</button>
+        <button aria-pressed={filter === 'continuing'} className={filter === 'continuing' ? 'is-active' : ''} onClick={() => setFilter('continuing')} type="button">Later courses</button>
+        <button aria-pressed={filter === 'projects'} className={filter === 'projects' ? 'is-active' : ''} onClick={() => setFilter('projects')} type="button">Projects</button>
       </nav>
       {showCourses && <section className="course-grid" aria-label="Courses">
         {filteredCourses.map((course) => <CourseCard course={course} key={course.id} />)}
       </section>}
       {showProjects && <section className="guided-project-list" aria-labelledby="guided-projects-title">
         <div className="section-heading-open">
-          <div><p className="eyebrow">Build something complete</p><h2 id="guided-projects-title">Guided projects</h2></div>
-          <p>Start with small checkpoints, then finish with a program you can download and keep.</p>
+          <div><p className="eyebrow">Use what you learned</p><h2 id="guided-projects-title">Projects</h2></div>
+          <p>Build a complete program in small steps, then download and keep it.</p>
         </div>
         {projectManifests.map((project) => (
           <AppLink
@@ -711,7 +680,7 @@ function CourseCatalog({ progress }: { progress: LearnerProgress }) {
             to={projectPath(project.language, project.id)}
           >
             <LanguageSymbol language={project.language} />
-            <span><small>{project.studioLabel} · {project.checkpoints.length} checkpoints</small><b>{project.title}</b><p>{project.subtitle}</p></span>
+            <span><small>{trackById(project.language).shortName} project · {project.checkpoints.length} project steps</small><b>{project.title}</b><p>{project.subtitle}</p></span>
             <strong>Open project <ArrowRight size={16} /></strong>
           </AppLink>
         ))}
@@ -721,8 +690,8 @@ function CourseCatalog({ progress }: { progress: LearnerProgress }) {
           return (
             <AppLink className="guided-project-row guided-project-row--capstone" key={project.id} to={coursePath(track.id)}>
               <LanguageSymbol language={track.id} />
-              <span><small>{track.shortName} foundation capstone</small><b>{project.title}</b><p>{project.description}</p></span>
-              <strong>{project.exercises.length} lessons <ArrowRight size={16} /></strong>
+              <span><small>{track.shortName} final project</small><b>{project.title}</b><p>{project.description}</p></span>
+              <strong>{project.exercises.length} steps <ArrowRight size={16} /></strong>
             </AppLink>
           )
         })}
@@ -742,12 +711,13 @@ function countLanguageDueConcepts(
     if (!completedMissions.has(mission.id)) return
     mission.exercises.forEach((exercise) => conceptIds.add(exercise.conceptId))
   })
-  if (track.id === 'python') {
-    Object.entries(pythonDataToolsManifest).forEach(([missionId, lessons]) => {
-      if (!completedMissions.has(missionId)) return
-      lessons.forEach((lesson) => conceptIds.add(lesson.conceptId))
+  publishedContinuingCourseManifests.forEach((manifest) => {
+    if (courseDefinition(manifest.courseId).language !== track.id) return
+    manifest.modules.forEach((module) => {
+      if (!completedMissions.has(module.id)) return
+      module.conceptIds.forEach((conceptId) => conceptIds.add(conceptId))
     })
-  }
+  })
   const today = dateKey(now)
   return [...conceptIds].filter((conceptId) => {
     const concept = progress.conceptProgress[conceptId]
@@ -806,13 +776,13 @@ function LearnerHome({ progress }: { progress: LearnerProgress }) {
     : activeCourse.currentLessonTitle ?? activeCourse.title
   const continueDescription = continuingCourse
     ? continuingCourse.currentModuleTitle
-      ? `${continuingCourse.currentModuleTitle} is the next module in your ${lowerFirst(continuingCourse.shortName)} path.`
+      ? `Next module: ${continuingCourse.currentModuleTitle}.`
       : continuingCourse.outcome
     : readyProject
     ? projectComplete
       ? readyProject.completionDescription
       : completedProjectCheckpointCount > 0
-        ? `${completedProjectCheckpointCount} of ${readyProject.checkpoints.length} checkpoints complete. Your browser saved the code for your next small step.`
+        ? `${completedProjectCheckpointCount} of ${readyProject.checkpoints.length} project steps complete. Your browser saved the code for your next step.`
         : readyProject.subtitle
     : activeCourse.currentModuleTitle
       ? `${activeCourse.title}, Module ${activeCourse.modules.find((item) => item.id === activeCourse.currentModuleId)?.number}: ${activeCourse.currentModuleTitle}`
@@ -840,8 +810,8 @@ function LearnerHome({ progress }: { progress: LearnerProgress }) {
   return (
     <main className="workshop-page learner-home">
       <header className="learner-welcome">
-        <div><p className="eyebrow">Your learning home</p><h1>Welcome back, {progress.callsign}.</h1><p>One short lesson is enough to keep moving.</p></div>
-        <div className="daily-goal-open"><span>{Math.min(progress.dailyXp, progress.dailyGoal)} / {progress.dailyGoal} XP today</span><i aria-label="Daily XP goal" aria-valuemax={progress.dailyGoal} aria-valuemin={0} aria-valuenow={Math.min(progress.dailyXp, progress.dailyGoal)} role="progressbar"><b style={{ width: `${Math.min(100, (progress.dailyXp / progress.dailyGoal) * 100)}%` }} /></i></div>
+        <div><h1>Welcome back, {progress.callsign}.</h1></div>
+        <div className="daily-goal-open"><span>{Math.min(progress.dailyXp, progress.dailyGoal)} / {progress.dailyGoal} points today</span><i aria-label="Daily point goal" aria-valuemax={progress.dailyGoal} aria-valuemin={0} aria-valuenow={Math.min(progress.dailyXp, progress.dailyGoal)} role="progressbar"><b style={{ width: `${Math.min(100, (progress.dailyXp / progress.dailyGoal) * 100)}%` }} /></i></div>
       </header>
 
       <section className={`continue-panel continue-panel--${continueCourse.language}`}>
@@ -856,25 +826,25 @@ function LearnerHome({ progress }: { progress: LearnerProgress }) {
 
       <div className="learner-home-grid">
         <section className="activity-panel" aria-labelledby="activity-title">
-          <div className="section-heading-open"><div><p className="eyebrow">This week</p><h2 id="activity-title">A small, steady practice</h2></div><b>{progress.streak} day streak</b></div>
+          <div className="section-heading-open"><div><h2 id="activity-title">This week</h2></div><b>{progress.streak} day streak</b></div>
           <div className="activity-days">
             {days.map((day) => <div className={day.today && progress.dailyXp > 0 ? 'has-study' : ''} key={day.key}><span>{day.label}</span><i>{day.today && progress.dailyXp > 0 ? <Check size={15} /> : ''}</i></div>)}
           </div>
-          <p>Only today is shown because earlier daily activity is not stored in your current learning record.</p>
+          <p>Only today’s activity is available.</p>
         </section>
         <section className="review-open" aria-labelledby="review-title">
-          <div><RotateCcw size={22} /><span><p className="eyebrow">Practice</p><h2 id="review-title">{reviewsDue === 0 ? 'Nothing is due yet' : `${reviewsDue} ${reviewsDue === 1 ? 'concept is' : 'concepts are'} ready`}</h2></span></div>
-          <p>{reviewsDue === 0 ? 'Reviews appear after you finish a module.' : 'Bring these ideas back before they become fuzzy.'}</p>
-          <AppLink to={practicePath(progress.activeLanguage)}>{reviewsDue === 0 ? 'See how practice works' : 'Start a short review'} <ArrowRight size={16} /></AppLink>
+          <div><RotateCcw size={22} /><span><p className="eyebrow">Practice</p><h2 id="review-title">{reviewsDue === 0 ? 'Nothing to review yet' : `${reviewsDue} ${reviewsDue === 1 ? 'idea is' : 'ideas are'} ready`}</h2></span></div>
+          <p>{reviewsDue === 0 ? 'Practice starts after you finish a module.' : 'Review a few ideas you learned earlier.'}</p>
+          <AppLink to={practicePath(progress.activeLanguage)}>{reviewsDue === 0 ? 'Open practice' : 'Start practice'} <ArrowRight size={16} /></AppLink>
         </section>
       </div>
 
       <section className="home-course-list" aria-labelledby="my-courses-title">
-        <div className="section-heading-open"><div><p className="eyebrow">Your courses</p><h2 id="my-courses-title">Five courses, one connected learning path</h2></div><AppLink to={coursesPath()}>Browse all courses <ArrowRight size={16} /></AppLink></div>
+        <div className="section-heading-open"><div><h2 id="my-courses-title">Your courses</h2></div><AppLink to={coursesPath()}>Browse all courses <ArrowRight size={16} /></AppLink></div>
         {courses.map((course) => (
           <AppLink className={`home-course-row ${course.availability === 'locked' ? 'is-locked' : ''}`} key={course.id} to={coursePath(course.id)}>
             <CourseSymbol course={course} />
-            <span><b>{course.title}</b><small>{course.availability === 'locked' ? 'Prerequisites required' : course.status === 'not-started' ? 'Not started' : `${course.completedLessonCount} of ${course.lessonCount} lessons complete`}</small></span>
+            <span><b>{course.title}</b><small>{course.availability === 'locked' ? 'Complete earlier work first' : course.status === 'not-started' ? 'Not started' : `${course.completedLessonCount} of ${course.lessonCount} lessons complete`}</small></span>
             <i aria-label={`${course.title} progress`} aria-valuemax={100} aria-valuemin={0} aria-valuenow={course.progressPercent} role="progressbar"><b style={{ width: `${course.progressPercent}%` }} /></i>
             <strong>{course.actionLabel} <ArrowRight size={15} /></strong>
           </AppLink>
@@ -920,8 +890,8 @@ function MissionPath({
     setExpandedModule(focusTarget?.id ?? '')
     setFocusModuleId(focusTarget?.id ?? null)
     setCompletionNotice(nextModule
-      ? `Module completed. 25 star shards saved. Module ${nextModule.number} is now available.`
-      : 'Module completed. 25 star shards saved. The guided project is now available.')
+      ? `Module complete. Module ${nextModule.number} is ready.`
+      : 'Module complete. The final project is ready.')
     onProgress((current) => completeMission(current, moduleId))
   }
 
@@ -935,7 +905,7 @@ function MissionPath({
       </header>
 
       <section className="course-modules" aria-labelledby="course-content-title">
-        <div className="section-heading-open"><div><p className="eyebrow">Course outline</p><h2 id="course-content-title">What you will learn</h2></div><p>Open a module to see its five short lessons.</p></div>
+        <div className="section-heading-open"><div><h2 id="course-content-title">Modules</h2></div><p>Open a module to see its lessons.</p></div>
         {completionNotice && <p className="module-completion-status" role="status">{completionNotice}</p>}
         {course.modules.map((module) => {
           const expanded = expandedModule === module.id
@@ -955,7 +925,7 @@ function MissionPath({
                 }}
               >
                 <span className="module-number">{module.completed ? <Check size={17} /> : module.availability === 'available' ? module.number : <LockKeyhole size={15} />}</span>
-                <span><small>{module.kind === 'guided-project' ? 'Guided project' : `Module ${module.number}`}</small><b>{module.title}</b><p>{module.description}</p></span>
+                <span><small>{module.kind === 'guided-project' ? 'Final project' : `Module ${module.number}`}</small><b>{module.title}</b><p>{module.description}</p></span>
                 <strong>{module.completedLessonCount} of {module.lessonCount} lessons complete</strong>
                 <ChevronDown size={19} />
               </button>
@@ -964,7 +934,7 @@ function MissionPath({
                     const canOpen = module.availability === 'available'
                     return canOpen ? (
                       <AppLink aria-current={lesson.current ? 'step' : undefined} className={lesson.current ? 'is-current' : ''} key={lesson.id} to={lessonPath(track.id, module.id, lesson.id)}>
-                        <span>{lesson.completed ? <Check size={15} /> : lesson.number}</span><b>{lesson.title}</b><small>{lesson.completed ? 'Complete' : lesson.current ? 'Next lesson' : 'Start lesson'} · {lesson.type === 'bugfix' ? 'Debugging' : lesson.type === 'choice' ? 'Guided check' : lesson.type === 'prediction' ? 'Prediction' : lesson.type === 'ordering' ? 'Ordering' : 'Code exercise'}</small><ArrowRight size={15} />
+                        <span>{lesson.completed ? <Check size={15} /> : lesson.number}</span><b>{lesson.title}</b><small>{lesson.completed ? 'Complete' : lesson.current ? 'Next lesson' : 'Start lesson'} · {lessonActivityLabel(lesson.type)}</small><ArrowRight size={15} />
                       </AppLink>
                     ) : (
                       <div className="is-locked" key={lesson.id}><span><LockKeyhole size={13} /></span><b>{lesson.title}</b><small>{module.availability === 'available' ? 'Complete this module in order' : 'Complete the previous module first'}</small></div>
@@ -975,7 +945,7 @@ function MissionPath({
                 <div className="module-finish-callout">
                   <span>
                     <b>Every lesson is complete.</b>
-                    <small>Finish this module to save the module reward and unlock what comes next.</small>
+                    <small>Finish this module to continue.</small>
                   </span>
                   <button className="primary-action" onClick={() => handleFinishModule(module.id)}>Finish module <ArrowRight size={17} /></button>
                 </div>
@@ -988,10 +958,10 @@ function MissionPath({
         <section className="course-project-next" aria-labelledby="course-project-next-title">
           <LanguageSymbol language={guidedProject.language} size="large" />
           <div>
-            <p className="eyebrow">After the foundations</p>
+            <p className="eyebrow">Final project</p>
             <h2 id="course-project-next-title">{guidedProject.title}</h2>
             <p>{guidedProject.subtitle}</p>
-            <span>{guidedProject.checkpoints.length} checkpoints · {guidedProject.duration} · {guidedProject.downloadLabel}</span>
+            <span>{guidedProject.checkpoints.length} project steps · {guidedProject.duration} · {guidedProject.downloadLabel}</span>
           </div>
           <AppLink className="primary-action" to={projectPath(guidedProject.language, guidedProject.id)}>
             {progress.completedProjects.includes(guidedProject.id)
@@ -1014,9 +984,9 @@ function reviewDateLabel(value: string | null): string | null {
 }
 
 function practiceReasonLabel(item: AdaptivePracticeSession['items'][number], today: string): string {
-  if (item.reason === 'weak') return 'Could use another pass'
-  if (item.reason === 'fresh') return 'Keep it fresh'
-  return item.progress.dueAt < today ? 'Ready for review' : 'Due today'
+  if (item.reason === 'weak') return 'Needs practice'
+  if (item.reason === 'fresh') return 'Recently learned'
+  return item.progress.dueAt < today ? 'Review now' : 'Review today'
 }
 
 function PracticeBay({ progress, trackOverride }: { progress: LearnerProgress; trackOverride?: LanguageTrack }) {
@@ -1028,17 +998,17 @@ function PracticeBay({ progress, trackOverride }: { progress: LearnerProgress; t
   const firstLesson = starterMission.exercises[0]
   const nextReviewLabel = reviewDateLabel(nextReviewAt)
   const heroTitle = mode === 'start'
-    ? 'Practice what you have learned'
+    ? 'Finish a module to use Practice'
     : mode === 'due'
-      ? 'A short review is ready'
-      : 'You are caught up for today'
+      ? 'A review is ready'
+      : 'No review is due'
   const heroText = mode === 'start'
-    ? `Short reviews appear here after you finish a module. Start with ${firstLesson?.title ?? starterMission.title} first.`
+    ? `Start with ${firstLesson?.title ?? starterMission.title}. Practice uses questions from modules you complete.`
     : mode === 'due'
-      ? `These ${questionCount} questions bring back ideas from modules you already completed.${deferredDueCount > 0 ? ` Another ${deferredDueCount} ${deferredDueCount === 1 ? 'idea will' : 'ideas will'} wait for the next short set.` : ''}`
+      ? `These ${questionCount} questions come from modules you completed.${deferredDueCount > 0 ? ` Another ${deferredDueCount} ${deferredDueCount === 1 ? 'question will' : 'questions will'} appear in a later set.` : ''}`
       : mode === 'weak'
-        ? 'Nothing is due. A few ideas could use another gentle pass now, or you can wait for their scheduled review.'
-        : `Nothing is due.${nextReviewLabel ? ` Your next scheduled review is ${nextReviewLabel}.` : ''} You can still take an optional refresher.`
+        ? 'No review is due, but you can still practice a few completed lessons.'
+        : `No review is due.${nextReviewLabel ? ` The next review is ${nextReviewLabel}.` : ''} You can still practice now.`
 
   useEffect(() => {
     clearPracticeSession(track.id, practiceSessionStorage())
@@ -1047,12 +1017,12 @@ function PracticeBay({ progress, trackOverride }: { progress: LearnerProgress; t
   return (
     <main className="content-page">
       <div className="page-heading page-heading--simple">
-        <div><p className="kicker"><RotateCcw size={14} /> SHORT REVIEW</p><h1>Practice</h1><p>A small set of familiar ideas, chosen from modules you have already completed.</p></div>
+        <div><p className="kicker"><RotateCcw size={14} /> Review</p><h1>Practice</h1><p>Answer a few questions from modules you completed.</p></div>
       </div>
       <section className="practice-hero">
         <LanguageSymbol language={track.id} size="large" />
         <div>
-          <small>{mode === 'start' ? 'FIRST, FINISH ONE MODULE' : `${questionCount} ${questionCount === 1 ? 'QUESTION' : 'QUESTIONS'} · ABOUT ${estimatedMinutes} MINUTES`}</small>
+          <small>{mode === 'start' ? 'Finish one module first' : `${questionCount} ${questionCount === 1 ? 'question' : 'questions'} · about ${estimatedMinutes} minutes`}</small>
           <h2>{heroTitle}</h2>
           <p>{heroText}</p>
         </div>
@@ -1069,8 +1039,8 @@ function PracticeBay({ progress, trackOverride }: { progress: LearnerProgress; t
       {items.length > 0 && (
         <section className="practice-plan" aria-labelledby="practice-plan-title">
           <div className="section-heading-open">
-            <div><p className="eyebrow">Your review plan</p><h2 id="practice-plan-title">What you will practice</h2></div>
-            <p>No new concepts. Every question comes from a completed {track.shortName} module.</p>
+            <div><h2 id="practice-plan-title">Questions</h2></div>
+            <p>Every question comes from a completed {track.shortName} module.</p>
           </div>
           <ol aria-label="Practice questions" role="list">
             {items.map((item, index) => (
@@ -1085,22 +1055,16 @@ function PracticeBay({ progress, trackOverride }: { progress: LearnerProgress; t
             ))}
           </ol>
           <p className="practice-plan__note">
-            Practice changes only when these ideas return. It awards no XP or star shards.
-            {deferredDueCount > 0 && ` This set stays short on purpose. The remaining ${deferredDueCount} due ${deferredDueCount === 1 ? 'idea' : 'ideas'} will be first in your next set.`}
+            Practice does not change course completion or rewards.
+            {deferredDueCount > 0 && ` The remaining ${deferredDueCount} ${deferredDueCount === 1 ? 'question will' : 'questions will'} appear in a later set.`}
           </p>
         </section>
       )}
-      <div className="section-label"><span>HOW PRACTICE WORKS</span><i /></div>
-      <div className="explain-grid">
-        <article><span>01</span><h3>Learn it</h3><p>Meet one idea in plain language, then use it immediately.</p></article>
-        <article><span>02</span><h3>Retrieve it</h3><p>Bring the idea back from memory instead of only rereading it.</p></article>
-        <article><span>03</span><h3>Space it</h3><p>Correct answers wait longer. Struggles return sooner and more gently.</p></article>
-      </div>
       {dueConcepts.length > 0 && (
-        <section className="practice-plain-note">
-          <BookOpen size={19} />
-          <p><b>Why these questions?</b> {dueConcepts.length === 1 ? 'One idea is ready' : `${dueConcepts.length} ideas are ready`} to be recalled. We use your answers only to decide when these ideas should return. Practice answers and code are not added to your saved learning record.</p>
-        </section>
+        <details className="practice-plain-note">
+          <summary>How Practice chooses questions</summary>
+          <p>Practice uses questions from completed modules. Your answers help choose later practice questions. Practice answers and code are not added to your saved learning record.</p>
+        </details>
       )}
     </main>
   )
@@ -1181,27 +1145,31 @@ function CadetRecord({ onOpenCourse, progress, recordLocation }: CadetRecordProp
   const answers = concepts.reduce((sum, item) => sum + item.correct + item.incorrect, 0)
   const accuracy = answers ? Math.round((concepts.reduce((sum, item) => sum + item.correct, 0) / answers) * 100) : 0
   const courses = buildCourseCards(progress)
+  const continuingCourses = courses.filter((course) => course.kind === 'continuing')
+  const courseRecordDescription = continuingCourses.length === 1
+    ? `${continuingCourses[0].shortName} progress is tracked separately from its beginner course.`
+    : 'Later-course progress is tracked separately from beginner courses.'
 
   return (
     <main className="content-page">
       <div className="page-heading page-heading--simple"><div><p className="kicker"><UserRound size={14} /> LEARNER RECORD</p><h1>{progress.callsign}</h1><p>{recordLocation}</p></div></div>
       <div className="record-grid">
-        <article><Zap /><span><b>{progress.xp}</b><small>Total XP</small></span></article>
+        <article><Zap /><span><b>{progress.xp}</b><small>Total points</small></span></article>
         <article><Flame /><span><b>{progress.streak}</b><small>Day streak</small></span></article>
-        <article><Trophy /><span><b>{progress.completedMissions.length}</b><small>Missions</small></span></article>
+        <article><Trophy /><span><b>{progress.completedMissions.length}</b><small>Modules</small></span></article>
         <article><CheckCircle2 /><span><b>{accuracy}%</b><small>Accuracy</small></span></article>
       </div>
       <section className="station-records" aria-labelledby="course-records-title">
         <div className="station-records__heading">
-          <div><small>FIVE COURSE RECORDS</small><h2 id="course-records-title">Course records</h2></div>
-          <p>Each course keeps its own ordered record. Python Foundations and Practical Python remain separate, so continuing never changes your foundation completion.</p>
+          <div><h2 id="course-records-title">Courses</h2></div>
+          <p>{courses.length} courses. {courseRecordDescription}</p>
         </div>
         <div className="station-records__grid">
           {courses.map((course) => {
             const track = trackById(course.language)
             return (
               <article key={course.id} style={{ '--station-accent': track.accent } as React.CSSProperties}>
-                <div className="station-records__name"><LanguageSymbol language={course.language} size="small" /><span><b>{course.title}</b><small>{course.kind === 'foundation' ? `${track.role} foundation` : 'Next-step Python course'}</small></span></div>
+                <div className="station-records__name"><LanguageSymbol language={course.language} size="small" /><span><b>{course.title}</b><small>{course.kind === 'foundation' ? 'Beginner course' : 'Continuing course'}</small></span></div>
                 <div className="station-records__count"><b>{course.completedModuleCount} / {course.moduleCount}</b><small>modules complete</small></div>
                 <div className="station-records__bar" aria-label={`${course.title} ${course.progressPercent}% complete`} aria-valuemax={100} aria-valuemin={0} aria-valuenow={course.progressPercent} role="progressbar"><span style={{ width: `${course.progressPercent}%` }} /></div>
                 <button className="secondary-action" onClick={() => onOpenCourse(course.id, course.language)}>
@@ -1267,28 +1235,28 @@ function SettingsPage({
   }
 
   const accountDescription = !authUser
-    ? 'Sign in to create a private Cadet Record that can continue on another device.'
+    ? 'Sign in to save your progress to your account and continue on another device.'
     : syncState === 'synced'
-      ? `Your Cadet Record is synchronized${syncUpdatedAt ? ` as of ${new Date(syncUpdatedAt).toLocaleString()}` : ''}.`
+      ? `Your progress is saved to your account${syncUpdatedAt ? ` as of ${new Date(syncUpdatedAt).toLocaleString()}` : ''}.`
       : syncState === 'needs-choice'
-        ? 'Choose how this browser and the saved account record should be combined.'
+        ? 'Choose which progress to keep, or combine the progress from this browser and your account.'
         : syncState === 'offline'
-          ? 'The account could not be reached. This browser copy is safe and can retry later.'
+          ? 'Your account could not be reached. Your progress is still saved in this browser.'
           : syncState === 'local-only'
-            ? 'This browser copy is not currently synchronizing. You can start synchronization whenever you are ready.'
+            ? 'Your progress is saved in this browser. Save it to your account when you are ready.'
             : syncState === 'saving' || syncState === 'checking'
-              ? 'Checking and saving your private Cadet Record.'
-              : 'The account record needs attention. This browser copy has not been removed.'
+              ? 'Checking your account and saving your progress.'
+              : 'Your account needs attention. Your progress is still saved in this browser.'
 
   return (
     <main className="content-page">
       <div className="page-heading page-heading--simple">
-        <div><p className="kicker"><Settings size={14} /> SETTINGS</p><h1>Academy settings</h1><p>Identity, synchronization, training pace, backups, and your stored learning data.</p></div>
+        <div><h1>Settings</h1><p>Your account, daily goal, backup, and learning data.</p></div>
       </div>
       <section className="account-panel">
         <span className="account-panel__icon"><Github size={24} /></span>
         <div>
-          <small>{authUser ? 'ACCOUNT AND SYNC' : 'GITHUB ACCOUNT'}</small>
+          <small>GitHub account</small>
           <h2>{authUser ? `Signed in as ${authUser.login}` : 'No account connected'}</h2>
           <p>{accountDescription}</p>
           {authUser && syncMessage && <p className="account-panel__status" role="status">{syncMessage}</p>}
@@ -1296,7 +1264,7 @@ function SettingsPage({
         {authUser ? (
           <div className="account-panel__actions">
             <button className="secondary-action" onClick={onSyncNow} disabled={syncBusy || syncState === 'needs-choice'}>
-              <RefreshCw size={16} /> {syncBusy ? 'Synchronizing' : 'Sync now'}
+              <RefreshCw size={16} /> {syncBusy ? 'Saving' : 'Save to account'}
             </button>
             <button className="secondary-action" onClick={onLogout} disabled={authBusy}>
               <LogOut size={16} /> {authBusy ? 'Signing out' : 'Sign out'}
@@ -1310,11 +1278,10 @@ function SettingsPage({
       </section>
       <section className="training-goal-panel" aria-labelledby="training-goal-title">
         <div>
-          <small>DAILY TRAINING GOAL</small>
-          <h2 id="training-goal-title">Choose a pace that fits today</h2>
-          <p>The goal is a gentle reminder, not a deadline. Missing it never locks a lesson, removes a streak already earned, or costs shards.</p>
+          <h2 id="training-goal-title">Daily goal</h2>
+          <p>The goal is a reminder, not a deadline. Missing it never locks a lesson or removes progress.</p>
         </div>
-        <div className="training-goal-panel__options" aria-label="Daily training goal">
+        <div className="training-goal-panel__options" aria-label="Daily study goal">
           {[5, 10, 15].map((goal) => (
             <button
               key={goal}
@@ -1322,7 +1289,7 @@ function SettingsPage({
               aria-pressed={progress.dailyGoal === goal}
               onClick={() => onDailyGoalChange(goal)}
             >
-              <Clock3 size={15} /> {goal} XP
+              <Clock3 size={15} /> {goal} points
             </button>
           ))}
         </div>
@@ -1330,17 +1297,16 @@ function SettingsPage({
       <section className="backup-panel">
         <span className="account-panel__icon"><Download size={24} /></span>
         <div>
-          <small>PORTABLE PROGRESS BACKUP</small>
-          <h2>Keep a copy that you control</h2>
-          <p>Download your callsign, XP, missions, streak, and review schedule as a JSON file. Restoring validates every value before replacing this browser copy. If synchronization is active, the restored copy is then saved to the account.</p>
+          <h2>Progress backup</h2>
+          <p>A backup is a small .json text file that this site can read. It contains your learner name, points, completed modules, study streak, and review schedule. Keep it somewhere you control. Restoring checks the file before replacing progress in this browser. If you save progress to your account, the restored progress is saved there too.</p>
           {backupMessage && <p className="backup-panel__status" role="status">{backupMessage}</p>}
         </div>
         <div className="backup-panel__actions">
           <button className="secondary-action" onClick={() => setBackupMessage(onDownloadBackup())}>
-            <Download size={16} /> Download backup
+            <Download size={16} /> Download backup file
           </button>
           <button className="secondary-action" onClick={() => restoreInput.current?.click()}>
-            <Upload size={16} /> Restore backup
+            <Upload size={16} /> Restore from file
           </button>
           <input
             ref={restoreInput}
@@ -1355,17 +1321,16 @@ function SettingsPage({
       {authUser && (
         <section className="settings-panel settings-panel--danger">
           <div>
-            <small>ACCOUNT DATA CONTROL</small>
-            <h2>Delete synchronized learning data</h2>
-            <p>This permanently removes the server copy of your Cadet Record. It does not delete the copy in this browser, your GitHub account, or your GitHub authorization.</p>
+            <h2>Delete progress saved to your account</h2>
+            <p>This permanently removes the learning progress saved to your account. It does not delete the progress in this browser, your GitHub account, or your GitHub sign-in permission.</p>
           </div>
           <button className="danger-button" onClick={onDeleteAccountData} disabled={syncBusy}>
-            <Trash2 size={16} /> Delete account learning data
+            <Trash2 size={16} /> Delete saved account progress
           </button>
         </section>
       )}
       <section className="settings-panel">
-        <div><small>LEARNING PROGRESS</small><h2>Reset learning progress</h2><p>Resetting removes your learner name, course and project completion, XP, shards, streak, training goal, and review schedule from this browser. Saved project code and local check summaries stay on this browser. When account synchronization is active, the empty learning record becomes the synchronized copy too.</p></div>
+        <div><h2>Reset learning progress</h2><p>Resetting removes your learner name, course and project completion, points, study streak, daily goal, and review schedule from this browser. Saved project code and check summaries stay in this browser. If you save progress to your account, the reset is saved there too.</p></div>
         <button className="danger-button" onClick={onReset}><RotateCcw size={16} /> Reset learning progress</button>
       </section>
     </main>
@@ -1374,11 +1339,11 @@ function SettingsPage({
 
 function authNoticeFromLocation(): string | null {
   const url = new URL(window.location.href)
-  if (url.searchParams.get('auth') === 'success') return 'GitHub identity verified. Welcome aboard.'
+  if (url.searchParams.get('auth') === 'success') return 'Signed in with GitHub.'
   if (url.searchParams.get('auth') !== 'error') return null
 
   const reason = url.searchParams.get('reason')
-  if (reason === 'cancelled') return 'GitHub sign-in was cancelled. Your local progress was not changed.'
+  if (reason === 'cancelled') return 'GitHub sign-in was cancelled. Your progress in this browser was not changed.'
   if (reason === 'not-configured') return 'GitHub sign-in is not configured yet.'
   return 'GitHub sign-in could not be completed. Please try again.'
 }
@@ -1427,26 +1392,26 @@ function SyncChoiceDialog({ busy, local, onChoose, onLater, remote }: SyncChoice
       <section className="sync-dialog">
         <div className="sync-dialog__icon"><Cloud size={26} /></div>
         <div>
-          <p className="kicker">PRIVATE CADET RECORD</p>
-          <h2 id="sync-dialog-title">{remote ? 'Choose which progress to continue' : 'Save this browser’s progress to your account?'}</h2>
+          <p className="kicker">SAVE PROGRESS</p>
+          <h2 id="sync-dialog-title">{remote ? 'Choose which progress to keep' : 'Save this browser’s progress to your account?'}</h2>
           <p>
             {remote
-              ? 'This browser and your account contain different learning records. Nothing will be overwritten until you choose.'
-              : 'Your current missions, XP, streak, settings, and review schedule can follow you to another signed-in device.'}
+              ? 'This browser and your account have different progress. Nothing will be replaced until you choose.'
+              : 'Your completed modules, points, study streak, settings, and review schedule can follow you to another signed-in device.'}
           </p>
         </div>
         {remote && (
           <div className="sync-dialog__records">
-            <article><small>THIS BROWSER</small><b>{local.xp} XP · {local.completedMissions.length} missions</b><span>{local.callsign || 'Unnamed cadet'}</span></article>
-            <article><small>SAVED ACCOUNT</small><b>{remote.progress.xp} XP · {remote.progress.completedMissions.length} missions</b><span>Updated {new Date(remote.updatedAt).toLocaleString()}</span></article>
+            <article><small>THIS BROWSER</small><b>{local.xp} points · {local.completedMissions.length} modules</b><span>{local.callsign || 'Unnamed learner'}</span></article>
+            <article><small>SAVED ACCOUNT</small><b>{remote.progress.xp} points · {remote.progress.completedMissions.length} modules</b><span>Updated {new Date(remote.updatedAt).toLocaleString()}</span></article>
           </div>
         )}
         <div className="sync-dialog__actions">
           {remote ? (
             <>
-              <button autoFocus className="primary-action" onClick={() => onChoose('combine')} disabled={busy}>Combine safely</button>
-              <button className="secondary-action" onClick={() => onChoose('local')} disabled={busy}>Use this browser</button>
-              <button className="secondary-action" onClick={() => onChoose('remote')} disabled={busy}>Use saved account</button>
+              <button autoFocus className="primary-action" onClick={() => onChoose('combine')} disabled={busy}>Combine both</button>
+              <button className="secondary-action" onClick={() => onChoose('local')} disabled={busy}>Use progress from this browser</button>
+              <button className="secondary-action" onClick={() => onChoose('remote')} disabled={busy}>Use progress saved to account</button>
             </>
           ) : (
             <button autoFocus className="primary-action" onClick={() => onChoose('local')} disabled={busy}>Save progress to account</button>
@@ -1454,7 +1419,7 @@ function SyncChoiceDialog({ busy, local, onChoose, onLater, remote }: SyncChoice
           <button className="text-action" onClick={onLater} disabled={busy}>Decide later</button>
         </div>
         <p className="sync-dialog__fine-print">
-          <Shield size={14} /> The academy stores the learning record only. It does not retain submitted code, GitHub tokens, email, or raw IP addresses here.
+          <Shield size={14} /> SeePoundCoffeePie stores only your learning progress. It does not retain submitted code, GitHub tokens, email, or raw IP addresses here.
         </p>
       </section>
     </dialog>
@@ -1462,20 +1427,7 @@ function SyncChoiceDialog({ busy, local, onChoose, onLater, remote }: SyncChoice
 }
 
 function NotFoundPage({ progress }: { progress: LearnerProgress }) {
-  return (
-    <main className="route-message-page" id="main-content" tabIndex={-1}>
-      <BrandMark />
-      <section className="route-message-card">
-        <p className="kicker"><Compass size={15} /> Uncharted route</p>
-        <h1>That page is not on the academy map</h1>
-        <p>The address may be incomplete, outdated, or mistyped. The public introduction and your current academy route are still available.</p>
-        <div className="landing-actions">
-          <AppLink className="primary-action" to="/">Visit the launch page <ArrowRight size={17} /></AppLink>
-          {progress.onboardingComplete && <AppLink className="secondary-action" to={homePath()}>Return to your learning home</AppLink>}
-        </div>
-      </section>
-    </main>
-  )
+  return <RouteNotFoundPage brand={<BrandMark />} progress={progress} />
 }
 
 function AppContent() {
@@ -1522,27 +1474,25 @@ function AppContent() {
           ? 'settings'
           : 'path'
 
-  const continuingPracticeLanguage = route.language
+  const continuingPracticeRequest = route.language
     && (route.page === 'practice' || route.page === 'practice-session')
-    && continuingPracticeLoaders[route.language]
-    ? route.language
-    : null
+    ? publishedContinuingCourseContentRequestForLanguage(route.language)
+    : undefined
+  const continuingPracticeLanguage = continuingPracticeRequest ? route.language : null
 
   useEffect(() => {
-    if (!continuingPracticeLanguage || continuingPracticeMissions[continuingPracticeLanguage]) return
-    const loader = continuingPracticeLoaders[continuingPracticeLanguage]
-    if (!loader) return
+    if (!continuingPracticeLanguage || !continuingPracticeRequest || continuingPracticeMissions[continuingPracticeLanguage]) return
     let active = true
-    void loader().then((missions) => {
-      if (active) {
+    void continuingPracticeRequest.then((content) => {
+      if (active && content) {
         setContinuingPracticeMissions((current) => ({
           ...current,
-          [continuingPracticeLanguage]: missions,
+          [continuingPracticeLanguage]: content.missions,
         }))
       }
     })
     return () => { active = false }
-  }, [continuingPracticeLanguage, continuingPracticeMissions])
+  }, [continuingPracticeLanguage, continuingPracticeMissions, continuingPracticeRequest])
 
   useEffect(() => {
     progressRef.current = progress
@@ -1588,7 +1538,7 @@ function AppContent() {
         : route.page === 'practice' || route.page === 'practice-session'
           ? `${track?.shortName} Practice`
           : route.page === 'codebook'
-            ? `${track?.shortName} Codebook`
+          ? `${track?.shortName} Code reference`
             : route.page === 'profile'
               ? 'Learner Record'
               : route.page === 'settings'
@@ -1602,7 +1552,7 @@ function AppContent() {
                     ? routedCourse.title
                     : exercise?.title ?? mission?.title
                   : 'Page not found'
-    document.title = `${pageTitle ?? 'Academy'} | SeePoundCoffeePie`
+    document.title = `${pageTitle ?? 'Learn'} | SeePoundCoffeePie`
   }, [route.checkpointId, route.exerciseId, route.language, route.missionId, route.page, route.projectId, routedCourse])
 
   useEffect(() => {
@@ -1628,7 +1578,7 @@ function AppContent() {
     setSyncRecord(record)
     setSyncChoice(undefined)
     setSyncState('synced')
-    setSyncMessage(`Cadet Record synchronized at ${new Date(record.updatedAt).toLocaleTimeString()}.`)
+    setSyncMessage(`Progress saved to your account at ${new Date(record.updatedAt).toLocaleTimeString()}.`)
   }, [])
 
   const saveAccountProgress = useCallback(async (
@@ -1637,7 +1587,7 @@ function AppContent() {
   ) => {
     setSyncBusy(true)
     setSyncState('saving')
-    setSyncMessage('Saving the latest Cadet Record to your account.')
+    setSyncMessage('Saving your progress to your account.')
     try {
       const result = await saveRemoteProgress(nextProgress, revision)
       if (result.ok) {
@@ -1654,7 +1604,7 @@ function AppContent() {
       throw new Error(result.message)
     } catch (error) {
       setSyncState(navigator.onLine ? 'error' : 'offline')
-      setSyncMessage(error instanceof Error ? error.message : 'This browser copy is safe, but it could not synchronize yet.')
+      setSyncMessage(error instanceof Error ? error.message : 'Your progress is saved in this browser, but it could not be saved to your account yet.')
       return false
     } finally {
       setSyncBusy(false)
@@ -1681,7 +1631,7 @@ function AppContent() {
             syncedSnapshotRef.current = JSON.stringify(local)
             setSyncRecord(null)
             setSyncState('synced')
-            setSyncMessage('Account connected. New learning progress will synchronize automatically.')
+            setSyncMessage('Account connected. New learning progress will be saved automatically.')
           }
           return
         }
@@ -1703,7 +1653,7 @@ function AppContent() {
       .catch((error: unknown) => {
         if (controller.signal.aborted) return
         setSyncState(navigator.onLine ? 'error' : 'offline')
-        setSyncMessage(error instanceof Error ? error.message : 'The account record could not be checked. This browser copy is safe.')
+        setSyncMessage(error instanceof Error ? error.message : 'Your account progress could not be checked. Your progress is still saved in this browser.')
       })
 
     return () => controller.abort()
@@ -1749,7 +1699,7 @@ function AppContent() {
       .then((session) => {
         if (active && session?.authenticated) {
           setSyncState('checking')
-          setSyncMessage('Checking for an existing Cadet Record.')
+          setSyncMessage('Checking for progress saved to your account.')
           setAuthUser(session.user)
         }
       })
@@ -1800,7 +1750,7 @@ function AppContent() {
       setSyncMessage('')
       setSyncState('guest')
       setAuthUser(null)
-      setAuthNotice('Signed out. This browser copy of your Cadet Record is still here.')
+      setAuthNotice('Signed out. Your learning progress is still saved in this browser.')
     } catch {
       setAuthNotice('Sign-out could not be completed. Please try again.')
     } finally {
@@ -1810,8 +1760,8 @@ function AppContent() {
 
   const reset = () => {
     const message = syncEnabledRef.current
-      ? 'Reset all SeePoundCoffeePie learning progress? The empty record will replace the synchronized account copy and return this browser to beginner intake. Saved project code and local check summaries will stay on this browser.'
-      : 'Reset all local SeePoundCoffeePie learning progress and return to beginner intake? Saved project code and local check summaries will stay on this browser.'
+      ? 'Reset all SeePoundCoffeePie learning progress? The reset will also be saved to your account, and this browser will return to beginner intake. Saved project code and check summaries will stay in this browser.'
+      : 'Reset all SeePoundCoffeePie learning progress in this browser and return to beginner intake? Saved project code and check summaries will stay in this browser.'
     if (window.confirm(message)) {
       const sessionStorage = practiceSessionStorage()
       tracks.forEach((track) => clearPracticeSession(track.id, sessionStorage))
@@ -1832,14 +1782,14 @@ function AppContent() {
     link.click()
     link.remove()
     window.setTimeout(() => URL.revokeObjectURL(url), 0)
-    return 'Backup downloaded. Keep the JSON file somewhere you control.'
+    return 'Backup file downloaded. Keep it somewhere you control.'
   }
 
   const restoreProgressBackup = (text: string) => {
     const result = parseProgressBackup(text)
     if (!result.ok) return result.message
     const restoreQuestion = syncEnabledRef.current
-      ? 'Replace the current SeePoundCoffeePie progress with this backup and synchronize the restored record to the account?'
+      ? 'Replace your current SeePoundCoffeePie progress with this backup and save the restored progress to your account?'
       : 'Replace this browser’s current SeePoundCoffeePie progress with the selected backup?'
     if (!window.confirm(restoreQuestion)) {
       return 'Restore cancelled. Your current progress was not changed.'
@@ -1867,7 +1817,7 @@ function AppContent() {
     if (choice === 'remote' && remote) {
       setProgress(remote.progress)
       markSynced(remote)
-      setAuthNotice('This browser now uses the Cadet Record saved in your account.')
+      setAuthNotice('This browser now uses the progress saved to your account.')
       return
     }
     const selected = choice === 'combine' && remote
@@ -1877,8 +1827,8 @@ function AppContent() {
     const saved = await saveAccountProgress(selected, remote?.revision ?? 0)
     if (saved) {
       setAuthNotice(choice === 'combine'
-        ? 'The browser and account records were combined and synchronized.'
-        : 'This browser’s Cadet Record is now saved to your account.')
+        ? 'Progress from this browser and your account was combined and saved.'
+        : 'This browser’s progress is now saved to your account.')
     }
   }
 
@@ -1886,7 +1836,7 @@ function AppContent() {
     syncEnabledRef.current = false
     setSyncChoice(undefined)
     setSyncState('local-only')
-    setSyncMessage('Synchronization is paused by your choice. This browser copy remains available.')
+    setSyncMessage('Your progress is saved in this browser. It is not being saved to your account.')
   }
 
   const syncNow = () => {
@@ -1895,7 +1845,7 @@ function AppContent() {
   }
 
   const deleteAccountData = async () => {
-    if (!window.confirm('Permanently delete the synchronized Cadet Record from your account? The copy in this browser will remain.')) return
+    if (!window.confirm('Permanently delete the learning progress saved to your account? The progress in this browser will remain.')) return
     setSyncBusy(true)
     try {
       await deleteRemoteProgress()
@@ -1905,8 +1855,8 @@ function AppContent() {
       setSyncRecord(null)
       setSyncChoice(undefined)
       setSyncState('local-only')
-      setSyncMessage('The synchronized learning record was deleted. This browser copy remains local.')
-      setAuthNotice('Account learning data deleted. Your browser copy was not removed.')
+      setSyncMessage('Progress saved to your account was deleted. Your progress remains in this browser.')
+      setAuthNotice('Saved account progress deleted. Your progress in this browser was not removed.')
     } catch (error) {
       setSyncState(navigator.onLine ? 'error' : 'offline')
       setSyncMessage(error instanceof Error ? error.message : 'Account learning data could not be deleted.')
@@ -1926,10 +1876,10 @@ function AppContent() {
   ) : null
 
   const recordLocation = authUser && (syncState === 'synced' || syncState === 'saving')
-    ? 'Your private Cadet Record is stored in this browser and synchronized to your account.'
+    ? 'Your progress is saved in this browser and to your account.'
     : authUser
-      ? 'Your Cadet Record is stored in this browser. Account synchronization needs attention.'
-      : 'Your Cadet Record is stored only in this browser until you choose to sign in.'
+      ? 'Your progress is saved in this browser, but there is a problem saving it to your account.'
+      : 'Your progress is saved in this browser. Sign in to save it to your account.'
 
   if (route.page === 'landing') {
     return (
@@ -2109,9 +2059,7 @@ function AppContent() {
           <Suspense fallback={(
             <main className="content-page" aria-busy="true">
               <section className="route-message-card route-message-card--inside">
-                <p className="kicker"><FileCode2 size={15} /> Portfolio preview</p>
-                <h1>Preparing the private preview</h1>
-                <p>Loading the project description and checking this browser for the final source.</p>
+                <h1>Loading portfolio</h1>
               </section>
             </main>
           )}>
@@ -2157,9 +2105,7 @@ function AppContent() {
           <Suspense fallback={(
             <main className="content-page" aria-busy="true">
               <section className="route-message-card route-message-card--inside">
-                <p className="kicker"><Coffee size={15} /> Project studio</p>
-                <h1>Opening your project</h1>
-                <p>Loading the lesson notes, editor, and your browser-saved draft.</p>
+                <h1>Loading project</h1>
               </section>
             </main>
           )}>
@@ -2202,9 +2148,7 @@ function AppContent() {
           <Suspense fallback={(
             <main className="content-page" aria-busy="true">
               <section className="route-message-card route-message-card--inside">
-                <p className="kicker"><BookOpen size={15} /> {routedCourse.shortName}</p>
-                <h1>Opening the course</h1>
-                <p>Loading the six-module outline and its beginner-friendly lesson previews.</p>
+                <h1>Loading course</h1>
               </section>
             </main>
           )}>
@@ -2225,9 +2169,9 @@ function AppContent() {
         )}
         {route.page === 'practice' && (practiceTrack
           ? <PracticeBay progress={normalizedProgress} trackOverride={practiceTrack} />
-          : <main className="content-page" aria-busy="true"><section className="route-message-card route-message-card--inside"><p className="kicker"><RotateCcw size={15} /> Practice</p><h1>Preparing your review</h1><p>Loading completed {trackById(normalizedProgress.activeLanguage).shortName} course material for this language-wide practice set.</p></section></main>)}
+          : <main className="content-page" aria-busy="true"><section className="route-message-card route-message-card--inside"><h1>Loading practice</h1></section></main>)}
         {route.page === 'codebook' && (
-          <Suspense fallback={<main className="content-page" aria-busy="true"><section className="route-message-card route-message-card--inside"><p className="kicker"><BookOpen size={15} /> Codebook</p><h1>Opening the reference</h1><p>Loading plain-language definitions and the examples you have unlocked.</p></section></main>}>
+          <Suspense fallback={<main className="content-page" aria-busy="true"><section className="route-message-card route-message-card--inside"><h1>Loading code reference</h1></section></main>}>
             <CodebookRoute progress={normalizedProgress} />
           </Suspense>
         )}

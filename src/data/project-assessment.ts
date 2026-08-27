@@ -1,7 +1,9 @@
 import type { ProjectTestCase } from './project-types'
 import type { LanguageId } from '../types'
 
-export type ServerOwnedAssessmentProfile = 'python-data-tools-supply-tracker-v1'
+export type ServerOwnedAssessmentProfile =
+  | 'python-data-tools-supply-tracker-v1'
+  | 'cpp-collections-records-workshop-report-v1'
 
 export interface ServerOwnedRunnerAssessment {
   language: LanguageId
@@ -19,6 +21,24 @@ interface ServerOwnedProjectStructuralCheckBase {
 }
 
 export type ServerOwnedRunnerStructuralCheck =
+  | ServerOwnedProjectStructuralCheckBase & {
+      validation: 'cpp-collections-authored-frame'
+    }
+  | ServerOwnedProjectStructuralCheckBase & {
+      validation: 'cpp-collections-part-record'
+    }
+  | ServerOwnedProjectStructuralCheckBase & {
+      validation: 'cpp-collections-restock'
+    }
+  | ServerOwnedProjectStructuralCheckBase & {
+      validation: 'cpp-collections-total-units'
+    }
+  | ServerOwnedProjectStructuralCheckBase & {
+      validation: 'cpp-collections-low-stock'
+    }
+  | ServerOwnedProjectStructuralCheckBase & {
+      validation: 'cpp-collections-supplied-harness'
+    }
   | ServerOwnedProjectStructuralCheckBase & {
       validation: 'python-data-tools-authored-frame'
     }

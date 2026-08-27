@@ -71,6 +71,19 @@ export interface PythonDataToolsAnalysis {
   harness: boolean
 }
 
+export interface CppCollectionsAnalysis {
+  version: 1
+  profile: 'cpp-collections-records-workshop-report-v1'
+  analyzed: boolean
+  parsed: boolean
+  authored_frame: boolean
+  part_record: boolean
+  restock: boolean
+  total_units: boolean
+  low_stock: boolean
+  supplied_harness: boolean
+}
+
 export type CppDeclarationFact =
   | { target: string; occurrence: number; statement: number; kind: 'integer'; value: number }
   | { target: string; occurrence: number; statement: number; kind: 'string' }
@@ -287,6 +300,7 @@ export interface JavaAnalysis {
 export type RunnerStructuralAnalysis =
   | PythonAnalysis
   | PythonDataToolsAnalysis
+  | CppCollectionsAnalysis
   | CppAnalysis
   | CsharpAnalysis
   | JavaAnalysis
@@ -311,8 +325,17 @@ export function registerRunnerAssignment(
   if (assessment?.language !== undefined && assessment.language !== assignment.language) {
     throw new Error(`Runner assignment ${assignment.exerciseId} has a mismatched assessment language.`)
   }
-  if (assessment?.analysisProfile !== undefined && assignment.language !== 'python') {
+  if (
+    assessment?.analysisProfile === 'python-data-tools-supply-tracker-v1'
+    && assignment.language !== 'python'
+  ) {
     throw new Error(`Runner assignment ${assignment.exerciseId} has a Python-only assessment profile.`)
+  }
+  if (
+    assessment?.analysisProfile === 'cpp-collections-records-workshop-report-v1'
+    && assignment.language !== 'cpp'
+  ) {
+    throw new Error(`Runner assignment ${assignment.exerciseId} has a mismatched C++ assessment profile.`)
   }
   if (assessment) {
     const visibleCaseCount = assessment.testCases.filter((testCase) => (
@@ -481,6 +504,21 @@ function checkPythonDataToolsAnalysisFact(
     case 'python-data-tools-total-stock': return analysis.total_stock
     case 'python-data-tools-low-stock': return analysis.low_stock
     case 'python-data-tools-harness': return analysis.harness
+    default: return false
+  }
+}
+
+function checkCppCollectionsAnalysisFact(
+  analysis: CppCollectionsAnalysis,
+  check: ServerOwnedRunnerStructuralCheck,
+): boolean {
+  switch (check.validation) {
+    case 'cpp-collections-authored-frame': return analysis.authored_frame
+    case 'cpp-collections-part-record': return analysis.part_record
+    case 'cpp-collections-restock': return analysis.restock
+    case 'cpp-collections-total-units': return analysis.total_units
+    case 'cpp-collections-low-stock': return analysis.low_stock
+    case 'cpp-collections-supplied-harness': return analysis.supplied_harness
     default: return false
   }
 }
@@ -811,6 +849,15 @@ export function evaluateRunnerStructuralChecks(
     && analysis.profile === assessment.analysisProfile
     && analysis.analyzed
     && analysis.parsed
+  const trustedCppCollections = assessment.language === 'cpp'
+    && assessment.analysisProfile === 'cpp-collections-records-workshop-report-v1'
+    && analysis !== null
+    && analysis !== undefined
+    && 'profile' in analysis
+    && analysis.version === 1
+    && analysis.profile === assessment.analysisProfile
+    && analysis.analyzed
+    && analysis.parsed
   const trustedPython = assessment.language === 'python'
     && assessment.analysisProfile === undefined
     && analysis !== null
@@ -820,6 +867,7 @@ export function evaluateRunnerStructuralChecks(
     && analysis.parsed
     && analysis.straight_line
   const trustedCpp = assessment.language === 'cpp'
+    && assessment.analysisProfile === undefined
     && analysis !== null
     && analysis !== undefined
     && 'analyzed' in analysis
@@ -852,6 +900,8 @@ export function evaluateRunnerStructuralChecks(
   return assessment.structuralChecks.map((check) => ({
     passed: trustedPythonDataTools
       ? checkPythonDataToolsAnalysisFact(analysis, check)
+      : trustedCppCollections
+        ? checkCppCollectionsAnalysisFact(analysis, check)
       : trustedPython
         ? checkPythonAnalysisFact(analysis, check)
       : trustedCpp
@@ -1006,7 +1056,7 @@ export function evaluateRunnerAssignment(
       visibility: 'hidden',
       passed: completed,
       message: completed
-        ? 'The program finished normally inside the isolated runner.'
+        ? 'The program finished normally in the temporary code checker.'
         : 'The same requirement also needs the program to compile and finish normally.',
     },
     ...requiredCodeTests,

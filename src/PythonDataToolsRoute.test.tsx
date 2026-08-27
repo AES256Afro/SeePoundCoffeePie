@@ -1,9 +1,16 @@
 // @vitest-environment jsdom
 
-import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
-import type { Dispatch, SetStateAction } from 'react'
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
+import {
+  Suspense,
+  type Dispatch,
+  type PropsWithChildren,
+  type ReactNode,
+  type SetStateAction,
+} from 'react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import {
+  ContinuingCoursePage,
   PythonDataToolsCoursePage,
   PythonDataToolsLessonPage,
 } from './PythonDataToolsRoute'
@@ -11,7 +18,7 @@ import { courseDefinition } from './data/course-registry'
 import { trackById } from './data/curriculum'
 import { pythonDataToolsCourse } from './data/python-data-tools-course'
 import { initialProgress } from './lib/progress'
-import type { LearnerProgress, Mission } from './types'
+import type { CourseId, LearnerProgress, Mission } from './types'
 
 interface MockLessonPlayerProps {
   initialExerciseId?: string
@@ -59,6 +66,19 @@ function progressDispatcher() {
   return vi.fn<(value: SetStateAction<LearnerProgress>) => void>()
 }
 
+function ContinuingCourseBoundary({ children }: PropsWithChildren) {
+  return <Suspense fallback={<p>Opening course content</p>}>{children}</Suspense>
+}
+
+async function renderCourse(element: ReactNode) {
+  let result: unknown
+  await act(async () => {
+    result = render(element, { wrapper: ContinuingCourseBoundary })
+  })
+  if (!result) throw new Error('Expected the continuing course route to render.')
+  return result as ReturnType<typeof render>
+}
+
 describe('Practical Python route components', () => {
   beforeEach(() => {
     document.title = 'Test document'
@@ -73,7 +93,7 @@ describe('Practical Python route components', () => {
   it('previews the locked course and routes both prerequisite links', async () => {
     const onNavigate = vi.fn<(path: string) => void>()
 
-    render(
+    await renderCourse(
       <PythonDataToolsCoursePage
         onNavigate={onNavigate}
         onProgress={progressDispatcher()}
@@ -81,15 +101,18 @@ describe('Practical Python route components', () => {
       />,
     )
 
-    const courseHeading = screen.getByRole('heading', {
+    const courseHeading = await screen.findByRole('heading', {
       level: 1,
       name: 'Practical Python: Data Tools',
     })
     expect(courseHeading).toBeTruthy()
-    expect(screen.getByText('Finish both prerequisites to start')).toBeTruthy()
+    expect(screen.getByText('Python course')).toBeTruthy()
+    expect(screen.getByText('Complete both items below to start')).toBeTruthy()
     expect(screen.getByRole('heading', {
-      name: 'Two earlier steps make this course feel gentle',
+      name: 'Complete these first',
     })).toBeTruthy()
+    expect(screen.getByText('You can view the modules now. Complete both items below to open the lessons.')).toBeTruthy()
+    expect(screen.getByText('Complete the modules in order.')).toBeTruthy()
     expect(screen.getAllByRole('button')).toHaveLength(6)
     for (const title of definition.moduleTitles) {
       expect(screen.getByText(title)).toBeTruthy()
@@ -98,8 +121,8 @@ describe('Practical Python route components', () => {
     const foundationsItem = screen.getByText('Complete Python Foundations').closest('li')
     const projectItem = screen.getByText('Complete Your First Interactive Program').closest('li')
     if (!foundationsItem || !projectItem) throw new Error('Expected both prerequisite list items.')
-    const foundationsLink = within(foundationsItem).getByRole('link', { name: /Open step/iu })
-    const projectLink = within(projectItem).getByRole('link', { name: /Open step/iu })
+    const foundationsLink = within(foundationsItem).getByRole('link', { name: /Open course/iu })
+    const projectLink = within(projectItem).getByRole('link', { name: /Open project/iu })
 
     expect(foundationsLink.getAttribute('href')).toBe('/courses/python-foundations')
     expect(projectLink.getAttribute('href')).toBe('/projects/python/first-interactive-program')
@@ -115,10 +138,10 @@ describe('Practical Python route components', () => {
     })
   })
 
-  it('starts an available course at its first authored lesson', () => {
+  it('starts an available course at its first authored lesson', async () => {
     const onNavigate = vi.fn<(path: string) => void>()
 
-    render(
+    await renderCourse(
       <PythonDataToolsCoursePage
         onNavigate={onNavigate}
         onProgress={progressDispatcher()}
@@ -126,11 +149,11 @@ describe('Practical Python route components', () => {
       />,
     )
 
-    expect(screen.queryByText('Finish both prerequisites to start')).toBeNull()
+    const start = await screen.findByRole('link', { name: /Start course/iu })
+    expect(screen.queryByText('Complete both items below to start')).toBeNull()
     expect(screen.queryByRole('heading', {
-      name: 'Two earlier steps make this course feel gentle',
+      name: 'Complete these first',
     })).toBeNull()
-    const start = screen.getByRole('link', { name: /Start course/iu })
     expect(start.getAttribute('href')).toBe(
       '/learn/python-data-tools/py-data-return-values/pydata1-retrieve-call',
     )
@@ -143,6 +166,27 @@ describe('Practical Python route components', () => {
     )
   })
 
+  it('shows a module description only while that module is open', async () => {
+    const firstMission = pythonDataToolsCourse.missions[0]
+    const secondMission = pythonDataToolsCourse.missions[1]
+
+    await renderCourse(
+      <PythonDataToolsCoursePage
+        onNavigate={vi.fn()}
+        onProgress={progressDispatcher()}
+        progress={initialProgress('python')}
+      />,
+    )
+
+    expect(await screen.findByText(firstMission.description)).toBeTruthy()
+    expect(screen.queryByText(secondMission.description)).toBeNull()
+
+    fireEvent.click(screen.getByRole('button', { name: new RegExp(secondMission.title, 'iu') }))
+
+    expect(screen.queryByText(firstMission.description)).toBeNull()
+    expect(screen.getByText(secondMission.description)).toBeTruthy()
+  })
+
   it('requires the prior module before opening a later lesson', async () => {
     const firstMission = pythonDataToolsCourse.missions[0]
     const secondMission = pythonDataToolsCourse.missions[1]
@@ -151,7 +195,7 @@ describe('Practical Python route components', () => {
     const onProgress = progressDispatcher()
     const onNavigate = vi.fn<(path: string) => void>()
     const ready = progressWithPrerequisites()
-    const { rerender } = render(
+    const { rerender } = await renderCourse(
       <PythonDataToolsLessonPage
         exerciseId={exercise.id}
         missionId={secondMission.id}
@@ -161,25 +205,27 @@ describe('Practical Python route components', () => {
       />,
     )
 
-    expect(screen.getByRole('heading', {
+    expect(await screen.findByRole('heading', {
       name: `${exercise.title} is still ahead`,
     })).toBeTruthy()
     expect(screen.getByText(
-      'Complete Functions That Return Answers first. Each module retrieves ideas that the next one uses.',
+      'Complete Functions That Return Answers first. Each module uses ideas from the one before it.',
     )).toBeTruthy()
     expect(screen.queryByRole('main', { name: 'Mock lesson player' })).toBeNull()
 
-    rerender(
-      <PythonDataToolsLessonPage
-        exerciseId={exercise.id}
-        missionId={secondMission.id}
-        onNavigate={onNavigate}
-        onProgress={onProgress}
-        progress={progressWithPrerequisites({
-          completedMissions: [...foundationMissionIds, firstMission.id],
-        })}
-      />,
-    )
+    await act(async () => {
+      rerender(
+        <PythonDataToolsLessonPage
+          exerciseId={exercise.id}
+          missionId={secondMission.id}
+          onNavigate={onNavigate}
+          onProgress={onProgress}
+          progress={progressWithPrerequisites({
+            completedMissions: [...foundationMissionIds, firstMission.id],
+          })}
+        />,
+      )
+    })
 
     expect(await screen.findByRole('heading', {
       name: `Lesson player: ${exercise.id}`,
@@ -199,7 +245,7 @@ describe('Practical Python route components', () => {
     }
     const onProgress = progressDispatcher()
 
-    render(
+    await renderCourse(
       <PythonDataToolsLessonPage
         exerciseId={exercise.id}
         missionId={mission.id}
@@ -209,7 +255,7 @@ describe('Practical Python route components', () => {
       />,
     )
 
-    expect(screen.getByText('Lesson locked')).toBeTruthy()
+    expect(await screen.findByText('Lesson locked')).toBeTruthy()
     expect(screen.getByRole('heading', {
       name: `${exercise.title} is still ahead`,
     })).toBeTruthy()
@@ -220,7 +266,7 @@ describe('Practical Python route components', () => {
     expect(onProgress).not.toHaveBeenCalled()
 
     cleanup()
-    render(
+    await renderCourse(
       <PythonDataToolsCoursePage
         onNavigate={vi.fn()}
         onProgress={onProgress}
@@ -228,22 +274,22 @@ describe('Practical Python route components', () => {
       />,
     )
 
-    expect(screen.getByText('Finish both prerequisites to start')).toBeTruthy()
+    expect(await screen.findByText('Complete both items below to start')).toBeTruthy()
     fireEvent.click(screen.getByRole('button', { name: /Cleaning and Normalizing Text/iu }))
     const lockedLesson = screen.getByText(exercise.title).closest<HTMLElement>('.is-locked')
     if (!lockedLesson) throw new Error('Expected the recorded lesson to remain a locked outline row.')
-    expect(within(lockedLesson).getByText('Complete both course prerequisites first')).toBeTruthy()
+    expect(within(lockedLesson).getByText('Complete both items below first')).toBeTruthy()
     expect(within(lockedLesson).queryByRole('link')).toBeNull()
   })
 
-  it('offers module completion only after all five lessons and sends the progress update', () => {
+  it('offers module completion only after all five lessons and sends the progress update', async () => {
     const mission = pythonDataToolsCourse.missions[0]
     const lessonIds = mission.exercises.map((exercise) => exercise.id)
     const onProgress = progressDispatcher()
     const fourLessons = progressWithPrerequisites({
       completedLessons: lessonIds.slice(0, 4),
     })
-    const { rerender } = render(
+    const { rerender } = await renderCourse(
       <PythonDataToolsCoursePage
         onNavigate={vi.fn()}
         onProgress={onProgress}
@@ -251,20 +297,22 @@ describe('Practical Python route components', () => {
       />,
     )
 
-    expect(screen.getByText('4 of 5 lessons complete')).toBeTruthy()
+    expect(await screen.findByText('4 of 5 lessons complete')).toBeTruthy()
     expect(screen.queryByRole('button', { name: /Finish module/iu })).toBeNull()
     expect(onProgress).not.toHaveBeenCalled()
 
     const allLessons = progressWithPrerequisites({ completedLessons: lessonIds })
-    rerender(
-      <PythonDataToolsCoursePage
-        onNavigate={vi.fn()}
-        onProgress={onProgress}
-        progress={allLessons}
-      />,
-    )
+    await act(async () => {
+      rerender(
+        <PythonDataToolsCoursePage
+          onNavigate={vi.fn()}
+          onProgress={onProgress}
+          progress={allLessons}
+        />,
+      )
+    })
 
-    expect(screen.getByText('5 of 5 lessons complete')).toBeTruthy()
+    expect(await screen.findByText('5 of 5 lessons complete')).toBeTruthy()
     fireEvent.click(screen.getByRole('button', { name: /Finish module/iu }))
 
     expect(onProgress).toHaveBeenCalledOnce()
@@ -275,11 +323,11 @@ describe('Practical Python route components', () => {
     expect(completed.completedLessons).toEqual(lessonIds)
     expect(completed.starShards).toBe(25)
     expect(screen.getByRole('status').textContent).toBe(
-      'Module completed. 25 star shards saved. Module 2 is now available.',
+      'Module complete. Module 2 is now available.',
     )
   })
 
-  it('keeps the concrete Supply Tracker completion message', () => {
+  it('keeps the concrete Supply Tracker completion message', async () => {
     const finalMission = pythonDataToolsCourse.missions.at(-1)
     if (!finalMission) throw new Error('Expected the final Practical Python module.')
     const priorMissionIds = pythonDataToolsCourse.missions.slice(0, -1).map((mission) => mission.id)
@@ -291,7 +339,7 @@ describe('Practical Python route components', () => {
       completedMissions: [...foundationMissionIds, ...priorMissionIds],
     })
 
-    render(
+    await renderCourse(
       <PythonDataToolsCoursePage
         onNavigate={vi.fn()}
         onProgress={progressDispatcher()}
@@ -299,9 +347,26 @@ describe('Practical Python route components', () => {
       />,
     )
 
-    fireEvent.click(screen.getByRole('button', { name: /Finish module/iu }))
+    fireEvent.click(await screen.findByRole('button', { name: /Finish module/iu }))
     expect(screen.getByRole('status').textContent).toBe(
-      'Course completed. 25 star shards saved. Your Supply Tracker is ready to review.',
+      'Course complete. Your Supply Tracker is ready to review.',
     )
+  })
+
+  it('uses the normal not-found page when a continuing course has no loader', async () => {
+    await renderCourse(
+      <ContinuingCoursePage
+        courseId={'cpp-collections-records' as CourseId}
+        onNavigate={vi.fn()}
+        onProgress={progressDispatcher()}
+        progress={initialProgress('python')}
+      />,
+    )
+
+    expect(screen.getByRole('heading', {
+      level: 1,
+      name: 'We could not find that page',
+    })).toBeTruthy()
+    expect(screen.getByRole('link', { name: /Go to the start page/iu }).getAttribute('href')).toBe('/')
   })
 })

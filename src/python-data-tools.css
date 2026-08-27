@@ -1,12 +1,22 @@
 /* Loaded with the lazy Practical Python route, not the initial workshop shell. */
 .course-hero--continuing {
   align-items: start;
+  padding: clamp(1.15rem, 2vw, 1.65rem);
   background: var(--surface);
-  box-shadow: 0 10px 26px rgb(67 54 35 / 7%);
+  box-shadow: none;
 }
 
 .course-hero--continuing > .language-symbol {
   margin-top: 0.15rem;
+}
+
+.course-hero--continuing > .language-symbol--large {
+  width: 64px;
+  height: 64px;
+}
+
+.course-hero--continuing h1 {
+  font-size: clamp(2.1rem, 3vw, 2.8rem);
 }
 
 .course-hero--continuing > div:nth-child(2) {
@@ -42,9 +52,9 @@
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(25rem, 1.08fr);
   align-items: center;
-  gap: clamp(1.5rem, 4vw, 3rem);
-  margin: 1.25rem auto 0;
-  padding: clamp(1.25rem, 2.5vw, 1.8rem);
+  gap: clamp(1.25rem, 3vw, 2rem);
+  margin: 1rem auto 0;
+  padding: clamp(1rem, 2vw, 1.35rem);
   background: #fffaf0;
   border: 1px solid #dbc78f;
   border-left: 5px solid var(--amber);
@@ -53,8 +63,8 @@
 
 .course-prerequisites h2 {
   max-width: 20ch;
-  margin: 0.2rem 0 0.7rem;
-  font-size: clamp(1.45rem, 2.1vw, 1.9rem);
+  margin: 0.1rem 0 0.45rem;
+  font-size: clamp(1.4rem, 1.8vw, 1.7rem);
 }
 
 .course-prerequisites > div > p:last-child {
@@ -74,12 +84,12 @@
 }
 
 .course-prerequisites li {
-  min-height: 60px;
+  min-height: 52px;
   display: grid;
   grid-template-columns: 32px minmax(0, 1fr) auto;
   align-items: center;
   gap: 0.75rem;
-  padding: 0.65rem 0.75rem;
+  padding: 0.4rem 0.75rem;
   border-bottom: 1px solid var(--rule);
 }
 
@@ -152,7 +162,7 @@
 
 .course-hero--continuing ~ .course-modules {
   max-width: 64rem;
-  margin-top: clamp(2.5rem, 4vw, 3.25rem);
+  margin-top: clamp(1.5rem, 2.5vw, 2rem);
 }
 
 .course-hero--continuing ~ .course-modules .section-heading-open {
@@ -183,8 +193,8 @@
 }
 
 .course-hero--continuing ~ .course-modules .module-row__summary {
-  min-height: 100px;
-  padding: 1.05rem 1.2rem;
+  min-height: 72px;
+  padding: 0.75rem 1rem;
   border-radius: 6px;
 }
 

@@ -17,15 +17,11 @@ import {
   CheckCircle2,
   CircleHelp,
   Code2,
-  Compass,
-  Gem,
   MessageCircleQuestion,
   RotateCcw,
   Sparkles,
   TerminalSquare,
-  Trophy,
   X,
-  Zap,
 } from 'lucide-react'
 import { orderedChoices } from './lib/choice-order'
 import { evaluateExercise } from './lib/evaluator'
@@ -48,6 +44,37 @@ export interface LessonPlayerProps {
   onExit: () => void
 }
 
+function learnerCheckName(name: string): string {
+  return name.replace(/^(?:Visible|Hidden|Protected)\s+/u, '')
+}
+
+const conceptLabels: Record<string, string> = {
+  'output and variables': 'using variables in output',
+  'collections and indexes': 'collection positions',
+  'loops and collections': 'looping through a collection',
+  'functions and loops': 'reusing code in a loop',
+  'parameters and calls': 'passing values into reusable code',
+  'function order': 'when reusable code is defined',
+  'program planning': 'planning a program',
+  'capstone assembly': 'putting a program together',
+  'capstone repair': 'fixing a complete program',
+  capstone: 'building a complete program',
+  compiler: 'how C++ code becomes a program',
+  runtime: 'how a program starts',
+  indexes: 'positions in a collection',
+  iteration: 'one pass through a loop',
+  'data tool assembly': 'putting the data tool together',
+  'data tool capstone': 'building the complete data tool',
+  'data tool debugging': 'fixing the data tool',
+  'f strings': 'formatted text',
+}
+
+function plainConceptLabel(conceptId: string): string {
+  const withoutOwner = conceptId.replace(/^(?:project-)?(?:python|cpp|csharp|java)-/u, '')
+  const words = withoutOwner.replaceAll('-', ' ')
+  return conceptLabels[words] ?? words
+}
+
 export function LessonPlayer({ initialExerciseId, mission, onExerciseChange, onPracticeComplete, practiceConceptIds, practiceSession, progress, onProgress, onExit }: LessonPlayerProps) {
   const practiceMode = practiceSession !== undefined || practiceConceptIds !== undefined
   const sessionExercises = practiceSession
@@ -68,7 +95,6 @@ export function LessonPlayer({ initialExerciseId, mission, onExerciseChange, onP
   const [runnerResult, setRunnerResult] = useState<RunnerResult | null>(null)
   const [runnerFailure, setRunnerFailure] = useState(false)
   const [credited, setCredited] = useState<string[]>(initiallyCredited)
-  const [awarded, setAwarded] = useState<string[]>([])
   const [recordedSuccesses, setRecordedSuccesses] = useState<string[]>([])
   const [hintOpen, setHintOpen] = useState(false)
   const [finished, setFinished] = useState(false)
@@ -103,9 +129,6 @@ export function LessonPlayer({ initialExerciseId, mission, onExerciseChange, onP
     resetExerciseUi()
   }
   const rewardsDisabled = practiceMode || missionAlreadyComplete
-  const earnedXp = rewardsDisabled
-    ? 0
-    : sessionExercises.filter((item) => awarded.includes(item.id)).reduce((sum, item) => sum + item.xp, 0)
   const progressPercent = reviewing
     ? ((reviewIndex + 1) / reviewQueue.length) * 100
     : ((activeStep + 1) / sessionExercises.length) * 100
@@ -142,18 +165,12 @@ export function LessonPlayer({ initialExerciseId, mission, onExerciseChange, onP
   const displayChoices = choiceExercise ? orderedChoices(exercise) : []
   const editableExercise = exercise.type === 'code' || exercise.type === 'bugfix'
   const taskLabel = reviewing
-    ? 'TRY IT ONCE MORE'
-    : exercise.type === 'choice'
-      ? 'GUIDED CHECK'
-      : exercise.type === 'prediction'
-        ? 'PREDICT THE OUTPUT'
-        : exercise.type === 'ordering'
-          ? 'PUT IT IN ORDER'
-          : exercise.type === 'bugfix'
-            ? 'DEBUGGING TASK'
-            : 'YOUR TASK'
+    ? 'Try again'
+    : editableExercise
+      ? 'Task'
+      : 'Question'
   const checkActionLabel = editableExercise
-    ? 'Run check'
+    ? 'Check my code'
       : exercise.type === 'ordering' ? 'Check order' : 'Check answer'
   const hasUnfinishedLessons = !missionAlreadyComplete
     && sessionExercises.some((item) => !credited.includes(item.id))
@@ -202,7 +219,6 @@ export function LessonPlayer({ initialExerciseId, mission, onExerciseChange, onP
       if (rewardsDisabled || lessonWasComplete) {
         onProgress((current) => recordAttempt(current, exercise.conceptId, true, 0))
       } else {
-        setAwarded((current) => [...current, exercise.id])
         onProgress((current) => recordLessonSuccess(current, exercise.id))
       }
     }
@@ -344,23 +360,22 @@ export function LessonPlayer({ initialExerciseId, mission, onExerciseChange, onP
   }
 
   if (finished) {
-    const reviewedConcepts = [...new Set(sessionExercises.map((item) => item.conceptId.split('-').slice(1).join(' ')))]
-    const awardedShards = practiceMode || missionAlreadyComplete ? 0 : 25
+    const reviewedConcepts = [...new Set(sessionExercises.map((item) => plainConceptLabel(item.conceptId)))]
     return (
       <div className="lesson-overlay">
         <main className="mission-complete" id="main-content" tabIndex={-1}>
           <div className="completion-burst" aria-hidden="true"><Sparkles /><span><Check /></span></div>
-          <p className="kicker">{practiceMode ? 'PRACTICE COMPLETE' : 'MISSION COMPLETE'}</p>
+          <p className="kicker">{practiceMode ? 'Practice complete' : 'Module complete'}</p>
           <h1 ref={completionHeadingRef} tabIndex={-1}>{practiceMode ? 'Review complete' : mission.title}</h1>
-          <p>{practiceMode ? `You practiced ${reviewedConcepts.join(', ')}. Your answers helped decide when those ideas should return.` : 'You turned unfamiliar symbols into a working report. That is programming.'}</p>
+          <p>{practiceMode ? `You practiced ${reviewedConcepts.join(', ')}. You may see these ideas again in a later Practice session.` : 'You completed every lesson in this module.'}</p>
           <div className="completion-stats">
             {practiceMode
-              ? <><div><CheckCircle2 /><b>{sessionExercises.length}</b><span>questions completed</span></div><div><BookOpen /><b>{reviewedConcepts.length}</b><span>concepts reviewed</span></div></>
-              : <><div><Zap /><b>{earnedXp}</b><span>XP earned</span></div><div><Gem /><b>{awardedShards}</b><span>star shards</span></div></>}
-            <div><RotateCcw /><b>{reviewQueue.length}</b><span>mistakes repaired</span></div>
+              ? <><div><CheckCircle2 /><b>{sessionExercises.length}</b><span>questions completed</span></div><div><BookOpen /><b>{reviewedConcepts.length}</b><span>ideas reviewed</span></div></>
+              : <><div><CheckCircle2 /><b>{sessionExercises.length}</b><span>lessons completed</span></div><div><BookOpen /><b>{reviewedConcepts.length}</b><span>ideas reviewed</span></div></>}
+            <div><RotateCcw /><b>{reviewQueue.length}</b><span>questions retried</span></div>
           </div>
-          <div className="what-learned"><h2>{practiceMode ? 'Memory strengthened' : 'Systems now familiar'}</h2><div>{reviewedConcepts.map((concept) => <span key={concept}><Check size={14} /> {concept}</span>)}</div></div>
-          <button className="primary-action primary-action--wide" onClick={onExit}>Return to {practiceMode ? 'Practice' : 'mission path'} <ArrowRight size={18} /></button>
+          <div className="what-learned"><h2>{practiceMode ? 'Reviewed in this session' : 'Reviewed in this module'}</h2><div>{reviewedConcepts.map((concept) => <span key={concept}><Check size={14} /> {concept}</span>)}</div></div>
+          <button className="primary-action primary-action--wide" onClick={onExit}>Return to {practiceMode ? 'Practice' : 'course'} <ArrowRight size={18} /></button>
         </main>
       </div>
     )
@@ -370,68 +385,84 @@ export function LessonPlayer({ initialExerciseId, mission, onExerciseChange, onP
     <div className="lesson-overlay">
       <header className="lesson-header">
         <button onClick={onExit} className="icon-button" aria-label={practiceMode ? 'Exit practice' : 'Exit lesson'}><X /></button>
-        <div className="lesson-progress" aria-label={practiceMode ? 'Practice progress' : 'Lesson progress'} aria-valuemax={100} aria-valuemin={0} aria-valuenow={Math.round(progressPercent)} aria-valuetext={`${reviewing ? 'Repair question' : practiceMode ? 'Question' : 'Lesson'} ${reviewing ? reviewIndex + 1 : activeStep + 1} of ${reviewing ? reviewQueue.length : sessionExercises.length}`} role="progressbar"><i style={{ width: `${progressPercent}%` }} /></div>
+        <div className="lesson-progress" aria-label={practiceMode ? 'Practice progress' : 'Lesson progress'} aria-valuemax={100} aria-valuemin={0} aria-valuenow={Math.round(progressPercent)} aria-valuetext={`${reviewing ? 'Retry question' : practiceMode ? 'Question' : 'Lesson'} ${reviewing ? reviewIndex + 1 : activeStep + 1} of ${reviewing ? reviewQueue.length : sessionExercises.length}`} role="progressbar"><i style={{ width: `${progressPercent}%` }} /></div>
         <div className="lesson-step"><b>{reviewing ? reviewIndex + 1 : activeStep + 1}</b><span>/ {reviewing ? reviewQueue.length : sessionExercises.length}</span></div>
-        <div className="lesson-xp">{practiceMode ? <><BookOpen size={17} /> Review</> : <><Zap size={17} /> {earnedXp} XP</>}</div>
       </header>
 
-      <main className="lesson-layout" id="main-content" tabIndex={-1}>
+      <main className={`lesson-layout${practiceMode || reviewing ? ' lesson-layout--with-banner' : ''}`} id="main-content" tabIndex={-1}>
         {practiceMode && !reviewing && (
           <section className="memory-repair" aria-label="Focused practice round">
             <BookOpen size={22} />
             <div>
-              <small>PRACTICE · QUESTION {activeStep + 1} OF {sessionExercises.length}</small>
-              <h2>A short set from modules you already completed.</h2>
+              <small>Practice, question {activeStep + 1} of {sessionExercises.length}</small>
+              <h2>Review a completed lesson.</h2>
               <p>{practiceSession
-                ? `This question comes from ${practiceSession.items.find((item) => item.exercise.id === exercise.id)?.missionTitle ?? 'your course'}. A correct answer helps decide when this idea should return.`
-                : `This short session uses exercises from ${mission.title}. A correct answer lets this idea wait longer before it returns.`}</p>
+                ? `This question comes from ${practiceSession.items.find((item) => item.exercise.id === exercise.id)?.missionTitle ?? 'your course'}. You may see this idea again in a later Practice session.`
+                : `This question comes from ${mission.title}. You may see this idea again in a later Practice session.`}</p>
             </div>
-            <span>FAMILIAR IDEA</span>
           </section>
         )}
         {reviewing && (
-          <section className="memory-repair" aria-label="Memory repair round">
+          <section className="memory-repair" aria-label="Review round">
             <RotateCcw size={22} />
             <div>
-              <small>MEMORY REPAIR · {reviewIndex + 1} OF {reviewQueue.length}</small>
-              <h2>This one is coming back so it can stick.</h2>
-              <p>You already corrected it once. Now try it again from a clean starting point. Reread the explanation and use the hint whenever you want.</p>
+              <small>Try again, question {reviewIndex + 1} of {reviewQueue.length}</small>
+              <h2>Try this question again.</h2>
+              <p>Start again, reread the explanation, and use the hint whenever you want.</p>
             </div>
-            <span>NO XP LOST</span>
           </section>
         )}
         <section className="lesson-briefing">
-          <p className="kicker">{exercise.eyebrow}</p>
           <h1 ref={lessonHeadingRef} tabIndex={-1}>{exercise.title}</h1>
           <p className="lesson-explanation">{exercise.explanation}</p>
           <div className="analogy-card">
-            <span className="mentor-avatar"><b>π</b><i /></span>
-            <div><small>PIE-314 · SHIPBOARD VERSION</small><p>{exercise.analogy}</p></div>
+            <small>Another way to think about it</small>
+            <p>{exercise.analogy}</p>
           </div>
-          <div className="micro-rule"><BookOpen size={18} /><div><b>New words are never a test</b><p>Reread the explanation or open the codebook whenever you need it.</p></div></div>
+          {editableExercise && (
+            <section className="code-onramp" aria-label="Code walkthrough">
+              <div className="code-focus">
+                <div>
+                  <small>Change this</small>
+                  <b>{exercise.focus ?? `Replace the ${blankCount === 1 ? 'one' : blankCount} _____ ${blankCount === 1 ? 'blank' : 'blanks'}.`}</b>
+                  <p>Only this part needs editing. The rest is already written for you.</p>
+                </div>
+              </div>
+              {exercise.codeGuide && exercise.codeGuide.length > 0 && (
+                <div className="code-guide">
+                  <div className="code-guide__head">
+                    <h2>What the code means</h2>
+                  </div>
+                  <div className="code-guide__items">
+                    {exercise.codeGuide.map((item) => (
+                      <article key={`${exercise.id}-${item.code}`}>
+                        <code>{item.code}</code>
+                        <p>{item.plain}</p>
+                      </article>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </section>
+          )}
         </section>
 
         <section className="exercise-panel">
           <div className="exercise-panel__head">
             <div><small>{taskLabel}</small><h2>{exercise.prompt}</h2></div>
-            <span>{reviewing
-              ? <><RotateCcw size={14} /> REVIEW</>
-              : practiceMode
-                ? <><BookOpen size={14} /> PRACTICE</>
-                : <><Trophy size={14} /> {exercise.xp} XP</>}</span>
           </div>
 
           {choiceExercise ? (
             <div>
               {exercise.type === 'prediction' && exercise.displayCode && (
                 <div className="prediction-code" aria-label="Code to predict">
-                  <div><Code2 size={15} /> READ THIS CODE</div>
+                  <div><Code2 size={15} /> Code to read</div>
                   <pre><code>{exercise.displayCode}</code></pre>
                 </div>
               )}
               <div className="guided-check-note">
                 <BookOpen size={17} />
-                <p><b>This is not a prior-knowledge test.</b> {exercise.type === 'prediction' ? 'Read the code from top to bottom and use the explanation on the left.' : 'The answer was just explained on the left.'} Reread it as often as you need, then choose the sentence that matches.</p>
+                <p>{exercise.type === 'prediction' ? 'Read the code from top to bottom. Use the explanation on the left when you need it.' : 'Use the explanation on the left. You can reread it before choosing.'}</p>
               </div>
               <fieldset className="choice-list">
                 <legend className="sr-only">{exercise.prompt}</legend>
@@ -455,13 +486,13 @@ export function LessonPlayer({ initialExerciseId, mission, onExerciseChange, onP
                   </label>
                 ))}
               </fieldset>
-              {feedback?.correct && exercise.output && <div className="exercise-result"><TerminalSquare size={15} /><span><b>RESULT</b><code>{exercise.output}</code></span></div>}
+              {feedback?.correct && exercise.output && <div className="exercise-result"><TerminalSquare size={15} /><span><b>Result</b><code>{exercise.output}</code></span></div>}
             </div>
           ) : exercise.type === 'ordering' ? (
             <div>
               <div className="guided-check-note">
                 <BookOpen size={17} />
-                <p><b>The computer reads from top to bottom.</b> Use the arrow buttons to place each piece where the computer should meet it. You can change the order as often as you need.</p>
+                <p>Use the arrow buttons to put the pieces in the order the computer should read them.</p>
               </div>
               <ol className="ordering-list" aria-label="Code pieces to order" role="list">
                 {orderedIds.map((id, index) => {
@@ -480,38 +511,12 @@ export function LessonPlayer({ initialExerciseId, mission, onExerciseChange, onP
                 })}
               </ol>
               <p aria-live="polite" className="sr-only" role="status">{orderingAnnouncement}</p>
-              {feedback?.correct && exercise.output && <div className="exercise-result"><TerminalSquare size={15} /><span><b>RESULT</b><code>{exercise.output}</code></span></div>}
+              {feedback?.correct && exercise.output && <div className="exercise-result"><TerminalSquare size={15} /><span><b>Result</b><code>{exercise.output}</code></span></div>}
             </div>
           ) : editableExercise ? (
             <div>
-              <section className="code-onramp" aria-label="Code walkthrough">
-                <div className="code-focus">
-                  <Compass size={19} />
-                  <div>
-                    <small>YOUR ONE JOB ON THIS SCREEN</small>
-                    <b>{exercise.focus ?? `Replace the ${blankCount === 1 ? 'one' : blankCount} _____ ${blankCount === 1 ? 'blank' : 'blanks'}.`}</b>
-                    <p>Everything else is supplied scaffolding. Read it if you are curious, but you are not expected to memorize or rewrite it yet.</p>
-                  </div>
-                </div>
-                {exercise.codeGuide && exercise.codeGuide.length > 0 && (
-                  <div className="code-guide">
-                    <div className="code-guide__head">
-                      <small>DEMYSTIFY THE CODE</small>
-                      <h3>Read each piece like a sentence</h3>
-                    </div>
-                    <div className="code-guide__items">
-                      {exercise.codeGuide.map((item) => (
-                        <article key={`${exercise.id}-${item.code}`}>
-                          <code>{item.code}</code>
-                          <p>{item.plain}</p>
-                        </article>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </section>
               <div className="code-workspace">
-                <div className="editor-bar"><span><Code2 size={15} /> {mission.language === 'python' ? 'mission.py' : mission.language === 'cpp' ? 'mission.cpp' : mission.language === 'java' ? 'Mission.java' : 'Mission.cs'}</span><small>LIVE ISOLATED RUNNER</small></div>
+                <div className="editor-bar"><span><Code2 size={15} /> {mission.language === 'python' ? 'main.py' : mission.language === 'cpp' ? 'main.cpp' : mission.language === 'java' ? 'Main.java' : 'Program.cs'}</span></div>
                 <div className="editor-body">
                   <div className="line-numbers" aria-hidden="true">{answer.split('\n').map((_, index) => <span key={index}>{index + 1}</span>)}</div>
                   <textarea
@@ -525,30 +530,28 @@ export function LessonPlayer({ initialExerciseId, mission, onExerciseChange, onP
                   />
                 </div>
                 {runnerBusy && <p className="sr-only" role="status">
-                  {runnerStatus === 'running' ? 'Your program is running.' : 'Preparing the code runner.'}
+                  {runnerStatus === 'running' ? 'Your program is running.' : 'Getting your code ready.'}
                 </p>}
                 <div className="console-pane">
-                  <div><TerminalSquare size={14} /> REAL CONSOLE OUTPUT</div>
+                  <div><TerminalSquare size={14} /> Output</div>
                   <pre>{runnerBusy
-                    ? runnerStatus === 'running' ? 'Your program is running inside a fresh isolated sandbox...' : 'Preparing a fresh isolated sandbox...'
+                    ? runnerStatus === 'running' ? 'Your program is running...' : 'Getting your code ready...'
                     : runnerResult
                       ? runnerResult.stdout || runnerResult.stderr || '(The program finished without printing any text.)'
-                      : 'Nothing has run yet. Complete your one small change, then select Run check.'}</pre>
+                      : 'Run your code to see what it prints.'}</pre>
                 </div>
                 {runnerResult && (
-                  <section className="runner-report" aria-label="Real runner report">
+                  <section className="runner-report" aria-label="Run results">
                     <div className="runner-report__summary">
                       <span className={runnerResult.outcome === 'completed' ? 'is-good' : 'is-alert'}>
                         {runnerResult.diagnostic.title}
                       </span>
-                      <small>{runnerResult.durationMs} ms · fresh sandbox destroyed after run</small>
                     </div>
                     <div className="runner-tests">
                       {runnerResult.tests.map((test) => (
                         <article key={`${runnerResult.runId}-${test.name}`}>
                           {test.passed ? <CheckCircle2 size={15} /> : <MessageCircleQuestion size={15} />}
-                          <span><b>{test.name}</b><small>{test.message}</small></span>
-                          <i>{test.visibility === 'hidden' ? 'HIDDEN CHECK' : 'VISIBLE CHECK'}</i>
+                          <span><b>{learnerCheckName(test.name)}</b><small>{test.message}</small></span>
                         </article>
                       ))}
                     </div>
@@ -561,7 +564,7 @@ export function LessonPlayer({ initialExerciseId, mission, onExerciseChange, onP
                   </section>
                 )}
                 <div className="editor-shortcuts" aria-label="Code editor keyboard controls">
-                  <span>KEYBOARD</span>
+                  <span>Keyboard</span>
                   <p><kbd>Ctrl</kbd> or <kbd>⌘</kbd> + <kbd>Enter</kbd> runs the check. <kbd>Tab</kbd> moves out of the editor normally.</p>
                 </div>
               </div>
@@ -569,12 +572,12 @@ export function LessonPlayer({ initialExerciseId, mission, onExerciseChange, onP
           ) : null}
 
           <button className="hint-toggle" aria-controls="lesson-hint" aria-expanded={hintOpen} onClick={() => setHintOpen((open) => !open)}><CircleHelp size={17} /> {hintOpen ? 'Hide hint' : 'I need a hint'}</button>
-          {hintOpen && <div className="hint-box" id="lesson-hint"><Sparkles size={16} /><span><b>Small nudge</b>{exercise.hint}</span></div>}
+          {hintOpen && <div className="hint-box" id="lesson-hint"><Sparkles size={16} /><span><b>Hint</b>{exercise.hint}</span></div>}
 
           {feedback && (
             <div aria-live="polite" className={`feedback-box ${runnerFailure ? 'is-neutral' : feedback.correct ? 'is-correct' : 'is-wrong'}`} role="status">
               {feedback.correct ? <CheckCircle2 /> : runnerFailure ? <CircleHelp /> : <MessageCircleQuestion />}
-              <div><b>{feedback.correct ? 'System online' : runnerFailure ? 'Runner unavailable' : 'Let’s inspect that'}</b><p>{feedback.message}</p></div>
+              <div><b>{feedback.correct ? 'Correct' : runnerFailure ? 'Could not run code' : 'Try again'}</b><p>{feedback.message}</p></div>
             </div>
           )}
 
@@ -583,27 +586,27 @@ export function LessonPlayer({ initialExerciseId, mission, onExerciseChange, onP
             <button className="primary-action" disabled={runnerBusy} onClick={feedback?.correct ? continueLesson : () => { void checkAnswer() }}>
               {feedback?.correct
                 ? reviewing
-                  ? reviewIndex === reviewQueue.length - 1 ? 'Complete memory repair' : 'Next review'
+                  ? reviewIndex === reviewQueue.length - 1 ? 'Finish review' : 'Next review'
                   : practiceMode
                     ? nextUncreditedStep >= 0
                       ? 'Continue'
                       : mistakes.length > 0
-                        ? 'Repair missed concepts'
+                        ? 'Review missed questions'
                         : 'Finish practice'
                     : activeStep === sessionExercises.length - 1
                       ? hasUnfinishedLessons
                         ? 'Complete remaining lessons'
                         : mistakes.length > 0
-                          ? 'Repair missed concepts'
-                          : 'Finish mission'
+                        ? 'Review missed questions'
+                        : 'Finish module'
                       : 'Continue'
                 : runnerBusy
-                  ? runnerStatus === 'running' ? 'Running your code...' : 'Launching sandbox...'
+                  ? runnerStatus === 'running' ? 'Running your code...' : 'Getting ready...'
                   : checkActionLabel}
               {feedback?.correct && <ArrowRight size={18} />}
             </button>
           </div>
-          <p className="simulator-note">Editable code runs on the server in a new network-blocked sandbox. The sandbox is destroyed after every check. Choice and ordering questions stay in your browser because they do not execute code.</p>
+          {editableExercise && <details className="run-safety-note"><summary>How code runs safely</summary><p>Your code runs in a clean workspace that is deleted after each check.</p></details>}
         </section>
       </main>
     </div>

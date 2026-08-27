@@ -14,12 +14,12 @@ describe('progression-aware codebook', () => {
     ['py-data-summaries', ['Accumulator', 'Filter']],
   ] as const
 
-  it('searches plain language, aliases, and active-language code', () => {
+  it('searches plain language, keywords, and active-language code', () => {
     const condition = codebookEntries.find((entry) => entry.term === 'Condition')
     const consoleEntry = codebookEntries.find((entry) => entry.term === 'Console')
     if (!condition || !consoleEntry) throw new Error('Required codebook entries are missing')
 
-    expect(codebookMatches(condition, 'sensor question', 'java')).toBe(true)
+    expect(codebookMatches(condition, 'make a decision', 'java')).toBe(true)
     expect(codebookMatches(condition, 'podCount < 6', 'java')).toBe(true)
     expect(codebookMatches(consoleEntry, 'terminal', 'java')).toBe(true)
     expect(codebookMatches(consoleEntry, 'shieldPower', 'java')).toBe(false)

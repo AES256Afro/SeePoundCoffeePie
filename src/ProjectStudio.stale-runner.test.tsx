@@ -44,8 +44,8 @@ function successfulRun(runId: string): RunResult {
     truncated: false,
     limit: null,
     tests: [
-      { name: 'Visible checkpoint check', visibility: 'visible', passed: true, message: 'The output matched.' },
-      { name: 'Protected checkpoint check', visibility: 'hidden', passed: true, message: 'The program finished.' },
+      { name: 'Visible output check', visibility: 'visible', passed: true, message: 'The output matched.' },
+      { name: 'Protected program check', visibility: 'hidden', passed: true, message: 'The program finished.' },
     ],
     diagnostic: { title: 'Program finished', explanation: 'The program ran.', suggestion: 'Continue.', line: null },
   }
@@ -104,8 +104,8 @@ async function beginFirstCheckpointCheck() {
   fireEvent.change(screen.getByRole('textbox', { name: 'Project code editor' }), {
     target: { value: '# A comment for the learner\nprint("Coffee counter ready.")' },
   })
-  fireEvent.click(screen.getByRole('button', { name: /Check checkpoint/iu }))
-  await waitFor(() => expect(screen.getByRole('button', { name: 'Checking safely...' })).toBeTruthy())
+  fireEvent.click(screen.getByRole('button', { name: /Check work/iu }))
+  await waitFor(() => expect(screen.getByRole('button', { name: 'Checking...' })).toBeTruthy())
 }
 
 describe('ProjectStudio stale runner protection', () => {
@@ -124,6 +124,30 @@ describe('ProjectStudio stale runner protection', () => {
     vi.restoreAllMocks()
   })
 
+  it('uses plain check labels without exposing timing or assessment terms', async () => {
+    vi.mocked(runExercise).mockResolvedValueOnce(successfulRun('run_plain_check_labels_123456789'))
+    render(
+      <ProjectHarness
+        initialCheckpointId="project-py-print"
+        startingProgress={projectProgress()}
+      />,
+    )
+
+    expect(await screen.findByRole('heading', { level: 1, name: 'Let the program speak' })).toBeTruthy()
+    fireEvent.change(screen.getByRole('textbox', { name: 'Project code editor' }), {
+      target: { value: '# A comment for the learner\nprint("Coffee counter ready.")' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: /Check work/iu }))
+
+    const results = await screen.findByRole('region', { name: 'Check results' })
+    expect(results.textContent).toMatch(/output check/iu)
+    expect(results.textContent).toMatch(/program check/iu)
+    expect(results.textContent).toContain('Shown here')
+    expect(results.textContent).toContain('Checked privately')
+    expect(results.textContent).not.toMatch(/\bvisible\b|\bhidden\b|\bprotected\b/iu)
+    expect(results.textContent).not.toMatch(/\b\d+\s*ms\b/iu)
+  })
+
   it('ignores a delayed checkpoint pass after navigating to another checkpoint', async () => {
     const completed = pythonInteractiveProject.checkpoints.slice(0, 2).map((checkpoint) => checkpoint.id)
     const pending = delayedRunner()
@@ -138,8 +162,8 @@ describe('ProjectStudio stale runner protection', () => {
     fireEvent.change(screen.getByRole('textbox', { name: 'Project code editor' }), {
       target: { value: 'customer_name = "Maya"\n\nprint(customer_name)' },
     })
-    fireEvent.click(screen.getByRole('button', { name: /Check checkpoint/iu }))
-    fireEvent.click(screen.getByRole('link', { name: /Checkpoint 1: Let the program speak.*complete/iu }))
+    fireEvent.click(screen.getByRole('button', { name: /Check work/iu }))
+    fireEvent.click(screen.getByRole('link', { name: /Step 1: Let the program speak.*complete/iu }))
 
     expect(await screen.findByRole('heading', { level: 1, name: 'Let the program speak' })).toBeTruthy()
     await act(async () => {
@@ -152,7 +176,7 @@ describe('ProjectStudio stale runner protection', () => {
     expect(progress.xp).toBe(0)
     expect(progress.conceptProgress).not.toHaveProperty('project-python-variables')
     expect(loadProjectHistory(projectId)).toEqual([])
-    expect(screen.queryByText('Checkpoint complete')).toBeNull()
+    expect(screen.queryByText('Step complete')).toBeNull()
   })
 
   it('lets reset cancel an in-flight check without accepting its later result', async () => {
@@ -165,10 +189,10 @@ describe('ProjectStudio stale runner protection', () => {
     )
 
     await beginFirstCheckpointCheck()
-    fireEvent.click(screen.getByRole('button', { name: 'Reset checkpoint' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Reset code' }))
 
     expect((screen.getByRole('textbox', { name: 'Project code editor' }) as HTMLTextAreaElement).value).toContain('_____')
-    expect(screen.getByRole('button', { name: /Check checkpoint/iu })).toBeTruthy()
+    expect(screen.getByRole('button', { name: /Check work/iu })).toBeTruthy()
     await act(async () => {
       pending.finish(successfulRun('run_stale_checkpoint_reset_123456'))
       await pending.result
@@ -179,8 +203,8 @@ describe('ProjectStudio stale runner protection', () => {
     expect(progress.xp).toBe(0)
     expect(progress.conceptProgress).toEqual({})
     expect(loadProjectHistory(projectId)).toEqual([])
-    expect(screen.queryByText('Checkpoint complete')).toBeNull()
-    expect(screen.queryByLabelText('Checkpoint test report')).toBeNull()
+    expect(screen.queryByText('Step complete')).toBeNull()
+    expect(screen.queryByLabelText('Check results')).toBeNull()
   })
 
   it('ignores a delayed checkpoint pass after leaving for the project overview', async () => {
@@ -206,7 +230,7 @@ describe('ProjectStudio stale runner protection', () => {
     expect(progress.xp).toBe(0)
     expect(progress.conceptProgress).toEqual({})
     expect(loadProjectHistory(projectId)).toEqual([])
-    expect(screen.queryByText('Checkpoint complete')).toBeNull()
+    expect(screen.queryByText('Step complete')).toBeNull()
   })
 
   it('does not write progress or history after the project workspace unmounts', async () => {

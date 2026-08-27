@@ -23,6 +23,22 @@ The 2026-08-26 compatibility release contains the complete unpublished TypeScrip
 
 The compatibility floor is now live from source commit `46175bfaf1f5c2005bdbbb3a183c58aa6551aebd`. The detailed release record is in `docs/PHASE_5B_COMPATIBILITY_RELEASE.md`. The Phase 5B course itself remains unpublished: no Phase 5B runner assignment, public route, catalog card, Practice item, Codebook example, or sitemap entry exists.
 
+## Current unpublished authoring checkpoint
+
+The current unpublished development checkpoint extends the hidden teaching draft beyond the deployed compatibility checkpoint:
+
+- all 6 modules provide 30 complete beginner lessons and 420 possible first-completion XP;
+- all 12 editable authentic solutions pass their visible checks, the supplied incorrect sources fail, and the 4 new Module 5 and 6 solutions pass local C++20 syntax validation;
+- Module 5 defines accumulator initialization, expanded updates, filtering, result collections, and the deliberate small-vector copy before learners must use those ideas;
+- Module 6 defines helper responsibility, data flow, dependency order, and the strict below-limit boundary before the learner repairs or assembles the final report;
+- a dedicated Clang-based analyzer now checks the taught collections-and-records shape for the protected final assessment. Its profile and facts remain server-owned, its runner-image files are root-owned and mode `0500`, and authentic plus adversarial image cases pass;
+- the focused Phase 5B plan and hidden-draft suite passes 2 files and 33 tests. The protected analyzer, coordinator, and runner-image checks also pass;
+- `npm run check:release` passes 54 test files and 627 tests, lint, repository text style, social-preview verification, TypeScript, the production build, the server-owned bundle boundary, and every bundle budget;
+- the current local build measures 470.23 kB raw and 125.79 kB gzip initial JavaScript, 72.44 kB raw and 13.46 kB gzip initial CSS, 758.23 kB raw and 210.81 kB gzip total JavaScript, and 85.44 kB raw and 16.47 kB gzip total CSS;
+- all 12 draft editable lessons remain outside the public runner registry, the course and lesson routes remain unavailable, and the complete teaching draft and protected analyzer facts remain outside emitted browser assets.
+
+These are local unpublished development facts. They do not replace the recorded production compatibility-floor versions above and do not authorize a public course release or deployment.
+
 ## Outcome
 
 Phase 5B adds `Practical C++: Collections and Records`, the academy's second C++ course and its second continuing course. It follows C++ Foundations and `Your First Compiled Program` without assuming any programming knowledge beyond those two completed prerequisites.
@@ -38,11 +54,11 @@ The finished course contains:
 - 10 prediction exercises, 6 explanation choices, 2 ordering exercises, 6 bug repairs, and 6 guided code exercises;
 - 12 runner-backed editable exercises;
 - 420 possible first-completion XP, with 70 XP in each module;
-- one final guided capstone using fixed in-memory workshop data;
+- one final project using fixed in-memory workshop data;
 - language-wide C++ Practice integration after a module is complete;
-- 11 new or extended Codebook definitions with exact mission-based C++ example unlocks.
+- 11 new or extended Code Reference definitions with C++ examples that become available after the exact introducing lesson.
 
-Normal replay, memory repair, and adaptive Practice remain zero-reward flows. Completing the same lesson or module again cannot award course XP or module shards twice.
+Replaying lessons, reviewing missed questions, and Practice remain zero-reward flows. Completing the same lesson or module again cannot award course XP or module shards twice.
 
 ## Course identity and prerequisite boundary
 
@@ -188,7 +204,7 @@ Learner capability: calculate one total across record fields and return a vector
 | 4 | `cpprecords5-fix-total-reset` | Keep the total between passes | Bug repair | `cpp-record-aggregation` | 16 | Moves a total initialization out of the loop so earlier quantities are not erased. |
 | 5 | `cpprecords5-low-stock` | Collect low-stock names | Guided code | `cpp-filtering-records` | 22 | Completes a below-limit condition and `push_back` call in a function that returns a vector of matching names. |
 
-### Module 6: Workshop Stock Report capstone
+### Module 6: Build the Workshop Stock Report
 
 Durable module ID: `cpp-records-workshop-report`
 
@@ -555,13 +571,14 @@ The bundle gate must assert exactly one matching route asset, one teaching-conte
 - Add the final 4 editable assignments.
 - Implement the dedicated analyzer, exact protocol, server-owned checks, coordinator wiring, image placement, and adversarial suite.
 - Prove authentic source passes and hardcoded, commented, unreachable, aliased, moved-harness, malformed, and encoding-confused sources fail without leaking internal facts.
-- Update the runner count contract from 100 to 112.
+- Validate the unpublished expected total of 112 editable assignments while keeping the public runner registry at 100.
 
 ### Slice 5: Product integration behind the release boundary
 
 - Add the `CourseId`, course definition, conjunctive prerequisites, strict route ownership, lazy route, and lazy content boundaries.
 - Generalize the continuing-course outline while preserving Practical Python behavior.
 - Add C++ Practice aggregation and exact Codebook unlocks.
+- Register the 12 editable assignments behind the disabled release boundary and update the expected runner count from 100 to 112.
 - Add catalog, home continuation, profile, backup, route, sitemap, live-check, and bundle tests.
 - Keep production publication disabled until every local release gate and manual learner check passes.
 

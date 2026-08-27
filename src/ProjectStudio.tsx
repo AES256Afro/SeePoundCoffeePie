@@ -18,8 +18,6 @@ import {
   RefreshCw,
   RotateCcw,
   TerminalSquare,
-  Trophy,
-  Zap,
 } from 'lucide-react'
 import {
   useEffect,
@@ -116,9 +114,13 @@ function nextProjectCheckpoint(project: GuidedProject, progress: LearnerProgress
 }
 
 function scaffoldingLabel(value: GuidedProjectCheckpoint['scaffolding']): string {
-  if (value === 'guided') return 'Guided'
-  if (value === 'supported') return 'Some support'
-  return 'Independent'
+  if (value === 'guided') return 'Step by step'
+  if (value === 'supported') return 'Some help'
+  return 'Try it yourself'
+}
+
+function learnerCheckName(name: string): string {
+  return name.replace(/^(?:Visible|Hidden|Protected)\s+/u, '')
 }
 
 function downloadSource(project: GuidedProject, source: string) {
@@ -166,24 +168,23 @@ function ProjectOverview({ onNavigate, progress, project }: Pick<ProjectContentP
                 : <Code2 aria-hidden="true" />}
         </div>
         <div>
-          <p className="eyebrow">{project.studioLabel}</p>
           <h1>{project.title}</h1>
           <p>{project.subtitle}</p>
           <div className="project-overview__facts">
             <span><Clock3 size={15} /> {project.duration}</span>
-            <span><BookOpen size={15} /> {project.checkpoints.length} checkpoints</span>
+            <span><BookOpen size={15} /> {project.checkpoints.length} steps</span>
             <span><Eye size={15} /> {project.sourcePrivacyLabel}</span>
           </div>
         </div>
         <div className="project-overview__action">
-          <strong>{completedCount} of {project.checkpoints.length} checkpoints complete</strong>
+          <strong>{completedCount} of {project.checkpoints.length} steps complete</strong>
           <small>{percent}% of project</small>
           <span
             aria-label="Project progress"
             aria-valuemax={100}
             aria-valuemin={0}
             aria-valuenow={percent}
-            aria-valuetext={`${completedCount} of ${project.checkpoints.length} checkpoints complete`}
+            aria-valuetext={`${completedCount} of ${project.checkpoints.length} steps complete`}
             role="progressbar"
           >
             <i style={{ width: `${percent}%` }} />
@@ -222,7 +223,7 @@ function ProjectOverview({ onNavigate, progress, project }: Pick<ProjectContentP
         <section className="project-prerequisite" aria-labelledby="project-prerequisite-title">
           <LockKeyhole aria-hidden="true" />
           <div>
-            <p className="eyebrow">One foundation first</p>
+            <p className="eyebrow">Before you start</p>
             <h2 id="project-prerequisite-title">{project.prerequisiteTitle}</h2>
             <p>{project.prerequisiteDescription}</p>
           </div>
@@ -243,8 +244,8 @@ function ProjectOverview({ onNavigate, progress, project }: Pick<ProjectContentP
 
         <section aria-labelledby="project-checkpoints-title" className="project-checkpoint-list">
           <div className="section-heading-open">
-            <div><p className="eyebrow">Project plan</p><h2 id="project-checkpoints-title">Twelve small checkpoints</h2></div>
-            <p>Each checkpoint introduces its words before asking you to use them.</p>
+            <div><h2 id="project-checkpoints-title">{project.checkpoints.length} project steps</h2></div>
+            <p>Each step explains its new terms before you use them.</p>
           </div>
           <ol>
             {project.checkpoints.map((checkpoint) => {
@@ -364,7 +365,7 @@ function CheckpointWorkspace({ checkpoint, onNavigate, onProgress, progress, pro
     setRunnerBusy(true)
     setRunnerPurpose('check')
     setRunnerResult(null)
-    setRunnerAnnouncement('Preparing the official checkpoint check.')
+    setRunnerAnnouncement('Preparing your check.')
     try {
       const result = await runExercise(
         exercise.id,
@@ -401,8 +402,8 @@ function CheckpointWorkspace({ checkpoint, onNavigate, onProgress, progress, pro
         output: result.stdout,
       })
       setRunnerAnnouncement(result.outcome === 'system_error'
-        ? 'The official checkpoint check could not finish. Your progress was not changed.'
-        : 'Official checkpoint check complete. Results are available below.')
+        ? 'The check could not finish. Your progress was not changed.'
+        : 'Check complete. Results are available below.')
       if (passed) awardCheckpoint()
       else if (result.outcome !== 'system_error') recordFailure()
     } catch (error) {
@@ -411,9 +412,9 @@ function CheckpointWorkspace({ checkpoint, onNavigate, onProgress, progress, pro
         correct: false,
         message: error instanceof Error
           ? error.message
-          : 'The isolated runner could not be reached. Your code was not marked wrong.',
+          : 'The code checker could not be reached. Your code was not marked wrong.',
       })
-      setRunnerAnnouncement('The official checkpoint check could not finish. Your progress was not changed.')
+      setRunnerAnnouncement('The check could not finish. Your progress was not changed.')
     } finally {
       if (isCurrentRunnerRequest()) {
         setRunnerBusy(false)
@@ -435,7 +436,7 @@ function CheckpointWorkspace({ checkpoint, onNavigate, onProgress, progress, pro
     setRunnerPurpose('run')
     setRunnerResult(null)
     setFeedback(null)
-    setRunnerAnnouncement('Preparing a practice run.')
+    setRunnerAnnouncement('Preparing your run.')
     try {
       const result = await runExercise(
         exercise.id,
@@ -448,16 +449,16 @@ function CheckpointWorkspace({ checkpoint, onNavigate, onProgress, progress, pro
       )
       if (!isCurrentRunnerRequest()) return
       setRunnerResult(result)
-      setRunnerAnnouncement('Practice run complete. Output is available in the program console.')
+      setRunnerAnnouncement('Run complete. Output is available below.')
     } catch (error) {
       if (!isCurrentRunnerRequest()) return
       setFeedback({
         correct: false,
         message: error instanceof Error
           ? error.message
-          : 'The practice run could not start. Your checkpoint progress was not changed.',
+          : 'The run could not start. Your project progress was not changed.',
       })
-      setRunnerAnnouncement('The practice run could not finish. Your checkpoint progress was not changed.')
+      setRunnerAnnouncement('The run could not finish. Your project progress was not changed.')
     } finally {
       if (isCurrentRunnerRequest()) {
         setRunnerBusy(false)
@@ -467,7 +468,7 @@ function CheckpointWorkspace({ checkpoint, onNavigate, onProgress, progress, pro
   }
 
   const resetDraft = () => {
-    if (!window.confirm('Reset only this checkpoint to its starting code? Other project drafts and completed checkpoints will stay unchanged.')) return
+    if (!window.confirm('Reset this step to its starting code? Other saved code and completed steps will stay unchanged.')) return
     runnerRequestIdRef.current += 1
     resetProjectDraft(project.id, checkpoint.id)
     setAnswer(exercise.starterCode ?? '')
@@ -476,7 +477,7 @@ function CheckpointWorkspace({ checkpoint, onNavigate, onProgress, progress, pro
     setRunnerStatus(null)
     setRunnerResult(null)
     setRunnerPurpose(null)
-    setRunnerAnnouncement('Checkpoint reset. Any earlier runner result will be ignored.')
+    setRunnerAnnouncement('Step reset. Any earlier result will be ignored.')
   }
 
   const continueProject = () => {
@@ -500,7 +501,6 @@ function CheckpointWorkspace({ checkpoint, onNavigate, onProgress, progress, pro
           <ArrowLeft />
         </StudioLink>
         <div>
-          <small>{project.studioLabel}</small>
           <b>{project.title}</b>
         </div>
         <div className="project-workspace__completion">
@@ -509,7 +509,7 @@ function CheckpointWorkspace({ checkpoint, onNavigate, onProgress, progress, pro
             aria-valuemax={100}
             aria-valuemin={0}
             aria-valuenow={completionPercent}
-            aria-valuetext={`${completedCheckpointCount} of ${project.checkpoints.length} checkpoints complete`}
+            aria-valuetext={`${completedCheckpointCount} of ${project.checkpoints.length} steps complete`}
             className="project-workspace__progress"
             role="progressbar"
           >
@@ -517,11 +517,10 @@ function CheckpointWorkspace({ checkpoint, onNavigate, onProgress, progress, pro
           </span>
           <small>{completedCheckpointCount} of {project.checkpoints.length} complete</small>
         </div>
-        <strong>Checkpoint {checkpoint.order} of {project.checkpoints.length}</strong>
-        <span><Zap size={15} /> {checkpoint.exercise.xp} XP</span>
+        <strong>Step {checkpoint.order} of {project.checkpoints.length}</strong>
       </header>
 
-      <nav aria-label="Project checkpoints" className="project-stepper" ref={stepperRef}>
+      <nav aria-label="Project steps" className="project-stepper" ref={stepperRef}>
         <ol>
           {project.checkpoints.map((step) => {
             const done = progress.completedProjectCheckpoints.includes(step.id)
@@ -532,7 +531,7 @@ function CheckpointWorkspace({ checkpoint, onNavigate, onProgress, progress, pro
                 {available ? (
                   <StudioLink
                     aria-current={current ? 'step' : undefined}
-                    aria-label={`Checkpoint ${step.order}: ${step.title}. ${current ? 'Current checkpoint, ' : ''}${done ? 'complete' : 'not complete'}.`}
+                    aria-label={`Step ${step.order}: ${step.title}. ${current ? 'Current step, ' : ''}${done ? 'complete' : 'not complete'}.`}
                     className={`${current ? 'is-current' : ''} ${done ? 'is-complete' : ''}`}
                     onNavigate={onNavigate}
                     to={projectPath(project.language, project.id, step.id)}
@@ -542,7 +541,7 @@ function CheckpointWorkspace({ checkpoint, onNavigate, onProgress, progress, pro
                 ) : (
                   <span>
                     <LockKeyhole aria-hidden="true" size={12} />
-                    <span className="sr-only">Checkpoint {step.order}: {step.title}. Locked.</span>
+                    <span className="sr-only">Step {step.order}: {step.title}. Locked.</span>
                   </span>
                 )}
               </li>
@@ -553,14 +552,13 @@ function CheckpointWorkspace({ checkpoint, onNavigate, onProgress, progress, pro
 
       <div className="project-workspace__layout">
         <section className="project-briefing">
-          <p className="kicker">Checkpoint {checkpoint.order} · {scaffoldingLabel(checkpoint.scaffolding)}</p>
+          <p className="kicker">Step {checkpoint.order} · {scaffoldingLabel(checkpoint.scaffolding)}</p>
           <h1>{checkpoint.title}</h1>
           <p className="project-objective">{checkpoint.objective}</p>
 
           {checkpoint.newTerms.length > 0 && (
             <section className="project-terms" aria-labelledby="project-terms-title">
-              <p className="eyebrow">Words before code</p>
-              <h2 id="project-terms-title">Nothing hidden behind jargon</h2>
+              <h2 id="project-terms-title">New terms</h2>
               <dl>
                 {checkpoint.newTerms.map((item) => (
                   <div key={item.term}><dt>{item.term}</dt><dd>{item.meaning}</dd></div>
@@ -570,16 +568,14 @@ function CheckpointWorkspace({ checkpoint, onNavigate, onProgress, progress, pro
           )}
 
           <section className="project-explanation" aria-labelledby="project-explanation-title">
-            <p className="eyebrow">What is happening</p>
-            <h2 id="project-explanation-title">{exercise.title}</h2>
+            <h2 id="project-explanation-title">Explanation</h2>
             <p>{exercise.explanation}</p>
-            <div><CircleHelp size={19} /><p><b>A useful comparison</b>{exercise.analogy}</p></div>
+            <div><CircleHelp size={19} /><p><b>Example</b>{exercise.analogy}</p></div>
           </section>
 
           {checkpoint.requirements && (
             <section className="project-requirements" aria-labelledby="project-requirements-title">
-              <p className="eyebrow">Plain-language requirements</p>
-              <h2 id="project-requirements-title">Build one piece at a time</h2>
+              <h2 id="project-requirements-title">Requirements</h2>
               <ol>{checkpoint.requirements.map((requirement) => <li key={requirement}>{requirement}</li>)}</ol>
             </section>
           )}
@@ -587,13 +583,13 @@ function CheckpointWorkspace({ checkpoint, onNavigate, onProgress, progress, pro
 
         <section className="project-task" aria-labelledby="project-task-title">
           <header>
-            <div><p className="eyebrow">Your checkpoint</p><h2 id="project-task-title">{exercise.prompt}</h2></div>
-            <span>{alreadyComplete ? <><Check size={14} /> Complete</> : <><Trophy size={14} /> {exercise.xp} XP</>}</span>
+            <div><p className="eyebrow">Task</p><h2 id="project-task-title">{exercise.prompt}</h2></div>
+            {alreadyComplete && <span><Check size={14} /> Complete</span>}
           </header>
 
           <div className="project-one-job">
             <CheckCircle2 size={19} />
-            <div><small>Your one job</small><p>{exercise.focus ?? exercise.prompt}</p></div>
+            <div><small>Do this</small><p>{exercise.focus ?? exercise.prompt}</p></div>
           </div>
 
           {(exercise.type === 'choice' || exercise.type === 'prediction') ? (
@@ -644,11 +640,11 @@ function CheckpointWorkspace({ checkpoint, onNavigate, onProgress, progress, pro
                   <label className="project-input">
                     <span>
                       <TerminalSquare size={15} />
-                      <b>Practice input</b>
-                      <small id={`project-input-help-${checkpoint.id}`}>One answer per line. Run uses this box; Check uses protected server examples.</small>
+                      <b>Run input</b>
+                      <small id={`project-input-help-${checkpoint.id}`}>Enter one answer per line. Run uses these answers. Check tests other answers too.</small>
                     </span>
                     <textarea
-                      aria-label="Practice program input"
+                      aria-label="Run input"
                       aria-describedby={`project-input-help-${checkpoint.id}`}
                       onChange={(event) => setPracticeInput(event.target.value)}
                       readOnly={runnerBusy}
@@ -657,24 +653,24 @@ function CheckpointWorkspace({ checkpoint, onNavigate, onProgress, progress, pro
                     />
                   </label>
                 )}
-                <section aria-busy={runnerBusy} className="project-console" aria-label="Program console">
-                  <div><TerminalSquare size={15} /><b>{runnerPurpose === 'check' ? 'Official check console' : 'Practice console'}</b></div>
+                <section aria-busy={runnerBusy} className="project-console" aria-label="Program output">
+                  <div><TerminalSquare size={15} /><b>{runnerPurpose === 'check' ? 'Check output' : 'Run output'}</b></div>
                   <pre>{runnerBusy
-                    ? runnerStatus === 'running' ? 'Running inside a fresh isolated sandbox...' : 'Preparing a fresh isolated sandbox...'
+                    ? runnerStatus === 'running' ? 'Running your code...' : 'Starting...'
                     : runnerResult
                       ? runnerResult.stdout
                         || (runnerResult.outcome === 'completed'
                           ? '(The program finished without displaying text.)'
-                          : 'The program stopped before it produced ordinary console output. Read the friendly explanation below.')
-                      : 'Nothing has run yet. Use Run to experiment, or Check checkpoint when you are ready.'}</pre>
+                          : 'The program stopped before it displayed output. See the error below.')
+                      : 'Nothing has run yet. Use Run to try your code, or Check work when you are ready.'}</pre>
                 </section>
                 {runnerResult && runnerResult.outcome !== 'completed' && (
-                  <section aria-label="Friendly language diagnostic" className="runner-report project-run-report">
+                  <section aria-label="Error help" className="runner-report project-run-report">
                     <div className="runner-report__summary">
                       <span className="is-alert">{runnerResult.diagnostic.title}</span>
                       <small>{runnerResult.diagnostic.line
                         ? `Look near line ${runnerResult.diagnostic.line}`
-                        : `${runnerResult.durationMs} ms in a fresh sandbox`}</small>
+                        : 'Read the explanation below.'}</small>
                     </div>
                     <div className="project-run-report__guidance">
                       <p>{runnerResult.diagnostic.explanation}</p>
@@ -695,7 +691,7 @@ function CheckpointWorkspace({ checkpoint, onNavigate, onProgress, progress, pro
                   <Play size={16} /> Run
                 </button>
                 <button className="secondary-action" onClick={resetDraft} type="button">
-                  <RefreshCw size={16} /> Reset checkpoint
+                  <RefreshCw size={16} /> Reset code
                 </button>
                 <button className="secondary-action" disabled={!answer.trim()} onClick={() => downloadSource(project, answer)} type="button">
                   <Download size={16} /> Download {project.downloadFileName.slice(project.downloadFileName.lastIndexOf('.'))}
@@ -705,14 +701,14 @@ function CheckpointWorkspace({ checkpoint, onNavigate, onProgress, progress, pro
           )}
 
           {runnerResult && runnerPurpose === 'check' && (
-            <section className="project-check-report" aria-label="Checkpoint test report">
-              <div><b>{runnerResult.tests.filter((test) => test.passed).length} of {runnerResult.tests.length} checks passed</b><small>Only summaries are kept in this browser. Source and console output are not added to history.</small></div>
+            <section className="project-check-report" aria-label="Check results">
+              <div><b>{runnerResult.tests.filter((test) => test.passed).length} of {runnerResult.tests.length} checks passed</b><small>Only check results are saved. Your code and output are not.</small></div>
               <ol>
                 {runnerResult.tests.map((test) => (
                   <li className={test.passed ? 'is-passed' : ''} key={`${runnerResult.runId}-${test.name}`}>
                     {test.passed ? <Check size={15} /> : <Circle size={15} />}
-                    <span><b>{test.name}</b><small>{test.message}</small></span>
-                    <i>{test.visibility}</i>
+                    <span><b>{learnerCheckName(test.name)}</b><small>{test.message}</small></span>
+                    <i>{test.visibility === 'visible' ? 'Shown here' : 'Checked privately'}</i>
                   </li>
                 ))}
               </ol>
@@ -727,7 +723,7 @@ function CheckpointWorkspace({ checkpoint, onNavigate, onProgress, progress, pro
           {feedback && (
             <section aria-live="polite" className={`feedback-box ${feedback.correct ? 'is-correct' : 'is-wrong'}`} role="status">
               {feedback.correct ? <CheckCircle2 /> : <CircleHelp />}
-              <div><b>{feedback.correct ? 'Checkpoint complete' : 'Let’s inspect that'}</b><p>{feedback.message}</p></div>
+              <div><b>{feedback.correct ? 'Step complete' : 'Check this part'}</b><p>{feedback.message}</p></div>
             </section>
           )}
 
@@ -736,18 +732,18 @@ function CheckpointWorkspace({ checkpoint, onNavigate, onProgress, progress, pro
           <div className="project-submit-row">
             {feedback?.correct ? (
               <button className="primary-action" onClick={continueProject} type="button">
-                {nextCheckpoint ? 'Continue to next checkpoint' : 'Finish project'} <ArrowRight size={17} />
+                {nextCheckpoint ? 'Next step' : 'Finish project'} <ArrowRight size={17} />
               </button>
             ) : (
               <button aria-disabled={runnerBusy} className="primary-action" onClick={() => { void checkCheckpoint() }} type="button">
-                {runnerBusy ? 'Checking safely...' : editable ? 'Check checkpoint' : 'Check answer'} <ArrowRight size={17} />
+                {runnerBusy ? 'Checking...' : editable ? 'Check work' : 'Check answer'} <ArrowRight size={17} />
               </button>
             )}
           </div>
 
           {history.length > 0 && (
             <details className="project-history">
-              <summary><RotateCcw size={16} /> Recent official checks</summary>
+              <summary><RotateCcw size={16} /> Recent checks</summary>
               <ol>
                 {history.slice(0, 5).map((entry, index) => (
                   <li key={`${entry.checkedAt}-${entry.checkpointId}-${index}`}>
@@ -802,7 +798,7 @@ export function ProjectStudio({ checkpointId, language, onNavigate, onProgress, 
     return (
       <main className="content-page">
         <section className="route-message-card route-message-card--inside" role="alert">
-          <p className="kicker"><CircleHelp size={15} /> Project studio</p>
+          <p className="kicker"><CircleHelp size={15} /> Project</p>
           <h1>The project notes did not finish loading</h1>
           <p>Your saved progress and code are still in this browser. Check the connection, then try opening the project again.</p>
           <div className="route-message-actions">
@@ -822,7 +818,7 @@ export function ProjectStudio({ checkpointId, language, onNavigate, onProgress, 
     return (
       <main aria-busy="true" className="content-page">
         <section className="route-message-card route-message-card--inside">
-          <p className="kicker"><Code2 size={15} /> Project studio</p>
+          <p className="kicker"><Code2 size={15} /> Project</p>
           <h1>Opening your project</h1>
           <p>Loading the lesson notes, editor, and your browser-saved draft.</p>
         </section>
