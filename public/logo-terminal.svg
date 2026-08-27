@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 48" role="img" aria-labelledby="title">
+  <title>SeePoundCoffeePie</title>
+  <text x="0" y="32" font-family="'JetBrains Mono', 'SFMono-Regular', Consolas, monospace" font-size="22" font-weight="700" fill="#e0e0e0" letter-spacing="-0.02em">spcp</text>
+  <!-- Blinking cursor block -->
+  <rect x="70" y="14" width="12" height="22" rx="1" fill="#00ff41">
+    <animate attributeName="opacity" values="1;0;1" dur="1s" repeatCount="indefinite"/>
+  </rect>
+</svg>

@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 48" role="img" aria-labelledby="title">
+  <title>SeePoundCoffeePie</title>
+  <!-- 2x2 grid icon -->
+  <rect x="0" y="0" width="18" height="18" rx="4" fill="#5eead4"/>
+  <rect x="22" y="0" width="18" height="18" rx="4" fill="#b967ff"/>
+  <rect x="0" y="22" width="18" height="18" rx="4" fill="#f0a050"/>
+  <rect x="22" y="22" width="18" height="18" rx="4" fill="#7ee787"/>
+  <!-- Wordmark -->
+  <text x="52" y="28" font-family="'JetBrains Mono', 'SFMono-Regular', Consolas, monospace" font-size="16" font-weight="700" fill="#e8ecf1" letter-spacing="-0.02em">SeePoundCoffeePie</text>
+</svg>

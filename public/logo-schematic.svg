@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 48" role="img" aria-labelledby="title">
+  <title>SeePoundCoffeePie</title>
+  <!-- 2x2 grid icon with corner ticks -->
+  <rect x="0" y="0" width="18" height="18" fill="#005f88" rx="1"/>
+  <rect x="22" y="0" width="18" height="18" fill="#6a1b9a" rx="1"/>
+  <rect x="0" y="22" width="18" height="18" fill="#b35400" rx="1"/>
+  <rect x="22" y="22" width="18" height="18" fill="#2e7d32" rx="1"/>
+  <path d="M-2 -2h5M-2 -2v5" stroke="#1a3a5c" stroke-width="1.5" fill="none"/>
+  <path d="M42 -2h-5M42 -2v5" stroke="#1a3a5c" stroke-width="1.5" fill="none"/>
+  <path d="M-2 42h5M-2 42v-5" stroke="#1a3a5c" stroke-width="1.5" fill="none"/>
+  <path d="M42 42h-5M42 42v-5" stroke="#1a3a5c" stroke-width="1.5" fill="none"/>
+  <!-- Wordmark -->
+  <text x="52" y="28" font-family="'JetBrains Mono', 'SFMono-Regular', Consolas, monospace" font-size="16" font-weight="700" fill="#1e2a3a" letter-spacing="0.04em">SPCP</text>
+</svg>

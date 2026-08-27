@@ -34,11 +34,20 @@
     <meta name="twitter:image" content="https://seepoundcoffeepie.com/social-card-v7.jpg" />
     <meta
       name="twitter:image:alt"
-      content="SeePoundCoffeePie preview featuring a large cyan eye for See and C++, pound cake for C#, coffee for Java, and pie for Python."
+      content="SeePoundCoffeePie preview featuring a large cyan eye for See and C++, pound cake for C#, coffee and Java, and pie and Python."
     />
     <link rel="canonical" href="https://seepoundcoffeepie.com/" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <title>SeePoundCoffeePie | Programming from the beginning.</title>
+    <script>
+      (function () {
+        var key = 'spcp-theme';
+        var valid = { workshop: 1, hex: 1, terminal: 1, schematic: 1 };
+        var theme = 'workshop';
+        try { var s = localStorage.getItem(key); if (s && valid[s]) theme = s; } catch (e) {}
+        document.documentElement.dataset.theme = theme;
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>
