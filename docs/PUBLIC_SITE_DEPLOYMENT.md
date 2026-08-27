@@ -59,7 +59,7 @@ The wrapper mechanically compares:
 - runner application versions and reported instance counts;
 - runner application update times.
 
-It requires `RUNNER_CONFIG.enabled` to be `false` before deployment, but it does not snapshot that value afterward. The public-site command does not run D1 migrations or secret-update commands. Reviewers must separately confirm that a routine site diff does not change the public runner assignment allowlist. Any intentional change to D1 migrations, secrets, runner state, or runner assignment policy is a separate release action outside this procedure.
+The wrapper requires `RUNNER_CONFIG.enabled` to be `false` before upload, reads it again after deployment, and confirms that the public status endpoint remains paused. It does not change or restore runner state itself. The public-site command does not run D1 migrations or secret-update commands. Reviewers must separately confirm that a routine site diff does not change the public runner assignment allowlist. Any intentional change to D1 migrations, secrets, runner state, or runner assignment policy is a separate release action outside this procedure.
 
 The ordinary production command now means public site only. Do not replace it with a raw `wrangler deploy` command.
 

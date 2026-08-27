@@ -1,7 +1,10 @@
 import { Resolver } from 'node:dns/promises'
 import { request as httpsRequest } from 'node:https'
 
-import { inspectDeployedJavaScriptChunkGraph } from './deployed-javascript-graph.mjs'
+import {
+  inspectDeployedJavaScriptChunkGraph,
+  uniqueDeployedJavaScriptAssetByPath,
+} from './deployed-javascript-graph.mjs'
 import {
   unpublishedCppCoursePath,
   unpublishedCppJavaScriptMarkers,
@@ -122,30 +125,25 @@ for (const [assetUrl, asset] of deployedJavaScriptAssets) {
 }
 
 async function verifyPracticalPythonAsset(pattern, markers, label) {
-  const assetPath = entryAsset.match(pattern)?.[0]
-  if (!assetPath) {
-    throw new Error(`The deployed application entry does not reference the ${label}`)
+  const deployedAsset = uniqueDeployedJavaScriptAssetByPath(deployedJavaScriptAssets, pattern)
+  if (!deployedAsset) {
+    throw new Error(`The deployed JavaScript graph does not contain one unique ${label}`)
   }
 
-  const assetResponse = await requestWithFreshDns(new URL(assetPath, canonical), { redirect: 'manual' })
-  const asset = await assetResponse.text()
+  const [, asset] = deployedAsset
   const acceptedMarkers = Array.isArray(markers) ? markers : [markers]
-  if (
-    assetResponse.status !== 200
-    || !(assetResponse.headers.get('content-type') ?? '').includes('javascript')
-    || !acceptedMarkers.some((marker) => asset.includes(marker))
-  ) {
+  if (!acceptedMarkers.some((marker) => asset.includes(marker))) {
     throw new Error(`The deployed ${label} is missing or does not match Phase 5A`)
   }
 }
 
 await verifyPracticalPythonAsset(
-  /assets\/PythonDataToolsRoute-[A-Za-z0-9_-]+\.js/u,
+  /\/assets\/PythonDataToolsRoute-[A-Za-z0-9_-]+\.js$/u,
   ['Course complete.', 'python-data-tools-course-'],
   'Practical Python route asset',
 )
 await verifyPracticalPythonAsset(
-  /assets\/python-data-tools-course-[A-Za-z0-9_-]+\.js/u,
+  /\/assets\/python-data-tools-course-[A-Za-z0-9_-]+\.js$/u,
   'Products: 2',
   'Practical Python teaching-content asset',
 )

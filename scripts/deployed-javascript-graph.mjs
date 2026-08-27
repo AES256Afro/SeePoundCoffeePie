@@ -63,3 +63,8 @@ export async function inspectDeployedJavaScriptChunkGraph({
 
   return assets
 }
+
+export function uniqueDeployedJavaScriptAssetByPath(assets, pathPattern) {
+  const matches = [...assets].filter(([assetUrl]) => pathPattern.test(new URL(assetUrl).pathname))
+  return matches.length === 1 ? matches[0] : null
+}

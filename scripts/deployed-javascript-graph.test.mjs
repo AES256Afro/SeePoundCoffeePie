@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest'
 import {
   deployedJavaScriptChunkUrls,
   inspectDeployedJavaScriptChunkGraph,
+  uniqueDeployedJavaScriptAssetByPath,
 } from './deployed-javascript-graph.mjs'
 
 const origin = 'https://example.com'
@@ -77,5 +78,23 @@ describe('deployed JavaScript graph inspection', () => {
       maxAssets: 3,
       request,
     })).rejects.toThrow(/3-asset inspection limit/iu)
+  })
+
+  it('selects a unique lazy asset by its deployed path', () => {
+    const graph = new Map([
+      [`${origin}/assets/entry.js`, 'import("./course.js")'],
+      [`${origin}/assets/course.js`, 'import("./teaching-abc123.js")'],
+      [`${origin}/assets/teaching-abc123.js`, 'export const example = true'],
+    ])
+
+    expect(uniqueDeployedJavaScriptAssetByPath(
+      graph,
+      /\/assets\/teaching-[A-Za-z0-9_-]+\.js$/u,
+    )).toEqual([
+      `${origin}/assets/teaching-abc123.js`,
+      'export const example = true',
+    ])
+    expect(uniqueDeployedJavaScriptAssetByPath(graph, /\/assets\/missing\.js$/u)).toBeNull()
+    expect(uniqueDeployedJavaScriptAssetByPath(graph, /\/assets\/.+\.js$/u)).toBeNull()
   })
 })
