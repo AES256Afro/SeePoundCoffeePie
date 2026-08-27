@@ -1,29 +1,26 @@
 import { Resolver } from 'node:dns/promises'
 import { request as httpsRequest } from 'node:https'
 
+import { inspectDeployedJavaScriptChunkGraph } from './deployed-javascript-graph.mjs'
+import {
+  unpublishedCppCoursePath,
+  unpublishedCppJavaScriptMarkers,
+  unpublishedCppLessonIds,
+  unpublishedCppLessonPath,
+  unpublishedCppLessonPrefix,
+} from './unpublished-cpp-release-boundary.mjs'
+
 const canonical = 'https://seepoundcoffeepie.com/'
 const expectedTitle = '<title>SeePoundCoffeePie | Programming from the beginning.</title>'
 const socialImageUrl = 'https://seepoundcoffeepie.com/social-card-v7.jpg'
 const practicalPythonCourseUrl = 'https://seepoundcoffeepie.com/courses/python-data-tools'
 const practicalPythonLessonUrl = 'https://seepoundcoffeepie.com/learn/python-data-tools/py-data-return-values/pydata1-retrieve-call'
-const unpublishedCppCoursePath = '/courses/cpp-collections-records'
-const unpublishedCppLessonPrefix = '/learn/cpp-collections-records/'
-const unpublishedCppLessonPath = '/learn/cpp-collections-records/cpp-records-return-values/cpprecords1-retrieve-call'
-const unpublishedCppEditableLessonIds = [
-  'cpprecords1-fix-return',
-  'cpprecords1-part-total',
-  'cpprecords2-fix-push-back',
-  'cpprecords2-add-parts',
-  'cpprecords3-fix-field-access',
-  'cpprecords3-build-part-record',
-  'cpprecords4-fix-copy-update',
-  'cpprecords4-restock-part',
-  'cpprecords5-fix-total-reset',
-  'cpprecords5-low-stock',
-  'cpprecords6-fix-low-stock-check',
-  'cpprecords6-workshop-stock-report',
-]
-
+const cliArguments = process.argv.slice(2)
+const unsupportedArguments = cliArguments.filter((argument) => argument !== '--allow-paused')
+if (unsupportedArguments.length > 0) {
+  throw new Error(`Unsupported check-live argument: ${unsupportedArguments.join(', ')}`)
+}
+const allowPaused = cliArguments.includes('--allow-paused')
 async function requestWithFreshDns(input, init = {}) {
   try {
     return await fetch(input, init)
@@ -72,6 +69,8 @@ async function requestWithFreshDns(input, init = {}) {
   }
 }
 
+const canonicalOrigin = new URL(canonical).origin
+
 const response = await requestWithFreshDns(canonical, { redirect: 'manual' })
 if (response.status !== 200) {
   throw new Error(`Expected ${canonical} to return 200, received ${response.status}`)
@@ -87,7 +86,8 @@ if (!entryAssetPath) {
   throw new Error('The live application shell did not name its JavaScript entry asset')
 }
 
-const entryAssetResponse = await requestWithFreshDns(new URL(entryAssetPath, canonical), {
+const entryAssetUrl = new URL(entryAssetPath, canonical)
+const entryAssetResponse = await requestWithFreshDns(entryAssetUrl, {
   redirect: 'manual',
 })
 const entryAsset = await entryAssetResponse.text()
@@ -102,6 +102,22 @@ if (
 for (const unpublishedRouteMarker of [unpublishedCppCoursePath, unpublishedCppLessonPrefix]) {
   if (entryAsset.includes(unpublishedRouteMarker)) {
     throw new Error(`The deployed application entry publicly registers the unpublished C++ route ${unpublishedRouteMarker}`)
+  }
+}
+
+const deployedJavaScriptAssets = await inspectDeployedJavaScriptChunkGraph({
+  allowedOrigin: canonicalOrigin,
+  entryAsset,
+  entryAssetUrl,
+  request: requestWithFreshDns,
+})
+for (const [assetUrl, asset] of deployedJavaScriptAssets) {
+  for (const marker of unpublishedCppJavaScriptMarkers) {
+    if (asset.includes(marker.value)) {
+      throw new Error(
+        `The deployed JavaScript chunk graph exposes unpublished Phase 5B ${marker.kind} in ${new URL(assetUrl).pathname}`,
+      )
+    }
   }
 }
 
@@ -170,8 +186,8 @@ for (const unpublishedRoute of [unpublishedCppCoursePath, unpublishedCppLessonPa
 
 const grantUrl = new URL('/api/runner/grants', canonical)
 const grantOrigin = new URL(canonical).origin
-let hiddenGrantCheck = 'runner assignments rejected'
-for (const exerciseId of unpublishedCppEditableLessonIds) {
+let pausedGrantCheck = false
+for (const exerciseId of unpublishedCppLessonIds) {
   const grantResponse = await requestWithFreshDns(grantUrl, {
     method: 'POST',
     redirect: 'manual',
@@ -201,16 +217,31 @@ for (const exerciseId of unpublishedCppEditableLessonIds) {
       'The code checker is not available right now. Try again later.',
       'The code checker is paused right now. Try again later.',
     ].includes(grantResult?.error)
+  const issuedGrant = typeof grantResult?.grant === 'string'
+  const setCookie = grantResponse.headers.has('set-cookie')
+
+  if (runnerClosed && !allowPaused && !issuedGrant && !setCookie) {
+    throw new Error(
+      `The code checker was paused while checking unpublished exercise ${exerciseId}; the default live check requires an enabled runner and a 404 rejection. Use --allow-paused only for an explicitly inconclusive check.`,
+    )
+  }
 
   if (
-    (!rejectedAsUnpublished && !runnerClosed)
-    || typeof grantResult?.grant === 'string'
-    || grantResponse.headers.has('set-cookie')
+    (!rejectedAsUnpublished && !(allowPaused && runnerClosed))
+    || issuedGrant
+    || setCookie
   ) {
     throw new Error(`The unpublished C++ exercise ${exerciseId} crossed the public run-grant boundary`)
   }
-  if (runnerClosed) hiddenGrantCheck = 'no grants issued while the code checker was closed'
+  if (runnerClosed) pausedGrantCheck = true
 }
+
+if (pausedGrantCheck) {
+  console.warn('Live verification warning: the code checker was paused, so absence of unpublished Phase 5B runner assignments was not proven.')
+}
+const hiddenGrantCheck = pausedGrantCheck
+  ? 'runner paused; assignment absence not proven'
+  : 'runner enabled; all unpublished assignments rejected with 404'
 
 const robotsResponse = await requestWithFreshDns(new URL('/robots.txt', canonical), { redirect: 'manual' })
 const robots = await robotsResponse.text()
@@ -314,4 +345,4 @@ for (const route of [...canonicalRoutes, ...legacyRoutes]) {
   }
 }
 
-console.log(`Live verification passed for Phase 5A assets, sitemap, robots, social previews, apex, www redirect, headers, ${canonicalRoutes.length} canonical routes, ${legacyRoutes.length} legacy routes, 2 unpublished C++ route boundaries, and ${unpublishedCppEditableLessonIds.length} unpublished C++ exercises (${hiddenGrantCheck}).`)
+console.log(`Live verification passed for Phase 5A assets, a ${deployedJavaScriptAssets.size}-asset JavaScript chunk graph, sitemap, robots, social previews, apex, www redirect, headers, ${canonicalRoutes.length} canonical routes, ${legacyRoutes.length} legacy routes, 2 unpublished C++ route boundaries, and all ${unpublishedCppLessonIds.length} unpublished C++ lesson assignments (${hiddenGrantCheck}).`)

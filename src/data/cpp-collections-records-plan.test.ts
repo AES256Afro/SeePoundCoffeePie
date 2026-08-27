@@ -11,9 +11,21 @@ import {
   cppCollectionsRecordsManifest,
   cppCollectionsRecordsMissionIds,
 } from './cpp-collections-records-manifest'
+import {
+  publishedContinuingCourseContentRequest,
+  publishedContinuingCourseLoaders,
+} from './published-continuing-course-loaders'
+import { publishedContinuingCourseManifests } from './published-continuing-course-manifests'
 import { projectManifests } from './project-manifests'
 import { tracks } from './curriculum'
 import { parseAppRoute } from '../lib/routes'
+import { findRunnerAssignment } from '../lib/runner-assignments'
+import {
+  unpublishedCppCoursePath,
+  unpublishedCppLessonIds,
+  unpublishedCppLessonPath,
+  unpublishedCppLessonPrefix,
+} from '../../scripts/unpublished-cpp-release-boundary.mjs'
 
 const expectedModuleIds = [
   'cpp-records-return-values',
@@ -35,6 +47,10 @@ const expectedLessonTypeSequences = [
 
 const phasePlanDocument = readFileSync(
   new URL('../../docs/PHASE_5B_PLAN.md', import.meta.url),
+  'utf8',
+)
+const publicSitemap = readFileSync(
+  new URL('../../public/sitemap.xml', import.meta.url),
   'utf8',
 )
 
@@ -60,29 +76,6 @@ describe('Phase 5B Practical C++ course plan', () => {
         xp: currentLesson.xp,
       })),
     )
-  })
-
-  it('keeps every planned identifier separate from published courses and projects', () => {
-    const publishedIds = new Set([
-      ...courseDefinitions.flatMap((course) => [
-        course.id,
-        course.slug,
-        ...course.missionIds,
-        ...course.lessonIds,
-      ]),
-      ...projectManifests.flatMap((project) => [
-        project.id,
-        ...project.checkpoints.map((checkpoint) => checkpoint.id),
-      ]),
-    ])
-    const plannedIds = [
-      cppCollectionsRecordsPlan.id,
-      ...expectedModuleIds,
-      ...cppCollectionsRecordsLessons.map((lesson) => lesson.id),
-    ]
-
-    expect(new Set(plannedIds).size).toBe(plannedIds.length)
-    for (const id of plannedIds) expect(publishedIds.has(id), id).toBe(false)
   })
 
   it('requires both completed C++ prerequisites in the publication contract', () => {
@@ -119,13 +112,72 @@ describe('Phase 5B Practical C++ course plan', () => {
     }
   })
 
-  it('keeps the incomplete course outside every public route and registry', () => {
-    expect(courseDefinitionForSlug(cppCollectionsRecordsPlan.slug)).toBeUndefined()
-    expect(courseDefinitions.some((course) => String(course.id) === cppCollectionsRecordsPlan.id)).toBe(false)
-    expect(parseAppRoute('/courses/cpp-collections-records').page).toBe('not-found')
-    expect(parseAppRoute(
-      '/learn/cpp-collections-records/cpp-records-return-values/cpprecords1-retrieve-call',
-    ).page).toBe('not-found')
+  it('keeps every hidden C++ course, module, and lesson identifier outside public surfaces', () => {
+    const hiddenModules = Object.entries(cppCollectionsRecordsManifest)
+    const hiddenModuleIds = hiddenModules.map(([moduleId]) => moduleId)
+    const hiddenLessonIds = hiddenModules.flatMap(([, lessons]) => (
+      lessons.map((lesson) => lesson.id)
+    ))
+    const hiddenIds = [cppCollectionsRecordsPlan.id, ...hiddenModuleIds, ...hiddenLessonIds]
+    const publicIds = new Set([
+      ...courseDefinitions.flatMap((course) => [
+        course.id,
+        course.slug,
+        ...course.missionIds,
+        ...course.lessonIds,
+      ]),
+      ...publishedContinuingCourseManifests.flatMap((manifest) => [
+        manifest.courseId,
+        ...manifest.modules.flatMap((module) => [module.id, ...module.lessonIds]),
+      ]),
+      ...publishedContinuingCourseLoaders.map((loader) => loader.courseId),
+      ...tracks.flatMap((track) => track.missions.flatMap((mission) => [
+        mission.id,
+        ...mission.exercises.map((exercise) => exercise.id),
+      ])),
+      ...projectManifests.flatMap((project) => [
+        project.id,
+        ...project.checkpoints.map((checkpoint) => checkpoint.id),
+      ]),
+    ])
+
+    expect(hiddenModuleIds).toHaveLength(6)
+    expect(hiddenLessonIds).toHaveLength(30)
+    expect(unpublishedCppCoursePath).toBe(`/courses/${cppCollectionsRecordsPlan.id}`)
+    expect(unpublishedCppLessonPrefix).toBe(`/learn/${cppCollectionsRecordsPlan.id}/`)
+    expect(unpublishedCppLessonPath).toBe(
+      `/learn/${cppCollectionsRecordsPlan.id}/${hiddenModuleIds[0]}/${hiddenLessonIds[0]}`,
+    )
+    expect(unpublishedCppLessonIds).toEqual(hiddenLessonIds)
+    expect(hiddenIds).toHaveLength(37)
+    expect(new Set(hiddenIds).size).toBe(hiddenIds.length)
+
+    for (const id of hiddenIds) {
+      expect(publicIds.has(id), `${id} must not enter a public registry`).toBe(false)
+      expect(courseDefinitionForSlug(id), `${id} must not resolve as a public course`).toBeUndefined()
+      expect(
+        publishedContinuingCourseContentRequest(id),
+        `${id} must not resolve through a public course loader`,
+      ).toBeUndefined()
+      expect(findRunnerAssignment(id), `${id} must not receive a runner assignment`).toBeUndefined()
+      expect(parseAppRoute(`/courses/${id}`).page, `${id} must not resolve as a course route`)
+        .toBe('not-found')
+      expect(publicSitemap, `${id} must not enter the public sitemap`).not.toContain(id)
+    }
+
+    for (const [moduleId, lessons] of hiddenModules) {
+      for (const lesson of lessons) {
+        expect(parseAppRoute(
+          `/learn/${cppCollectionsRecordsPlan.id}/${moduleId}/${lesson.id}`,
+        ).page, `${lesson.id} must not resolve through its guessed continuing-course route`)
+          .toBe('not-found')
+        expect(parseAppRoute(
+          `/learn/cpp-foundations/${moduleId}/${lesson.id}`,
+        ).page, `${lesson.id} must not resolve through the published C++ course`)
+          .toBe('not-found')
+      }
+    }
+
     expect(cppCollectionsRecordsPlan.publicationBlockers).toHaveLength(10)
     expect(cppCollectionsRecordsPlan.publicationPolicy).toContain('outside the public registry')
   })

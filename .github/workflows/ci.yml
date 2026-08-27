@@ -43,5 +43,8 @@ jobs:
       - name: Verify server-owned assessment privacy
         run: npm run check:project-bundle
 
+      - name: Verify public-site deployment freezes runner images
+        run: npm run check:public-site-deploy
+
       - name: Verify bundle budgets
         run: npm run check:bundle
