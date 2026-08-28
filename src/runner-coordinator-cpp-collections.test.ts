@@ -230,7 +230,7 @@ describe('private C++ Workshop Stock Report coordination', () => {
         success: true,
         stdout: command.includes('CppCollectionsAnalyzer.py')
           ? JSON.stringify(analysis({ parsed: false, authored_frame: false, part_record: false, restock: false, total_units: false, low_stock: false, supplied_harness: false }))
-          : supervisorResult('compile_error', '', 'expected a closing brace'),
+          : supervisorResult('compile_error', '', "main.cpp:41: error: expected '}'"),
       })),
       destroy: vi.fn(async () => undefined),
     }
@@ -241,7 +241,20 @@ describe('private C++ Workshop Stock Report coordination', () => {
 
     const result = storedResult(storage, queued.id)
     expect(result.outcome).toBe('compile_error')
-    expect(result.stderr).toContain('expected a closing brace')
+    expect(result.stderr).toContain("expected '}'")
+    expect(result.diagnostic).toEqual({
+      title: 'C++ expected a closing brace',
+      explanation: 'An opening brace starts a group of instructions, and C++ needs a matching closing brace to end that group.',
+      suggestion: 'Count the opening and closing braces around the reported line.',
+      line: 41,
+    })
+    expect(Object.keys(result.diagnostic).sort()).toEqual([
+      'explanation',
+      'line',
+      'suggestion',
+      'title',
+    ])
+    expect(result.diagnostic).not.toHaveProperty('pattern')
     expect(result.tests.every((test) => !test.passed)).toBe(true)
     expect(result.tests.slice(1).every((test) => (
       test.message === 'This required part of the lesson is not present yet. Review the task and try again.'

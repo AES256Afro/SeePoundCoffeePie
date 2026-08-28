@@ -171,7 +171,14 @@ export function explainRunnerResult(
 
   const diagnostic = stderr || ''
   const matched = rules[language].find((rule) => rule.pattern.test(diagnostic))
-  if (matched) return { ...matched, line }
+  if (matched) {
+    return {
+      title: matched.title,
+      explanation: matched.explanation,
+      suggestion: matched.suggestion,
+      line,
+    }
+  }
 
   return {
     title: outcome === 'compile_error' ? 'The language could not read this code yet' : 'The program stopped while it was running',

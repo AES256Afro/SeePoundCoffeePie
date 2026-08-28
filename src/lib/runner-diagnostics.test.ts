@@ -24,6 +24,38 @@ describe('beginner runner diagnostics', () => {
       .toMatchObject({ title: 'C# expected a semicolon', line: 4 })
   })
 
+  it.each([
+    {
+      stderr: "main.cpp:12: error: expected '}'",
+      expected: {
+        title: 'C++ expected a closing brace',
+        explanation: 'An opening brace starts a group of instructions, and C++ needs a matching closing brace to end that group.',
+        suggestion: 'Count the opening and closing braces around the reported line.',
+        line: 12,
+      },
+    },
+    {
+      stderr: "main.cpp:8: error: expected ';'",
+      expected: {
+        title: 'C++ expected a semicolon',
+        explanation: 'Most C++ instructions end with a semicolon. It tells C++ where that instruction stops.',
+        suggestion: 'Look at the reported line and the line just above it for a missing semicolon.',
+        line: 8,
+      },
+    },
+  ])('returns only public diagnostic fields for $stderr', ({ stderr, expected }) => {
+    const diagnostic = explainRunnerResult('cpp', 'compile_error', stderr, null)
+
+    expect(diagnostic).toEqual(expected)
+    expect(Object.keys(diagnostic).sort()).toEqual([
+      'explanation',
+      'line',
+      'suggestion',
+      'title',
+    ])
+    expect(diagnostic).not.toHaveProperty('pattern')
+  })
+
   it('does not blame the learner for infrastructure failures', () => {
     expect(explainRunnerResult('java', 'system_error', '', null).explanation)
       .toContain('service problem')
