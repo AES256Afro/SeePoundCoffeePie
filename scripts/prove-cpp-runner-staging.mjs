@@ -23,6 +23,8 @@ import { assertReviewedRunnerStatus } from './runner-deployment-checks.mjs'
 const projectRoot = fileURLToPath(new URL('../', import.meta.url))
 const wranglerPath = fileURLToPath(new URL('../node_modules/.bin/wrangler', import.meta.url))
 const commitPattern = /^[0-9a-f]{40}$/u
+const stagingRunnerStateTimeoutMilliseconds = 120_000
+const stagingRunnerWindowTtlSeconds = 900
 
 function sameRecord(left, right) {
   return JSON.stringify(left) === JSON.stringify(right)
@@ -98,18 +100,24 @@ export function stagingRunnerKvPutArgs(enabled) {
   if (typeof enabled !== 'boolean') {
     throw new Error('The staging runner window requires one exact Boolean state.')
   }
-  return [
+  const args = [
     'kv',
     'key',
     'put',
     'enabled',
     String(enabled),
+  ]
+  if (enabled) {
+    args.push('--ttl', String(stagingRunnerWindowTtlSeconds))
+  }
+  args.push(
     '--binding',
     'RUNNER_CONFIG',
     '--remote',
     '--config',
     deploymentEnvironments.staging.config,
-  ]
+  )
+  return args
 }
 
 function stagingRunnerKvGetArgs() {
@@ -126,26 +134,61 @@ function stagingRunnerKvGetArgs() {
   ]
 }
 
+function readStagingRunnerKvValue(timeoutMilliseconds) {
+  return safeCommandOutput(
+    wranglerPath,
+    stagingRunnerKvGetArgs(),
+    (command, args, options) => execFileSync(command, args, {
+      ...options,
+      timeout: timeoutMilliseconds,
+    }),
+  )
+}
+
 export function setStagingRunnerEnabled(enabled) {
   safeCommandOutput(wranglerPath, stagingRunnerKvPutArgs(enabled))
 }
 
 export async function requireStagingRunnerState(enabled, {
-  attempts = 30,
+  createAbortSignal = (milliseconds) => AbortSignal.timeout(milliseconds),
   fetchImpl = fetch,
+  now = () => performance.now(),
+  pollMilliseconds = 1_000,
+  readKvValue = readStagingRunnerKvValue,
   sleep = (milliseconds) => new Promise((resolvePromise) => setTimeout(resolvePromise, milliseconds)),
+  timeoutMilliseconds = stagingRunnerStateTimeoutMilliseconds,
 } = {}) {
   const expectedValue = String(enabled)
-  const actualValue = safeCommandOutput(wranglerPath, stagingRunnerKvGetArgs())
-  if (actualValue !== expectedValue) {
-    throw new Error(`Staging RUNNER_CONFIG.enabled is not exactly ${expectedValue}.`)
+  if (
+    !Number.isSafeInteger(timeoutMilliseconds)
+    || timeoutMilliseconds < 1
+    || !Number.isSafeInteger(pollMilliseconds)
+    || pollMilliseconds < 1
+  ) {
+    throw new Error('The staging runner state wait needs positive integer timing bounds.')
   }
 
-  for (let attempt = 1; attempt <= attempts; attempt += 1) {
+  const deadline = now() + timeoutMilliseconds
+  let lastPublicStateError
+  while (now() < deadline) {
+    const initialRemainingMilliseconds = deadline - now()
+    const actualValue = readKvValue(Math.max(1, Math.floor(initialRemainingMilliseconds)))
+    if (now() >= deadline) break
+    if (actualValue !== expectedValue) {
+      throw new Error(`Staging RUNNER_CONFIG.enabled changed while proving ${expectedValue}.`)
+    }
+
+    const remainingBeforeRequest = deadline - now()
+    if (remainingBeforeRequest <= 0) break
+    const requestTimeoutMilliseconds = Math.max(
+      1,
+      Math.min(10_000, Math.floor(remainingBeforeRequest / 2)),
+    )
+    let publicStateMatched = false
     try {
       const response = await fetchImpl(
         new URL('/api/runner/status', deploymentEnvironments.staging.origin),
-        { redirect: 'manual', signal: AbortSignal.timeout(10_000) },
+        { redirect: 'manual', signal: createAbortSignal(requestTimeoutMilliseconds) },
       )
       const body = await response.json()
       assertReviewedRunnerStatus({
@@ -154,16 +197,28 @@ export async function requireStagingRunnerState(enabled, {
         label: 'staging',
         requireEnabled: enabled,
       })
-      const confirmedValue = safeCommandOutput(wranglerPath, stagingRunnerKvGetArgs())
-      if (confirmedValue !== expectedValue) {
-        throw new Error(`Staging RUNNER_CONFIG.enabled changed while proving ${expectedValue}.`)
-      }
-      return
-    } catch {
-      if (attempt < attempts) await sleep(1_000)
+      publicStateMatched = true
+    } catch (error) {
+      lastPublicStateError = error
     }
+
+    const remainingBeforeConfirmation = deadline - now()
+    if (remainingBeforeConfirmation <= 0) break
+    const confirmedValue = readKvValue(Math.max(1, Math.floor(remainingBeforeConfirmation)))
+    if (now() >= deadline) break
+    if (confirmedValue !== expectedValue) {
+      throw new Error(`Staging RUNNER_CONFIG.enabled changed while proving ${expectedValue}.`)
+    }
+    if (publicStateMatched) return
+
+    const remainingMilliseconds = deadline - now()
+    if (remainingMilliseconds <= 0) break
+    await sleep(Math.min(pollMilliseconds, remainingMilliseconds))
   }
-  throw new Error(`The public staging runner endpoint did not become ${enabled ? 'enabled' : 'paused'}.`)
+  throw new Error(
+    `The public staging runner endpoint did not become ${enabled ? 'enabled' : 'paused'}.`,
+    { cause: lastPublicStateError },
+  )
 }
 
 export function runStagingRegressionCheck(command, run = execFileSync) {

@@ -26,6 +26,7 @@ import {
 import {
   parseCppStagingRegressionArgs,
   parseSuccessfulExactCommitCi,
+  requireStagingRunnerState,
   runCppStagingRegressionProof,
   stagingRunnerKvPutArgs,
   waitForStableStagingRelease,
@@ -90,6 +91,8 @@ describe('recorded Practical C++ staging proof contract', () => {
       'put',
       'enabled',
       'true',
+      '--ttl',
+      '900',
       '--binding',
       'RUNNER_CONFIG',
       '--remote',
@@ -97,7 +100,173 @@ describe('recorded Practical C++ staging proof contract', () => {
       'wrangler.staging.jsonc',
     ])
     expect(stagingRunnerKvPutArgs(false)[4]).toBe('false')
+    expect(stagingRunnerKvPutArgs(false)).not.toContain('--ttl')
     expect(() => stagingRunnerKvPutArgs('false')).toThrow(/Boolean/iu)
+  })
+
+  it('waits past the default KV cache window within the wall-clock deadline', async () => {
+    let elapsedMilliseconds = 0
+    const sleep = vi.fn(async (milliseconds) => {
+      elapsedMilliseconds += milliseconds
+    })
+    const readKvValue = vi.fn(() => 'true')
+    let fetchCount = 0
+    const fetchImpl = vi.fn(async () => {
+      fetchCount += 1
+      const enabled = elapsedMilliseconds >= 61_000
+      return new Response(JSON.stringify({
+        configured: true,
+        enabled,
+        languages: ['python', 'cpp', 'csharp', 'java'],
+        paused: !enabled,
+        version: 1,
+      }), {
+        headers: { 'Content-Type': 'application/json' },
+        status: 200,
+      })
+    })
+
+    await expect(requireStagingRunnerState(true, {
+      fetchImpl,
+      now: () => elapsedMilliseconds,
+      readKvValue,
+      sleep,
+    })).resolves.toBeUndefined()
+
+    expect(fetchImpl).toHaveBeenCalledTimes(62)
+    expect(sleep).toHaveBeenCalledTimes(61)
+    expect(readKvValue).toHaveBeenCalledTimes(124)
+  })
+
+  it.each([true, false])(
+    'aborts immediately when KV changes during a mismatched public %s-state attempt',
+    async (enabled) => {
+      const expectedValue = String(enabled)
+      const readKvValue = vi.fn()
+        .mockReturnValueOnce(expectedValue)
+        .mockReturnValueOnce(String(!enabled))
+      const sleep = vi.fn(async () => undefined)
+
+      await expect(requireStagingRunnerState(enabled, {
+        fetchImpl: async () => new Response(JSON.stringify({
+          configured: true,
+          enabled: !enabled,
+          languages: ['python', 'cpp', 'csharp', 'java'],
+          paused: enabled,
+          version: 1,
+        }), {
+          headers: { 'Content-Type': 'application/json' },
+          status: 200,
+        }),
+        readKvValue,
+        sleep,
+      })).rejects.toThrow(new RegExp(`changed while proving ${expectedValue}`, 'iu'))
+
+      expect(readKvValue).toHaveBeenCalledTimes(2)
+      expect(sleep).not.toHaveBeenCalled()
+    },
+  )
+
+  it('does not fetch when an authoritative KV read consumes the deadline', async () => {
+    let elapsedMilliseconds = 0
+    const fetchImpl = vi.fn()
+    const failure = await requireStagingRunnerState(true, {
+      fetchImpl,
+      now: () => elapsedMilliseconds,
+      readKvValue: (remainingMilliseconds) => {
+        expect(remainingMilliseconds).toBe(120_000)
+        elapsedMilliseconds = 120_001
+        return 'true'
+      },
+      sleep: vi.fn(async () => undefined),
+    }).catch((error) => error)
+
+    expect(failure).toBeInstanceOf(Error)
+    expect(failure.message).toMatch(/did not become enabled/iu)
+    expect(fetchImpl).not.toHaveBeenCalled()
+  })
+
+  it('does not accept public success when the confirming KV read passes the deadline', async () => {
+    let elapsedMilliseconds = 0
+    const readKvValue = vi.fn()
+      .mockReturnValueOnce('true')
+      .mockImplementationOnce(() => {
+        elapsedMilliseconds = 120_001
+        return 'true'
+      })
+
+    await expect(requireStagingRunnerState(true, {
+      fetchImpl: async () => new Response(JSON.stringify({
+        configured: true,
+        enabled: true,
+        languages: ['python', 'cpp', 'csharp', 'java'],
+        paused: false,
+        version: 1,
+      }), {
+        headers: { 'Content-Type': 'application/json' },
+        status: 200,
+      }),
+      now: () => elapsedMilliseconds,
+      readKvValue,
+      sleep: vi.fn(async () => undefined),
+    })).rejects.toThrow(/did not become enabled/iu)
+
+    expect(readKvValue).toHaveBeenCalledTimes(2)
+  })
+
+  it('bounds repeated request timeouts by one absolute two-minute deadline', async () => {
+    let elapsedMilliseconds = 0
+    const requestTimeouts = []
+    const sleep = vi.fn(async (milliseconds) => {
+      elapsedMilliseconds += milliseconds
+    })
+
+    await expect(requireStagingRunnerState(true, {
+      createAbortSignal: (milliseconds) => ({ timeoutMilliseconds: milliseconds }),
+      fetchImpl: async (_url, options) => {
+        const requestTimeout = options.signal.timeoutMilliseconds
+        requestTimeouts.push(requestTimeout)
+        elapsedMilliseconds += requestTimeout
+        throw new Error('simulated request timeout')
+      },
+      now: () => elapsedMilliseconds,
+      readKvValue: () => 'true',
+      sleep,
+    })).rejects.toThrow(/did not become enabled/iu)
+
+    expect(elapsedMilliseconds).toBe(120_000)
+    expect(requestTimeouts.every((milliseconds) => milliseconds <= 10_000)).toBe(true)
+    expect(requestTimeouts.at(-1)).toBeLessThanOrEqual(10_000)
+  })
+
+  it('preserves the final public-state failure after exhausting the wait', async () => {
+    let elapsedMilliseconds = 0
+    const sleep = vi.fn(async (milliseconds) => {
+      elapsedMilliseconds += milliseconds
+    })
+    const failure = await requireStagingRunnerState(true, {
+      fetchImpl: async () => new Response(JSON.stringify({
+        configured: true,
+        enabled: false,
+        languages: ['python', 'cpp', 'csharp', 'java'],
+        paused: true,
+        version: 1,
+      }), {
+        headers: { 'Content-Type': 'application/json' },
+        status: 200,
+      }),
+      now: () => elapsedMilliseconds,
+      pollMilliseconds: 1,
+      readKvValue: () => 'true',
+      sleep,
+      timeoutMilliseconds: 2,
+    }).catch((error) => error)
+
+    expect(failure).toBeInstanceOf(Error)
+    expect(failure.message).toMatch(/did not become enabled/iu)
+    expect(failure.cause).toBeInstanceOf(Error)
+    expect(failure.cause.message).toMatch(/not configured and enabled/iu)
+    expect(sleep).toHaveBeenCalledTimes(2)
   })
 
   it('accepts only a successful completed CI push run for the exact commit', () => {

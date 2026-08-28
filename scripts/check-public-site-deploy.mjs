@@ -103,11 +103,12 @@ if (JSON.stringify(CPP_STAGING_REGRESSION_CHECKS) !== JSON.stringify(expectedSta
 }
 for (const [enabled, expectedValue] of [[true, 'true'], [false, 'false']]) {
   const args = stagingRunnerKvPutArgs(enabled)
+  const expiry = enabled ? '--ttl 900 ' : ''
   if (
     args.join(' ') !== [
       'kv key put enabled',
       expectedValue,
-      '--binding RUNNER_CONFIG --remote --config wrangler.staging.jsonc',
+      `${expiry}--binding RUNNER_CONFIG --remote --config wrangler.staging.jsonc`,
     ].join(' ')
   ) {
     throw new Error('The recorded Practical C++ staging proof does not use the reviewed KV window.')
