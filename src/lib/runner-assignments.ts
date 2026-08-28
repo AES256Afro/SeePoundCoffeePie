@@ -316,7 +316,7 @@ export interface RunnerProjectEvaluation {
 const assignmentRevisionEncoder = new TextEncoder()
 export const RUNNER_ASSIGNMENT_REVISION_VERSION = 'v1'
 export const RUNNER_GRADING_BEHAVIOR_REVISION =
-  'sha256:6c003477a855c2006278010bfa33e9cb4e61e9f1646d3ccd257feb69abfadfda'
+  'sha256:243fd302843a56273416436bece13b54c6d9e21e3c20834e7c0e0158a1588c32'
 
 function canonicalRevisionValue(value: unknown): string {
   if (value === null) return 'null'
@@ -1121,7 +1121,7 @@ export function evaluateProtectedRunnerAssignment(
     passed: check.passed,
     message: check.passed
       ? `This required part of the ${assignment.kind === 'project' ? 'project' : 'lesson'} is present in your code.`
-      : check.message,
+      : `This required part of the ${assignment.kind === 'project' ? 'project' : 'lesson'} is not present yet. Review the task and try again.`,
   }))
   const visibleIndex = assessment.testCases.findIndex((testCase) => testCase.visibility === 'visible')
 

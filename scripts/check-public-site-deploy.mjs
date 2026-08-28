@@ -2,7 +2,17 @@ import { execFileSync } from 'node:child_process'
 import { readdirSync, readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 
+import {
+  buildCppRunnerWranglerArgs,
+  cppRunnerPublicationAlias,
+} from './deploy-cpp-runner.mjs'
 import { buildWranglerDeployArgs } from './deploy-public-site.mjs'
+import { CPP_STAGING_REGRESSION_CHECKS } from './cpp-runner-staging-proof.mjs'
+import { stagingRunnerKvPutArgs } from './prove-cpp-runner-staging.mjs'
+import {
+  buildRunnerImageRollbackWranglerArgs,
+  runnerImageRollbackMetadata,
+} from './rollback-runner-images.mjs'
 
 const packageJson = JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8'))
 const requiredScripts = {
@@ -12,6 +22,15 @@ const requiredScripts = {
   'deploy:site:staging': 'npm run check:release && node scripts/deploy-public-site.mjs staging',
   'deploy:staging': 'npm run deploy:site:staging',
   'deploy:staging:dry-run': 'npm run build && node scripts/deploy-public-site.mjs staging --dry-run',
+  'deploy:runner:cpp:production': 'npm run check:release && node scripts/deploy-cpp-runner.mjs production',
+  'deploy:runner:cpp:production:dry-run': 'npm run build && node scripts/deploy-cpp-runner.mjs production --dry-run',
+  'deploy:runner:cpp:staging': 'npm run check:release && node scripts/deploy-cpp-runner.mjs staging',
+  'deploy:runner:cpp:staging:dry-run': 'npm run build && node scripts/deploy-cpp-runner.mjs staging --dry-run',
+  'prove:runner:cpp:staging': 'node scripts/prove-cpp-runner-staging.mjs',
+  'rollback:runner:images:production': 'npm run check:release && node scripts/rollback-runner-images.mjs production',
+  'rollback:runner:images:production:dry-run': 'npm run build && node scripts/rollback-runner-images.mjs production --dry-run',
+  'rollback:runner:images:staging': 'npm run check:release && node scripts/rollback-runner-images.mjs staging',
+  'rollback:runner:images:staging:dry-run': 'npm run build && node scripts/rollback-runner-images.mjs staging --dry-run',
 }
 
 for (const [name, expected] of Object.entries(requiredScripts)) {
@@ -34,7 +53,10 @@ const mutationScanDirectories = [
 ]
 const allowedMutationHelpers = new Set([
   fileURLToPath(new URL('./check-public-site-deploy.mjs', import.meta.url)),
+  fileURLToPath(new URL('./deploy-cpp-runner.mjs', import.meta.url)),
   fileURLToPath(new URL('./deploy-public-site.mjs', import.meta.url)),
+  fileURLToPath(new URL('./prove-cpp-runner-staging.mjs', import.meta.url)),
+  fileURLToPath(new URL('./rollback-runner-images.mjs', import.meta.url)),
 ])
 for (const { directory, extensions } of mutationScanDirectories) {
   for (const entry of readdirSync(directory, { withFileTypes: true })) {
@@ -62,6 +84,119 @@ for (const environmentName of ['production', 'staging']) {
         !== '../data/controlled-runner-publication:./src/data/runner-publication.base.ts'
     ) {
       throw new Error(`The ${environmentName} public-site deployment does not pin the fail-closed runner registry.`)
+    }
+  }
+}
+
+const expectedStagingRegressionChecks = [
+  'npm run check:site:staging:enabled',
+  'npm run check:runner:staging',
+  'npm run check:runner:project:staging',
+  'npm run check:runner:cpp-project:staging',
+  'npm run check:runner:cpp-collections:staging',
+  'npm run check:runner:csharp-project:staging',
+  'npm run check:runner:java-project:staging',
+  'npm run check:runner:python-data-tools:staging',
+]
+if (JSON.stringify(CPP_STAGING_REGRESSION_CHECKS) !== JSON.stringify(expectedStagingRegressionChecks)) {
+  throw new Error('The recorded Practical C++ staging proof does not run the exact full regression set.')
+}
+for (const [enabled, expectedValue] of [[true, 'true'], [false, 'false']]) {
+  const args = stagingRunnerKvPutArgs(enabled)
+  if (
+    args.join(' ') !== [
+      'kv key put enabled',
+      expectedValue,
+      '--binding RUNNER_CONFIG --remote --config wrangler.staging.jsonc',
+    ].join(' ')
+  ) {
+    throw new Error('The recorded Practical C++ staging proof does not use the reviewed KV window.')
+  }
+}
+
+const exactRunnerReleaseCommit = '0'.repeat(40)
+const cppRunnerReleaseConfigPath = '/tmp/reviewed-cpp-runner-release.json'
+for (const environmentName of ['production', 'staging']) {
+  for (const dryRun of [false, true]) {
+    const args = buildCppRunnerWranglerArgs(environmentName, {
+      commit: exactRunnerReleaseCommit,
+      configPath: cppRunnerReleaseConfigPath,
+      dryRun,
+    })
+    const rolloutIndex = args.indexOf('--containers-rollout')
+    if (rolloutIndex < 0 || args[rolloutIndex + 1] !== 'immediate') {
+      throw new Error(`The ${environmentName} Practical C++ runner release is not an immediate rollout.`)
+    }
+    const aliasIndex = args.indexOf('--alias')
+    const configIndex = args.indexOf('--config')
+    if (aliasIndex < 0 || args[aliasIndex + 1] !== cppRunnerPublicationAlias) {
+      throw new Error(`The ${environmentName} Practical C++ runner release does not pin the published runner registry.`)
+    }
+    if (!args.includes('--strict')) {
+      throw new Error(`The ${environmentName} Practical C++ runner release is not strict.`)
+    }
+    if (configIndex < 0 || args[configIndex + 1] !== cppRunnerReleaseConfigPath) {
+      throw new Error(`The ${environmentName} Practical C++ runner release does not use its generated configuration.`)
+    }
+    const tagIndex = args.indexOf('--tag')
+    const messageIndex = args.indexOf('--message')
+    if (
+      tagIndex < 0
+      || args[tagIndex + 1] !== `runner-cpp-${exactRunnerReleaseCommit}`
+      || messageIndex < 0
+      || !args[messageIndex + 1].includes(exactRunnerReleaseCommit)
+    ) {
+      throw new Error(`The ${environmentName} Practical C++ runner release does not record the exact commit.`)
+    }
+  }
+}
+
+const rollbackConfigPath = '/tmp/reviewed-runner-image-rollback.json'
+const rollbackTargetProof = {
+  releaseCommit: '1'.repeat(40),
+  targetDigests: {
+    RunnerCppSandbox: `sha256:${'2'.repeat(64)}`,
+    RunnerCsharpSandbox: `sha256:${'3'.repeat(64)}`,
+    RunnerJavaSandbox: `sha256:${'4'.repeat(64)}`,
+    RunnerPythonSandbox: `sha256:${'5'.repeat(64)}`,
+  },
+}
+const rollbackMetadata = runnerImageRollbackMetadata(exactRunnerReleaseCommit, rollbackTargetProof)
+for (const environmentName of ['production', 'staging']) {
+  for (const dryRun of [false, true]) {
+    const args = buildRunnerImageRollbackWranglerArgs(environmentName, {
+      commit: exactRunnerReleaseCommit,
+      configPath: rollbackConfigPath,
+      dryRun,
+      targetProof: rollbackTargetProof,
+    })
+    const rolloutIndex = args.indexOf('--containers-rollout')
+    const aliasIndex = args.indexOf('--alias')
+    const configIndex = args.indexOf('--config')
+    const tagIndex = args.indexOf('--tag')
+    const messageIndex = args.indexOf('--message')
+    if (rolloutIndex < 0 || args[rolloutIndex + 1] !== 'immediate') {
+      throw new Error(`The ${environmentName} exact-digest rollback is not an immediate rollout.`)
+    }
+    if (!args.includes('--strict')) {
+      throw new Error(`The ${environmentName} exact-digest rollback is not strict.`)
+    }
+    if (aliasIndex < 0 || args[aliasIndex + 1] !== cppRunnerPublicationAlias) {
+      throw new Error(`The ${environmentName} exact-digest rollback does not pin the published runner registry.`)
+    }
+    if (configIndex < 0 || args[configIndex + 1] !== rollbackConfigPath) {
+      throw new Error(`The ${environmentName} exact-digest rollback does not use its generated configuration.`)
+    }
+    if (
+      tagIndex < 0
+      || args[tagIndex + 1] !== rollbackMetadata.tag
+      || messageIndex < 0
+      || args[messageIndex + 1] !== rollbackMetadata.message
+    ) {
+      throw new Error(`The ${environmentName} exact-digest rollback does not record the exact commit.`)
+    }
+    if (args.includes('--dry-run') !== dryRun) {
+      throw new Error(`The ${environmentName} exact-digest rollback dry-run mode is not exact.`)
     }
   }
 }

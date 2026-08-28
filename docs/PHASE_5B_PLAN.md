@@ -663,14 +663,14 @@ The release gate must cover:
 - reviewed initial-versus-lazy placement, exactly one combined initial stylesheet and one lazy learning-workspace stylesheet, and raw and gzip budgets with initial-load headroom;
 - repository-wide text style, including no Unicode U+2014.
 
-Future M009 and M010 commands, not yet implemented:
+The dedicated M009 and M010 deployed-runner commands are:
 
 ```text
 npm run check:runner:cpp-collections:staging
 npm run check:runner:cpp-collections:production
 ```
 
-The probe must reject hardcoded output, comment-only decoys, unreachable required code, behavior aliases, moved harness statements, malformed source, wrong profiles, and malformed analyzer envelopes while accepting the exact authentic solution. It must assert that no profile or structural fact appears in the response.
+The deployed probe rejects hardcoded output, comment-only decoys, unreachable required code, behavior aliases, moved harness statements, malformed source, and learner-source attempts to forge analyzer data while accepting the exact authentic solution. It asserts that no profile, structural fact, submitted source, or internal runner path appears in the response. Wrong analyzer profiles and malformed analyzer envelopes cannot be supplied through the public API; the coordinator fault-injection tests reject those internal failures before the deployed probe is allowed to run.
 
 Passing TypeScript, unit tests, a production build, or the closed-loopback Playwright gate does not prove the runner image, Cloudflare Sandbox isolation, a complete manual keyboard or screen-reader walkthrough, 200 percent zoom, reduced-motion behavior, other browsers, deployed Worker compatibility, or live progress safety. Runner, manual accessibility, staging, and production evidence remain separate gates.
 

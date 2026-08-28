@@ -217,6 +217,9 @@ describe('private C++ Workshop Stock Report coordination', () => {
     expect(result.tests).toHaveLength(7)
     expect(result.tests.every((test) => !test.passed)).toBe(true)
     expect(JSON.stringify(result)).not.toContain('cpp-collections-records-workshop-report-v1')
+    for (const structuralCheck of cppCollectionsRecordsServerAssessment.structuralChecks) {
+      expect(JSON.stringify(result)).not.toContain(structuralCheck.message)
+    }
   })
 
   it('lets parsed false reach the compiler so the learner receives its syntax diagnostic', async () => {
@@ -240,5 +243,11 @@ describe('private C++ Workshop Stock Report coordination', () => {
     expect(result.outcome).toBe('compile_error')
     expect(result.stderr).toContain('expected a closing brace')
     expect(result.tests.every((test) => !test.passed)).toBe(true)
+    expect(result.tests.slice(1).every((test) => (
+      test.message === 'This required part of the lesson is not present yet. Review the task and try again.'
+    ))).toBe(true)
+    for (const structuralCheck of cppCollectionsRecordsServerAssessment.structuralChecks) {
+      expect(JSON.stringify(result)).not.toContain(structuralCheck.message)
+    }
   })
 })
