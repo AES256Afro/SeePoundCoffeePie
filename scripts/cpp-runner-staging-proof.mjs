@@ -93,8 +93,29 @@ function releaseMetadata(commit) {
 }
 
 function exactIsoTimestamp(value, label) {
-  const milliseconds = typeof value === 'string' ? Date.parse(value) : Number.NaN
-  if (!Number.isFinite(milliseconds) || new Date(milliseconds).toISOString() !== value) {
+  const match = typeof value === 'string'
+    ? /^(?<date>\d{4}-\d{2}-\d{2})T(?<hour>[01]\d|2[0-3]):(?<minute>[0-5]\d):(?<second>[0-5]\d)(?<fraction>\.\d{1,9})?Z$/u.exec(value)
+    : null
+  if (!match?.groups) {
+    throw new Error(`${label} must be an exact ISO timestamp.`)
+  }
+
+  const fractionDigits = match.groups.fraction?.slice(1) ?? ''
+  const millisecondDigits = `${fractionDigits}000`.slice(0, 3)
+  const millisecondTimestamp = [
+    match.groups.date,
+    'T',
+    match.groups.hour,
+    ':',
+    match.groups.minute,
+    ':',
+    match.groups.second,
+    '.',
+    millisecondDigits,
+    'Z',
+  ].join('')
+  const milliseconds = Date.parse(millisecondTimestamp)
+  if (!Number.isFinite(milliseconds) || new Date(milliseconds).toISOString() !== millisecondTimestamp) {
     throw new Error(`${label} must be an exact ISO timestamp.`)
   }
   return milliseconds

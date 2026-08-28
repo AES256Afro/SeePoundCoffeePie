@@ -55,7 +55,9 @@ function stagingSnapshot() {
     instances: 2,
     name,
     state: 'ready',
-    updated_at: `2026-08-28T0${index + 1}:00:00.000Z`,
+    updated_at: index === 0
+      ? '2026-08-28T01:00:00.000000064Z'
+      : `2026-08-28T0${index + 1}:00:00.000Z`,
     version: index + 1,
   })), 'staging')
 }
@@ -145,6 +147,36 @@ describe('recorded Practical C++ staging proof contract', () => {
   })
 
   it.each([
+    ['without a fraction on a valid leap day', '2024-02-29T01:02:03Z'],
+    ['with one fractional digit', '2026-08-28T01:02:03.4Z'],
+    ['with nine fractional digits', '2026-08-28T01:02:03.243000064Z'],
+  ])('preserves a strict Cloudflare update timestamp %s', (_label, timestamp) => {
+    const containers = stagingSnapshot()
+    containers[0].updated_at = timestamp
+
+    const proof = validProof({ containers })
+
+    expect(proof.containers.find(({ name }) => name === containers[0].name)?.updatedAt).toBe(timestamp)
+  })
+
+  it('keeps sub-millisecond update differences in fingerprints and live equality', () => {
+    const recordedContainers = stagingSnapshot()
+    recordedContainers[0].updated_at = '2026-08-28T01:02:03.243000064Z'
+    const changedContainers = structuredClone(recordedContainers)
+    changedContainers[0].updated_at = '2026-08-28T01:02:03.243000065Z'
+
+    const recordedProof = validProof({ containers: recordedContainers })
+    const changedProof = validProof({ containers: changedContainers })
+
+    expect(recordedProof.containerFingerprint).not.toBe(changedProof.containerFingerprint)
+    expect(() => validateCppStagingRegressionProof(recordedProof, {
+      expectedCommit: commit,
+      expectedContainers: changedContainers,
+      nowMilliseconds,
+    })).toThrow(/no longer match/iu)
+  })
+
+  it.each([
     ['extra field', (proof) => { proof.private = true }],
     ['wrong schema', (proof) => { proof.schema = 'unreviewed' }],
     ['failed status', (proof) => { proof.status = 'failed' }],
@@ -155,6 +187,24 @@ describe('recorded Practical C++ staging proof contract', () => {
     ['wrong snapshot fingerprint', (proof) => { proof.containerFingerprint = '0'.repeat(64) }],
     ['wrong C++ digest', (proof) => { proof.cppDigest = `sha256:${'f'.repeat(64)}` }],
     ['extra container field', (proof) => { proof.containers[0].image = 'private' }],
+    ['invalid calendar update time', (proof) => {
+      proof.containers[0].updatedAt = '2026-02-29T01:00:00.000000064Z'
+    }],
+    ['offset update time', (proof) => {
+      proof.containers[0].updatedAt = '2026-08-28T01:00:00.000000064+00:00'
+    }],
+    ['empty-fraction update time', (proof) => {
+      proof.containers[0].updatedAt = '2026-08-28T01:00:00.Z'
+    }],
+    ['over-precise update time', (proof) => {
+      proof.containers[0].updatedAt = '2026-08-28T01:00:00.0000000640Z'
+    }],
+    ['leap-second update time', (proof) => {
+      proof.containers[0].updatedAt = '2026-08-28T01:00:60.000000064Z'
+    }],
+    ['lowercase UTC update time', (proof) => {
+      proof.containers[0].updatedAt = '2026-08-28T01:00:00.000000064z'
+    }],
   ])('rejects a proof with %s', (_label, mutate) => {
     const proof = structuredClone(validProof())
     mutate(proof)
