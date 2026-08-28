@@ -38,7 +38,7 @@ const runnerClassDefinitions = new Map([
 
 export const cppRunnerPublicationAlias = [
   '../data/controlled-runner-publication',
-  './src/data/runner-publication.with-cpp.ts',
+  resolve(projectRoot, 'src/data/runner-publication.with-cpp.ts'),
 ].join(':')
 
 export function parseCppRunnerReleaseArgs(argv) {
@@ -411,13 +411,36 @@ export function rollbackGuidance(
   ].join('\n')
 }
 
-export function assertPausedRunnerStatus(environmentName, responseStatus, status) {
+export function assertPausedRunnerStatus(
+  environmentName,
+  responseStatus,
+  status,
+  { allowLegacyPreRelease = false } = {},
+) {
+  const expectedLanguages = ['python', 'cpp', 'csharp', 'java']
+  const hasReviewedLanguages = (
+    Array.isArray(status?.languages)
+    && JSON.stringify(status.languages) === JSON.stringify(expectedLanguages)
+  )
+  const hasCurrentPausedShape = (
+    status?.configured === true
+    && status?.enabled === false
+    && status?.paused === true
+  )
+  const hasExactLegacyPausedShape = (
+    allowLegacyPreRelease
+    && status?.enabled === false
+    && JSON.stringify(Object.keys(status ?? {}).sort()) === JSON.stringify([
+      'enabled',
+      'languages',
+      'version',
+    ])
+  )
   if (
     responseStatus !== 200
-    || status?.configured !== true
-    || status?.enabled !== false
-    || status?.paused !== true
     || status?.version !== 1
+    || !hasReviewedLanguages
+    || (!hasCurrentPausedShape && !hasExactLegacyPausedShape)
   ) {
     throw new Error(`The ${environmentName} code-checker status endpoint is not configured and paused at version 1.`)
   }
@@ -535,7 +558,7 @@ export function requirePausedRunner(environmentName) {
   }
 }
 
-export async function requirePausedRunnerEndpoint(environmentName) {
+export async function requirePausedRunnerEndpoint(environmentName, options) {
   const environment = deploymentEnvironments[environmentName]
   const response = await fetch(new URL('/api/runner/status', environment.origin), {
     redirect: 'manual',
@@ -547,7 +570,7 @@ export async function requirePausedRunnerEndpoint(environmentName) {
   } catch {
     throw new Error(`The ${environmentName} code-checker status endpoint returned unreadable JSON.`)
   }
-  assertPausedRunnerStatus(environmentName, response.status, status)
+  assertPausedRunnerStatus(environmentName, response.status, status, options)
 }
 
 export function readActiveDeploymentVersion(environmentName) {
@@ -699,7 +722,9 @@ export async function runCppRunnerRelease(
     : undefined
 
   dependencies.requirePausedRunner(environmentName)
-  await dependencies.requirePausedRunnerEndpoint(environmentName)
+  await dependencies.requirePausedRunnerEndpoint(environmentName, {
+    allowLegacyPreRelease: true,
+  })
   const beforeVersion = dependencies.readActiveDeploymentVersion(environmentName)
   const beforeContainers = dependencies.readContainerSnapshot(environmentName)
   const releaseConfig = buildCppOnlyReleaseConfig(
@@ -719,7 +744,9 @@ export async function runCppRunnerRelease(
   let candidateVersion
   try {
     dependencies.requirePausedRunner(environmentName)
-    await dependencies.requirePausedRunnerEndpoint(environmentName)
+    await dependencies.requirePausedRunnerEndpoint(environmentName, {
+      allowLegacyPreRelease: true,
+    })
     const mutationCommit = dependencies.verifiedReleaseCommit()
     if (mutationCommit !== commit) {
       throw new Error('The release commit changed after preflight. No deployment was started.')

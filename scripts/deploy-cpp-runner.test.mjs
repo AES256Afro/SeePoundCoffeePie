@@ -1,4 +1,5 @@
 import { existsSync, readFileSync, statSync } from 'node:fs'
+import { fileURLToPath } from 'node:url'
 
 import { describe, expect, it, vi } from 'vitest'
 
@@ -118,7 +119,10 @@ describe('Practical C++ runner release arguments', () => {
   })
 
   it('uses an immediate strict rollout and the exact published runner alias', () => {
-    const expectedAlias = '../data/controlled-runner-publication:./src/data/runner-publication.with-cpp.ts'
+    const expectedAlias = [
+      '../data/controlled-runner-publication',
+      fileURLToPath(new URL('../src/data/runner-publication.with-cpp.ts', import.meta.url)),
+    ].join(':')
     expect(cppRunnerPublicationAlias).toBe(expectedAlias)
     for (const environmentName of ['production', 'staging']) {
       const args = buildCppRunnerWranglerArgs(environmentName, {
@@ -160,19 +164,46 @@ describe('Practical C++ runner release arguments', () => {
       enabled: false,
       paused: true,
       version: 1,
+      languages: ['python', 'cpp', 'csharp', 'java'],
     })).not.toThrow()
     expect(() => assertPausedRunnerStatus('staging', 200, {
       configured: false,
       enabled: false,
       paused: false,
       version: 1,
+      languages: ['python', 'cpp', 'csharp', 'java'],
     })).toThrow(/configured and paused/iu)
     expect(() => assertPausedRunnerStatus('production', 200, {
       configured: true,
       enabled: false,
       paused: false,
       version: 1,
+      languages: ['python', 'cpp', 'csharp', 'java'],
     })).toThrow(/configured and paused/iu)
+  })
+
+  it('accepts only the exact legacy paused status during pre-release bootstrap', () => {
+    const legacyPaused = {
+      enabled: false,
+      version: 1,
+      languages: ['python', 'cpp', 'csharp', 'java'],
+    }
+    expect(() => assertPausedRunnerStatus('staging', 200, legacyPaused, {
+      allowLegacyPreRelease: true,
+    })).not.toThrow()
+    expect(() => assertPausedRunnerStatus('staging', 200, legacyPaused))
+      .toThrow(/configured and paused/iu)
+    for (const invalidStatus of [
+      { ...legacyPaused, enabled: true },
+      { ...legacyPaused, version: 2 },
+      { enabled: false, version: 1 },
+      { ...legacyPaused, languages: ['java', 'csharp', 'cpp', 'python'] },
+      { ...legacyPaused, unexpected: true },
+    ]) {
+      expect(() => assertPausedRunnerStatus('staging', 200, invalidStatus, {
+        allowLegacyPreRelease: true,
+      })).toThrow(/configured and paused/iu)
+    }
   })
 
   it('uses the full commit in both release annotations', () => {
@@ -486,6 +517,12 @@ describe('fail-closed release orchestration', () => {
     expect(deps.verifiedReleaseCommit).toHaveBeenCalledTimes(2)
     expect(deps.loadStagingRegressionProof).not.toHaveBeenCalled()
     expect(deps.runWranglerDeploy).toHaveBeenCalledOnce()
+    expect(deps.requirePausedRunnerEndpoint.mock.calls).toEqual([
+      ['staging', { allowLegacyPreRelease: true }],
+      ['staging', { allowLegacyPreRelease: true }],
+      ['staging'],
+      ['staging'],
+    ])
     const order = deps.verifiedReleaseCommit.mock.invocationCallOrder
     expect(order[1]).toBeLessThan(deps.runWranglerDeploy.mock.invocationCallOrder[0])
   })
@@ -582,6 +619,14 @@ describe('fail-closed release orchestration', () => {
     )
     expect(deps.verifyVersionMetadata).toHaveBeenCalledTimes(4)
     expect(deps.loadStagingRegressionProof).toHaveBeenCalledTimes(2)
+    expect(deps.requirePausedRunnerEndpoint.mock.calls).toEqual([
+      ['staging'],
+      ['production', { allowLegacyPreRelease: true }],
+      ['production', { allowLegacyPreRelease: true }],
+      ['staging'],
+      ['production'],
+      ['production'],
+    ])
     expect(deps.waitForRunnerRollout.mock.calls[0][0].expectedDigest).toBe(stagingDigest)
     const repeatedProofOrder = deps.loadStagingRegressionProof.mock.invocationCallOrder
     expect(repeatedProofOrder[1]).toBeLessThan(deps.runWranglerDeploy.mock.invocationCallOrder[0])
