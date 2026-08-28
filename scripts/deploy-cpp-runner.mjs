@@ -299,6 +299,72 @@ export function cppRunnerImageDigest(snapshot) {
   return match.groups.digest.toLowerCase()
 }
 
+export function parseLinuxAmd64ImageManifestDigest(rawManifestIndex) {
+  let manifestIndex
+  try {
+    manifestIndex = JSON.parse(rawManifestIndex)
+  } catch {
+    throw new Error('The local C++ runner image index is unreadable.')
+  }
+  const matches = Array.isArray(manifestIndex?.manifests)
+    ? manifestIndex.manifests.filter((manifest) => (
+        manifest?.mediaType === 'application/vnd.oci.image.manifest.v1+json'
+        && manifest?.platform?.architecture === 'amd64'
+        && manifest?.platform?.os === 'linux'
+        && /^sha256:[0-9a-f]{64}$/u.test(manifest?.digest ?? '')
+      ))
+    : []
+  if (matches.length !== 1) {
+    throw new Error('The local C++ runner image does not contain one Linux amd64 manifest.')
+  }
+  return matches[0].digest.toLowerCase()
+}
+
+export function readLocalCppImageDigest(commit, run = execFileSync) {
+  if (!commitPattern.test(commit)) {
+    throw new Error('Reading the local C++ image digest requires the exact release commit.')
+  }
+  const image = `spcp-${commit.slice(0, 12)}-release-cpp:worker`
+  const directory = mkdtempSync(resolve(tmpdir(), 'spcp-cpp-image-digest-'))
+  const archivePath = resolve(directory, 'image.tar')
+  try {
+    const descriptorRaw = safeCommandOutput('docker', [
+      'image',
+      'inspect',
+      image,
+      '--format',
+      '{{json .Descriptor}}',
+    ], run)
+    let descriptor
+    try {
+      descriptor = JSON.parse(descriptorRaw)
+    } catch {
+      throw new Error('The local C++ runner image descriptor is unreadable.')
+    }
+    const indexDigest = descriptor?.digest
+    if (!/^sha256:[0-9a-f]{64}$/u.test(indexDigest ?? '')) {
+      throw new Error('The local C++ runner image descriptor does not contain a valid digest.')
+    }
+
+    try {
+      run('docker', ['image', 'save', '--output', archivePath, image], {
+        cwd: projectRoot,
+        stdio: ['ignore', 'ignore', 'pipe'],
+      })
+    } catch {
+      throw new Error('The local C++ runner image could not be exported for digest verification.')
+    }
+    const manifestIndex = safeCommandOutput('tar', [
+      '-xOf',
+      archivePath,
+      `blobs/sha256/${indexDigest.slice('sha256:'.length)}`,
+    ], run)
+    return parseLinuxAmd64ImageManifestDigest(manifestIndex)
+  } finally {
+    rmSync(directory, { force: true, recursive: true })
+  }
+}
+
 export function cppRunnerRolloutComplete(before, after, expectedDigest) {
   assertNonCppRunnersUnchanged(before, after)
   const previous = cppRunner(before)
@@ -319,14 +385,27 @@ export function cppRunnerRolloutComplete(before, after, expectedDigest) {
     throw new Error('The C++ runner update time moved backward.')
   }
 
-  const digestMatches = expectedDigest === undefined
-    || cppRunnerImageDigest(after) === expectedDigest.toLowerCase()
+  const reviewedDigest = expectedDigest?.toLowerCase()
+  const digestMatches = reviewedDigest === undefined
+    || cppRunnerImageDigest(after) === reviewedDigest
+  const digestWasAlreadyPresent = reviewedDigest !== undefined
+    && cppRunnerImageDigest(before) === reviewedDigest
+  const snapshotStayedExact = sameRecord(previous, current)
+  const applicationAdvanced = (
+    current.version > previous.version
+    && currentUpdateTime > previousUpdateTime
+  )
 
   return (
-    current.image !== previous.image
-    && current.version > previous.version
-    && currentUpdateTime > previousUpdateTime
-    && digestMatches
+    digestMatches
+    && (
+      (current.image !== previous.image && applicationAdvanced)
+      || (
+        current.image === previous.image
+        && digestWasAlreadyPresent
+        && (snapshotStayedExact || applicationAdvanced)
+      )
+    )
   )
 }
 
@@ -358,7 +437,7 @@ export async function waitForCppRunnerRollout({
       } else {
         stableSnapshot = undefined
         stableCount = 0
-        lastObservation = 'the C++ digest, application version, and update time had not all advanced'
+        lastObservation = 'the C++ application had not reached its exact reviewed digest and state'
       }
     } else {
       stableSnapshot = undefined
@@ -644,6 +723,7 @@ export function defaultCppRunnerReleaseDependencies() {
     printSnapshot,
     readActiveDeploymentVersion,
     readContainerSnapshot,
+    readLocalCppImageDigest,
     readReadyContainerSnapshot,
     requirePausedRunner,
     requirePausedRunnerEndpoint,
@@ -720,6 +800,8 @@ export async function runCppRunnerRelease(
   let stagingProof = environmentName === 'production'
     ? await proveSameCommitStagingRelease(commit, dependencies)
     : undefined
+  const expectedCppDigest = stagingProof?.digest
+    ?? dependencies.readLocalCppImageDigest(commit)
 
   dependencies.requirePausedRunner(environmentName)
   await dependencies.requirePausedRunnerEndpoint(environmentName, {
@@ -812,7 +894,7 @@ export async function runCppRunnerRelease(
 
     const afterContainers = await dependencies.waitForRunnerRollout({
       before: beforeContainers,
-      expectedDigest: stagingProof?.digest,
+      expectedDigest: expectedCppDigest,
       readReadySnapshot: () => dependencies.readReadyContainerSnapshot(environmentName),
     })
     dependencies.requirePausedRunner(environmentName)
@@ -827,7 +909,11 @@ export async function runCppRunnerRelease(
     dependencies.log(`Practical C++ ${environmentName} runner release completed.`)
     dependencies.log(`Previous Worker version: ${beforeVersion}`)
     dependencies.log(`Current Worker version: ${candidateVersion}`)
-    dependencies.log('Python, C#, and Java stayed unchanged. The C++ application kept its ID and advanced to a new digest and application version while the checker remained paused.')
+    if (cppRunner(beforeContainers).image === cppRunner(afterContainers).image) {
+      dependencies.log(`All four runner images stayed unchanged because ${environmentName} already had the exact reviewed C++ digest. The Worker advanced while the checker remained paused.`)
+    } else {
+      dependencies.log('Python, C#, and Java stayed unchanged. The C++ application kept its ID and advanced to the exact reviewed digest and a new application version while the checker remained paused.')
+    }
   } catch (error) {
     let activeVersion
     try {

@@ -14,9 +14,11 @@ import {
   buildCppOnlyReleaseConfig,
   buildCppRunnerWranglerArgs,
   cppRunnerPublicationAlias,
+  cppRunnerImageDigest,
   cppRunnerReleaseMetadata,
   cppRunnerRolloutComplete,
   parseCppRunnerReleaseArgs,
+  parseLinuxAmd64ImageManifestDigest,
   rollbackGuidance,
   runCppRunnerRelease,
   safeCommandOutput,
@@ -289,6 +291,29 @@ describe('C++-only generated release configuration', () => {
 })
 
 describe('Practical C++ runner rollout proof', () => {
+  it('reads exactly one Linux amd64 platform digest from a local OCI image index', () => {
+    const digest = `sha256:${'a'.repeat(64)}`
+    expect(parseLinuxAmd64ImageManifestDigest(JSON.stringify({
+      manifests: [
+        {
+          digest,
+          mediaType: 'application/vnd.oci.image.manifest.v1+json',
+          platform: { architecture: 'amd64', os: 'linux' },
+        },
+        {
+          digest: `sha256:${'b'.repeat(64)}`,
+          mediaType: 'application/vnd.oci.image.manifest.v1+json',
+          platform: { architecture: 'unknown', os: 'unknown' },
+        },
+      ],
+    }))).toBe(digest)
+
+    expect(() => parseLinuxAmd64ImageManifestDigest('{'))
+      .toThrow(/unreadable/iu)
+    expect(() => parseLinuxAmd64ImageManifestDigest(JSON.stringify({ manifests: [] })))
+      .toThrow(/one Linux amd64 manifest/iu)
+  })
+
   it('accepts only a stable-ID C++ digest, version, and update-time advance', () => {
     const before = beforeSnapshot()
     const after = completedSnapshot(before)
@@ -348,6 +373,28 @@ describe('Practical C++ runner rollout proof', () => {
     })).resolves.toEqual(after)
     expect(readReadySnapshot).toHaveBeenCalledTimes(4)
     expect(sleep).toHaveBeenCalledTimes(3)
+  })
+
+  it('accepts two stable unchanged samples only when the reviewed digest was already live', async () => {
+    const before = beforeSnapshot()
+    const expectedDigest = cppRunnerImageDigest(before)
+    const readReadySnapshot = vi.fn().mockResolvedValue(structuredClone(before))
+    const sleep = vi.fn()
+
+    expect(cppRunnerRolloutComplete(before, structuredClone(before), expectedDigest)).toBe(true)
+    expect(cppRunnerRolloutComplete(
+      before,
+      structuredClone(before),
+      `sha256:${'f'.repeat(64)}`,
+    )).toBe(false)
+    await expect(waitForCppRunnerRollout({
+      before,
+      expectedDigest,
+      readReadySnapshot,
+      sleep,
+    })).resolves.toEqual(before)
+    expect(readReadySnapshot).toHaveBeenCalledTimes(2)
+    expect(sleep).toHaveBeenCalledOnce()
   })
 
   it('fails immediately if a non-C++ application changes during polling', async () => {
@@ -457,6 +504,7 @@ describe('fail-closed release orchestration', () => {
         .mockReturnValueOnce(previousVersion)
         .mockReturnValue(candidateVersion),
       readContainerSnapshot: vi.fn(() => before),
+      readLocalCppImageDigest: vi.fn(() => `sha256:${'a'.repeat(64)}`),
       readReadyContainerSnapshot: vi.fn(() => after),
       requirePausedRunner: vi.fn(),
       requirePausedRunnerEndpoint: vi.fn().mockResolvedValue(undefined),
@@ -514,6 +562,7 @@ describe('fail-closed release orchestration', () => {
     await expect(runCppRunnerRelease(['staging'], deps)).resolves.toBeUndefined()
 
     expect(deps.verifyRunnerImages).toHaveBeenCalledWith(commit)
+    expect(deps.readLocalCppImageDigest).toHaveBeenCalledWith(commit)
     expect(deps.verifiedReleaseCommit).toHaveBeenCalledTimes(2)
     expect(deps.loadStagingRegressionProof).not.toHaveBeenCalled()
     expect(deps.runWranglerDeploy).toHaveBeenCalledOnce()
@@ -628,6 +677,7 @@ describe('fail-closed release orchestration', () => {
       ['production'],
     ])
     expect(deps.waitForRunnerRollout.mock.calls[0][0].expectedDigest).toBe(stagingDigest)
+    expect(deps.readLocalCppImageDigest).not.toHaveBeenCalled()
     const repeatedProofOrder = deps.loadStagingRegressionProof.mock.invocationCallOrder
     expect(repeatedProofOrder[1]).toBeLessThan(deps.runWranglerDeploy.mock.invocationCallOrder[0])
     expect(repeatedProofOrder[1]).toBeGreaterThan(
