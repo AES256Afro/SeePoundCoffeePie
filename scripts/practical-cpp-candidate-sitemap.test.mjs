@@ -87,4 +87,17 @@ describe('Practical C++ candidate sitemap', () => {
     expect(() => controlledPracticalCppSitemap('published'))
       .toThrow(/must be an array/iu)
   })
+
+  it('does not write sitemap files for an in-memory Vite build', async () => {
+    const plugin = controlledPracticalCppSitemap(productionControlledCourseRoutes)
+    plugin.configResolved({
+      publicDir: '/missing-public-directory',
+      build: {
+        outDir: '/missing-output-directory',
+        write: false,
+      },
+    })
+
+    await expect(plugin.closeBundle()).resolves.toBeUndefined()
+  })
 })

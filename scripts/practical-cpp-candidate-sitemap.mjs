@@ -76,6 +76,7 @@ export function inspectPracticalCppCandidateSitemap(candidateSitemap) {
 export function practicalCppCandidateSitemap() {
   let publicDirectory
   let outputDirectory
+  let writesBuildOutput = true
   return {
     name: 'practical-cpp-candidate-sitemap',
     apply: 'build',
@@ -85,8 +86,10 @@ export function practicalCppCandidateSitemap() {
       }
       publicDirectory = config.publicDir
       outputDirectory = config.build.outDir
+      writesBuildOutput = config.build.write !== false
     },
     async closeBundle() {
+      if (!writesBuildOutput) return
       if (!publicDirectory || !outputDirectory) {
         throw new Error('The Practical C++ candidate sitemap build paths were not resolved.')
       }
