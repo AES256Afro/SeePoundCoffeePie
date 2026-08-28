@@ -896,7 +896,7 @@ function withBrowserSecurityHeaders(response: Response, url: URL): Response {
 
   headers.set(
     'Content-Security-Policy',
-    "default-src 'self'; base-uri 'self'; connect-src 'self'; font-src 'self'; form-action 'self'; frame-ancestors 'none'; img-src 'self' data:; object-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; upgrade-insecure-requests",
+    "default-src 'self'; base-uri 'self'; connect-src 'self'; font-src 'self'; form-action 'self'; frame-ancestors 'none'; img-src 'self' data:; object-src 'none'; script-src 'self' 'sha256-1UhOgK3ZAMe2zV4ermcAVblEtWHVcZCamA1+mPo6zKw='; style-src 'self' 'unsafe-inline'; upgrade-insecure-requests",
   )
   headers.set('Cross-Origin-Opener-Policy', 'same-origin')
   headers.set('Permissions-Policy', 'camera=(), geolocation=(), microphone=()')
@@ -933,6 +933,9 @@ export async function handleRequest(
 
   if (url.pathname.startsWith('/api/auth/')) {
     if (url.hostname !== CANONICAL_HOST) {
+      if (url.pathname === '/api/auth/session' && request.method === 'GET') {
+        return json({ authenticated: false, user: null })
+      }
       url.hostname = CANONICAL_HOST
       return Response.redirect(url.toString(), 308)
     }

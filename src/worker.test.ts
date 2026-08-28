@@ -203,10 +203,39 @@ describe('production Worker', () => {
     )
 
     expect(response.status).toBe(200)
-    expect(response.headers.get('Content-Security-Policy')).toContain("frame-ancestors 'none'")
+    const contentSecurityPolicy = response.headers.get('Content-Security-Policy') ?? ''
+    expect(contentSecurityPolicy).toContain("frame-ancestors 'none'")
+    expect(contentSecurityPolicy).toContain(
+      "script-src 'self' 'sha256-1UhOgK3ZAMe2zV4ermcAVblEtWHVcZCamA1+mPo6zKw='",
+    )
+    expect(contentSecurityPolicy.match(/script-src[^;]*/u)?.[0]).not.toContain("'unsafe-inline'")
     expect(response.headers.get('X-Content-Type-Options')).toBe('nosniff')
     expect(response.headers.get('X-Frame-Options')).toBe('DENY')
     expect(response.headers.get('Cache-Control')).toBe('public, max-age=0, must-revalidate')
+  })
+
+  it('keeps the staging session check on staging and signed out', async () => {
+    const response = await handleRequest(
+      new Request('https://see-pound-coffee-pie-phase2-staging.chris-c39.workers.dev/api/auth/session'),
+      htmlEnv,
+    )
+
+    expect(response.status).toBe(200)
+    expect(response.headers.get('Location')).toBeNull()
+    expect(response.headers.get('Cache-Control')).toBe('no-store')
+    await expect(response.json()).resolves.toEqual({ authenticated: false, user: null })
+  })
+
+  it('still redirects other staging auth routes to the canonical production host', async () => {
+    const response = await handleRequest(
+      new Request('https://see-pound-coffee-pie-phase2-staging.chris-c39.workers.dev/api/auth/github/start'),
+      htmlEnv,
+    )
+
+    expect(response.status).toBe(308)
+    expect(response.headers.get('Location')).toBe(
+      'https://seepoundcoffeepie.com/api/auth/github/start',
+    )
   })
 
   it('allows long immutable caching for hashed production assets', async () => {
