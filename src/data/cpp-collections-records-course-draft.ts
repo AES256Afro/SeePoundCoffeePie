@@ -13,7 +13,7 @@ const returnValueExercises: Exercise[] = [
     type: 'prediction',
     prompt: 'What line will this familiar function call display?',
     displayCode:
-      'void label_part(std::string part) {\n    std::cout << "Part: " << part;\n}\n\nlabel_part("bolts");',
+      '#include <iostream>\n#include <string>\n\nvoid label_part(std::string part) {\n    std::cout << "Part: " << part;\n}\n\nint main() {\n    label_part("bolts");\n    return 0;\n}',
     choices: [
       {
         id: 'a',
@@ -28,12 +28,12 @@ const returnValueExercises: Exercise[] = [
       {
         id: 'c',
         label: 'Nothing',
-        detail: 'The final line calls the function, so the output instruction inside its braces runs.',
+        detail: 'The call inside main runs the output instruction inside the function braces.',
       },
     ],
     correctChoice: 'a',
     output: 'Part: bolts',
-    hint: 'Move the argument "bolts" into the temporary parameter named part, then read the output instruction.',
+    hint: 'Find the call inside main. Move its argument "bolts" into the temporary parameter named part, then read the output instruction.',
     recap: 'A function call supplies an argument, and the function uses that value through its typed parameter.',
     xp: 8,
   },

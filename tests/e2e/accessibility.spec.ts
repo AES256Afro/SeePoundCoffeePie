@@ -49,6 +49,7 @@ test('a Practical C++ lesson passes the scoped WCAG A and AA gate', async ({ pag
     level: 1,
     name: 'Trace a familiar function call',
   })).toBeVisible()
+  await expect(page.getByRole('region', { name: 'Trace a familiar function call' })).toBeVisible()
 
   await expectNoAccessibilityViolations(page)
 })

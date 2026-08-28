@@ -284,22 +284,22 @@ const practicalCppCodeReferenceEntries = [
   },
   {
     example: 'Part part{"bolts", 4};',
-    module: 'Structs that group a record',
+    module: 'Records with struct',
     term: 'Record',
   },
   {
     example: 'struct Part { std::string name; int quantity; };',
-    module: 'Structs that group a record',
+    module: 'Records with struct',
     term: 'Struct',
   },
   {
     example: 'std::cout << part.name << ": " << part.quantity;',
-    module: 'Structs that group a record',
+    module: 'Records with struct',
     term: 'Field',
   },
   {
     example: 'for (Part& part : parts) { part.quantity = part.quantity + 1; }',
-    module: 'References that update records',
+    module: 'Updating stored records',
     term: 'Reference',
   },
   {
@@ -452,7 +452,11 @@ test('the Practical C++ course and direct lesson explain both missing prerequisi
   await expect(page.getByRole('heading', { name: 'Complete these first' })).toBeVisible()
   await expect(page.getByText('Complete C++ Foundations', { exact: true })).toBeVisible()
   await expect(page.getByText('Complete Your First Compiled Program', { exact: true })).toBeVisible()
-  await expect(page.getByRole('region', { name: 'Modules' }).getByRole('button')).toHaveCount(6)
+  const lockedModules = page.getByRole('region', { name: 'Modules' })
+  await expect(lockedModules.getByRole('button')).toHaveCount(6)
+  await expect(lockedModules.getByRole('button', {
+    name: /Module 1 Functions that return answers.*Locked\. Complete prerequisites\./iu,
+  })).toBeVisible()
   await expect(page.getByRole('link', { name: /^Start course/iu })).toHaveCount(0)
   expect(teachingDataRequests).toHaveLength(1)
 
@@ -479,7 +483,14 @@ test('the Practical C++ course opens its first lesson inside the same SPA', asyn
 
   const startCourse = page.getByRole('link', { name: /^Start course/iu })
   await expect(startCourse).toHaveAttribute('href', practicalCppLessonPath)
-  await expect(page.getByRole('region', { name: 'Modules' }).getByRole('button')).toHaveCount(6)
+  await expect(page.getByText('Beginner II', { exact: false })).toBeVisible()
+  await expect(page.getByText('Complete C++ Foundations and Your First Compiled Program before starting this course.')).toBeVisible()
+  await expect(page.getByText('Store, update, total, and check parts.', { exact: true })).toBeVisible()
+  const availableModules = page.getByRole('region', { name: 'Modules' })
+  await expect(availableModules.getByRole('button')).toHaveCount(6)
+  await expect(availableModules.getByRole('button', {
+    name: /Module 2 Vectors that grow and change.*Locked\. Complete previous module\./iu,
+  })).toBeVisible()
   expect(teachingDataRequests).toHaveLength(1)
   expect(documentRequests).toEqual([practicalCppCoursePath])
 
@@ -508,13 +519,13 @@ test('first, middle, and final published lessons share one cached teaching-data 
 
   await page.getByRole('button', { name: 'Exit lesson' }).click()
   await expect(page).toHaveURL(new RegExp(`${practicalCppCoursePath}$`, 'u'))
-  await openPracticalCppModule(page, 3, 'Structs that group a record')
+  await openPracticalCppModule(page, 3, 'Records with struct')
   await page.locator(`a[href="${practicalCppMiddleLessonPath}"]`).click()
   await expectCanonicalLesson(page, practicalCppMiddleLessonPath, 'Build and store a part record')
 
   await page.getByRole('button', { name: 'Exit lesson' }).click()
   await expect(page).toHaveURL(new RegExp(`${practicalCppCoursePath}$`, 'u'))
-  await openPracticalCppModule(page, 6, 'Build a Workshop Stock Report')
+  await openPracticalCppModule(page, 6, 'Build the Workshop Stock Report')
   await page.locator(`a[href="${practicalCppFinalLessonPath}"]`).click()
   await expectCanonicalLesson(page, practicalCppFinalLessonPath, 'Build the Workshop Stock Report')
 

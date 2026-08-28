@@ -58,6 +58,29 @@ describe('Practical C++ return-values draft module', () => {
     }
   })
 
+  it('shows a complete first prediction program that compiles to the taught answer', () => {
+    const exercise = exercises[0]
+    const source = exercise.displayCode ?? ''
+    const buildDirectory = mkdtempSync(path.join(tmpdir(), 'seepoundcoffeepie-cpp-first-prediction-'))
+    const sourcePath = path.join(buildDirectory, `${exercise.id}.cpp`)
+    const executablePath = path.join(buildDirectory, exercise.id)
+
+    try {
+      writeFileSync(sourcePath, source, 'utf8')
+      execFileSync('c++', ['-std=c++20', sourcePath, '-o', executablePath], {
+        encoding: 'utf8',
+        timeout: 15_000,
+      })
+      const output = execFileSync(executablePath, [], {
+        encoding: 'utf8',
+        timeout: 5_000,
+      }).trimEnd()
+      expect(output).toBe(exercise.output)
+    } finally {
+      rmSync(buildDirectory, { recursive: true, force: true })
+    }
+  }, 30_000)
+
   it('keeps both editable exercises bounded and specifically explained', () => {
     const editable = exercises.filter((exercise) => exercise.type === 'bugfix' || exercise.type === 'code')
     expect(editable).toHaveLength(2)

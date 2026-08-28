@@ -11,10 +11,10 @@ const candidateCourseId = 'cpp-collections-records' as const
 const candidateModuleTitles = Object.freeze([
   'Functions that return answers',
   'Vectors that grow and change',
-  'Structs that group a record',
-  'References that update records',
+  'Records with struct',
+  'Updating stored records',
   'Totals and low-stock filters',
-  'Build a Workshop Stock Report',
+  'Build the Workshop Stock Report',
 ])
 
 const candidateManifest: PublishedContinuingCourseManifest = Object.freeze({
@@ -32,8 +32,8 @@ const candidateDefinition: CourseDefinition = Object.freeze({
   language: 'cpp',
   shortName: 'Practical C++',
   title: 'Practical C++: Collections and Records',
-  description: 'Use functions, vectors, structs, references, totals, and filters in small C++ programs.',
-  outcome: 'Build and explain a Workshop Stock Report that stores part records, updates quantities, totals units, and identifies low-stock parts.',
+  description: 'Store, update, total, and check parts.',
+  outcome: 'Stock report.',
   kind: 'continuing',
   level: 'Beginner II',
   symbol: 'eye',

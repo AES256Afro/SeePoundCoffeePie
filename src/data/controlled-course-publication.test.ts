@@ -141,6 +141,9 @@ describe('controlled Practical C++ production publication', () => {
     expect(content?.missions.map((mission) => mission.id)).toEqual(
       candidateCppContinuingCourseRegistration.definition.missionIds,
     )
+    expect(content?.missions.map((mission) => mission.title)).toEqual(
+      candidateCppContinuingCourseRegistration.definition.moduleTitles,
+    )
   })
 
   it('requires both earlier C++ units before the published course becomes available', () => {

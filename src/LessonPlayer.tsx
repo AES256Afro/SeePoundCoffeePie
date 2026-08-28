@@ -240,6 +240,7 @@ export function LessonPlayer({ initialExerciseId, mission, onExerciseChange, onP
   }
 
   const checkAnswer = async () => {
+    if (runnerBusy) return
     setRunnerFailure(false)
     if (!editableExercise) {
       recordEvaluation(evaluateExercise(exercise, answer))
@@ -440,8 +441,8 @@ export function LessonPlayer({ initialExerciseId, mission, onExerciseChange, onP
             </div>
           </section>
         )}
-        <section className="lesson-briefing" tabIndex={0}>
-          <h1 ref={lessonHeadingRef} tabIndex={-1}>{exercise.title}</h1>
+        <section aria-labelledby="lesson" className="lesson-briefing" tabIndex={0}>
+          <h1 id="lesson" ref={lessonHeadingRef} tabIndex={-1}>{exercise.title}</h1>
           <p className="lesson-explanation">{exercise.explanation}</p>
           <div className="analogy-card">
             <small>Another way to think about it</small>
@@ -548,6 +549,7 @@ export function LessonPlayer({ initialExerciseId, mission, onExerciseChange, onP
                 <div className="editor-body">
                   <div className="line-numbers" aria-hidden="true">{answer.split('\n').map((_, index) => <span key={index}>{index + 1}</span>)}</div>
                   <textarea
+                    aria-busy={runnerBusy}
                     aria-label="Code editor"
                     aria-keyshortcuts="Control+Enter Meta+Enter"
                     autoCapitalize="off"
@@ -557,7 +559,7 @@ export function LessonPlayer({ initialExerciseId, mission, onExerciseChange, onP
                     onKeyDown={handleEditorKeyDown}
                     spellCheck={false}
                     wrap="off"
-                    disabled={feedback?.correct || runnerBusy}
+                    readOnly={feedback?.correct || runnerBusy}
                   />
                 </div>
                 {runnerBusy && <p className="sr-only" role="status">
@@ -614,7 +616,11 @@ export function LessonPlayer({ initialExerciseId, mission, onExerciseChange, onP
 
           <div className="exercise-actions">
             {!reviewing && activeStep > 0 && !feedback?.correct && <button className="secondary-action" onClick={returnToPreviousExercise}><ArrowLeft size={17} /> Back</button>}
-            <button className="primary-action" disabled={runnerBusy} onClick={feedback?.correct ? continueLesson : () => { void checkAnswer() }}>
+            <button
+              aria-disabled={runnerBusy}
+              className="primary-action"
+              onClick={feedback?.correct ? continueLesson : () => { void checkAnswer() }}
+            >
               {feedback?.correct
                 ? reviewing
                   ? reviewIndex === reviewQueue.length - 1 ? 'Finish review' : 'Next review'

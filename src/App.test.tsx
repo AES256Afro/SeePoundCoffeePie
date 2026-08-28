@@ -210,6 +210,105 @@ describe('beginner lesson interactions', () => {
     expect(screen.getByLabelText('Code editor keyboard controls').textContent).toContain('Tab moves out of the editor normally')
   })
 
+  it('keeps screen-reader focus on the editor while a code check is running', async () => {
+    type RunResult = Awaited<ReturnType<typeof runExercise>>
+    let finishRun!: (result: RunResult) => void
+    const delayedRun = new Promise<RunResult>((resolve) => {
+      finishRun = resolve
+    })
+    vi.mocked(runExercise).mockImplementationOnce((_exerciseId, _language, _source, onStatus) => {
+      onStatus?.('running')
+      return delayedRun
+    })
+    const editor = await openFirstEditableStep() as HTMLTextAreaElement
+    fireEvent.change(editor, {
+      target: { value: '# Show a message\nprint("Signal online")' },
+    })
+    const heading = screen.getByRole('heading', { level: 1, name: 'Print your first message' })
+    await waitFor(() => expect(document.activeElement).toBe(heading))
+    editor.focus()
+
+    fireEvent.keyDown(editor, { key: 'Enter', ctrlKey: true })
+
+    await waitFor(() => expect(editor.getAttribute('aria-busy')).toBe('true'))
+    expect(editor.readOnly).toBe(true)
+    expect(editor.disabled).toBe(false)
+    expect(document.activeElement).toBe(editor)
+
+    await act(async () => {
+      finishRun({
+        version: 1,
+        runId: 'run_focus_stays_in_editor_123456',
+        outcome: 'completed',
+        stdout: 'Signal online\n',
+        stderr: '',
+        exitCode: 0,
+        durationMs: 18,
+        truncated: false,
+        limit: null,
+        tests: [
+          { name: 'Visible console check', visibility: 'visible', passed: true, message: 'The output matched.' },
+          { name: 'Finish without a language error', visibility: 'hidden', passed: true, message: 'The program finished.' },
+        ],
+        diagnostic: { title: 'Program finished', explanation: 'The program ran.', suggestion: 'Continue.', line: null },
+      })
+      await delayedRun
+    })
+
+    await waitFor(() => expect(editor.getAttribute('aria-busy')).toBe('false'))
+    expect(document.activeElement).toBe(editor)
+  })
+
+  it('keeps screen-reader focus on the check button while code is running', async () => {
+    type RunResult = Awaited<ReturnType<typeof runExercise>>
+    let finishRun!: (result: RunResult) => void
+    const delayedRun = new Promise<RunResult>((resolve) => {
+      finishRun = resolve
+    })
+    vi.mocked(runExercise).mockImplementationOnce((_exerciseId, _language, _source, onStatus) => {
+      onStatus?.('running')
+      return delayedRun
+    })
+    const editor = await openFirstEditableStep() as HTMLTextAreaElement
+    fireEvent.change(editor, {
+      target: { value: '# Show a message\nprint("Signal online")' },
+    })
+    const heading = screen.getByRole('heading', { level: 1, name: 'Print your first message' })
+    await waitFor(() => expect(document.activeElement).toBe(heading))
+    const checkButton = screen.getByRole('button', { name: 'Check my code' })
+    checkButton.focus()
+
+    fireEvent.click(checkButton)
+
+    await waitFor(() => expect(checkButton.getAttribute('aria-disabled')).toBe('true'))
+    expect(checkButton.textContent).toBe('Running your code...')
+    expect(document.activeElement).toBe(checkButton)
+
+    await act(async () => {
+      finishRun({
+        version: 1,
+        runId: 'run_focus_stays_on_button_123456',
+        outcome: 'completed',
+        stdout: 'Signal online\n',
+        stderr: '',
+        exitCode: 0,
+        durationMs: 18,
+        truncated: false,
+        limit: null,
+        tests: [
+          { name: 'Visible console check', visibility: 'visible', passed: true, message: 'The output matched.' },
+          { name: 'Finish without a language error', visibility: 'hidden', passed: true, message: 'The program finished.' },
+        ],
+        diagnostic: { title: 'Program finished', explanation: 'The program ran.', suggestion: 'Continue.', line: null },
+      })
+      await delayedRun
+    })
+
+    await waitFor(() => expect(checkButton.getAttribute('aria-disabled')).toBe('false'))
+    expect(checkButton.textContent).toContain('Continue')
+    expect(document.activeElement).toBe(checkButton)
+  })
+
   it('uses plain teaching labels in the editable lesson workspace', async () => {
     await openFirstEditableStep()
 

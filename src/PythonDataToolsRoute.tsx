@@ -179,7 +179,7 @@ function ContinuingCoursePageContent({ course, courseId, onNavigate, onProgress,
           <p className="eyebrow">{languageLabels[definition.language]} course</p>
           <h1 tabIndex={-1}>{definition.title}</h1>
           <p>{definition.description}</p>
-          <span>{moduleCount} modules · {lessonCount} short lessons</span>
+          <span>{moduleCount} modules · {lessonCount} lessons · {definition.level} · {prerequisiteSentence(definition)}</span>
         </div>
         <div className="course-hero__action">
           <b>{completedLessonCount} of {lessonCount} lessons complete</b>
@@ -218,6 +218,10 @@ function ContinuingCoursePageContent({ course, courseId, onNavigate, onProgress,
           const expanded = expandedModule === mission.id
           const current = moduleIndex === currentModuleIndex
           const readyToFinish = prerequisiteReady && moduleAvailable && !moduleComplete && moduleCompletedLessons === mission.exercises.length
+          const moduleLabel = definition.moduleKinds[moduleIndex] === 'capstone' ? 'Final project' : `Module ${moduleIndex + 1}`
+          const moduleLock = moduleAvailable ? '' : prerequisiteReady
+            ? '. Locked. Complete previous module.'
+            : '. Locked. Complete prerequisites.'
           return (
             <article className={`module-row ${moduleComplete ? 'is-complete' : ''} ${current ? 'is-current' : ''}`} key={mission.id}>
               <button
@@ -231,7 +235,7 @@ function ContinuingCoursePageContent({ course, courseId, onNavigate, onProgress,
                 }}
               >
                 <span className="module-number">{moduleComplete ? <Check size={17} /> : moduleAvailable ? moduleIndex + 1 : <LockKeyhole size={15} />}</span>
-                <span><small>{definition.moduleKinds[moduleIndex] === 'capstone' ? 'Final project' : `Module ${moduleIndex + 1}`}</small><b>{definition.moduleTitles[moduleIndex]}</b>{expanded && <p>{mission.description}</p>}</span>
+                <span><small>{moduleLabel}</small><b>{definition.moduleTitles[moduleIndex]}</b>{moduleLock}{expanded && <p>{mission.description}</p>}</span>
                 <strong>{moduleCompletedLessons} of {mission.exercises.length} lessons complete</strong>
                 <ChevronDown size={19} />
               </button>
