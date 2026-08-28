@@ -2,7 +2,7 @@
 
 Date: 2026-08-28
 
-Status: complete local evidence for the 2026-08-28 release candidate. This is not hosted CI, staging, or production evidence, and it does not claim a deployed Worker version.
+Status: historical local evidence from the 2026-08-28 unpublished-candidate checkpoint, followed by the current publication-gate shape. This is not hosted CI, staging, or production evidence, and it does not claim a deployed Worker version.
 
 ## Purpose
 
@@ -21,7 +21,7 @@ The exact Playwright and axe packages are pinned in the project lockfile. CI ins
 
 ## Isolation boundary
 
-The production harness serves the ordinary five-course build on `127.0.0.1:4197`. The candidate harness serves the controlled six-course build on `127.0.0.1:4198`. Both test built sites rather than Vite source modules. They:
+At the recorded checkpoint, the production harness served the five-course build on `127.0.0.1:4197`, while a candidate harness served the controlled six-course build on `127.0.0.1:4198`. Both tested built sites rather than Vite source modules. They:
 
 - block service workers;
 - fix the browser clock used by deterministic learner state;
@@ -34,9 +34,9 @@ The production harness serves the ordinary five-course build on `127.0.0.1:4197`
 
 The runner origin is an unreachable loopback HTTPS address. The suite does not exercise GitHub OAuth, progress synchronization, D1, Cloudflare Sandbox, or a deployed Worker.
 
-## Automated route and state matrix
+## Recorded automated route and state matrix
 
-The 15 production Chromium cases cover:
+The 15 five-course Chromium cases recorded at that checkpoint covered:
 
 | Area | State or behavior checked |
 | --- | --- |
@@ -59,7 +59,7 @@ The 15 production Chromium cases cover:
 
 The two private-route checks are generated from one route matrix, so the Playwright reporter counts them as two cases. The four scoped axe checks belong to this production suite. No axe rule is disabled or excluded.
 
-The 11 candidate Chromium cases cover:
+The 11 six-course candidate Chromium cases recorded at that checkpoint covered:
 
 | Area | State or behavior checked |
 | --- | --- |
@@ -75,9 +75,9 @@ The 11 candidate Chromium cases cover:
 | Code Reference | All 11 exact module labels remain locked until their introducing modules are complete |
 | Code Reference | All 11 reviewed C++ examples become available after the matching modules are complete |
 
-## Local results
+## Recorded local results
 
-The current local release gate passes:
+The unpublished-candidate checkpoint passed:
 
 - Vitest: 78 files, 808 tests;
 - candidate Playwright: 11 of 11 cases;
@@ -85,7 +85,7 @@ The current local release gate passes:
 - deterministic foundation and Practical C++ generation, complete candidate application and runner selection, and raw, gzip, category, and aggregate limits;
 - TypeScript, ESLint, a 299-file repository text-style check, social-preview checks, production build, public-deployment boundary checks, server-owned browser-bundle checks, both local Wrangler dry runs with Docker disabled, and bundle budgets.
 
-The current bundle evidence is:
+The bundle evidence recorded at that checkpoint was:
 
 - production initial JavaScript: 332,089 bytes raw and 99,794 bytes gzip;
 - production initial CSS: 53,329 bytes raw and 10,034 bytes gzip;
@@ -102,7 +102,13 @@ The current bundle evidence is:
 - candidate Practical Python route shared by both continuing courses: 10,306 bytes raw and 3,617 bytes gzip;
 - candidate Code Reference route: 34,269 bytes raw and 10,637 bytes gzip.
 
-The default production artifact contains no Practical C++ JSON, candidate title, or `with-cpp` module reference. A no-write inspection of its 121-module Vite graph found no candidate publication or packed-content module. The candidate artifact contains exactly one byte-identical teaching JSON asset behind one lazy owning loader, and none of the 20 reviewed private server markers appears in either browser surface.
+At that checkpoint, the five-course artifact contained no Practical C++ JSON, candidate title, or `with-cpp` module reference. A no-write inspection of its 121-module Vite graph found no candidate publication or packed-content module. The separate candidate artifact contained exactly one byte-identical teaching JSON asset behind one lazy owning loader, and none of the 20 reviewed private server markers appeared in either browser surface.
+
+## Current publication gate
+
+The current source selects the complete six-course application: 36 modules, 180 lessons, and 112 runner assignments. Practical C++ has exactly 12 runner-backed lessons and 18 teaching-only lessons. The teaching-only IDs must always return not found from the runner boundary.
+
+Practical C++ browser coverage now runs against the ordinary production `dist` artifact. There is no second candidate-only Playwright server or candidate-only browser configuration. The merged route matrix covers the six-card catalog, both continuing-course prerequisite paths, canonical Practical C++ course and lesson routes, representative first, middle, and final lesson history, keyboard editor exit, 390-pixel navigation, Practice, Code Reference, malformed teaching data, and scoped accessibility checks. The final test and bundle counts are intentionally left for the exact release commit and later `PHASE_5B_RELEASE.md` record.
 
 ## What this does not prove
 
@@ -134,22 +140,16 @@ Run the already-built production browser gate:
 npm run test:e2e:built
 ```
 
-Build and run the unpublished candidate browser gate:
-
-```bash
-npm run check:cpp-browser-candidate
-```
-
-Run the complete candidate content, application, Worker, and browser chain:
+Run the Practical C++ content, application, and Worker publication checks. The command keeps its historical candidate name:
 
 ```bash
 npm run check:cpp-content-candidate
 ```
 
-Run both browser surfaces with every other local release check:
+Run the production-dist browser surface with every other local release check:
 
 ```bash
 npm run check:release
 ```
 
-On failure, Playwright writes its HTML report and test artifacts to ignored local directories. CI uploads those artifacts for a failed run. A successful local run does not create hosted CI evidence until the exact reviewed commit is pushed and the hosted job passes.
+On failure, Playwright writes its HTML report and test artifacts to ignored local directories. CI uploads those artifacts for a failed run. A successful local run does not create hosted CI evidence until the exact reviewed commit is pushed and the hosted job passes. Staging and production remain separate evidence even after hosted CI succeeds.

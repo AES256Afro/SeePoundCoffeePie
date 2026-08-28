@@ -376,7 +376,7 @@ describe('Practical Python route components', () => {
   it('uses the normal not-found page when a continuing course has no loader', async () => {
     await renderCourse(
       <ContinuingCoursePage
-        courseId={'cpp-collections-records' as CourseId}
+        courseId={'unknown-continuing-course' as CourseId}
         onNavigate={vi.fn()}
         onProgress={progressDispatcher()}
         progress={initialProgress('python')}

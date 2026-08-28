@@ -9,6 +9,7 @@ import {
 import {
   practicalCppCandidatePublication,
 } from './practical-cpp-candidate-publication.mjs'
+import { productionControlledPublication } from './controlled-course-publication.mjs'
 
 const candidateSelection = controlledPublicationAppSelection(
   practicalCppCandidatePublication.sources,
@@ -29,6 +30,7 @@ describe('Practical C++ complete-app candidate publication', () => {
     })
     expect(Object.isFrozen(practicalCppCandidatePublication)).toBe(true)
     expect(Object.isFrozen(practicalCppCandidatePublication.routes)).toBe(true)
+    expect(practicalCppCandidatePublication).toEqual(productionControlledPublication)
   })
 
   it('maps only the checked-in publication selectors to reviewed candidate sources', () => {

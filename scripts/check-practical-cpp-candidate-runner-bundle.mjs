@@ -18,8 +18,8 @@ import { buildWranglerDeployArgs } from './deploy-public-site.mjs'
 
 const projectRoot = fileURLToPath(new URL('../', import.meta.url))
 const wranglerPath = fileURLToPath(new URL('../node_modules/.bin/wrangler', import.meta.url))
-const candidateSource = controlledPublicationSources('published').runnerAssignments
-const defaultSource = productionControlledPublicationSources.runnerAssignments
+const publishedSource = productionControlledPublicationSources.runnerAssignments
+const baseSource = controlledPublicationSources('unpublished').runnerAssignments
 const protectedCandidateMarker = 'workshop-stock-report-visible'
 const requiredCandidateModules = Object.freeze([
   'src/data/cpp-collections-records-course-draft.ts',
@@ -72,11 +72,11 @@ function dryRunWorker(root, label, runnerPublicationSource, assetsDirectory) {
 }
 
 export function checkPracticalCppCandidateRunnerBundle() {
-  if (defaultSource !== 'src/data/runner-publication.base.ts') {
-    throw new Error('The checked-in production runner publication is no longer fail-closed.')
+  if (publishedSource !== 'src/data/runner-publication.with-cpp.ts') {
+    throw new Error('The checked-in production runner publication is missing Practical C++.')
   }
-  if (candidateSource !== 'src/data/runner-publication.with-cpp.ts') {
-    throw new Error('The reviewed Practical C++ runner candidate source is missing.')
+  if (baseSource !== 'src/data/runner-publication.base.ts') {
+    throw new Error('The explicit unpublished runner fixture no longer fails closed.')
   }
 
   const temporaryRoot = mkdtempSync(path.join(tmpdir(), 'seepound-cpp-runner-candidate-'))
@@ -85,36 +85,36 @@ export function checkPracticalCppCandidateRunnerBundle() {
   writeFileSync(path.join(assetsDirectory, 'index.html'), '<!doctype html><title>Runner build check</title>\n')
 
   try {
-    const defaultBuild = dryRunWorker(
+    const baseBuild = dryRunWorker(
       temporaryRoot,
-      'default',
-      defaultSource,
+      'base',
+      baseSource,
       assetsDirectory,
     )
-    const candidateBuild = dryRunWorker(
+    const publishedBuild = dryRunWorker(
       temporaryRoot,
-      'candidate',
-      candidateSource,
+      'published',
+      publishedSource,
       assetsDirectory,
     )
 
-    if (defaultBuild.bundle.includes(protectedCandidateMarker)) {
-      throw new Error('The default Worker contains the unpublished Practical C++ assessment.')
+    if (baseBuild.bundle.includes(protectedCandidateMarker)) {
+      throw new Error('The explicit unpublished Worker contains the Practical C++ assessment.')
     }
     for (const modulePath of requiredCandidateModules) {
-      if (hasModule(defaultBuild.sources, modulePath)) {
-        throw new Error(`The default Worker loaded unpublished runner module ${modulePath}.`)
+      if (hasModule(baseBuild.sources, modulePath)) {
+        throw new Error(`The explicit unpublished Worker loaded runner module ${modulePath}.`)
       }
-      if (!hasModule(candidateBuild.sources, modulePath)) {
-        throw new Error(`The candidate Worker did not load reviewed runner module ${modulePath}.`)
+      if (!hasModule(publishedBuild.sources, modulePath)) {
+        throw new Error(`The production Worker did not load reviewed runner module ${modulePath}.`)
       }
     }
-    if (!candidateBuild.bundle.includes(protectedCandidateMarker)) {
-      throw new Error('The candidate Worker is missing its protected Practical C++ assessment.')
+    if (!publishedBuild.bundle.includes(protectedCandidateMarker)) {
+      throw new Error('The production Worker is missing its protected Practical C++ assessment.')
     }
 
     console.log(
-      'Practical C++ runner candidate passed a pinned Wrangler dry run while the default Worker remained unpublished.',
+      'Practical C++ runner publication passed pinned production and explicit unpublished Wrangler dry runs.',
     )
   } finally {
     rmSync(temporaryRoot, { force: true, recursive: true })

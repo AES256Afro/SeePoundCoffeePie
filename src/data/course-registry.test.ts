@@ -12,15 +12,20 @@ import {
 import { initialProgress } from '../lib/progress'
 
 describe('course registry', () => {
-  it('owns five unique courses and allows two distinct Python courses', () => {
-    expect(courseDefinitions).toHaveLength(5)
-    expect(new Set(courseDefinitions.map((course) => course.id)).size).toBe(5)
-    expect(new Set(courseDefinitions.map((course) => course.slug)).size).toBe(5)
+  it('owns six unique courses and allows two distinct Python and C++ courses', () => {
+    expect(courseDefinitions).toHaveLength(6)
+    expect(new Set(courseDefinitions.map((course) => course.id)).size).toBe(6)
+    expect(new Set(courseDefinitions.map((course) => course.slug)).size).toBe(6)
     expect(courseDefinitions.filter((course) => course.language === 'python').map((course) => course.id)).toEqual([
       'python-foundations',
       'python-data-tools',
     ])
+    expect(courseDefinitions.filter((course) => course.language === 'cpp').map((course) => course.id)).toEqual([
+      'cpp-foundations',
+      'cpp-collections-records',
+    ])
     expect(foundationCourseId('python')).toBe('python-foundations')
+    expect(foundationCourseId('cpp')).toBe('cpp-foundations')
   })
 
   it('keeps every durable foundation mission and lesson under its original owner', () => {
@@ -56,6 +61,22 @@ describe('course registry', () => {
     expect(courseIsComplete('python-data-tools', courseOnly)).toBe(false)
   })
 
+  it('requires both C++ Foundations and the compiled project', () => {
+    const foundation = courseDefinitions.find((course) => course.id === 'cpp-foundations')
+    if (!foundation) throw new Error('C++ Foundations is missing.')
+    const empty = initialProgress('cpp')
+    const courseOnly = { ...empty, completedMissions: [...foundation.missionIds] }
+    const projectOnly = { ...empty, completedProjects: ['first-compiled-program'] }
+    const both = { ...courseOnly, completedProjects: ['first-compiled-program'] }
+
+    expect(missingCoursePrerequisites('cpp-collections-records', empty)).toHaveLength(2)
+    expect(courseIsAvailable('cpp-collections-records', courseOnly)).toBe(false)
+    expect(courseIsAvailable('cpp-collections-records', projectOnly)).toBe(false)
+    expect(courseIsAvailable('cpp-collections-records', both)).toBe(true)
+    expect(courseIsComplete('cpp-foundations', courseOnly)).toBe(true)
+    expect(courseIsComplete('cpp-collections-records', courseOnly)).toBe(false)
+  })
+
   it('declares six modules and thirty lessons for every current course', () => {
     for (const course of courseDefinitions) {
       expect(course.missionIds).toHaveLength(6)
@@ -85,6 +106,18 @@ describe('course registry', () => {
     )).toBe(false)
     expect(courseMissionOwnsLesson('cpp-foundations', 'cpp-reactor', 'cpp-output')).toBe(true)
     expect(courseMissionOwnsLesson('cpp-foundations', 'cpp-routing', 'cpp-output')).toBe(false)
+    expect(courseMissionLessonIds('cpp-collections-records', 'cpp-records-return-values')).toEqual([
+      'cpprecords1-retrieve-call',
+      'cpprecords1-return-purpose',
+      'cpprecords1-predict-result',
+      'cpprecords1-fix-return',
+      'cpprecords1-part-total',
+    ])
+    expect(courseMissionOwnsLesson(
+      'cpp-collections-records',
+      'cpp-records-return-values',
+      'cpprecords1-part-total',
+    )).toBe(true)
     expect(courseMissionLessonIds('python-data-tools', 'not-a-module')).toEqual([])
   })
 })

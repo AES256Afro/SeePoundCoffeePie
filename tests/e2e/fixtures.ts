@@ -3,6 +3,8 @@ import {
   test as base,
   type ConsoleMessage,
   type Page,
+  type Request,
+  type Response,
 } from '@playwright/test'
 
 const APP_ORIGIN = 'http://127.0.0.1:4197'
@@ -18,6 +20,39 @@ export const PYTHON_FOUNDATION_MISSION_IDS = [
   'py-looping-orbit',
   'py-function-foundry',
   'py-void-wyrm',
+] as const
+
+export const CPP_FOUNDATION_MISSION_IDS = [
+  'cpp-reactor',
+  'cpp-hull-logic',
+  'cpp-cargo-array',
+  'cpp-engine-loop',
+  'cpp-command-function',
+  'cpp-titan-forge',
+] as const
+
+export const CPP_FOUNDATION_CONCEPT_IDS = [
+  'cpp-compiler',
+  'cpp-output',
+  'cpp-variables',
+  'cpp-output-and-variables',
+  'cpp-booleans',
+  'cpp-conditions',
+  'cpp-comparisons',
+  'cpp-collections',
+  'cpp-indexes',
+  'cpp-collections-and-indexes',
+  'cpp-loops',
+  'cpp-iteration',
+  'cpp-loops-and-collections',
+  'cpp-functions',
+  'cpp-parameters-and-calls',
+  'cpp-function-order',
+  'cpp-functions-and-loops',
+  'cpp-program-planning',
+  'cpp-capstone-assembly',
+  'cpp-capstone-repair',
+  'cpp-capstone',
 ] as const
 
 interface ConceptProgressRecord {
@@ -78,16 +113,31 @@ function diagnostic(message: ConsoleMessage): string {
   return `${message.text()}${suffix}`
 }
 
+function requestDiagnostic(request: Request): string {
+  const failure = request.failure()
+  return `${request.method()} ${request.url()}${failure ? `: ${failure.errorText}` : ''}`
+}
+
+function responseDiagnostic(response: Response): string {
+  return `${response.status()} ${response.request().method()} ${response.url()}`
+}
+
 export const test = base.extend<BrowserFixtures>({
   _closedLoopbackGuard: [async ({ context, page }, use) => {
     const unexpectedApiRequests: string[] = []
     const unexpectedExternalRequests: string[] = []
     const pageErrors: string[] = []
     const consoleErrors: string[] = []
+    const failedRequests: string[] = []
+    const failedResponses: string[] = []
 
     page.on('pageerror', (error) => pageErrors.push(error.message))
     page.on('console', (message) => {
       if (message.type() === 'error') consoleErrors.push(diagnostic(message))
+    })
+    page.on('requestfailed', (request) => failedRequests.push(requestDiagnostic(request)))
+    page.on('response', (response) => {
+      if (response.status() >= 400) failedResponses.push(responseDiagnostic(response))
     })
 
     await context.route('**/*', async (route) => {
@@ -133,6 +183,8 @@ export const test = base.extend<BrowserFixtures>({
 
     expect.soft(unexpectedApiRequests, 'unexpected API requests').toEqual([])
     expect.soft(unexpectedExternalRequests, 'unexpected external-origin requests').toEqual([])
+    expect.soft(failedRequests, 'failed browser requests').toEqual([])
+    expect.soft(failedResponses, 'HTTP error responses').toEqual([])
     expect.soft(pageErrors, 'uncaught page errors').toEqual([])
     expect.soft(consoleErrors, 'browser console errors').toEqual([])
   }, { auto: true }],

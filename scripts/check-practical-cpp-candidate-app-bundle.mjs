@@ -8,6 +8,7 @@ import { build } from 'vite'
 import { assetNamesReferencedByHtml } from './bundle-release-guards.mjs'
 import {
   inspectPracticalCppCandidateAssets,
+  practicalCppServerOwnedMarkers,
 } from './practical-cpp-candidate-app-guards.mjs'
 import {
   controlledPublicationAppSelection,
@@ -19,7 +20,7 @@ import {
   practicalCppCandidatePublication,
 } from './practical-cpp-candidate-publication.mjs'
 import {
-  unpublishedCppJavaScriptMarkers,
+  practicalCppPrivateJavaScriptMarkers,
 } from './unpublished-cpp-release-boundary.mjs'
 
 const projectRoot = fileURLToPath(new URL('../', import.meta.url))
@@ -47,40 +48,15 @@ const candidateAppSelection = controlledPublicationAppSelection(
 )
 
 const catalogServerOwnedCandidateMarkers = Object.freeze(
-  unpublishedCppJavaScriptMarkers
-    .filter(({ kind }) => (
-      kind === 'analyzer'
-      || kind === 'assessment profile'
-      || kind === 'server assessment'
-      || kind === 'server assessment requirement'
-    ))
-    .map(({ value }) => value),
+  practicalCppPrivateJavaScriptMarkers.map(({ value }) => value),
 )
-
-function sourceLiteralPropertyValues(source, property, minimumCount) {
-  const expression = new RegExp(`\\b${property}:\\s*'([^'\\\\]*)'`, 'gu')
-  const values = [...source.matchAll(expression)].map((match) => match[1])
-  if (values.length < minimumCount) {
-    throw new Error(
-      `The Practical C++ server assessment no longer exposes the reviewed ${property} marker set.`,
-    )
-  }
-  return values
-}
 
 async function serverOwnedCandidateMarkers() {
   const source = await readFile(candidateServerAssessmentPath, 'utf8')
-  return Object.freeze([...new Set([
-    ...catalogServerOwnedCandidateMarkers,
-    ...sourceLiteralPropertyValues(source, 'validation', 6),
-    ...sourceLiteralPropertyValues(source, 'message', 6),
-    ...sourceLiteralPropertyValues(source, 'id', 1),
-    ...sourceLiteralPropertyValues(source, 'name', 1),
-    ...sourceLiteralPropertyValues(source, 'purpose', 1),
-    'authored_frame',
-    'part_record',
-    'supplied_harness',
-  ])])
+  return practicalCppServerOwnedMarkers({
+    catalogMarkers: catalogServerOwnedCandidateMarkers,
+    serverAssessmentSource: source,
+  })
 }
 
 async function filesBelow(directory) {

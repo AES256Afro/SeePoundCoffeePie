@@ -17,8 +17,6 @@
   },
   "include": [
     "playwright.config.ts",
-    "playwright.candidate.config.ts",
-    "tests/e2e/**/*.ts",
-    "tests/candidate-e2e/**/*.ts"
+    "tests/e2e/**/*.ts"
   ]
 }

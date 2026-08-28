@@ -38,12 +38,15 @@ describe('controlled course publication source selection', () => {
     expect(controlledPublicationSources(state)).toEqual(baseSources)
   })
 
-  it('keeps the checked-in production state on every base source', () => {
+  it('selects every reviewed Practical C++ source in production', () => {
     expect(productionControlledPublication).toEqual({
-      routes: [],
-      sources: baseSources,
+      routes: [
+        '/courses/cpp-collections-records',
+        '/learn/cpp-collections-records/cpp-records-return-values/cpprecords1-retrieve-call',
+      ],
+      sources: practicalCppSources,
     })
-    expect(productionControlledPublicationSources).toEqual(baseSources)
+    expect(productionControlledPublicationSources).toEqual(practicalCppSources)
   })
 })
 
@@ -55,8 +58,11 @@ describe('controlled course route projection', () => {
     lessonPath: '/learn/cpp-collections-records/cpp-records-return-values/cpprecords1-retrieve-call',
   }
 
-  it('returns no production route while Practical C++ is unpublished', () => {
-    expect(productionControlledCourseRoutes).toEqual([])
+  it('projects the reviewed Practical C++ routes in production', () => {
+    expect(productionControlledCourseRoutes).toEqual([
+      candidate.coursePath,
+      candidate.lessonPath,
+    ])
   })
 
   it('projects the course and first canonical lesson only when published', () => {

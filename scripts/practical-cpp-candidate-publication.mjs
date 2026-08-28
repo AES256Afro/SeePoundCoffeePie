@@ -10,9 +10,9 @@ const candidateReleaseCatalog = Object.freeze(privateCourseReleaseCatalog.map((c
     : course
 )))
 
-// The complete candidate build, its bundle inspection, and its browser harness
-// all consume this one validated publication decision. Production never imports
-// this module, so the checked-in unpublished catalog remains fail closed.
+// The isolated complete-app checks keep consuming this validated publication
+// decision. Once production is published, tests require this historical
+// candidate projection to remain exactly equal to the production projection.
 export const practicalCppCandidatePublication = controlledCoursePublication(
   candidateReleaseCatalog,
 )

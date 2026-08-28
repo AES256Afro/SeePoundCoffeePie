@@ -13,6 +13,10 @@ export interface PrivateCourseReleaseEntry {
   readonly lessonPrefix: string
   readonly lessonPath: string
   readonly lessonIds: readonly string[]
+  readonly runnerBackedLessonIds: readonly string[]
+  readonly teachingOnlyLessonIds: readonly string[]
+  readonly publicBrowserMarkers: readonly PrivateCourseBrowserMarker[]
+  readonly privateBrowserMarkers: readonly PrivateCourseBrowserMarker[]
   readonly browserMarkers: readonly PrivateCourseBrowserMarker[]
 }
 
@@ -26,3 +30,7 @@ export const unpublishedCppLessonPrefix: string
 export const unpublishedCppLessonPath: string
 export const unpublishedCppLessonIds: readonly string[]
 export const unpublishedCppJavaScriptMarkers: readonly PrivateCourseBrowserMarker[]
+export const practicalCppRunnerBackedLessonIds: readonly string[]
+export const practicalCppTeachingOnlyLessonIds: readonly string[]
+export const practicalCppPublicJavaScriptMarkers: readonly PrivateCourseBrowserMarker[]
+export const practicalCppPrivateJavaScriptMarkers: readonly PrivateCourseBrowserMarker[]

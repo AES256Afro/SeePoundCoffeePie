@@ -24,7 +24,7 @@ export interface PlannedCourseModule {
 }
 
 export interface PlannedCourse {
-  status: 'unpublished'
+  status: 'published'
   id: string
   slug: string
   route: string
@@ -67,13 +67,12 @@ const lesson = (
   introduces,
 })
 
-// Phase 5B design-locked identifiers and curriculum intent. This complete plan
-// is not imported by the public course registry, route parser, progress schema,
-// or runner assignment registry. Progress uses a separate identifier-only
-// compatibility manifest. Tests keep the course unpublished until all teaching
-// copy and protected checks are ready.
+// Phase 5B design-locked identifiers and curriculum intent. The reviewed
+// publication sources connect this plan to the public registry, route parser,
+// progress schema, and runner assignment registry. The separate identifier-only
+// compatibility manifest preserves records written before publication.
 export const cppCollectionsRecordsPlan = {
-  status: 'unpublished',
+  status: 'published',
   id: 'cpp-collections-records',
   slug: 'cpp-collections-records',
   route: '/courses/cpp-collections-records',
@@ -84,7 +83,7 @@ export const cppCollectionsRecordsPlan = {
   outcome:
     'Build and explain a Workshop Stock Report that stores part records, updates quantities, totals units, and identifies low-stock parts.',
   publicationPolicy:
-    'Keep this course outside the public registry, routes, runner assignments, sitemap, and teaching-content bundles until every blocker below passes together. A compact identifier-only manifest may enter progress allowlists first as the documented compatibility floor.',
+    'Publish this course only while its reviewed application, route, runner, sitemap, privacy, browser, staging, and rollback gates continue to pass together. Preserve the earlier compact identifier-only manifest as the documented compatibility floor.',
   publicationBlockers: [
     'all six modules contain complete reviewed learner teaching copy',
     'all twelve editable lessons have registered C++ runner assignments and specific diagnostics',
@@ -499,7 +498,7 @@ export const cppCollectionsRecordsPlan = {
       'builds and returns the low-stock name vector from the authored comparison',
       'keeps the fixed harness and required call order intact',
     ],
-    analyzer: 'A future server-owned pinned Clang AST profile, reviewed before publication.',
+    analyzer: 'A server-owned pinned Clang AST profile reviewed at publication and retained as a release gate.',
   },
 } as const satisfies PlannedCourse
 

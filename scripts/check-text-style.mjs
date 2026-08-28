@@ -1,5 +1,5 @@
 import { execFileSync } from 'node:child_process'
-import { lstatSync, readFileSync } from 'node:fs'
+import { existsSync, lstatSync, readFileSync } from 'node:fs'
 
 const forbidden = String.fromCodePoint(0x2014)
 const paths = execFileSync(
@@ -10,6 +10,7 @@ const decoder = new TextDecoder('utf-8', { fatal: true })
 const findings = []
 
 for (const path of paths) {
+  if (!existsSync(path)) continue
   if (!lstatSync(path).isFile()) continue
 
   const bytes = readFileSync(path)

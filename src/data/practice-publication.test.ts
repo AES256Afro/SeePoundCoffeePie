@@ -19,7 +19,6 @@ import { trackById } from './curriculum'
 import { foundationMissionLessonIds } from './foundation-curriculum-index'
 import { createLearningSurface } from './learning-surface'
 import {
-  definePublishedLearningSequences,
   publishedLearningSequences,
 } from './learning-sequence'
 import { loadPracticeTrackForSurface } from './practice-publication'
@@ -33,21 +32,17 @@ const candidateMissionIds = new Set(
 const foundationCourseDefinitions = courseDefinitions.filter((definition) => (
   definition.kind === 'foundation'
 ))
-const candidateLearningSequences = definePublishedLearningSequences(
-  publishedLearningSequences.map((sequence) => sequence.language === 'cpp'
-    ? {
-        ...sequence,
-        units: [
-          ...sequence.units,
-          { kind: 'course', stage: 'continuing', courseId: candidateCourseId } as const,
-        ],
-      }
-    : sequence),
-)
+const candidateLearningSequences = publishedLearningSequences
+const baseLearningSequences = publishedLearningSequences.map((sequence) => ({
+  ...sequence,
+  units: sequence.units.filter((unit) => (
+    unit.kind !== 'course' || unit.courseId !== candidateCourseId
+  )),
+}))
 const baseSurface = createLearningSurface({
   foundationCourseDefinitions,
   foundationModuleLessonIds: foundationMissionLessonIds,
-  learningSequences: publishedLearningSequences,
+  learningSequences: baseLearningSequences,
   continuingCourseRegistrations: basePublishedContinuingCourseRegistrations,
 })
 const candidateSurface = createLearningSurface({
@@ -124,17 +119,25 @@ afterEach(() => {
 })
 
 describe('controlled Practical C++ Practice publication', () => {
-  it('keeps the base production surface at five courses with foundation-only C++ Practice', async () => {
+  it('keeps the explicit base surface at five courses with foundation-only C++ Practice', async () => {
     const foundation = trackById('cpp')
     const progress = cppReadyProgress([...candidateMissionIds])
     const result = await loadPracticeTrackForSurface(baseSurface, foundation, progress)
 
+    expect(baseSurface.courseDefinitions.map((definition) => definition.id)).toEqual([
+      'python-foundations',
+      'cpp-foundations',
+      'csharp-foundations',
+      'java-foundations',
+      'python-data-tools',
+    ])
     expect(courseDefinitions.map((definition) => definition.id)).toEqual([
       'python-foundations',
       'cpp-foundations',
       'csharp-foundations',
       'java-foundations',
       'python-data-tools',
+      candidateCourseId,
     ])
     expect(baseSurface.continuingCourseIdsForLanguage('cpp')).toEqual([])
     expect(result).toEqual({ ok: true, track: foundation })

@@ -77,7 +77,7 @@ describe('public-site deployment arguments', () => {
   })
 
   it('pins the checked-in runner publication source for every Worker build', () => {
-    const expectedAlias = '../data/controlled-runner-publication:./src/data/runner-publication.base.ts'
+    const expectedAlias = '../data/controlled-runner-publication:./src/data/runner-publication.with-cpp.ts'
     for (const environmentName of ['production', 'staging']) {
       const args = buildWranglerDeployArgs(environmentName)
       expect(args.slice(args.indexOf('--alias'), args.indexOf('--alias') + 2)).toEqual([
@@ -87,6 +87,9 @@ describe('public-site deployment arguments', () => {
     }
     expect(runnerPublicationAlias('src/data/runner-publication.with-cpp.ts')).toBe(
       '../data/controlled-runner-publication:./src/data/runner-publication.with-cpp.ts',
+    )
+    expect(runnerPublicationAlias('src/data/runner-publication.base.ts')).toBe(
+      '../data/controlled-runner-publication:./src/data/runner-publication.base.ts',
     )
     expect(() => runnerPublicationAlias('src/data/unreviewed.ts')).toThrow(/unreviewed/iu)
   })

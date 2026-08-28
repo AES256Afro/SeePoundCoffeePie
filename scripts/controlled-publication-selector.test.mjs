@@ -12,24 +12,24 @@ import {
 } from './controlled-publication-selector.mjs'
 
 describe('controlled publication Vite selector', () => {
-  it('maps the complete production source set to fail-closed implementations', () => {
+  it('maps the complete production source set to reviewed Practical C++ implementations', () => {
     const selection = controlledPublicationAppSelection(productionControlledPublicationSources)
 
     expect(path.basename(selection.continuingCourses.selected))
-      .toBe('continuing-course-publications.base.ts')
+      .toBe('continuing-course-publications.with-cpp.ts')
     expect(path.basename(selection.codebookContributions.selected))
-      .toBe('codebook-publication.base.ts')
+      .toBe('codebook-publication.with-cpp.ts')
     expect(path.basename(selection.runnerAssignments.selected))
-      .toBe('runner-publication.base.ts')
+      .toBe('runner-publication.with-cpp.ts')
   })
 
-  it('maps all three selectors together for the reviewed candidate state', () => {
-    const selection = controlledPublicationAppSelection(controlledPublicationSources('published'))
+  it('maps all three selectors together to the fail-closed base for an unpublished state', () => {
+    const selection = controlledPublicationAppSelection(controlledPublicationSources('unpublished'))
 
     expect(Object.values(selection).map(({ selected }) => path.basename(selected))).toEqual([
-      'continuing-course-publications.with-cpp.ts',
-      'codebook-publication.with-cpp.ts',
-      'runner-publication.with-cpp.ts',
+      'continuing-course-publications.base.ts',
+      'codebook-publication.base.ts',
+      'runner-publication.base.ts',
     ])
   })
 

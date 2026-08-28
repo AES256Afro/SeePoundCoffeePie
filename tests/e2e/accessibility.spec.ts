@@ -1,6 +1,12 @@
 import AxeBuilder from '@axe-core/playwright'
 
-import { expect, test, type Page } from './fixtures'
+import { CPP_FOUNDATION_MISSION_IDS, expect, test, type Page } from './fixtures'
+
+const practicalCppPrerequisites = {
+  activeLanguage: 'cpp' as const,
+  completedMissions: [...CPP_FOUNDATION_MISSION_IDS],
+  completedProjects: ['first-compiled-program'],
+}
 
 async function expectNoAccessibilityViolations(page: Page): Promise<void> {
   const results = await new AxeBuilder({ page })
@@ -29,6 +35,45 @@ test('a lesson passes the scoped WCAG A and AA gate', async ({ page, seedProgres
   await seedProgress()
   await page.goto('/learn/python-foundations/py-first-spark/py-console')
   await expect(page.getByRole('heading', { level: 1, name: 'Meet the console' })).toBeVisible()
+
+  await expectNoAccessibilityViolations(page)
+})
+
+test('a Practical C++ lesson passes the scoped WCAG A and AA gate', async ({ page, seedProgress }) => {
+  await seedProgress(practicalCppPrerequisites)
+  await page.goto(
+    '/learn/cpp-collections-records/cpp-records-return-values/cpprecords1-retrieve-call',
+  )
+  await expect(page.getByRole('heading', {
+    exact: true,
+    level: 1,
+    name: 'Trace a familiar function call',
+  })).toBeVisible()
+
+  await expectNoAccessibilityViolations(page)
+})
+
+test('the Practical C++ course passes the scoped WCAG A and AA gate', async ({ page, seedProgress }) => {
+  await seedProgress(practicalCppPrerequisites)
+  await page.goto('/courses/cpp-collections-records')
+  await expect(page.getByRole('heading', {
+    level: 1,
+    name: 'Practical C++: Collections and Records',
+  })).toBeVisible()
+
+  await expectNoAccessibilityViolations(page)
+})
+
+test('an editable Practical C++ lesson passes the scoped WCAG A and AA gate', async ({ page, seedProgress }) => {
+  await seedProgress(practicalCppPrerequisites)
+  await page.goto(
+    '/learn/cpp-collections-records/cpp-records-return-values/cpprecords1-fix-return',
+  )
+  await expect(page.getByRole('heading', {
+    exact: true,
+    level: 1,
+    name: 'Repair the returned subtotal',
+  })).toBeVisible()
 
   await expectNoAccessibilityViolations(page)
 })

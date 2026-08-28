@@ -20,6 +20,7 @@ export function assertReviewedRunnerStatus({
 export function assertReviewedPublishedGrant({
   body,
   exerciseId,
+  expectedLanguage,
   hasSetCookie,
   httpStatus,
   label,
@@ -29,7 +30,7 @@ export function assertReviewedPublishedGrant({
     if (
       httpStatus !== 200
       || typeof body?.grant !== 'string'
-      || body?.language !== 'python'
+      || body?.language !== expectedLanguage
     ) {
       throw new Error(`The enabled ${label} code checker did not grant ${exerciseId}.`)
     }
@@ -43,5 +44,28 @@ export function assertReviewedPublishedGrant({
     || hasSetCookie
   ) {
     throw new Error(`The paused ${label} code checker issued or attempted a public runner grant.`)
+  }
+}
+
+export function assertReviewedTeachingOnlyGrantRejection({
+  body,
+  exerciseId,
+  hasSetCookie,
+  httpStatus,
+  label,
+}) {
+  const reviewedErrors = [
+    'That exercise does not support live execution.',
+    'This page does not have a code check yet.',
+  ]
+  if (
+    httpStatus !== 404
+    || !reviewedErrors.includes(body?.error)
+    || typeof body?.grant === 'string'
+    || hasSetCookie
+  ) {
+    throw new Error(
+      `The teaching-only ${label} exercise ${exerciseId} crossed the public runner boundary.`,
+    )
   }
 }

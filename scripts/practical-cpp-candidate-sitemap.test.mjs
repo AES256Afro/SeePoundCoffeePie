@@ -9,6 +9,9 @@ import {
   renderPracticalCppCandidateSitemap,
 } from './practical-cpp-candidate-sitemap.mjs'
 import {
+  productionControlledCourseRoutes,
+} from './controlled-course-publication.mjs'
+import {
   unpublishedCppCoursePath,
   unpublishedCppLessonPath,
 } from './unpublished-cpp-release-boundary.mjs'
@@ -65,15 +68,16 @@ describe('Practical C++ candidate sitemap', () => {
     ))).toThrow(/exactly once/iu)
   })
 
-  it('keeps unpublished production unchanged and accepts only the reviewed route projection', () => {
+  it('keeps empty projections fail closed and activates the reviewed production projection', () => {
     expect(controlledPracticalCppSitemap([])).toMatchObject({
       name: 'controlled-practical-cpp-sitemap',
       apply: 'build',
     })
-    expect(controlledPracticalCppSitemap([
+    expect(productionControlledCourseRoutes).toEqual([
       unpublishedCppCoursePath,
       unpublishedCppLessonPath,
-    ])).toMatchObject({
+    ])
+    expect(controlledPracticalCppSitemap(productionControlledCourseRoutes)).toMatchObject({
       name: 'controlled-practical-cpp-sitemap',
       apply: 'build',
       closeBundle: expect.any(Function),

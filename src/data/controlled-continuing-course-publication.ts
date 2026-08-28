@@ -1,6 +1,6 @@
-// The normal application build imports this fail-closed selector. A dedicated
-// candidate-only Vite configuration aliases this module to the reviewed
-// Practical C++ registration without changing the production source state.
+// The checked-in module remains the fail-closed base selector. Production Vite
+// builds alias it to the complete reviewed publication source selected by the
+// source-controlled release catalog.
 export {
   basePublishedContinuingCourseRegistrations,
   controlledContinuingCourseRegistrations,

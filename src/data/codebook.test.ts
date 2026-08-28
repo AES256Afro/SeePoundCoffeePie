@@ -60,7 +60,7 @@ describe('progression-aware codebook', () => {
         if (!entry) throw new Error(`${term} is missing`)
 
         expect(entry.unlockAfter).toBeUndefined()
-        expect(entry.unlockAfterMissionIds).toEqual({ python: missionId })
+        expect(entry.unlockAfterMissionIds).toMatchObject({ python: missionId })
         expect(codebookExampleState(entry, python, [])).toBe('locked')
         expect(codebookExampleState(entry, python, ['py-first-spark'])).toBe('locked')
         expect(codebookExampleState(entry, python, [missionId])).toBe('unlocked')
@@ -171,7 +171,15 @@ describe('Codebook contributions', () => {
   if (!returnValue) throw new Error('Return value entry is missing')
 
   it('extends an existing term and adds a new term without mutating the source entries', () => {
-    const source: CodebookEntry[] = [returnValue]
+    const baseExamples = { ...returnValue.examples }
+    const baseMissionUnlocks = { ...returnValue.unlockAfterMissionIds }
+    delete baseExamples.cpp
+    delete baseMissionUnlocks.cpp
+    const source: CodebookEntry[] = [{
+      ...returnValue,
+      examples: baseExamples,
+      unlockAfterMissionIds: baseMissionUnlocks,
+    }]
     const merged = mergeCodebookContributions(source, [
       {
         kind: 'extend',

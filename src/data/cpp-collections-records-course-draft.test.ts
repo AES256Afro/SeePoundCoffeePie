@@ -83,12 +83,16 @@ describe('Practical C++ return-values draft module', () => {
     expect(evaluateExerciseChecks(build, build.starterCode ?? '').some((check) => !check.passed)).toBe(true)
   })
 
-  it('keeps the authored module unavailable to the current runner registry by construction', async () => {
+  it('publishes both authored edits through the current runner registry', async () => {
     const { findRunnerAssignment } = await import('../lib/runner-assignments')
     for (const exercise of exercises.filter((candidate) => (
       candidate.type === 'bugfix' || candidate.type === 'code'
     ))) {
-      expect(findRunnerAssignment(exercise.id)).toBeUndefined()
+      expect(findRunnerAssignment(exercise.id)).toMatchObject({
+        exerciseId: exercise.id,
+        language: 'cpp',
+        expectedOutput: exercise.output,
+      })
     }
   })
 
@@ -118,7 +122,7 @@ describe('Practical C++ return-values draft module', () => {
     expect(cppCollectionsRecordsVectorsModule.exercises[2].explanation).toContain('size')
   })
 
-  it('keeps both Module 2 edits bounded, checkable, and outside the runner registry', async () => {
+  it('keeps both Module 2 edits bounded, checkable, and in the runner registry', async () => {
     const editable = cppCollectionsRecordsVectorsModule.exercises.filter((exercise) => (
       exercise.type === 'bugfix' || exercise.type === 'code'
     ))
@@ -138,7 +142,13 @@ describe('Practical C++ return-values draft module', () => {
     expect(evaluateExerciseChecks(repair, repair.starterCode ?? '').some((check) => !check.passed)).toBe(true)
     expect(evaluateExerciseChecks(build, completedSource).every((check) => check.passed)).toBe(true)
     expect(evaluateExerciseChecks(build, build.starterCode ?? '').some((check) => !check.passed)).toBe(true)
-    for (const exercise of editable) expect(findRunnerAssignment(exercise.id)).toBeUndefined()
+    for (const exercise of editable) {
+      expect(findRunnerAssignment(exercise.id)).toMatchObject({
+        exerciseId: exercise.id,
+        language: 'cpp',
+        expectedOutput: exercise.output,
+      })
+    }
   })
 
   it('authors Modules 3 and 4 against their design-locked manifests', () => {
@@ -452,17 +462,23 @@ describe('Practical C++ return-values draft module', () => {
     }
   }, 30_000)
 
-  it('keeps all six authored modules outside the current runner registry', async () => {
+  it('publishes only the twelve editable exercises through the current runner registry', async () => {
     const { findRunnerAssignment } = await import('../lib/runner-assignments')
 
-    for (const exercise of draftedExercises.filter((candidate) => (
-      candidate.type === 'bugfix' || candidate.type === 'code'
-    ))) {
-      expect(findRunnerAssignment(exercise.id)).toBeUndefined()
+    for (const exercise of draftedExercises) {
+      if (exercise.type === 'bugfix' || exercise.type === 'code') {
+        expect(findRunnerAssignment(exercise.id)).toMatchObject({
+          exerciseId: exercise.id,
+          language: 'cpp',
+          expectedOutput: exercise.output,
+        })
+      } else {
+        expect(findRunnerAssignment(exercise.id)).toBeUndefined()
+      }
     }
   })
 
-  it('keeps the six authored draft modules ordered and unpublished', () => {
+  it('keeps the six published authored modules ordered', () => {
     expect(cppCollectionsRecordsDraftModules.map((module) => module.id)).toEqual([
       'cpp-records-return-values',
       'cpp-records-vectors',

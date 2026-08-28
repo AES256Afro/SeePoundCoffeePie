@@ -47,6 +47,13 @@ const practicalPythonPrerequisiteLabels = [
   'Complete Python Foundations',
   'Complete Your First Interactive Program',
 ] as const
+const practicalCppTitle = 'Practical C++: Collections and Records'
+const practicalCppCoursePath = '/courses/cpp-collections-records'
+const practicalCppFirstLessonPath = '/learn/cpp-collections-records/cpp-records-return-values/cpprecords1-retrieve-call'
+const practicalCppPrerequisiteLabels = [
+  'Complete C++ Foundations',
+  'Complete Your First Compiled Program',
+] as const
 
 const phase5aTestLiterals = [
   practicalPythonTitle,
@@ -796,7 +803,7 @@ describe('beginner lesson interactions', () => {
     expect(screen.getByRole('link', { name: 'Start practice' }).getAttribute('href')).toBe('/practice/python')
   })
 
-  it('does not count compatibility-only C++ identifiers as published review material', async () => {
+  it('does not count an orphaned Practical C++ module record as eligible review material', async () => {
     storeTestProgress({
       ...initialProgress('cpp'),
       callsign: 'Compatibility Cadet',
@@ -808,7 +815,7 @@ describe('beginner lesson interactions', () => {
     render(<App />)
 
     expect(await screen.findByRole('heading', { name: 'Nothing to review yet' })).toBeTruthy()
-    expect(screen.queryByText(/Practical C\+\+/iu)).toBeNull()
+    expect(screen.getByText(practicalCppTitle, { selector: 'b' })).toBeTruthy()
   })
 
   it('restores a frozen practice queue at its bookmarkable step URL after remount', async () => {
@@ -955,7 +962,7 @@ describe('beginner lesson interactions', () => {
     })
   })
 
-  it('shows independent Foundation and Practical Python records without erasing other progress', async () => {
+  it('shows independent foundation and continuing-course records without erasing other progress', async () => {
     window.localStorage.setItem(progressKey, JSON.stringify({
       ...initialProgress('python'),
       callsign: 'Route Cadet',
@@ -967,13 +974,16 @@ describe('beginner lesson interactions', () => {
     fireEvent.click(screen.getByRole('link', { name: 'Learner record' }))
 
     expect(screen.getByRole('heading', { name: 'Courses' })).toBeTruthy()
-    expect(screen.getByText('5 courses. Practical Python progress is tracked separately from its beginner course.')).toBeTruthy()
+    expect(screen.getByText('6 courses. Later-course progress is tracked separately from beginner courses.')).toBeTruthy()
     expect(await screen.findByLabelText('Python Foundations 100% complete')).toBeTruthy()
     expect(await screen.findByLabelText(`${practicalPythonTitle} 17% complete`)).toBeTruthy()
     expect(await screen.findByLabelText('Java Foundations 17% complete')).toBeTruthy()
     const practicalRecord = screen.getByText(practicalPythonTitle, { selector: 'b' }).closest('article')
     expect(practicalRecord).toBeTruthy()
     expect(within(practicalRecord as HTMLElement).getByText('Continuing course')).toBeTruthy()
+    const practicalCppRecord = screen.getByText(practicalCppTitle, { selector: 'b' }).closest('article')
+    expect(practicalCppRecord).toBeTruthy()
+    expect(within(practicalCppRecord as HTMLElement).getByText('Continuing course')).toBeTruthy()
     const cppRecord = screen.getByText('C++ Foundations', { selector: 'b' }).closest('article')
     expect(cppRecord).toBeTruthy()
     fireEvent.click(within(cppRecord as HTMLElement).getByRole('button', { name: 'Start course' }))
@@ -1237,28 +1247,51 @@ describe('beginner lesson interactions', () => {
     )
   })
 
-  it('lists five separate course cards with canonical course links', () => {
+  it('moves Home from the completed C++ project into Practical C++', async () => {
+    storeTestProgress({
+      ...initialProgress('cpp'),
+      callsign: 'Practical C++ Cadet',
+      onboardingComplete: true,
+      completedMissions: cppMissionIds,
+      completedProjects: [cppCompiledProject.id],
+    })
+    window.history.replaceState({}, '', '/home')
+
+    render(<App />)
+
+    expect(await screen.findByText('Your next course')).toBeTruthy()
+    const practicalHeading = screen.getByRole('heading', { name: practicalCppTitle })
+    const practicalPanel = practicalHeading.closest('section')
+    expect(practicalPanel).toBeTruthy()
+    expect(within(practicalPanel as HTMLElement).getByRole('link', { name: /Start course/iu }).getAttribute('href'))
+      .toBe(practicalCppFirstLessonPath)
+    expect(screen.queryByRole('heading', { name: cppCompiledProject.title })).toBeNull()
+  })
+
+  it('lists six separate course cards with canonical course links', () => {
     window.history.replaceState({}, '', '/courses')
 
     render(<App />)
 
     const courseGrid = screen.getByRole('region', { name: 'Courses' })
-    expect(within(courseGrid).getAllByRole('article')).toHaveLength(5)
+    expect(within(courseGrid).getAllByRole('article')).toHaveLength(6)
     expect(within(courseGrid).getByRole('heading', { name: 'Python Foundations' })).toBeTruthy()
     expect(within(courseGrid).getByRole('heading', { name: 'C++ Foundations' })).toBeTruthy()
     expect(within(courseGrid).getByRole('heading', { name: 'C# Foundations' })).toBeTruthy()
     expect(within(courseGrid).getByRole('heading', { name: 'Java Foundations' })).toBeTruthy()
     expect(within(courseGrid).getByRole('heading', { name: practicalPythonTitle })).toBeTruthy()
-    expect(screen.getByText('The 4 foundation courses start from the beginning. Practical Python lists the earlier work you need before starting. Your progress is saved separately for each course.')).toBeTruthy()
+    expect(within(courseGrid).getByRole('heading', { name: practicalCppTitle })).toBeTruthy()
+    expect(screen.getByText('The 4 foundation courses start from the beginning. Each next-step course lists the earlier work you need before starting. Your progress is saved separately for each course.')).toBeTruthy()
     expect(screen.getAllByRole('link', { name: /^Start course/iu }).map((link) => link.getAttribute('href'))).toEqual([
       '/courses/python-foundations',
       '/courses/cpp-foundations',
       '/courses/csharp-foundations',
       '/courses/java-foundations',
     ])
-    expect(screen.getByRole('link', { name: /^View course/iu }).getAttribute('href')).toBe(
+    expect(screen.getAllByRole('link', { name: /^View course/iu }).map((link) => link.getAttribute('href'))).toEqual([
       practicalPythonCoursePath,
-    )
+      practicalCppCoursePath,
+    ])
     expect(document.title).toBe('Courses | SeePoundCoffeePie')
   })
 
@@ -1275,6 +1308,22 @@ describe('beginner lesson interactions', () => {
     }
     expect(within(practicalCard as HTMLElement).getByRole('link', { name: /^View course/iu }).getAttribute('href')).toBe(
       practicalPythonCoursePath,
+    )
+  })
+
+  it('lists both prerequisites inside the locked Practical C++ catalog card', () => {
+    window.history.replaceState({}, '', '/courses')
+
+    render(<App />)
+
+    const practicalCard = screen.getByRole('heading', { name: practicalCppTitle }).closest('article')
+    expect(practicalCard).toBeTruthy()
+    expect(within(practicalCard as HTMLElement).getByText('Complete the items below to start')).toBeTruthy()
+    for (const label of practicalCppPrerequisiteLabels) {
+      expect(within(practicalCard as HTMLElement).getByText(label)).toBeTruthy()
+    }
+    expect(within(practicalCard as HTMLElement).getByRole('link', { name: /^View course/iu }).getAttribute('href')).toBe(
+      practicalCppCoursePath,
     )
   })
 

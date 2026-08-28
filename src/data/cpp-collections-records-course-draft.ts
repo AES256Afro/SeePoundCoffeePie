@@ -1337,8 +1337,8 @@ const workshopReportExercises: Exercise[] = [
   },
 ]
 
-// These authored modules remain outside the public course registry and runner
-// registry until all six modules, runner assignments, and release gates pass.
+// These reviewed modules are published through the controlled continuing-course
+// source. Only the twelve bugfix and code exercises enter the runner registry.
 export const cppCollectionsRecordsReturnValuesModule: Mission = {
   id: 'cpp-records-return-values',
   language: 'cpp',

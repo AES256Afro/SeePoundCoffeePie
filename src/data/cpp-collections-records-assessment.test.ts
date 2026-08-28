@@ -122,8 +122,13 @@ describe('private C++ collections assessment', () => {
     )).toThrow('mismatched assessment language')
   })
 
-  it('does not publish the protected capstone in the runner registry', () => {
-    expect(findRunnerAssignment('cpprecords6-workshop-stock-report')).toBeUndefined()
+  it('publishes the protected capstone only through its C++ runner assignment', () => {
+    expect(findRunnerAssignment('cpprecords6-workshop-stock-report')).toMatchObject({
+      exerciseId: 'cpprecords6-workshop-stock-report',
+      language: 'cpp',
+      kind: 'academy',
+      assessment: cppCollectionsRecordsServerAssessment,
+    })
   })
 })
 
@@ -138,7 +143,7 @@ const serverOnlyMarkers = [
 ]
 
 describe('private C++ collections assessment bundle boundary', () => {
-  it('keeps trusted wiring out of unpublished teaching source', () => {
+  it('keeps trusted wiring out of published teaching source', () => {
     expect(publicCourseSource).not.toContain('cpp-collections-records.server')
     expect(publicCourseSource).not.toContain('analysisProfile')
     for (const marker of serverOnlyMarkers) expect(publicCourseSource).not.toContain(marker)

@@ -41,7 +41,7 @@ function selectedBundleOptions(arguments_) {
   }
 }
 
-const { profile: bundleProfile, root } = selectedBundleOptions(process.argv.slice(2))
+const { root } = selectedBundleOptions(process.argv.slice(2))
 const budgets = {
   // The first-load budget stays tight. Route-loaded teaching content gets a separate total cap.
   initial: {
@@ -105,10 +105,15 @@ const reviewedAssetBudgets = [
   {
     label: 'codebook route javascript',
     pattern: /^CodebookRoute-.*\.js$/u,
-    // The unpublished candidate's already-reviewed ceiling includes its C++
-    // examples. The ordinary production build keeps the tighter Phase 5A cap.
-    raw: bundleProfile === 'practical-cpp-candidate' ? 38_000 : 30_000,
-    gzip: bundleProfile === 'practical-cpp-candidate' ? 12_000 : 10_000,
+    // The published ceiling includes the Practical C++ reference entries.
+    raw: 38_000,
+    gzip: 12_000,
+  },
+  {
+    label: 'practical c++ teaching data',
+    pattern: /^cpp-collections-records-course-packed\.generated-[A-Za-z0-9_-]{6,}\.json$/u,
+    raw: 54_000,
+    gzip: 15_000,
   },
   {
     label: 'foundation teaching content',

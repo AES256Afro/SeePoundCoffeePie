@@ -29,6 +29,10 @@ vi.mock('./lib/runner-assignments', async (importOriginal) => {
 import worker, { handleRequest } from './worker'
 import { cppCollectionsRecordsManifest } from './data/cpp-collections-records-manifest'
 import { cppCollectionsRecordsLessons } from './data/cpp-collections-records-plan'
+import {
+  practicalCppRunnerBackedLessonIds,
+  practicalCppTeachingOnlyLessonIds,
+} from '../scripts/unpublished-cpp-release-boundary.mjs'
 import { trackById } from './data/curriculum'
 import { initialProgress } from './lib/progress'
 import {
@@ -880,7 +884,7 @@ describe('production Worker', () => {
     expect(response.headers.get('Set-Cookie')).toBeNull()
   })
 
-  it('does not issue runner grants for any unpublished Phase 5B editable lesson', async () => {
+  it('returns the reviewed paused response for all twelve Practical C++ runner lessons', async () => {
     const runnerConfigGet = vi.fn(async () => 'false')
     const runnerEnv = {
       ...htmlEnv,
@@ -890,12 +894,101 @@ describe('production Worker', () => {
         getByName: vi.fn(),
       },
     }
-    const editableLessonIds = cppCollectionsRecordsLessons
+    expect(practicalCppRunnerBackedLessonIds).toEqual(cppCollectionsRecordsLessons
       .filter((lesson) => lesson.runnerBacked)
-      .map((lesson) => lesson.id)
-    expect(editableLessonIds).toHaveLength(12)
+      .map((lesson) => lesson.id))
 
-    for (const exerciseId of editableLessonIds) {
+    for (const exerciseId of practicalCppRunnerBackedLessonIds) {
+      const response = await handleRequest(
+        new Request('https://seepoundcoffeepie.com/api/runner/grants', {
+          method: 'POST',
+          headers: {
+            Origin: 'https://seepoundcoffeepie.com',
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ exerciseId }),
+        }),
+        runnerEnv,
+      )
+      expect(response.status, exerciseId).toBe(503)
+      await expect(response.json()).resolves.toEqual({
+        error: 'The code checker is paused right now. Try again later.',
+      })
+      expect(response.headers.get('Set-Cookie')).toBeNull()
+    }
+    expect(runnerConfigGet).toHaveBeenCalledTimes(12)
+    expect(runnerEnv.RUNNER_CONTROL.getByName).not.toHaveBeenCalled()
+  })
+
+  it('issues scoped C++ grants for all twelve Practical C++ runner lessons while enabled', async () => {
+    const runnerConfigGet = vi.fn(async () => 'true')
+    const runnerEnv = {
+      ...htmlEnv,
+      RUNNER_CONFIG: { get: runnerConfigGet } as unknown as KVNamespace,
+      RUNNER_ENABLED: 'false',
+      RUNNER_CONTROL: {
+        getByName: vi.fn(),
+      },
+    }
+
+    for (const exerciseId of practicalCppRunnerBackedLessonIds) {
+      const response = await handleRequest(
+        new Request('https://seepoundcoffeepie.com/api/runner/grants', {
+          method: 'POST',
+          headers: {
+            Origin: 'https://seepoundcoffeepie.com',
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ exerciseId }),
+        }),
+        runnerEnv,
+      )
+      expect(response.status, exerciseId).toBe(200)
+      const body = await response.json() as {
+        grant: string
+        language: string
+        version: number
+        visibleTest: { expectedOutput: string }
+      }
+      expect(body).toMatchObject({
+        language: 'cpp',
+        version: 1,
+        visibleTest: { expectedOutput: expect.any(String) },
+      })
+      expect(decodedGrantPayload(body.grant)).toMatchObject({
+        exerciseId,
+        language: 'cpp',
+      })
+      expect(decodedGrantPayload(body.grant).assignmentBinding)
+        .toMatch(/^[A-Za-z0-9_-]{43}$/u)
+      expect(cookieValue(response, '__Host-spp_runner_guest'))
+        .toMatch(/^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$/u)
+    }
+    expect(runnerConfigGet).toHaveBeenCalledTimes(12)
+    expect(runnerEnv.RUNNER_CONTROL.getByName).not.toHaveBeenCalled()
+  })
+
+  it('rejects all eighteen Practical C++ teaching-only lessons before runner configuration', async () => {
+    const runnerConfigGet = vi.fn(async () => 'true')
+    const runnerEnv = {
+      ...htmlEnv,
+      SESSION_SECRET: undefined,
+      RUNNER_CONFIG: { get: runnerConfigGet } as unknown as KVNamespace,
+      RUNNER_ENABLED: 'true',
+      RUNNER_CONTROL: {
+        getByName: vi.fn(),
+      },
+    }
+    expect(practicalCppTeachingOnlyLessonIds).toEqual(cppCollectionsRecordsLessons
+      .filter((lesson) => !lesson.runnerBacked)
+      .map((lesson) => lesson.id))
+    expect(practicalCppTeachingOnlyLessonIds).toHaveLength(18)
+    expect(new Set([
+      ...practicalCppRunnerBackedLessonIds,
+      ...practicalCppTeachingOnlyLessonIds,
+    ])).toEqual(new Set(cppCollectionsRecordsLessons.map((lesson) => lesson.id)))
+
+    for (const exerciseId of practicalCppTeachingOnlyLessonIds) {
       const response = await handleRequest(
         new Request('https://seepoundcoffeepie.com/api/runner/grants', {
           method: 'POST',

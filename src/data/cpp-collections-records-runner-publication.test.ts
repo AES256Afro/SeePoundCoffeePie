@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import {
   privateCourseReleaseState,
+  practicalCppRunnerBackedLessonIds,
+  practicalCppTeachingOnlyLessonIds,
   unpublishedCppCourseId,
   unpublishedCppLessonIds,
 } from '../../scripts/unpublished-cpp-release-boundary.mjs'
@@ -20,18 +22,18 @@ const editableLessonIds = cppCollectionsRecordsLessons
   .filter((lesson) => lesson.runnerBacked)
   .map((lesson) => lesson.id)
 
-describe('controlled Practical C++ runner publication candidate', () => {
-  it('fails closed for production and every non-published state', () => {
-    expect(privateCourseReleaseState(unpublishedCppCourseId)).toBe('unpublished')
+describe('controlled Practical C++ runner production publication', () => {
+  it('publishes only for the exact production state and fails closed otherwise', () => {
+    expect(privateCourseReleaseState(unpublishedCppCourseId)).toBe('published')
     expect(controlledCppRunnerAssignments(
       privateCourseReleaseState(unpublishedCppCourseId),
-    )).toEqual([])
+    ).map((assignment) => assignment.exerciseId)).toEqual(editableLessonIds)
     for (const state of [undefined, null, false, 'unavailable', 'unpublished', 'Published']) {
       expect(controlledCppRunnerAssignments(state), String(state)).toEqual([])
     }
   })
 
-  it('builds exactly twelve validated candidates only for the exact published state', () => {
+  it('builds exactly twelve validated assignments only for the exact published state', () => {
     const candidates = controlledCppRunnerAssignments('published')
     const registry = createRunnerAssignmentRegistry(candidates)
 
@@ -49,11 +51,20 @@ describe('controlled Practical C++ runner publication candidate', () => {
     }
   })
 
-  it('keeps every candidate absent from the production registry', () => {
-    expect(runnerAssignmentCount()).toBe(100)
-    expect(createRunnerAssignmentRegistry().size).toBe(100)
+  it('publishes exactly the twelve editable lessons and keeps eighteen teaching lessons local', () => {
+    expect(runnerAssignmentCount()).toBe(112)
+    expect(createRunnerAssignmentRegistry().size).toBe(112)
     expect(unpublishedCppLessonIds).toEqual(cppCollectionsRecordsLessons.map((lesson) => lesson.id))
-    for (const exerciseId of editableLessonIds) {
+    expect(practicalCppRunnerBackedLessonIds).toEqual(editableLessonIds)
+    expect(practicalCppTeachingOnlyLessonIds).toHaveLength(18)
+    for (const exerciseId of practicalCppRunnerBackedLessonIds) {
+      expect(findRunnerAssignment(exerciseId), exerciseId).toMatchObject({
+        exerciseId,
+        kind: 'academy',
+        language: 'cpp',
+      })
+    }
+    for (const exerciseId of practicalCppTeachingOnlyLessonIds) {
       expect(findRunnerAssignment(exerciseId), exerciseId).toBeUndefined()
     }
   })

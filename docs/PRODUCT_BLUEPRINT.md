@@ -46,7 +46,7 @@ Wrong answers do not consume hearts, lives, energy, or paid currency. A mistake 
 
 Before a module completes, each exercise missed during that run returns once in a short memory-repair round. The answer is reset so the learner retrieves it again, all teaching material remains available, and the repair updates memory strength and timing without awarding XP.
 
-The current Practice page keeps review sets separate by language, not by course. It chooses at most five authored questions across completed modules in every course for that runtime language, brings due and weaker ideas back first, and keeps each short set varied. A Python set can therefore retrieve eligible work from both Python Foundations and Practical Python. The learner sees what will return, where it came from, and why it was selected before starting. Practice updates the existing memory counts and next review date. It awards no XP, star shards, or module completion.
+The current Practice page keeps review sets separate by language, not by course. It chooses at most five authored questions across completed modules in every course for that runtime language, brings due and weaker ideas back first, and keeps each short set varied. A Python set can retrieve eligible work from Python Foundations and Practical Python. A C++ set can do the same across C++ Foundations and Practical C++. The learner sees what will return, where it came from, and why it was selected before starting. Practice updates the existing memory counts and next review date. It awards no XP, star shards, or module completion.
 
 ### Helpful hints without answer dumping
 
@@ -104,7 +104,7 @@ Competitive leaderboards are not part of the first product. They can motivate so
 
 ## Language tracks and courses
 
-The first sector uses the same conceptual spine across four runtime languages so learners can compare syntax without losing the underlying idea. Course identity and runtime language are deliberately separate. `CourseId` owns a catalog entry, prerequisite set, outline, module IDs, lesson IDs, and routes. `LanguageTrack.id` remains the execution and review identity used by the runner, Practice, and Codebook. More than one course can therefore teach Python without inventing another language or mixing their completion requirements.
+The first sector uses the same conceptual spine across four runtime languages so learners can compare syntax without losing the underlying idea. The current source has four foundation courses and two continuing courses, for 36 modules and 180 lessons. Course identity and runtime language are deliberately separate. `CourseId` owns a catalog entry, prerequisite set, outline, module IDs, lesson IDs, and routes. `LanguageTrack.id` remains the execution and review identity used by the runner, Practice, and Code Reference. More than one course can therefore use the same runtime without inventing another language or mixing completion requirements.
 
 ### See: C++ Engineering Corps
 
@@ -209,7 +209,7 @@ Every authored lesson must:
 - The production interface uses open document layouts, a readable light palette, normal sentence-case labels, modest corners, and the eye, `#`, coffee cup, and `π` symbols. It does not rely on space scenes, gradients, glows, glass effects, or a permanent sidebar.
 - Source commit `6cbba1d` and Cloudflare Worker version `658fcb18-970c-41e4-a614-839998d7c23e` were published on 2026-08-25. The automated release gate, accessibility review, paused-runner deployment, live canonical-route checks, full four-language production runner regression, production browser exercise, and final smoke test all passed.
 
-#### Current local teaching-first refinement (unpublished)
+#### Current source refinement
 
 - Active lessons and project workspaces use the full desktop height below a compact header. Teaching and working panes scroll independently only when their own content needs it, and the layout becomes one readable column at 1100 CSS pixels for smaller screens and browser zoom.
 - Learner-facing work uses direct labels such as `Task`, `Question`, `Step`, and `Output`. Reward, implementation, and runner wording stays out of the normal teaching path. Extra execution-safety detail remains available in a closed disclosure.
@@ -300,13 +300,15 @@ Future cooperative-learning work is deferred until it receives its own release p
 - The compatibility floor and controlled staging and production procedure are specified in [the Phase 5A release record](PHASE_5A_RELEASE.md).
 - Source commit `a5ce1327beb0275ab1625c1962887375419b52d2` was deployed to production on 2026-08-26. The release evidence, deployed Worker versions, runner state, container readiness, automated gates, and manual browser verification are recorded in [the Phase 5A release record](PHASE_5A_RELEASE.md).
 
-### Phase 5B: Practical C++: Collections and Records (authored and unpublished)
+### Phase 5B: Practical C++: Collections and Records (source publication candidate)
 
-- The next continuing course follows both C++ Foundations and `Your First Compiled Program`. It introduces returned helper values, vectors, data-only structs, references, record updates, accumulators, and filters without introducing pointers, manual memory management, custom template definitions, files, packages, build systems, or object-oriented design.
-- All six modules and 30 lessons are authored in a hidden TypeScript draft. The course uses the same 70 XP per module and 420 XP total rhythm as Practical Python, with exactly 12 editable exercises.
-- The full hidden course remains outside the public course registry, routes, Practice, Codebook, public runner assignments, sitemap, and browser bundles. Its compact identifier-only manifest remains the compatibility boundary for progress.
+- The second continuing course follows both C++ Foundations and `Your First Compiled Program`. It introduces returned helper values, vectors, data-only structs, references, record updates, accumulators, and filters without introducing pointers, manual memory management, custom template definitions, files, packages, build systems, or object-oriented design.
+- All six modules and 30 lessons are authored and selected by the normal production source. The course uses the same 70 XP per module and 420 XP total rhythm as Practical Python.
+- Exactly 12 Practical C++ lessons are runner-backed. The other 18 are teaching-only choices, predictions, or ordering activities and must always receive `404` from the runner grant boundary.
+- The selected source has six courses, 36 modules, 180 lessons, and exactly 112 runner assignments. The course, canonical lesson routes, Practice ownership, Code Reference examples, sitemap entries, and one lazy teaching-data asset now travel together through the reviewed publication selection.
 - The final Workshop Stock Report uses fixed in-memory records and now has a separate pinned Clang-based collections analyzer with a server-owned profile, protected facts, authentic solutions, and adversarial tests. The existing Observation Desk analyzer remains narrow and unchanged.
-- No partial course or `coming soon` card may reach production. The complete curriculum, compatibility floor, protected assessment, release gates, staged implementation slices, and manual learner checks are specified in [the Phase 5B plan](PHASE_5B_PLAN.md).
+- No partial course or `coming soon` card may reach production. The guarded release must upload the built site, Worker, published registry, and reviewed C++ image as the one initial mutation in each environment. The complete curriculum, compatibility floor, protected assessment, release gates, staged implementation slices, and manual learner checks are specified in [the Phase 5B plan](PHASE_5B_PLAN.md).
+- This source selection is not evidence that staging or production has been updated. The latest recorded live baseline remains the five-course 2026-08-26 compatibility release until M009 and M010 are complete.
 
 ## Release gates
 

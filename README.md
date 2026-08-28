@@ -9,7 +9,7 @@ The name is the curriculum:
 - **Coffee** = Java
 - **Pie** = Python
 
-Lessons are short and guided across four foundation courses and Practical Python. Each new term is explained in plain language, shown in a concrete example, used immediately, and revisited in later practice. Story-based exercises remain where they make an idea easier to understand or remember.
+Lessons are short and guided across four foundation courses, Practical Python, and Practical C++. Each new term is explained in plain language, shown in a concrete example, used immediately, and revisited in later practice. Story-based exercises remain where they make an idea easier to understand or remember.
 
 ## What the repository includes
 
@@ -18,19 +18,19 @@ The current implementation includes:
 - a public introduction that explains the site before asking a visitor to choose a course;
 - a four-question beginner intake that asks one plain-language question at a time and recommends, but does not lock, a course;
 - an open learner home with one continuation action, review priorities, and visible course progress;
-- a bookmarkable course catalog and separate outlines for Python, C++, C#, and Java Foundations plus `Practical Python: Data Tools`;
-- six fully playable five-lesson modules in each foundation course and six more five-lesson Practical Python modules;
+- a bookmarkable course catalog and separate outlines for Python, C++, C#, and Java Foundations, `Practical Python: Data Tools`, and `Practical C++: Collections and Records`;
+- six fully playable five-lesson modules in each of the six courses;
 - four bookmarkable 12-step projects: Python's `Your First Interactive Program`, C++'s `Your First Compiled Program`, C#'s `Community Workshop Check-In`, and Java's `Community Picnic Planner`;
 - a private portfolio preview for each completed project with a deliberate, script-free HTML download;
 - plain-language explanations and concrete analogies;
 - guided choices, output prediction, code ordering, bug repair, and editable code exercises;
 - immediate, specific feedback and optional hints;
 - an end-of-module retry round that brings missed ideas back once and awards no points;
-- real isolated execution for 48 editable foundation lessons and 12 editable Practical Python lessons;
+- real isolated execution for 48 editable foundation lessons, 12 editable Practical Python lessons, and 12 editable Practical C++ lessons;
 - points, an adjustable daily point goal, a study streak, lesson and module completion, and accuracy tracking;
 - a spaced-review scheduler that weighs correct and incorrect attempts;
 - language-wide Practice that builds a short review of up to five familiar questions from completed modules across every course in the selected language, starting with ideas that are due or need another pass and awarding no points or module-completion rewards;
-- a searchable 62-term beginner Code reference and a Learner Record with examples that appear after related lessons and separate progress for every course;
+- a searchable beginner Code Reference and a Learner Record with examples that appear after related lessons and separate progress for every course;
 - validated local JSON backup and restore for course progress;
 - offline-safe browser persistence with a visible reset control;
 - optional private cross-device progress synchronization, conflict choices, and account-data deletion;
@@ -48,8 +48,10 @@ The site uses clean application URLs instead of separate `.html` files. Cloudfla
 - `/courses` is the complete course catalog;
 - `/courses/python-foundations`, `/courses/cpp-foundations`, `/courses/csharp-foundations`, and `/courses/java-foundations` are the four foundation-course outlines;
 - `/courses/python-data-tools` is the Practical Python outline. It can be previewed while locked and opens only after both Python Foundations and `/projects/python/first-interactive-program` are complete;
+- `/courses/cpp-collections-records` is the Practical C++ outline. It can be previewed while locked and opens only after both C++ Foundations and `/projects/cpp/first-compiled-program` are complete;
 - `/learn/:course-slug/:module-id/:lesson-id` is an exact lesson URL. For example, `/learn/python-foundations/py-first-spark/py-console` opens the first Python lesson directly;
 - `/learn/python-data-tools/py-data-return-values/pydata1-retrieve-call` opens the first Practical Python lesson after both prerequisites are complete;
+- `/learn/cpp-collections-records/cpp-records-return-values/cpprecords1-retrieve-call` opens the first Practical C++ lesson after both prerequisites are complete;
 - `/projects/python/first-interactive-program` is the Python project overview, and adding a project-step ID opens that exact Python step;
 - `/projects/cpp/first-compiled-program` is the C++ project overview, and adding a project-step ID opens that exact C++ step;
 - `/projects/csharp/workshop-check-in` is the C# project overview, and adding a project-step ID opens that exact C# step;
@@ -70,7 +72,11 @@ Each module unlocks only after the previous module is complete in the same langu
 
 Practical Python begins only after the learner completes both Python Foundations and `Your First Interactive Program`. Its modules retrieve functions and formatting before introducing returned answers, text normalization, list mutation, dictionaries, accumulators, and filters. The final Supply Tracker combines those ideas with fixed in-memory data and no new input or package burden.
 
-The current curriculum totals 30 playable modules and 150 authored lessons across five courses, plus four 12-step projects. The runner registry contains exactly 100 editable assignments: 48 foundation lessons, 12 Practical Python lessons, and 40 project steps.
+Practical C++ begins only after the learner completes both C++ Foundations and `Your First Compiled Program`. Its modules retrieve functions and collections before introducing returned helper values, vectors, records, references, record updates, accumulators, and filters. The final Workshop Stock Report uses fixed in-memory records and no files, packages, or network access.
+
+The current source totals 36 playable modules and 180 authored lessons across six courses, plus four 12-step projects. The selected runner registry contains exactly 112 editable assignments: 48 foundation lessons, 12 Practical Python lessons, 12 Practical C++ lessons, and 40 project steps. The other 18 Practical C++ lessons use choices, predictions, or ordering in the browser and never request an execution grant.
+
+These counts describe the source-controlled Practical C++ publication candidate. The last recorded live compatibility release still has five courses, 30 modules, 150 lessons, and 100 runner assignments. Staging and production publication remain separate release steps and are not claimed by this README.
 
 Inside editable code exercises, press Ctrl+Enter on Windows or Linux, or Command+Enter on macOS, to run the same check as the visible button. Tab keeps its normal browser behavior so keyboard learners can leave the editor without getting trapped.
 
@@ -105,7 +111,7 @@ Or run the same complete local release gate with one command:
 npm run check:release
 ```
 
-`npm run test:e2e` builds the site and runs the production Chromium browser gate against a loopback-only preview. The harness blocks service workers, live API access, and external origins. It covers the five-course catalog, continuing-course prerequisites, canonical lesson URLs, the unpublished Practical C++ boundary, keyboard exit from the editor, navigation and language switching at 390 CSS pixels, Practice, Code Reference, and scoped WCAG A and AA checks on representative pages. `npm run check:cpp-browser-candidate` separately exercises the controlled six-course Practical C++ candidate without publishing it. `npm run check:release` includes both browser gates.
+`npm run test:e2e` builds the site and runs the ordinary six-course production artifact in Chromium against a loopback-only preview. The harness blocks service workers, live API access, and external origins. It covers both continuing-course prerequisite paths, canonical Practical C++ course and lesson routes, keyboard exit from the editor, navigation and language switching at 390 CSS pixels, Practice, Code Reference, and scoped WCAG A and AA checks on representative pages. Practical C++ now runs in this normal production-dist gate instead of a second candidate-only browser server. `npm run check:release` includes that browser gate.
 
 Automated browser checks do not replace manual keyboard, screen-reader, 200 percent zoom, reduced-motion, multi-browser, staging, or production review. Those remain separate release evidence.
 
@@ -117,8 +123,8 @@ npm run check:runner:image
 
 The production bundle is written to `dist/`.
 `npm run check:bundle` enforces raw and gzip budgets for emitted JavaScript, CSS, HTML, and inert JSON teaching data, plus an aggregate transfer cap so moving bytes between file types cannot hide growth. It separately caps the lazy Portfolio and shared continuing-course route JavaScript, Practical Python and packed foundation teaching content, Code Reference JavaScript, the combined initial application stylesheet, and the lazy learning-workspace stylesheet. It also requires at least 15 percent raw and gzip headroom for initial JavaScript and CSS, so course growth cannot silently create an oversized first load.
-`npm run check:foundation-content` verifies that the lazy packed foundation curriculum is deterministic and still matches the readable curriculum source. `npm run check:cpp-content-candidate` verifies the complete unpublished Practical C++ candidate: deterministic generated JSON, one lazy owning loader, the controlled six-course application, 112 candidate runner assignments, the 43-location candidate sitemap, fixed JavaScript, CSS, route, teaching-data, and aggregate limits, absence of protected server markers, and 11 Chromium cases. Candidate artifacts are written under ignored `.vite` directories. The ordinary production build still writes to `dist`, selects five courses and 100 runner assignments, and emits no Practical C++ candidate JSON. The current candidate total-JavaScript result is 217,952 gzip bytes against a 218,000-byte cap, so the complete candidate gate must run after every source change.
-`npm run check:project-bundle` recursively rejects emitted source maps and scans the production browser output for unpublished teaching content and server-owned assessment material before a direct deployment wrapper can invoke Wrangler.
+`npm run check:foundation-content` verifies that the lazy packed foundation curriculum is deterministic and still matches the readable curriculum source. `npm run check:cpp-content-candidate` keeps its historical command name, but now verifies the source-selected publication: deterministic generated JSON, one lazy owning loader, the six-course application, the exact 112-assignment runner registry, the complete sitemap projection, fixed JavaScript, CSS, route, teaching-data, and aggregate limits, and absence of protected server markers.
+`npm run check:project-bundle` recursively rejects emitted source maps, requires the Practical C++ teaching data behind its one lazy loader, and scans the production browser output for server-owned assessment material before a deployment wrapper can invoke Wrangler.
 `npm run check:social-preview` verifies the Open Graph and large-card metadata plus the exact 1200 by 630 share image used by Discord and other social platforms.
 
 ## Production hosting
@@ -139,13 +145,25 @@ npm run deploy:dry-run
 npm run deploy:staging:dry-run
 ```
 
-Deploy the public site from a clean `main` checkout with:
+For routine public-site work after a reviewed runner set is already live, deploy from a clean `main` checkout with:
 
 ```bash
 npm run deploy
 ```
 
 This public-site-only command runs the complete release gate, deploys Worker code and static browser assets with Wrangler's container-free rollout mode, and requires the selected environment's code checker to be paused. It compares each runner application's ID, image, version, reported instance count, and update time before and after deployment, and fails if any value changes. `npm run deploy:staging` applies the same checks to staging.
+
+The first Practical C++ publication is not routine website work. Its guarded commands deploy the built site, Worker, published assignment registry, and reviewed C++ image together:
+
+```bash
+npm run deploy:runner:cpp:staging:dry-run
+npm run deploy:runner:cpp:staging
+npm run prove:runner:cpp:staging
+npm run deploy:runner:cpp:production:dry-run
+npm run deploy:runner:cpp:production
+```
+
+That guarded deployment must be the only initial publication mutation in each environment. Do not run `deploy:site:staging` after the guarded staging deployment because a second Worker upload would change the version used by the staging proof. Production must consume the fresh same-commit staging proof.
 
 Do not replace the reviewed wrapper with a raw `wrangler deploy` command. Runner-image releases use a separate controlled procedure. See [Public-site deployment boundary](docs/PUBLIC_SITE_DEPLOYMENT.md).
 
@@ -155,7 +173,7 @@ Verify the live social preview, apex domain, `www` redirect, security headers, a
 npm run check:live
 ```
 
-The default live check requires the code checker to be fully configured and enabled, then proves a known published lesson can receive a grant while every unpublished Practical C++ assignment still returns not found. During a deliberately paused public-site release, use `npm run check:live:paused`; it requires a configured paused checker, rejects the published grant with the expected paused response, and retains the same unpublished-assignment checks.
+After Practical C++ is deployed, the default live check requires the code checker to be fully configured and enabled. It verifies a known Python grant, all 12 runner-backed Practical C++ grants with the C++ language binding, and the 18 teaching-only Practical C++ exercise IDs that must always return not found. During a deliberately paused release, use `npm run check:live:paused`; it requires a configured paused checker, rejects executable grants with the expected paused response, and still proves that teaching-only IDs cannot cross the runner boundary. These source checks are expected to fail against the older five-course compatibility deployment until the guarded publication completes.
 
 The DNS, TLS, WAF, cache, security-reporting, and intentional-exception state verified on 2026-08-27 is recorded in the [dated production domain security baseline](docs/PRODUCTION_DOMAIN_SECURITY_BASELINE_2026-08-27.md).
 
@@ -195,7 +213,7 @@ The Learner Record can also download a versioned JSON backup and restore it afte
 
 ## How editable code runs
 
-The 48 editable foundation exercises, 12 editable Practical Python exercises, and 40 editable project steps use real server-side Python, C++, C#, and Java toolchains. The browser requests a five-minute exercise-scoped run grant, submits only the versioned language, source, optional text input, and `run` or `check` purpose, then polls an opaque learner-owned result ID. Each grant and stored result is bound to grading-only assignment data and a checked revision of the grading implementation. The browser receives only a keyed opaque binding, not the protected revision. Changed, revoked, or legacy assignments fail closed before source acceptance, sandbox creation, or stored output return. Learners cannot choose an executable, command, compiler flag, package, image, path, mount, or network destination.
+The 48 editable foundation exercises, 12 editable Practical Python exercises, 12 editable Practical C++ exercises, and 40 editable project steps use real server-side Python, C++, C#, and Java toolchains. The browser requests a five-minute exercise-scoped run grant, submits only the versioned language, source, optional text input, and `run` or `check` purpose, then polls an opaque learner-owned result ID. Each grant and stored result is bound to grading-only assignment data and a checked revision of the grading implementation. The browser receives only a keyed opaque binding, not the protected revision. Changed, revoked, or legacy assignments fail closed before source acceptance, sandbox creation, or stored output return. Learners cannot choose an executable, command, compiler flag, package, image, path, mount, or network destination.
 
 Every attempt starts in a fresh Cloudflare Sandbox VM with a pinned base image and fixed server-owned toolchain commands. A trusted supervisor drops privileges, blocks socket syscalls, measures the whole process tree, caps CPU, wall time, memory, processes, writable storage, stdout, and stderr, and destroys the VM after the result. Each final project check replaces caller-supplied input with one visible and three server-owned cases. Every case uses a different fresh VM. Python's parser, C++'s pinned compiler front end, C#'s pinned Roslyn parser, and Java's pinned compiler-tree analyzer verify the deliberately small program shapes taught by their projects. The Practical Python Supply Tracker has fixed in-memory data and uses a separate protected Python AST profile to verify the four taught functions, the supplied harness, and statement order. Comments, inactive code, early exits, aliases, Unicode escapes, added members, moved statements, and unsupported control flow cannot earn structural credit. The browser receives only visible output and pass summaries. Private inputs, reference solutions, assessment profiles, and internal syntax analysis stay out of the browser bundle and result. Language errors are translated into beginner language while sanitized raw diagnostics remain available under a disclosure.
 

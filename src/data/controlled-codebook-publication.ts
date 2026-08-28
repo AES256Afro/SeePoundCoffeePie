@@ -1,6 +1,6 @@
-// The normal application build contributes no unpublished Code Reference
-// entries. The candidate-only build aliases this module to the reviewed C++
-// contribution file.
+// The checked-in module contributes no controlled Code Reference entries.
+// Production Vite builds alias it to the complete reviewed publication source
+// selected by the source-controlled release catalog.
 export {
   applyControlledCodebookContributions,
   controlledCodebookContributions,

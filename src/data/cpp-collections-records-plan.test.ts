@@ -24,6 +24,10 @@ import {
   privateCourseIsPublished,
   privateCourseReleaseCatalog,
   privateCourseReleaseState,
+  practicalCppPrivateJavaScriptMarkers,
+  practicalCppPublicJavaScriptMarkers,
+  practicalCppRunnerBackedLessonIds,
+  practicalCppTeachingOnlyLessonIds,
   unpublishedCppCourseId,
   unpublishedCppCoursePath,
   unpublishedCppJavaScriptMarkers,
@@ -60,23 +64,23 @@ const publicSitemap = readFileSync(
 )
 
 describe('Phase 5B Practical C++ course plan', () => {
-  it('keeps private course release state fail closed', () => {
+  it('publishes only the exact reviewed private course release record', () => {
     expect(privateCourseReleaseCatalog).toHaveLength(1)
     expect(privateCourseReleaseCatalog[0]).toMatchObject({
       id: cppCollectionsRecordsPlan.id,
-      state: 'unpublished',
+      state: 'published',
     })
     expect(unpublishedCppCourseId).toBe(cppCollectionsRecordsPlan.id)
-    expect(privateCourseReleaseState(unpublishedCppCourseId)).toBe('unpublished')
+    expect(privateCourseReleaseState(unpublishedCppCourseId)).toBe('published')
     expect(privateCourseReleaseState('unknown-private-course')).toBe('unavailable')
-    expect(privateCourseIsPublished(unpublishedCppCourseId)).toBe(false)
+    expect(privateCourseIsPublished(unpublishedCppCourseId)).toBe(true)
     expect(privateCourseIsPublished('unknown-private-course')).toBe(false)
     expect(Object.isFrozen(privateCourseReleaseCatalog)).toBe(true)
     expect(Object.isFrozen(privateCourseReleaseCatalog[0])).toBe(true)
   })
 
-  it('reserves one complete six-module and thirty-lesson curriculum', () => {
-    expect(cppCollectionsRecordsPlan.status).toBe('unpublished')
+  it('publishes one complete six-module and thirty-lesson curriculum', () => {
+    expect(cppCollectionsRecordsPlan.status).toBe('published')
     expect(cppCollectionsRecordsPlan.id).toBe('cpp-collections-records')
     expect(cppCollectionsRecordsPlan.language).toBe('cpp')
     expect(cppCollectionsRecordsPlan.modules.map((module) => module.id)).toEqual(expectedModuleIds)
@@ -85,7 +89,7 @@ describe('Phase 5B Practical C++ course plan', () => {
     expect(new Set(cppCollectionsRecordsLessons.map((lesson) => lesson.id)).size).toBe(30)
   })
 
-  it('keeps the compact progress manifest identical to the unpublished plan', () => {
+  it('keeps the compact progress manifest identical to the published plan', () => {
     expect(cppCollectionsRecordsMissionIds).toEqual(expectedModuleIds)
     expect(Object.keys(cppCollectionsRecordsManifest)).toEqual(expectedModuleIds)
     expect(cppCollectionsRecordsProgressLessons).toEqual(
@@ -125,26 +129,37 @@ describe('Phase 5B Practical C++ course plan', () => {
 
   it('plans exactly twelve runner-backed edits and keeps them aligned with editable lesson types', () => {
     const runnerBacked = cppCollectionsRecordsLessons.filter((currentLesson) => currentLesson.runnerBacked)
+    const teachingOnly = cppCollectionsRecordsLessons.filter((currentLesson) => !currentLesson.runnerBacked)
     expect(runnerBacked).toHaveLength(12)
+    expect(teachingOnly).toHaveLength(18)
+    expect(practicalCppRunnerBackedLessonIds).toEqual(runnerBacked.map((lesson) => lesson.id))
+    expect(practicalCppTeachingOnlyLessonIds).toEqual(teachingOnly.map((lesson) => lesson.id))
+    expect(new Set([
+      ...practicalCppRunnerBackedLessonIds,
+      ...practicalCppTeachingOnlyLessonIds,
+    ])).toEqual(new Set(unpublishedCppLessonIds))
     for (const currentLesson of cppCollectionsRecordsLessons) {
       expect(currentLesson.runnerBacked, currentLesson.id)
         .toBe(currentLesson.type === 'bugfix' || currentLesson.type === 'code')
     }
     for (const currentLesson of runnerBacked) {
-      expect(
-        findRunnerAssignment(currentLesson.id),
-        `${currentLesson.id} must not receive a runner assignment while its course is unpublished`,
-      ).toBeUndefined()
+      expect(findRunnerAssignment(currentLesson.id), currentLesson.id).toMatchObject({
+        exerciseId: currentLesson.id,
+        language: 'cpp',
+      })
+    }
+    for (const currentLesson of teachingOnly) {
+      expect(findRunnerAssignment(currentLesson.id), currentLesson.id).toBeUndefined()
     }
   })
 
-  it('keeps every hidden C++ course, module, and lesson identifier outside public surfaces', () => {
-    const hiddenModules = Object.entries(cppCollectionsRecordsManifest)
-    const hiddenModuleIds = hiddenModules.map(([moduleId]) => moduleId)
-    const hiddenLessonIds = hiddenModules.flatMap(([, lessons]) => (
+  it('publishes every reviewed C++ course, module, and lesson identifier together', () => {
+    const publishedModules = Object.entries(cppCollectionsRecordsManifest)
+    const publishedModuleIds = publishedModules.map(([moduleId]) => moduleId)
+    const publishedLessonIds = publishedModules.flatMap(([, lessons]) => (
       lessons.map((lesson) => lesson.id)
     ))
-    const hiddenIds = [cppCollectionsRecordsPlan.id, ...hiddenModuleIds, ...hiddenLessonIds]
+    const publishedIds = [cppCollectionsRecordsPlan.id, ...publishedModuleIds, ...publishedLessonIds]
     const publicIds = new Set([
       ...courseDefinitions.flatMap((course) => [
         course.id,
@@ -167,50 +182,65 @@ describe('Phase 5B Practical C++ course plan', () => {
       ]),
     ])
 
-    expect(hiddenModuleIds).toHaveLength(6)
-    expect(hiddenLessonIds).toHaveLength(30)
+    expect(publishedModuleIds).toHaveLength(6)
+    expect(publishedLessonIds).toHaveLength(30)
     expect(unpublishedCppCoursePath).toBe(`/courses/${cppCollectionsRecordsPlan.id}`)
     expect(unpublishedCppLessonPrefix).toBe(`/learn/${cppCollectionsRecordsPlan.id}/`)
     expect(unpublishedCppLessonPath).toBe(
-      `/learn/${cppCollectionsRecordsPlan.id}/${hiddenModuleIds[0]}/${hiddenLessonIds[0]}`,
+      `/learn/${cppCollectionsRecordsPlan.id}/${publishedModuleIds[0]}/${publishedLessonIds[0]}`,
     )
-    expect(unpublishedCppLessonIds).toEqual(hiddenLessonIds)
+    expect(unpublishedCppLessonIds).toEqual(publishedLessonIds)
     expect(privateCourseReleaseCatalog[0]?.coursePath).toBe(unpublishedCppCoursePath)
     expect(privateCourseReleaseCatalog[0]?.lessonPrefix).toBe(unpublishedCppLessonPrefix)
     expect(privateCourseReleaseCatalog[0]?.lessonPath).toBe(unpublishedCppLessonPath)
     expect(privateCourseReleaseCatalog[0]?.lessonIds).toBe(unpublishedCppLessonIds)
+    expect(privateCourseReleaseCatalog[0]?.runnerBackedLessonIds)
+      .toBe(practicalCppRunnerBackedLessonIds)
+    expect(privateCourseReleaseCatalog[0]?.teachingOnlyLessonIds)
+      .toBe(practicalCppTeachingOnlyLessonIds)
     expect(privateCourseReleaseCatalog[0]?.browserMarkers).toBe(unpublishedCppJavaScriptMarkers)
-    expect(hiddenIds).toHaveLength(37)
-    expect(new Set(hiddenIds).size).toBe(hiddenIds.length)
+    expect(privateCourseReleaseCatalog[0]?.publicBrowserMarkers)
+      .toBe(practicalCppPublicJavaScriptMarkers)
+    expect(privateCourseReleaseCatalog[0]?.privateBrowserMarkers)
+      .toBe(practicalCppPrivateJavaScriptMarkers)
+    expect(practicalCppPublicJavaScriptMarkers).toHaveLength(7)
+    expect(practicalCppPrivateJavaScriptMarkers).toHaveLength(4)
+    expect(publishedIds).toHaveLength(37)
+    expect(new Set(publishedIds).size).toBe(publishedIds.length)
 
-    for (const id of hiddenIds) {
-      expect(publicIds.has(id), `${id} must not enter a public registry`).toBe(false)
-      expect(courseDefinitionForSlug(id), `${id} must not resolve as a public course`).toBeUndefined()
-      expect(
-        publishedContinuingCourseContentRequest(id),
-        `${id} must not resolve through a public course loader`,
-      ).toBeUndefined()
-      expect(findRunnerAssignment(id), `${id} must not receive a runner assignment`).toBeUndefined()
-      expect(parseAppRoute(`/courses/${id}`).page, `${id} must not resolve as a course route`)
-        .toBe('not-found')
-      expect(publicSitemap, `${id} must not enter the public sitemap`).not.toContain(id)
+    for (const id of publishedIds) {
+      expect(publicIds.has(id), `${id} must enter a public registry`).toBe(true)
+      expect(publicSitemap, `${id} enters only the emitted sitemap`).not.toContain(id)
     }
 
-    for (const [moduleId, lessons] of hiddenModules) {
+    expect(courseDefinitionForSlug(cppCollectionsRecordsPlan.slug)?.id)
+      .toBe(cppCollectionsRecordsPlan.id)
+    expect(publishedContinuingCourseContentRequest(cppCollectionsRecordsPlan.id))
+      .toBeDefined()
+    expect(parseAppRoute(unpublishedCppCoursePath)).toMatchObject({
+      page: 'course',
+      courseId: cppCollectionsRecordsPlan.id,
+    })
+
+    for (const [moduleId, lessons] of publishedModules) {
       for (const lesson of lessons) {
         expect(parseAppRoute(
           `/learn/${cppCollectionsRecordsPlan.id}/${moduleId}/${lesson.id}`,
-        ).page, `${lesson.id} must not resolve through its guessed continuing-course route`)
-          .toBe('not-found')
+        ), `${lesson.id} must resolve through its canonical continuing-course route`).toMatchObject({
+          page: 'lesson',
+          courseId: cppCollectionsRecordsPlan.id,
+          missionId: moduleId,
+          exerciseId: lesson.id,
+        })
         expect(parseAppRoute(
           `/learn/cpp-foundations/${moduleId}/${lesson.id}`,
-        ).page, `${lesson.id} must not resolve through the published C++ course`)
+        ).page, `${lesson.id} must not resolve through the wrong C++ course`)
           .toBe('not-found')
       }
     }
 
     expect(cppCollectionsRecordsPlan.publicationBlockers).toHaveLength(10)
-    expect(cppCollectionsRecordsPlan.publicationPolicy).toContain('outside the public registry')
+    expect(cppCollectionsRecordsPlan.publicationPolicy).toContain('Publish this course only')
   })
 
   it('records a bounded capstone and deliberately excludes premature C++ complexity', () => {

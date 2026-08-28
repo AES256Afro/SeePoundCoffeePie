@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { computeRunnerGradingBehaviorRevision } from '../../scripts/runner-grading-revision.mjs'
 import { cppCompiledProject } from '../data/cpp-compiled-project'
+import { cppCollectionsRecordsDraftModules } from '../data/cpp-collections-records-course-draft'
 import { tracks } from '../data/curriculum'
 import { csharpWorkshopProject } from '../data/csharp-workshop-project'
 import { javaPicnicProject } from '../data/java-picnic-project'
@@ -21,6 +22,7 @@ import {
 const editableAcademyExercises = [
   ...tracks.flatMap((track) => track.missions.flatMap((mission) => mission.exercises)),
   ...pythonDataToolsCourse.missions.flatMap((mission) => mission.exercises),
+  ...cppCollectionsRecordsDraftModules.flatMap((mission) => mission.exercises),
 ].filter((exercise) => (
   (exercise.type === 'code' || exercise.type === 'bugfix') && exercise.output !== undefined
 ))
@@ -40,7 +42,7 @@ const assignmentRevisionPattern = new RegExp(
 
 describe('server-owned runner assignments', () => {
   it('covers every authored editable exercise with real output', () => {
-    expect(runnerAssignmentCount()).toBe(100)
+    expect(runnerAssignmentCount()).toBe(112)
     expect(runnerAssignmentCount()).toBe(editableAcademyExercises.length + editableProjectExercises.length)
     expect(findRunnerAssignment('py-print')).toMatchObject({ language: 'python', expectedOutput: 'Signal online' })
     expect(findRunnerAssignment('java-galley-report')).toMatchObject({ language: 'java' })
@@ -73,6 +75,36 @@ describe('server-owned runner assignments', () => {
         kind: 'academy',
       })),
     )
+  })
+
+  it('registers all twelve Practical C++ editable lessons under the C++ runtime', () => {
+    const exerciseIds = [
+      'cpprecords1-fix-return',
+      'cpprecords1-part-total',
+      'cpprecords2-fix-push-back',
+      'cpprecords2-add-parts',
+      'cpprecords3-fix-field-access',
+      'cpprecords3-build-part-record',
+      'cpprecords4-fix-copy-update',
+      'cpprecords4-restock-part',
+      'cpprecords5-fix-total-reset',
+      'cpprecords5-low-stock',
+      'cpprecords6-fix-low-stock-check',
+      'cpprecords6-workshop-stock-report',
+    ]
+
+    expect(exerciseIds.map((exerciseId) => findRunnerAssignment(exerciseId))).toEqual(
+      exerciseIds.map((exerciseId) => expect.objectContaining({
+        exerciseId,
+        language: 'cpp',
+        kind: 'academy',
+      })),
+    )
+    expect(findRunnerAssignment('cpprecords6-workshop-stock-report')?.assessment)
+      .toBeDefined()
+    expect(exerciseIds.slice(0, -1).every((exerciseId) => (
+      findRunnerAssignment(exerciseId)?.assessment === undefined
+    ))).toBe(true)
   })
 
   it('derives an opaque deterministic revision from visible and protected grading semantics', async () => {

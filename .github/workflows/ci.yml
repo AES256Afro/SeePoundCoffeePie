@@ -31,7 +31,7 @@ jobs:
       - name: Run tests
         run: npm test
 
-      - name: Verify Practical C++ candidate release gates
+      - name: Verify Practical C++ content and runner gates
         run: npm run check:cpp-content-candidate
 
       - name: Verify packed foundation curriculum

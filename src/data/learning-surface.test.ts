@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { basePublishedContinuingCourseRegistrations } from './continuing-course-publications.base'
+import { controlledContinuingCourseRegistrations } from './controlled-continuing-course-publication'
 import {
   courseDefinitions,
 } from './course-registry'
@@ -17,10 +18,22 @@ if (!practicalPython) throw new Error('Practical Python registration is missing.
 const foundationCourseDefinitions = courseDefinitions.filter((definition) => (
   definition.kind === 'foundation'
 ))
+const baseLearningSequences = publishedLearningSequences.map((sequence) => ({
+  ...sequence,
+  units: sequence.units.filter((unit) => (
+    unit.kind !== 'course' || unit.courseId !== 'cpp-collections-records'
+  )),
+}))
 const publishedLearningSurface = createLearningSurface({
   foundationCourseDefinitions,
   foundationModuleLessonIds: foundationMissionLessonIds,
   learningSequences: publishedLearningSequences,
+  continuingCourseRegistrations: controlledContinuingCourseRegistrations,
+})
+const baseLearningSurface = createLearningSurface({
+  foundationCourseDefinitions,
+  foundationModuleLessonIds: foundationMissionLessonIds,
+  learningSequences: baseLearningSequences,
   continuingCourseRegistrations: basePublishedContinuingCourseRegistrations,
 })
 
@@ -30,7 +43,7 @@ function createTestSurface(
   return createLearningSurface({
     foundationCourseDefinitions,
     foundationModuleLessonIds: foundationMissionLessonIds,
-    learningSequences: publishedLearningSequences,
+    learningSequences: baseLearningSequences,
     continuingCourseRegistrations: basePublishedContinuingCourseRegistrations,
     ...overrides,
   })
@@ -43,13 +56,14 @@ function registrationWith(
 }
 
 describe('learning surface', () => {
-  it('assembles the current five-course surface without changing public IDs or order', () => {
+  it('assembles the current six-course surface without changing public IDs or order', () => {
     expect(publishedLearningSurface.courseDefinitions.map((definition) => definition.id)).toEqual([
       'python-foundations',
       'cpp-foundations',
       'csharp-foundations',
       'java-foundations',
       'python-data-tools',
+      'cpp-collections-records',
     ])
     expect(publishedLearningSurface.courseDefinitions).toEqual(courseDefinitions)
     expect(publishedLearningSurface.courseDefinition('python-data-tools')?.language).toBe('python')
@@ -64,7 +78,18 @@ describe('learning surface', () => {
       courseId: 'python-data-tools',
     })
     expect(publishedLearningSurface.continuingCourseManifests.map((manifest) => manifest.courseId))
-      .toEqual(['python-data-tools'])
+      .toEqual(['python-data-tools', 'cpp-collections-records'])
+    expect(publishedLearningSurface.continuingCourseIdsForLanguage('cpp'))
+      .toEqual(['cpp-collections-records'])
+
+    expect(baseLearningSurface.courseDefinitions.map((definition) => definition.id)).toEqual([
+      'python-foundations',
+      'cpp-foundations',
+      'csharp-foundations',
+      'java-foundations',
+      'python-data-tools',
+    ])
+    expect(baseLearningSurface.continuingCourseIdsForLanguage('cpp')).toEqual([])
   })
 
   it('keeps lookup, ownership, and prerequisite helpers fail closed', () => {

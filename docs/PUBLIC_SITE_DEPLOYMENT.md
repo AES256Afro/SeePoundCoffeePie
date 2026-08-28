@@ -2,13 +2,13 @@
 
 Status: active release procedure.
 
-The website and the four runner images share one Wrangler configuration, but they do not need to change together. A routine interface or lesson-copy release must update the Worker and static assets without building or updating any runner image.
+The website and the four runner images share one Wrangler configuration, but they do not need to change together. A routine interface or lesson-copy release updates the Worker and static assets without building or updating any runner image.
 
-This boundary is especially important while `Dockerfile.runner.cpp` contains the unpublished Phase 5B analyzer. The analyzer belongs in local and controlled runner-image verification. It must not enter a routine public-site release.
+The first Practical C++ publication is an intentional runner release, not a routine public-site release. Its guarded wrapper uploads `dist`, Worker code, the published 112-assignment registry, and the reviewed C++ image together. It must be the only initial Practical C++ mutation in each environment. The latest recorded live baseline remains the five-course compatibility release until that procedure finishes.
 
 ## Safe default commands
 
-Use these commands for normal website work:
+Use these commands for normal website work after the environment already has the reviewed runner set required by the selected source:
 
 ```bash
 npm run deploy:staging:dry-run
@@ -61,9 +61,11 @@ The wrapper mechanically compares:
 
 The wrapper requires `RUNNER_CONFIG.enabled` to be `false` before upload, reads it again after deployment, and confirms that the public status endpoint remains paused. It does not change or restore runner state itself. The public-site command does not run D1 migrations or secret-update commands. Reviewers must separately confirm that a routine site diff does not change the public runner assignment allowlist. Any intentional change to D1 migrations, secrets, runner state, or runner assignment policy is a separate release action outside this procedure.
 
-The ordinary production command now means public site only. Do not replace it with a raw `wrangler deploy` command.
+The ordinary production command means public site only. Do not use it for the first Practical C++ publication and do not replace it with a raw `wrangler deploy` command.
 
-## Staging sequence
+## Routine staging sequence
+
+This sequence is for site-only changes after the required runner images and assignment registry are already established. Use the dedicated Practical C++ sequence below for the initial six-course publication.
 
 1. Commit the reviewed change to `main`, push it, and wait for CI.
 2. Record `npx wrangler deployments status --json --config wrangler.staging.jsonc`.
@@ -72,10 +74,12 @@ The ordinary production command now means public site only. Do not replace it wi
 5. Record the new Worker version printed by the wrapper.
 6. Run `npm run check:site:staging` while the code checker remains paused.
 7. Test the signed-out introduction, catalog, one foundation lesson, and one project at desktop and mobile sizes.
-8. Open one controlled runner window by setting `RUNNER_CONFIG.enabled` to `true`. Run `npm run check:site:staging:enabled`, `npm run check:runner:staging`, `npm run check:runner:project:staging`, `npm run check:runner:cpp-project:staging`, `npm run check:runner:cpp-collections:staging`, `npm run check:runner:csharp-project:staging`, `npm run check:runner:java-project:staging`, and `npm run check:runner:python-data-tools:staging`. Then immediately set `RUNNER_CONFIG.enabled` back to `false`. The Practical C++ command is expected to pass only after the complete course and its protected assignment registry are present in staging. If any check fails, pause the checker before investigating.
+8. Open one controlled runner window by setting `RUNNER_CONFIG.enabled` to `true`. Run `npm run check:site:staging:enabled`, `npm run check:runner:staging`, `npm run check:runner:project:staging`, `npm run check:runner:cpp-project:staging`, `npm run check:runner:cpp-collections:staging`, `npm run check:runner:csharp-project:staging`, `npm run check:runner:java-project:staging`, and `npm run check:runner:python-data-tools:staging`. Then immediately set `RUNNER_CONFIG.enabled` back to `false`. If any check fails, pause the checker before investigating.
 9. Confirm the wrapper reports all four staging runner applications unchanged, then confirm `RUNNER_CONFIG.enabled` is `false`.
 
-## Production sequence
+## Routine production sequence
+
+This sequence is for site-only changes after the guarded Practical C++ release is complete. It is not the initial course-publication procedure.
 
 1. Review the staging Worker version, automated output, container snapshot, and browser notes together.
 2. Record `npx wrangler deployments status --json`.
@@ -83,10 +87,10 @@ The ordinary production command now means public site only. Do not replace it wi
 4. Confirm `npx wrangler kv key get enabled --binding RUNNER_CONFIG --remote` returns `false`.
 5. Run `npm run deploy`.
 6. Record the new Worker version printed by the wrapper.
-7. Run `npm run check:live:paused` while the code checker remains paused. This requires a configured paused checker, confirms a published assignment cannot receive a grant while paused, and confirms every unpublished Practical C++ assignment still returns not found without issuing a grant or guest cookie.
+7. Run `npm run check:live:paused` while the code checker remains paused. This requires a configured paused checker, confirms executable assignments cannot receive grants while paused, and confirms all 18 teaching-only Practical C++ IDs still return not found without issuing a grant or guest cookie.
 8. Repeat the signed-out desktop and mobile browser checks on the custom domain.
 9. Confirm the wrapper reports all four production runner applications unchanged.
-10. If the pre-release value recorded in step 3 was `true`, open one controlled runner window by setting `RUNNER_CONFIG.enabled` to `true`. Run `npm run check:live`, `npm run check:runner:production`, `npm run check:runner:project:production`, `npm run check:runner:cpp-project:production`, `npm run check:runner:cpp-collections:production`, `npm run check:runner:csharp-project:production`, `npm run check:runner:java-project:production`, and `npm run check:runner:python-data-tools:production`. The live check requires a valid grant for the published `py-print` assignment before the full runner regressions begin. The Practical C++ command is expected to pass only after the complete course and its protected assignment registry are published. If the recorded value was already `false`, do not enable the checker and record that execution remains untested until the separate pause reason is resolved; the paused check still proves that unpublished assignments remain unavailable.
+10. If the pre-release value recorded in step 3 was `true`, open one controlled runner window by setting `RUNNER_CONFIG.enabled` to `true`. Run `npm run check:live`, `npm run check:runner:production`, `npm run check:runner:project:production`, `npm run check:runner:cpp-project:production`, `npm run check:runner:cpp-collections:production`, `npm run check:runner:csharp-project:production`, `npm run check:runner:java-project:production`, and `npm run check:runner:python-data-tools:production`. The live check requires valid grants for the reviewed Python assignment and all 12 runner-backed Practical C++ assignments before the full regressions begin. If the recorded value was already `false`, do not enable the checker and record that execution remains untested until the separate pause reason is resolved; the paused check still proves executable grants are closed and all 18 teaching-only Practical C++ IDs remain unavailable.
 11. If any regression fails, set `RUNNER_CONFIG.enabled` to `false` immediately. If every applicable check passes, restore the exact pre-release value recorded in step 3. Never enable a checker that was already paused for another reason.
 
 ## Rollback
@@ -105,7 +109,7 @@ For staging, add:
 
 Record `npx wrangler containers list --json` before and after a rollback, adding `--config wrangler.staging.jsonc` for staging, and verify that the same four runner application IDs, images, versions, reported instance counts, and update times remain unchanged.
 
-Never roll production below the production compatibility floors recorded in the [Phase 5A release](PHASE_5A_RELEASE.md) and the [Phase 5B compatibility release](PHASE_5B_COMPATIBILITY_RELEASE.md). After a rollback, rerun `npm run check:live`, verify that a record containing the reserved Phase 5B identifiers can still be read and saved without loss, confirm the unpublished C++ routes and assignments remain unavailable, and run the full production runner regression set during a controlled enabled window.
+Never roll production below the production compatibility floors recorded in the [Phase 5A release](PHASE_5A_RELEASE.md) and the [Phase 5B compatibility release](PHASE_5B_COMPATIBILITY_RELEASE.md). After a rollback, verify that a record containing the reserved Phase 5B identifiers can still be read and saved without loss. Run the live check that matches the restored source surface, then run the complete environment-specific runner regression set during a controlled enabled window.
 
 ## Intentional runner releases
 
@@ -121,7 +125,7 @@ npm run deploy:runner:cpp:production:dry-run
 npm run deploy:runner:cpp:production
 ```
 
-The dry-run commands compile the Worker and build every configured container locally because Wrangler requires Docker even for an `immediate` container dry run. They do not read or change remote runner state, and they do not require a recorded staging proof. The actual commands run the complete release gate first, then stop unless the checkout is clean, on `main`, and matches both `origin/main` and the live remote `main` ref. The actual wrapper also runs the four-image validation with a prefix derived from that exact commit. It repeats the clean-main and live-ref proof immediately before upload. For the upload, it creates a temporary mode-0600 configuration in which only C++ uses `Dockerfile.runner.cpp`; Python, C#, and Java are pinned to their exact live digest URIs after exact Cloudflare registry, account, and repository validation. The file is removed after Wrangler exits.
+The dry-run commands compile the Worker and build every configured container locally because Wrangler requires Docker even for an `immediate` container dry run. They do not read or change remote runner state, and they do not require a recorded staging proof. The actual commands run the complete release gate first, then stop unless the checkout is clean, on `main`, and matches both `origin/main` and the live remote `main` ref. The actual wrapper also runs the four-image validation with a prefix derived from that exact commit. It repeats the clean-main and live-ref proof immediately before upload. For the upload, it creates a temporary mode-0600 configuration in which only C++ uses `Dockerfile.runner.cpp`; Python, C#, and Java are pinned to their exact live digest URIs after exact Cloudflare registry, account, and repository validation. The same upload carries the built six-course site, Worker code, and published runner registry. The file is removed after Wrangler exits.
 
 The wrapper is intentionally narrower than a raw Wrangler command. It:
 
@@ -167,7 +171,8 @@ The command always attempts to set staging back to paused in `finally`, then pro
 7. Save the before and after snapshots, both Worker version IDs, and the exact rollback-evidence JSON printed by the wrapper. Keep the JSON outside the repository so it does not make the release checkout dirty.
 8. Keep staging paused while checking the static site and the published assignment boundary.
 9. Run `npm run prove:runner:cpp:staging`. It opens the one controlled runner window, runs every fixed staging check, pauses in `finally`, proves the public endpoint paused, and records the mode-0600 local proof only after the Worker and all four containers remain unchanged.
-10. Do not continue to production unless the recorded proof exists and remains fresh, the C++ analyzer probes, adversarial cases, four-language regressions, container readiness, and manual browser checks all pass.
+10. Do not run `npm run deploy:site:staging` after step 6. A second Worker upload would change the version bound to the proof.
+11. Do not continue to production unless the recorded proof exists and remains fresh, the C++ analyzer probes, adversarial cases, four-language regressions, container readiness, and manual browser checks all pass.
 
 ### Practical C++ production sequence
 
@@ -181,6 +186,7 @@ The command always attempts to set staging back to paused in `finally`, then pro
 8. Keep production paused while running `npm run check:live:paused` and the signed-out browser checks.
 9. If production was enabled before the release, open one controlled runner window and run the complete production regression set, including `npm run check:runner:cpp-collections:production`. Pause immediately if any check fails.
 10. Restore the exact pre-release runner state only after every applicable check passes. Never enable a runner that was already paused for another reason.
+11. Do not add a routine site deployment to this sequence. The guarded production upload is the site, Worker, registry, and image publication.
 
 ### Runner-image rollback
 

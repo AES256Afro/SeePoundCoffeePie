@@ -2,22 +2,22 @@ import { expect, PYTHON_FOUNDATION_MISSION_IDS, test } from './fixtures'
 
 const practicalPythonCoursePath = '/courses/python-data-tools'
 const practicalPythonLessonPath = '/learn/python-data-tools/py-data-return-values/pydata1-retrieve-call'
-const privateCppCoursePath = '/courses/cpp-collections-records'
-const privateCppLessonPath = '/learn/cpp-collections-records/cpp-records-return-values/cpprecords1-retrieve-call'
+const practicalCppCoursePath = '/courses/cpp-collections-records'
 
-test('the published catalog exposes only the five reviewed courses', async ({ page, seedProgress }) => {
+test('the published catalog exposes all six reviewed courses', async ({ page, seedProgress }) => {
   await seedProgress()
   await page.goto('/courses')
 
   await expect(page.getByRole('heading', { level: 1, name: 'Choose a course' })).toBeVisible()
   const catalog = page.getByRole('region', { name: 'Courses' })
-  await expect(catalog.getByRole('article')).toHaveCount(5)
+  await expect(catalog.getByRole('article')).toHaveCount(6)
   await expect(catalog.getByRole('heading', { name: 'Python Foundations' })).toBeVisible()
   await expect(catalog.getByRole('heading', { name: 'C++ Foundations' })).toBeVisible()
   await expect(catalog.getByRole('heading', { name: 'C# Foundations' })).toBeVisible()
   await expect(catalog.getByRole('heading', { name: 'Java Foundations' })).toBeVisible()
   await expect(catalog.getByRole('heading', { name: 'Practical Python: Data Tools' })).toBeVisible()
-  await expect(page.locator(`a[href="${privateCppCoursePath}"]`)).toHaveCount(0)
+  await expect(catalog.getByRole('heading', { name: 'Practical C++: Collections and Records' })).toBeVisible()
+  await expect(catalog.locator(`a[href="${practicalCppCoursePath}"]`)).toHaveCount(1)
 })
 
 test('the Practical Python outline explains both prerequisites while locked', async ({ page, seedProgress }) => {
@@ -64,16 +64,3 @@ test('a direct Practical Python lesson opens after both prerequisites are comple
   await expect(page.getByRole('heading', { level: 1, name: 'Trace a familiar function call' })).toBeVisible()
   await expect(page.getByText('Lesson locked')).toHaveCount(0)
 })
-
-for (const route of [privateCppCoursePath, privateCppLessonPath]) {
-  test(`the unpublished Practical C++ boundary rejects ${route}`, async ({ page, seedProgress }) => {
-    await seedProgress()
-    await page.goto(route)
-
-    await expect(page.getByRole('heading', { level: 1, name: 'We could not find that page' })).toBeVisible()
-    await expect(page.getByText('Page not found')).toBeVisible()
-    await expect(page.getByText('Practical C++: Collections and Records')).toHaveCount(0)
-    await expect(page.getByText('Workshop Stock Report')).toHaveCount(0)
-    await expect(page.locator(`a[href="${privateCppCoursePath}"]`)).toHaveCount(0)
-  })
-}

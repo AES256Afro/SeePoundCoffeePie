@@ -37,6 +37,22 @@ describe('public learning sequence', () => {
     expect(publishedContinuingCourseIdsForLanguage('python')).toEqual(['python-data-tools'])
   })
 
+  it('declares the published C++ transition in one explicit order', () => {
+    expect(publishedLearningUnitsForLanguage('cpp')).toEqual([
+      { kind: 'course', stage: 'foundation', courseId: 'cpp-foundations' },
+      {
+        kind: 'project',
+        projectId: 'first-compiled-program',
+        prerequisiteCourseId: 'cpp-foundations',
+      },
+      { kind: 'course', stage: 'continuing', courseId: 'cpp-collections-records' },
+    ])
+    expect(publishedFoundationCourseId('cpp')).toBe('cpp-foundations')
+    expect(publishedProjectUnitAfterCourse('cpp', 'cpp-foundations')?.projectId)
+      .toBe('first-compiled-program')
+    expect(publishedContinuingCourseIdsForLanguage('cpp')).toEqual(['cpp-collections-records'])
+  })
+
   it('orders project manifests from the learning sequence, not registration order', () => {
     const reversed = [...projectManifests].reverse()
     const ordered = orderProjectManifestsForLearningSequence(reversed)
@@ -120,15 +136,15 @@ describe('public learning sequence', () => {
     }])).toThrow(/must follow its prerequisite course/iu)
   })
 
-  it('does not publish Practical C++ in any sequence or loader registry', () => {
-    const publicSurface = JSON.stringify({
-      publishedLearningSequences,
-      publishedContinuingCourseLoaders: publishedContinuingCourseLoaders.map((loader) => loader.courseId),
-      guidedProjectLoaders: guidedProjectLoaders.map((loader) => (
-        projectRouteKey(loader.language, loader.projectId)
-      )),
+  it('publishes Practical C++ in both its sequence and loader registry', () => {
+    expect(publishedContinuingCourseLoaders.map((loader) => loader.courseId)).toEqual([
+      'python-data-tools',
+      'cpp-collections-records',
+    ])
+    expect(publishedLearningUnitsForLanguage('cpp').at(-1)).toEqual({
+      kind: 'course',
+      stage: 'continuing',
+      courseId: 'cpp-collections-records',
     })
-
-    expect(publicSurface).not.toContain('cpp-collections-records')
   })
 })

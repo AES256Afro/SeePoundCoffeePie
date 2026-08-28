@@ -1,4 +1,5 @@
 import { Resolver } from 'node:dns/promises'
+import { readFile } from 'node:fs/promises'
 import { request as httpsRequest } from 'node:https'
 
 import {
@@ -8,24 +9,43 @@ import {
 import {
   assertReviewedPublishedGrant,
   assertReviewedRunnerStatus,
+  assertReviewedTeachingOnlyGrantRejection,
 } from './runner-deployment-checks.mjs'
+import {
+  practicalCppServerOwnedMarkers,
+} from './practical-cpp-candidate-app-guards.mjs'
+import {
+  inspectPracticalCppCandidateSitemap,
+  practicalCppCandidateLessonUrls,
+} from './practical-cpp-candidate-sitemap.mjs'
 import {
   privateCourseIsPublished,
   privateCourseReleaseState,
+  practicalCppPrivateJavaScriptMarkers,
+  practicalCppRunnerBackedLessonIds,
+  practicalCppTeachingOnlyLessonIds,
   unpublishedCppCourseId,
   unpublishedCppCoursePath,
-  unpublishedCppJavaScriptMarkers,
-  unpublishedCppLessonIds,
   unpublishedCppLessonPath,
-  unpublishedCppLessonPrefix,
 } from './unpublished-cpp-release-boundary.mjs'
 
 if (
-  privateCourseReleaseState(unpublishedCppCourseId) !== 'unpublished'
-  || privateCourseIsPublished(unpublishedCppCourseId)
+  privateCourseReleaseState(unpublishedCppCourseId) !== 'published'
+  || !privateCourseIsPublished(unpublishedCppCourseId)
 ) {
-  throw new Error('The production boundary check requires Practical C++ to remain unpublished.')
+  throw new Error('The production boundary check requires Practical C++ to be published.')
 }
+
+const practicalCppPrivateMarkers = practicalCppServerOwnedMarkers({
+  catalogMarkers: practicalCppPrivateJavaScriptMarkers.map(({ value }) => value),
+  serverAssessmentSource: await readFile(
+    new URL('../src/data/cpp-collections-records.server.ts', import.meta.url),
+    'utf8',
+  ),
+})
+const practicalCppTeachingData = await readFile(
+  new URL('../src/data/cpp-collections-records-course-packed.generated.json', import.meta.url),
+)
 
 const canonical = 'https://seepoundcoffeepie.com/'
 const expectedTitle = '<title>SeePoundCoffeePie | Programming from the beginning.</title>'
@@ -113,14 +133,9 @@ if (
   entryAssetResponse.status !== 200
   || !(entryAssetResponse.headers.get('content-type') ?? '').includes('javascript')
   || !entryAsset.includes('python-data-tools')
+  || !entryAsset.includes(unpublishedCppCourseId)
 ) {
-  throw new Error('The deployed application entry does not contain the Practical Python course registry')
-}
-
-for (const unpublishedRouteMarker of [unpublishedCppCoursePath, unpublishedCppLessonPrefix]) {
-  if (entryAsset.includes(unpublishedRouteMarker)) {
-    throw new Error(`The deployed application entry publicly registers the unpublished C++ route ${unpublishedRouteMarker}`)
-  }
+  throw new Error('The deployed application entry does not contain the reviewed Practical Python and Practical C++ course registry')
 }
 
 const deployedJavaScriptAssets = await inspectDeployedJavaScriptChunkGraph({
@@ -130,10 +145,10 @@ const deployedJavaScriptAssets = await inspectDeployedJavaScriptChunkGraph({
   request: requestWithFreshDns,
 })
 for (const [assetUrl, asset] of deployedJavaScriptAssets) {
-  for (const marker of unpublishedCppJavaScriptMarkers) {
-    if (asset.includes(marker.value)) {
+  for (const marker of practicalCppPrivateMarkers) {
+    if (asset.includes(marker)) {
       throw new Error(
-        `The deployed JavaScript chunk graph exposes unpublished Phase 5B ${marker.kind} in ${new URL(assetUrl).pathname}`,
+        `The deployed JavaScript chunk graph exposes a private Practical C++ server marker in ${new URL(assetUrl).pathname}`,
       )
     }
   }
@@ -163,6 +178,52 @@ await verifyPracticalPythonAsset(
   'Practical Python teaching-content asset',
 )
 
+const practicalCppLoader = uniqueDeployedJavaScriptAssetByPath(
+  deployedJavaScriptAssets,
+  /\/assets\/cpp-collections-records-course-packed-[A-Za-z0-9_-]+\.js$/u,
+)
+if (!practicalCppLoader) {
+  throw new Error('The deployed JavaScript graph does not contain one unique Practical C++ teaching-data loader')
+}
+const [practicalCppLoaderUrl, practicalCppLoaderAsset] = practicalCppLoader
+if (practicalCppLoaderUrl === entryAssetUrl.href) {
+  throw new Error('The Practical C++ teaching-data loader entered the initial application asset')
+}
+const practicalCppJsonNames = [...practicalCppLoaderAsset.matchAll(
+  /cpp-collections-records-course-packed\.generated-[A-Za-z0-9_-]{6,}\.json/gu,
+)].map((match) => match[0])
+if (new Set(practicalCppJsonNames).size !== 1) {
+  throw new Error('The Practical C++ loader does not own exactly one content-hashed teaching-data asset')
+}
+const [practicalCppJsonName] = practicalCppJsonNames
+const practicalCppJsonOwners = [...deployedJavaScriptAssets].filter(([, asset]) => (
+  asset.includes(practicalCppJsonName)
+))
+if (
+  practicalCppJsonOwners.length !== 1
+  || practicalCppJsonOwners[0][0] !== practicalCppLoaderUrl
+  || entryAsset.includes(practicalCppJsonName)
+) {
+  throw new Error('The Practical C++ teaching-data asset is not isolated behind its one reviewed lazy loader')
+}
+const practicalCppJsonResponse = await requestWithFreshDns(
+  new URL(`/assets/${practicalCppJsonName}`, canonical),
+  { redirect: 'manual' },
+)
+const practicalCppJson = Buffer.from(await practicalCppJsonResponse.arrayBuffer())
+if (
+  practicalCppJsonResponse.status !== 200
+  || !(practicalCppJsonResponse.headers.get('content-type') ?? '').includes('json')
+  || !practicalCppJson.equals(practicalCppTeachingData)
+) {
+  throw new Error('The deployed Practical C++ teaching data does not exactly match the reviewed generated asset')
+}
+for (const marker of practicalCppPrivateMarkers) {
+  if (practicalCppJson.includes(marker)) {
+    throw new Error('The deployed Practical C++ teaching data exposes a private server-owned marker')
+  }
+}
+
 const sitemapResponse = await requestWithFreshDns(new URL('/sitemap.xml', canonical), { redirect: 'manual' })
 const sitemap = await sitemapResponse.text()
 if (
@@ -173,29 +234,7 @@ if (
 ) {
   throw new Error('The live sitemap does not publish the Practical Python course and first lesson')
 }
-
-for (const unpublishedRoutePrefix of [unpublishedCppCoursePath, unpublishedCppLessonPrefix]) {
-  const unpublishedUrlPrefix = new URL(unpublishedRoutePrefix, canonical).href
-  if (sitemap.includes(`<loc>${unpublishedUrlPrefix}`)) {
-    throw new Error(`The live sitemap publishes an unpublished C++ route under ${unpublishedRoutePrefix}`)
-  }
-}
-
-for (const unpublishedRoute of [unpublishedCppCoursePath, unpublishedCppLessonPath]) {
-  // Static hosting returns the application shell for unknown browser paths.
-  // The route stays private when the shell has no route registration and the
-  // sitemap does not publish it.
-  const unpublishedUrl = new URL(unpublishedRoute, canonical)
-  const unpublishedResponse = await requestWithFreshDns(unpublishedUrl, { redirect: 'manual' })
-  const unpublishedBody = await unpublishedResponse.text()
-  if (
-    unpublishedResponse.status !== 200
-    || !unpublishedBody.includes(expectedTitle)
-    || !unpublishedBody.includes('<div id="root"></div>')
-  ) {
-    throw new Error(`The unpublished C++ path did not remain behind the ordinary application fallback: ${unpublishedRoute}`)
-  }
-}
+const practicalCppSitemap = inspectPracticalCppCandidateSitemap(sitemap)
 
 const statusResponse = await requestWithFreshDns(new URL('/api/runner/status', canonical), {
   redirect: 'manual',
@@ -233,13 +272,14 @@ try {
 assertReviewedPublishedGrant({
   body: publishedGrantResult,
   exerciseId: publishedRunnerExerciseId,
+  expectedLanguage: 'python',
   hasSetCookie: publishedGrantResponse.headers.has('set-cookie'),
   httpStatus: publishedGrantResponse.status,
   label: 'live',
   requireEnabled: !allowPaused,
 })
 
-for (const exerciseId of unpublishedCppLessonIds) {
+async function requestRunnerGrant(exerciseId) {
   const grantResponse = await requestWithFreshDns(grantUrl, {
     method: 'POST',
     redirect: 'manual',
@@ -254,29 +294,37 @@ for (const exerciseId of unpublishedCppLessonIds) {
   try {
     grantResult = JSON.parse(grantBody)
   } catch {
-    throw new Error(`The runner returned unreadable JSON while checking unpublished exercise ${exerciseId}`)
+    throw new Error(`The runner returned unreadable JSON while checking ${exerciseId}`)
   }
+  return { grantResponse, grantResult }
+}
 
-  const rejectedAsUnpublished = grantResponse.status === 404
-    && [
-      'That exercise does not support live execution.',
-      'This page does not have a code check yet.',
-    ].includes(grantResult?.error)
-  const issuedGrant = typeof grantResult?.grant === 'string'
-  const setCookie = grantResponse.headers.has('set-cookie')
-
-  if (
-    !rejectedAsUnpublished
-    || issuedGrant
-    || setCookie
-  ) {
-    throw new Error(`The unpublished C++ exercise ${exerciseId} crossed the public run-grant boundary`)
-  }
+for (const exerciseId of practicalCppRunnerBackedLessonIds) {
+  const { grantResponse, grantResult } = await requestRunnerGrant(exerciseId)
+  assertReviewedPublishedGrant({
+    body: grantResult,
+    exerciseId,
+    expectedLanguage: 'cpp',
+    hasSetCookie: grantResponse.headers.has('set-cookie'),
+    httpStatus: grantResponse.status,
+    label: 'live',
+    requireEnabled: !allowPaused,
+  })
+}
+for (const exerciseId of practicalCppTeachingOnlyLessonIds) {
+  const { grantResponse, grantResult } = await requestRunnerGrant(exerciseId)
+  assertReviewedTeachingOnlyGrantRejection({
+    body: grantResult,
+    exerciseId,
+    hasSetCookie: grantResponse.headers.has('set-cookie'),
+    httpStatus: grantResponse.status,
+    label: 'live',
+  })
 }
 const runnerStateCheck = allowPaused
-  ? 'configured runner paused and published grant rejected with 503'
-  : `configured runner enabled and published grant issued for ${publishedRunnerExerciseId}`
-const hiddenGrantCheck = `${runnerStateCheck}; all unpublished assignments rejected with 404`
+  ? 'configured runner paused and executable grants rejected with 503'
+  : 'configured runner enabled and reviewed Python and C++ grants issued'
+const practicalCppGrantCheck = `${runnerStateCheck}; all teaching-only C++ assignments rejected with 404`
 
 const robotsResponse = await requestWithFreshDns(new URL('/robots.txt', canonical), { redirect: 'manual' })
 const robots = await robotsResponse.text()
@@ -339,6 +387,7 @@ const canonicalRoutes = [
   '/courses',
   '/courses/python-foundations',
   '/courses/python-data-tools',
+  unpublishedCppCoursePath,
   '/courses/cpp-foundations',
   '/courses/csharp-foundations',
   '/courses/java-foundations',
@@ -356,6 +405,7 @@ const canonicalRoutes = [
   '/portfolio/java/picnic-planner',
   '/learn/python-foundations/py-first-spark/py-console',
   '/learn/python-data-tools/py-data-return-values/pydata1-retrieve-call',
+  unpublishedCppLessonPath,
   '/learn/cpp-foundations/cpp-reactor/cpp-compiler',
   '/learn/csharp-foundations/cs-shield/cs-dotnet',
   '/learn/java-foundations/java-coffee-protocol/java-jvm',
@@ -380,4 +430,11 @@ for (const route of [...canonicalRoutes, ...legacyRoutes]) {
   }
 }
 
-console.log(`Live verification passed for Phase 5A assets, a ${deployedJavaScriptAssets.size}-asset JavaScript chunk graph, sitemap, robots, social previews, apex, www redirect, headers, ${canonicalRoutes.length} canonical routes, ${legacyRoutes.length} legacy routes, 2 unpublished C++ route boundaries, and all ${unpublishedCppLessonIds.length} unpublished C++ lesson assignments (${hiddenGrantCheck}).`)
+for (const practicalCppLessonUrl of practicalCppCandidateLessonUrls) {
+  const spaResponse = await requestWithFreshDns(practicalCppLessonUrl, { redirect: 'manual' })
+  if (spaResponse.status !== 200 || !(await spaResponse.text()).includes(expectedTitle)) {
+    throw new Error(`SPA navigation fallback did not return the application shell for ${new URL(practicalCppLessonUrl).pathname}`)
+  }
+}
+
+console.log(`Live verification passed for Practical Python and Practical C++ assets, a ${deployedJavaScriptAssets.size}-asset JavaScript chunk graph, exact ${practicalCppSitemap.lessonCount}-lesson C++ sitemap, robots, social previews, apex, www redirect, headers, ${canonicalRoutes.length} canonical routes, ${legacyRoutes.length} legacy routes, all ${practicalCppCandidateLessonUrls.length} C++ lesson routes, ${practicalCppRunnerBackedLessonIds.length} runner-backed C++ assignments, and ${practicalCppTeachingOnlyLessonIds.length} teaching-only C++ assignments (${practicalCppGrantCheck}).`)

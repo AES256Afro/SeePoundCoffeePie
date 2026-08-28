@@ -37,7 +37,6 @@ export function createSiteViteConfig(
       exclude: [
         ...configDefaults.exclude,
         'tests/e2e/**',
-        'tests/candidate-e2e/**',
       ],
     },
     server: {

@@ -28,9 +28,7 @@ export default tseslint.config(
   {
     files: [
       'playwright.config.ts',
-      'playwright.candidate.config.ts',
       'tests/e2e/**/*.ts',
-      'tests/candidate-e2e/**/*.ts',
     ],
     languageOptions: {
       globals: {

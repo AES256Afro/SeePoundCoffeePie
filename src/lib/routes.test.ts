@@ -268,9 +268,40 @@ describe('bookmarkable application routes', () => {
   })
 })
 
+describe('published Practical C++ route ownership', () => {
+  it('resolves the exact canonical course and lesson', () => {
+    expect(parseAppRoute('/courses/cpp-collections-records')).toEqual({
+      page: 'course',
+      language: 'cpp',
+      courseId: 'cpp-collections-records',
+      conceptIds: [],
+    })
+    expect(parseAppRoute(
+      '/learn/cpp-collections-records/cpp-records-return-values/cpprecords1-retrieve-call',
+    )).toEqual({
+      page: 'lesson',
+      language: 'cpp',
+      courseId: 'cpp-collections-records',
+      missionId: 'cpp-records-return-values',
+      exerciseId: 'cpprecords1-retrieve-call',
+      practice: false,
+      conceptIds: [],
+    })
+  })
+
+  it('rejects a real lesson under the wrong module and a made-up lesson', () => {
+    expect(parseAppRoute(
+      '/learn/cpp-collections-records/cpp-records-vectors/cpprecords1-retrieve-call',
+    ).page).toBe('not-found')
+    expect(parseAppRoute(
+      '/learn/cpp-collections-records/cpp-records-return-values/cpprecords1-made-up',
+    ).page).toBe('not-found')
+  })
+})
+
 describe('injected canonical course route ownership', () => {
-  const candidateCourseId = 'cpp-collections-records' as CourseId
-  const candidateSlug = 'cpp-collections-records'
+  const candidateCourseId = 'reviewed-test-course' as CourseId
+  const candidateSlug = 'reviewed-test-course'
   const candidateMissionId = 'cpp-records'
   const candidateLessonId = 'cpp-records-create'
   const parseCandidateRoute = createAppRouteParser({

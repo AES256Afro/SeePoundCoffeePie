@@ -8,6 +8,37 @@ function contentsAsBuffer(contents) {
   return Buffer.isBuffer(contents) ? contents : Buffer.from(contents)
 }
 
+function sourceLiteralPropertyValues(source, property, minimumCount) {
+  const expression = new RegExp(`\\b${property}:\\s*'([^'\\\\]*)'`, 'gu')
+  const values = [...source.matchAll(expression)].map((match) => match[1])
+  if (values.length < minimumCount) {
+    throw new Error(
+      `The Practical C++ server assessment no longer exposes the reviewed ${property} marker set.`,
+    )
+  }
+  return values
+}
+
+export function practicalCppServerOwnedMarkers({ catalogMarkers, serverAssessmentSource }) {
+  if (!Array.isArray(catalogMarkers) || catalogMarkers.length !== 4) {
+    throw new Error('The Practical C++ private marker catalog is incomplete.')
+  }
+  if (typeof serverAssessmentSource !== 'string' || serverAssessmentSource.length === 0) {
+    throw new Error('The Practical C++ server assessment source is unreadable.')
+  }
+  return Object.freeze([...new Set([
+    ...catalogMarkers,
+    ...sourceLiteralPropertyValues(serverAssessmentSource, 'validation', 6),
+    ...sourceLiteralPropertyValues(serverAssessmentSource, 'message', 6),
+    ...sourceLiteralPropertyValues(serverAssessmentSource, 'id', 1),
+    ...sourceLiteralPropertyValues(serverAssessmentSource, 'name', 1),
+    ...sourceLiteralPropertyValues(serverAssessmentSource, 'purpose', 1),
+    'authored_frame',
+    'part_record',
+    'supplied_harness',
+  ])])
+}
+
 export function inspectPracticalCppCandidateAssets({
   assets,
   authoredTeachingData,

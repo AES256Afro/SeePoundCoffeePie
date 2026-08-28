@@ -13,7 +13,7 @@ import {
 } from './course-model'
 
 describe('course presentation model', () => {
-  it('presents four foundations and one distinct next-step course', () => {
+  it('presents four foundations and two distinct next-step courses', () => {
     const cards = buildCourseCards(initialProgress())
 
     expect(cards.map((card) => ({
@@ -27,6 +27,7 @@ describe('course presentation model', () => {
       { id: 'csharp-foundations', slug: 'csharp-foundations', title: 'C# Foundations', symbol: 'hash' },
       { id: 'java-foundations', slug: 'java-foundations', title: 'Java Foundations', symbol: 'coffee' },
       { id: 'python-data-tools', slug: 'python-data-tools', title: 'Practical Python: Data Tools', symbol: 'pi' },
+      { id: 'cpp-collections-records', slug: 'cpp-collections-records', title: 'Practical C++: Collections and Records', symbol: 'eye' },
     ])
 
     for (const card of cards.slice(0, 4)) {
@@ -41,6 +42,15 @@ describe('course presentation model', () => {
     }
     expect(cards[4]).toMatchObject({
       language: 'python',
+      kind: 'continuing',
+      level: 'Beginner II',
+      availability: 'locked',
+      actionLabel: 'View course',
+      moduleCount: 6,
+      lessonCount: 30,
+    })
+    expect(cards[5]).toMatchObject({
+      language: 'cpp',
       kind: 'continuing',
       level: 'Beginner II',
       availability: 'locked',

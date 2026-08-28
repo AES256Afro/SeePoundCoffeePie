@@ -1,4 +1,4 @@
-import { expect, test } from './fixtures'
+import { CPP_FOUNDATION_MISSION_IDS, expect, test } from './fixtures'
 
 test.describe('mobile navigation and language controls', () => {
   test.use({
@@ -37,6 +37,34 @@ test.describe('mobile navigation and language controls', () => {
       document.documentElement.scrollWidth <= window.innerWidth + 1
     ))
     expect(hasNoHorizontalOverflow).toBe(true)
+  })
+
+  test('keeps the Practical C++ course and editor usable without running code', async ({ page, seedProgress }) => {
+    await seedProgress({
+      activeLanguage: 'cpp',
+      completedMissions: [...CPP_FOUNDATION_MISSION_IDS],
+      completedProjects: ['first-compiled-program'],
+    })
+    await page.goto('/courses/cpp-collections-records')
+
+    await expect(page.getByRole('heading', {
+      level: 1,
+      name: 'Practical C++: Collections and Records',
+    })).toBeVisible()
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1)).toBe(true)
+
+    await page.goto(
+      '/learn/cpp-collections-records/cpp-records-return-values/cpprecords1-fix-return',
+    )
+    await expect(page.getByRole('heading', {
+      exact: true,
+      level: 1,
+      name: 'Repair the returned subtotal',
+    })).toBeVisible()
+    await expect(page.getByRole('textbox', { name: 'Code editor' })).toBeVisible()
+    await expect(page.getByRole('button', { exact: true, name: 'Check my code' })).toBeVisible()
+    await expect(page.getByRole('region', { name: 'Run results' })).toHaveCount(0)
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1)).toBe(true)
   })
 })
 

@@ -6,7 +6,6 @@ import {
   codebookEntries,
   codebookExampleState,
   codebookMatches,
-  mergeCodebookContributions,
 } from './codebook'
 import { basePublishedContinuingCourseRegistrations } from './continuing-course-publications.base'
 import {
@@ -17,7 +16,6 @@ import { courseDefinitions } from './course-registry'
 import { foundationMissionLessonIds } from './foundation-curriculum-index'
 import { createLearningSurface } from './learning-surface'
 import {
-  definePublishedLearningSequences,
   publishedLearningSequences,
 } from './learning-sequence'
 import { trackById } from './curriculum'
@@ -41,17 +39,7 @@ const candidateCourseId = candidateCppContinuingCourseRegistration.definition.id
 const foundationCourseDefinitions = courseDefinitions.filter((definition) => (
   definition.kind === 'foundation'
 ))
-const candidateLearningSequences = definePublishedLearningSequences(
-  publishedLearningSequences.map((sequence) => sequence.language === 'cpp'
-    ? {
-        ...sequence,
-        units: [
-          ...sequence.units,
-          { kind: 'course', stage: 'continuing', courseId: candidateCourseId } as const,
-        ],
-      }
-    : sequence),
-)
+const candidateLearningSequences = publishedLearningSequences
 const candidateSurface = createLearningSurface({
   foundationCourseDefinitions,
   foundationModuleLessonIds: foundationMissionLessonIds,
@@ -126,22 +114,14 @@ const candidateCodebookChanges = [
     unlockAfterMissionId: 'cpp-records-summaries',
   },
 ] as const
-const mergedCandidateCodebookEntries = mergeCodebookContributions(
-  codebookEntries,
-  candidateCodebookContributions,
-  (language, missionId) => candidateSurface.courseDefinitions.some((definition) => (
-    definition.language === language
-    && definition.kind === 'continuing'
-    && candidateSurface.courseOwnsMission(definition.id, missionId)
-  )),
-)
+const mergedCandidateCodebookEntries = codebookEntries
 
-describe('controlled Practical C++ publication candidate', () => {
-  it('keeps the base source on five courses and assembles the candidate only when selected', () => {
+describe('controlled Practical C++ production publication', () => {
+  it('keeps the base source fail closed while production publishes six courses', () => {
     expect(basePublishedContinuingCourseRegistrations.map((entry) => entry.definition.id))
       .toEqual(['python-data-tools'])
     expect(baseCodebookContributions).toEqual([])
-    expect(courseDefinitions.map((definition) => definition.id)).not.toContain(candidateCourseId)
+    expect(courseDefinitions.map((definition) => definition.id)).toContain(candidateCourseId)
 
     expect(candidateSurface.courseDefinitions.map((definition) => definition.id)).toEqual([
       'python-foundations',
@@ -154,7 +134,7 @@ describe('controlled Practical C++ publication candidate', () => {
     expect(candidateSurface.continuingCourseIdsForLanguage('cpp')).toEqual([candidateCourseId])
   })
 
-  it('validates all six candidate modules and thirty lessons against loaded content', async () => {
+  it('validates all six published modules and thirty lessons against loaded content', async () => {
     const content = await candidateSurface.continuingCourseContentRequest(candidateCourseId)
     expect(content?.missions).toHaveLength(6)
     expect(content?.missions.flatMap((mission) => mission.exercises)).toHaveLength(30)
@@ -163,7 +143,7 @@ describe('controlled Practical C++ publication candidate', () => {
     )
   })
 
-  it('requires both earlier C++ units before the candidate becomes available', () => {
+  it('requires both earlier C++ units before the published course becomes available', () => {
     const empty = initialProgress('cpp')
     expect(candidateSurface.missingCoursePrerequisites(candidateCourseId, empty)).toHaveLength(2)
     expect(candidateSurface.courseIsAvailable(candidateCourseId, empty)).toBe(false)
@@ -177,7 +157,7 @@ describe('controlled Practical C++ publication candidate', () => {
     expect(candidateSurface.courseIsAvailable(candidateCourseId, ready)).toBe(true)
   })
 
-  it('resolves candidate course and lesson URLs only through injected ownership', () => {
+  it('resolves the published course and lesson URLs through production ownership', () => {
     const parseCandidateRoute = createAppRouteParser(candidateSurface)
     const lessonPath = '/learn/cpp-collections-records/cpp-records-return-values/cpprecords1-retrieve-call'
 
@@ -192,11 +172,13 @@ describe('controlled Practical C++ publication candidate', () => {
       missionId: 'cpp-records-return-values',
       exerciseId: 'cpprecords1-retrieve-call',
     })
-    expect(parseAppRoute('/courses/cpp-collections-records').page).toBe('not-found')
-    expect(parseAppRoute(lessonPath).page).toBe('not-found')
+    expect(parseAppRoute('/courses/cpp-collections-records')).toEqual(
+      parseCandidateRoute('/courses/cpp-collections-records'),
+    )
+    expect(parseAppRoute(lessonPath)).toEqual(parseCandidateRoute(lessonPath))
   })
 
-  it('defines the exact eleven candidate Code Reference changes', () => {
+  it('defines the exact eleven published Code Reference changes', () => {
     expect(candidateCodebookContributions.map((contribution) => ({
       kind: contribution.kind,
       term: contribution.kind === 'add' ? contribution.entry.term : contribution.targetTerm,
@@ -216,7 +198,7 @@ describe('controlled Practical C++ publication candidate', () => {
     ))).toBe(false)
   })
 
-  it('keeps every candidate example locked to its exact C++ mission', () => {
+  it('keeps every published example locked to its exact C++ mission', () => {
     const cpp = trackById('cpp')
     const allFoundationMissions = cpp.missions.map((mission) => mission.id)
     const allPythonContinuingMissions = candidateSurface
@@ -293,7 +275,7 @@ describe('controlled Practical C++ publication candidate', () => {
       }
     }
 
-    expect(JSON.stringify(codebookEntries)).not.toContain('cpp-records-')
+    expect(JSON.stringify(codebookEntries)).toContain('cpp-records-')
     expect(JSON.stringify(baseCodebookContributions)).not.toContain('cpp-records-')
   })
 })

@@ -440,7 +440,7 @@ export function LessonPlayer({ initialExerciseId, mission, onExerciseChange, onP
             </div>
           </section>
         )}
-        <section className="lesson-briefing">
+        <section className="lesson-briefing" tabIndex={0}>
           <h1 ref={lessonHeadingRef} tabIndex={-1}>{exercise.title}</h1>
           <p className="lesson-explanation">{exercise.explanation}</p>
           <div className="analogy-card">

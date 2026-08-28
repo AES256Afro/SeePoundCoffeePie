@@ -174,7 +174,7 @@ function ContinuingCoursePageContent({ course, courseId, onNavigate, onProgress,
     <main className="workshop-page course-outline" id="main-content" tabIndex={-1}>
       <NavigateLink className="back-link" onNavigate={onNavigate} to={coursesPath()}><ArrowLeft size={16} /> All courses</NavigateLink>
       <header className={`course-hero course-hero--${definition.language} course-hero--continuing`}>
-        <span aria-label={languageLabels[definition.language]} className={`language-symbol language-symbol--${definition.language} language-symbol--large`}>{courseSymbol(definition)}</span>
+        <span aria-hidden="true" className={`language-symbol language-symbol--${definition.language} language-symbol--large`}>{courseSymbol(definition)}</span>
         <div>
           <p className="eyebrow">{languageLabels[definition.language]} course</p>
           <h1 tabIndex={-1}>{definition.title}</h1>

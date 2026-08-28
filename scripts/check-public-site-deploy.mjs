@@ -81,9 +81,9 @@ for (const environmentName of ['production', 'staging']) {
     if (
       aliasIndex < 0
       || args[aliasIndex + 1]
-        !== '../data/controlled-runner-publication:./src/data/runner-publication.base.ts'
+        !== '../data/controlled-runner-publication:./src/data/runner-publication.with-cpp.ts'
     ) {
-      throw new Error(`The ${environmentName} public-site deployment does not pin the fail-closed runner registry.`)
+      throw new Error(`The ${environmentName} public-site deployment does not pin the published runner registry.`)
     }
   }
 }
@@ -269,4 +269,4 @@ for (const environmentName of ['production', 'staging']) {
   }
 }
 
-console.log('Public-site deployment contract passed. Default releases pin the fail-closed runner registry, freeze all runner container images, and both dry runs succeed with Docker disabled.')
+console.log('Public-site deployment contract passed. Default releases pin the published runner registry, freeze all runner container images, and both dry runs succeed with Docker disabled.')

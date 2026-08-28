@@ -11,11 +11,12 @@ const practicalCppLessonPath = '/learn/cpp-collections-records/cpp-records-retur
 const practicalCppMiddleLessonPath = '/learn/cpp-collections-records/cpp-records-structs/cpprecords3-build-part-record'
 const practicalCppFinalLessonPath = '/learn/cpp-collections-records/cpp-records-workshop-report/cpprecords6-workshop-stock-report'
 const progressStorageKey = 'see-pound-coffee-pie-progress-v3'
-const candidatePrerequisites = {
+const practicalCppPrerequisites = {
+  activeLanguage: 'cpp' as const,
   completedMissions: [...CPP_FOUNDATION_MISSION_IDS],
   completedProjects: ['first-compiled-program'],
 }
-const completedCandidateModulesBeforeFinal = [
+const completedPracticalCppModulesBeforeFinal = [
   'cpp-records-return-values',
   'cpp-records-vectors',
   'cpp-records-structs',
@@ -23,7 +24,239 @@ const completedCandidateModulesBeforeFinal = [
   'cpp-records-summaries',
 ] as const
 
-const candidateCodeReferenceEntries = [
+const practicalCppModuleIds = [
+  'cpp-records-return-values',
+  'cpp-records-vectors',
+  'cpp-records-structs',
+  'cpp-records-updates',
+  'cpp-records-summaries',
+  'cpp-records-workshop-report',
+] as const
+
+type PracticalCppExerciseType = 'bugfix' | 'choice' | 'code' | 'ordering' | 'prediction'
+
+interface PracticalCppLessonCase {
+  moduleIndex: number
+  path: string
+  runnerBacked: boolean
+  title: string
+  type: PracticalCppExerciseType
+}
+
+const practicalCppLessonCases = [
+  {
+    moduleIndex: 0,
+    path: '/learn/cpp-collections-records/cpp-records-return-values/cpprecords1-retrieve-call',
+    runnerBacked: false,
+    title: 'Trace a familiar function call',
+    type: 'prediction',
+  },
+  {
+    moduleIndex: 0,
+    path: '/learn/cpp-collections-records/cpp-records-return-values/cpprecords1-return-purpose',
+    runnerBacked: false,
+    title: 'Meet a returned answer',
+    type: 'choice',
+  },
+  {
+    moduleIndex: 0,
+    path: '/learn/cpp-collections-records/cpp-records-return-values/cpprecords1-predict-result',
+    runnerBacked: false,
+    title: 'Use a returned result',
+    type: 'prediction',
+  },
+  {
+    moduleIndex: 0,
+    path: '/learn/cpp-collections-records/cpp-records-return-values/cpprecords1-fix-return',
+    runnerBacked: true,
+    title: 'Repair the returned subtotal',
+    type: 'bugfix',
+  },
+  {
+    moduleIndex: 0,
+    path: '/learn/cpp-collections-records/cpp-records-return-values/cpprecords1-part-total',
+    runnerBacked: true,
+    title: 'Build a reusable part total',
+    type: 'code',
+  },
+  {
+    moduleIndex: 1,
+    path: '/learn/cpp-collections-records/cpp-records-vectors/cpprecords2-retrieve-array',
+    runnerBacked: false,
+    title: 'Recall a fixed parts array',
+    type: 'prediction',
+  },
+  {
+    moduleIndex: 1,
+    path: '/learn/cpp-collections-records/cpp-records-vectors/cpprecords2-vector-purpose',
+    runnerBacked: false,
+    title: 'Meet a growable collection',
+    type: 'choice',
+  },
+  {
+    moduleIndex: 1,
+    path: '/learn/cpp-collections-records/cpp-records-vectors/cpprecords2-predict-growth',
+    runnerBacked: false,
+    title: 'Follow a vector as it grows',
+    type: 'prediction',
+  },
+  {
+    moduleIndex: 1,
+    path: '/learn/cpp-collections-records/cpp-records-vectors/cpprecords2-fix-push-back',
+    runnerBacked: true,
+    title: 'Repair the vector update',
+    type: 'bugfix',
+  },
+  {
+    moduleIndex: 1,
+    path: '/learn/cpp-collections-records/cpp-records-vectors/cpprecords2-add-parts',
+    runnerBacked: true,
+    title: 'Add parts to a vector',
+    type: 'code',
+  },
+  {
+    moduleIndex: 2,
+    path: '/learn/cpp-collections-records/cpp-records-structs/cpprecords3-retrieve-types',
+    runnerBacked: false,
+    title: 'Recall typed storage',
+    type: 'prediction',
+  },
+  {
+    moduleIndex: 2,
+    path: '/learn/cpp-collections-records/cpp-records-structs/cpprecords3-struct-purpose',
+    runnerBacked: false,
+    title: 'Meet a record shape',
+    type: 'choice',
+  },
+  {
+    moduleIndex: 2,
+    path: '/learn/cpp-collections-records/cpp-records-structs/cpprecords3-predict-fields',
+    runnerBacked: false,
+    title: 'Read a part record',
+    type: 'prediction',
+  },
+  {
+    moduleIndex: 2,
+    path: '/learn/cpp-collections-records/cpp-records-structs/cpprecords3-fix-field-access',
+    runnerBacked: true,
+    title: 'Repair the field name',
+    type: 'bugfix',
+  },
+  {
+    moduleIndex: 2,
+    path: '/learn/cpp-collections-records/cpp-records-structs/cpprecords3-build-part-record',
+    runnerBacked: true,
+    title: 'Build and store a part record',
+    type: 'code',
+  },
+  {
+    moduleIndex: 3,
+    path: '/learn/cpp-collections-records/cpp-records-updates/cpprecords4-retrieve-vector-loop',
+    runnerBacked: false,
+    title: 'Recall a vector loop',
+    type: 'prediction',
+  },
+  {
+    moduleIndex: 3,
+    path: '/learn/cpp-collections-records/cpp-records-updates/cpprecords4-reference-purpose',
+    runnerBacked: false,
+    title: 'Meet a reference',
+    type: 'choice',
+  },
+  {
+    moduleIndex: 3,
+    path: '/learn/cpp-collections-records/cpp-records-updates/cpprecords4-predict-update',
+    runnerBacked: false,
+    title: 'Follow an original record update',
+    type: 'prediction',
+  },
+  {
+    moduleIndex: 3,
+    path: '/learn/cpp-collections-records/cpp-records-updates/cpprecords4-fix-copy-update',
+    runnerBacked: true,
+    title: 'Repair the copy mistake',
+    type: 'bugfix',
+  },
+  {
+    moduleIndex: 3,
+    path: '/learn/cpp-collections-records/cpp-records-updates/cpprecords4-restock-part',
+    runnerBacked: true,
+    title: 'Restock a named part',
+    type: 'code',
+  },
+  {
+    moduleIndex: 4,
+    path: '/learn/cpp-collections-records/cpp-records-summaries/cpprecords5-retrieve-return',
+    runnerBacked: false,
+    title: 'Recall a returned calculation',
+    type: 'prediction',
+  },
+  {
+    moduleIndex: 4,
+    path: '/learn/cpp-collections-records/cpp-records-summaries/cpprecords5-accumulator-purpose',
+    runnerBacked: false,
+    title: 'Meet a running total',
+    type: 'choice',
+  },
+  {
+    moduleIndex: 4,
+    path: '/learn/cpp-collections-records/cpp-records-summaries/cpprecords5-order-total',
+    runnerBacked: false,
+    title: 'Put the total in order',
+    type: 'ordering',
+  },
+  {
+    moduleIndex: 4,
+    path: '/learn/cpp-collections-records/cpp-records-summaries/cpprecords5-fix-total-reset',
+    runnerBacked: true,
+    title: 'Keep the total between passes',
+    type: 'bugfix',
+  },
+  {
+    moduleIndex: 4,
+    path: '/learn/cpp-collections-records/cpp-records-summaries/cpprecords5-low-stock',
+    runnerBacked: true,
+    title: 'Collect low-stock names',
+    type: 'code',
+  },
+  {
+    moduleIndex: 5,
+    path: '/learn/cpp-collections-records/cpp-records-workshop-report/cpprecords6-trace-stock-update',
+    runnerBacked: false,
+    title: 'Trace a stock update',
+    type: 'prediction',
+  },
+  {
+    moduleIndex: 5,
+    path: '/learn/cpp-collections-records/cpp-records-workshop-report/cpprecords6-plan-report',
+    runnerBacked: false,
+    title: 'Assign each report job',
+    type: 'choice',
+  },
+  {
+    moduleIndex: 5,
+    path: '/learn/cpp-collections-records/cpp-records-workshop-report/cpprecords6-order-report',
+    runnerBacked: false,
+    title: 'Put the report flow in order',
+    type: 'ordering',
+  },
+  {
+    moduleIndex: 5,
+    path: '/learn/cpp-collections-records/cpp-records-workshop-report/cpprecords6-fix-low-stock-check',
+    runnerBacked: true,
+    title: 'Repair the low-stock boundary',
+    type: 'bugfix',
+  },
+  {
+    moduleIndex: 5,
+    path: '/learn/cpp-collections-records/cpp-records-workshop-report/cpprecords6-workshop-stock-report',
+    runnerBacked: true,
+    title: 'Build the Workshop Stock Report',
+    type: 'code',
+  },
+] as const satisfies readonly PracticalCppLessonCase[]
+
+const practicalCppCodeReferenceEntries = [
   {
     example: 'int total = subtotal(4, 3);',
     module: 'Functions that return answers',
@@ -92,7 +325,7 @@ async function codeReferenceEntry(page: Page, term: string) {
   return entry
 }
 
-function watchCandidateTeachingDataRequests(page: Page): string[] {
+function watchPracticalCppTeachingDataRequests(page: Page): string[] {
   const requests: string[] = []
   page.on('request', (request) => {
     const pathname = new URL(request.url()).pathname
@@ -125,7 +358,7 @@ async function expectCanonicalLesson(
   await expect(heading).toBeFocused()
 }
 
-async function openCandidateModule(page: Page, moduleNumber: number, title: string): Promise<void> {
+async function openPracticalCppModule(page: Page, moduleNumber: number, title: string): Promise<void> {
   const moduleLabel = moduleNumber === 6 ? 'Final project' : `Module ${moduleNumber}`
   const summary = page.getByRole('button', {
     name: new RegExp(`${moduleLabel} ${title}`, 'u'),
@@ -142,9 +375,64 @@ async function savedActiveLanguage(page: Page): Promise<string | undefined> {
   }, progressStorageKey)
 }
 
-test('the complete candidate catalog exposes the reviewed sixth course', async ({ page, seedProgress }) => {
-  const candidateDataRequests = watchCandidateTeachingDataRequests(page)
-  await seedProgress()
+test('the published Practical C++ route matrix stays exactly 12 runner-backed and 18 teaching-only lessons', () => {
+  const paths = practicalCppLessonCases.map(({ path }) => path)
+  const runnerBackedLessons = practicalCppLessonCases.filter(({ runnerBacked }) => runnerBacked)
+  const teachingOnlyLessons = practicalCppLessonCases.filter(({ runnerBacked }) => !runnerBacked)
+
+  expect(practicalCppLessonCases).toHaveLength(30)
+  expect(new Set(paths).size).toBe(30)
+  expect(runnerBackedLessons).toHaveLength(12)
+  expect(teachingOnlyLessons).toHaveLength(18)
+  expect(runnerBackedLessons.every(({ type }) => type === 'bugfix' || type === 'code')).toBe(true)
+  expect(teachingOnlyLessons.every(({ type }) => type !== 'bugfix' && type !== 'code')).toBe(true)
+})
+
+test.describe('all published Practical C++ deep links', () => {
+  for (const lesson of practicalCppLessonCases) {
+    const classification = lesson.runnerBacked ? 'runner-backed' : 'teaching-only'
+
+    test(`${lesson.title} opens as a ${classification} route`, async ({ page, seedProgress }) => {
+      const teachingDataRequests = watchPracticalCppTeachingDataRequests(page)
+      await seedProgress({
+        ...practicalCppPrerequisites,
+        completedMissions: [
+          ...practicalCppPrerequisites.completedMissions,
+          ...practicalCppModuleIds.slice(0, lesson.moduleIndex),
+        ],
+      })
+      await page.goto(lesson.path)
+
+      await expectCanonicalLesson(page, lesson.path, lesson.title)
+      await expect(page.getByText('Lesson locked')).toHaveCount(0)
+      expect(teachingDataRequests).toHaveLength(1)
+
+      const editor = page.getByRole('textbox', { name: 'Code editor' })
+      const fileLabel = page.locator('.editor-bar').getByText('main.cpp', { exact: true })
+      const safetyNote = page.getByText('How code runs safely', { exact: true })
+      const runResults = page.getByRole('region', { name: 'Run results' })
+
+      if (lesson.runnerBacked) {
+        await expect(editor).toBeVisible()
+        await expect(fileLabel).toBeVisible()
+        await expect(page.getByRole('button', { exact: true, name: 'Check my code' })).toBeVisible()
+        await expect(safetyNote).toBeVisible()
+        await expect(runResults).toHaveCount(0)
+      } else {
+        const action = lesson.type === 'ordering' ? 'Check order' : 'Check answer'
+        await expect(page.getByRole('button', { exact: true, name: action })).toBeVisible()
+        await expect(editor).toHaveCount(0)
+        await expect(fileLabel).toHaveCount(0)
+        await expect(safetyNote).toHaveCount(0)
+        await expect(runResults).toHaveCount(0)
+      }
+    })
+  }
+})
+
+test('the production catalog exposes the reviewed sixth course', async ({ page, seedProgress }) => {
+  const teachingDataRequests = watchPracticalCppTeachingDataRequests(page)
+  await seedProgress({ activeLanguage: 'cpp' })
   await page.goto('/courses')
 
   const catalog = page.getByRole('region', { name: 'Courses' })
@@ -152,12 +440,12 @@ test('the complete candidate catalog exposes the reviewed sixth course', async (
   await expect(catalog.getByRole('article')).toHaveCount(6)
   await expect(catalog.getByRole('heading', { name: 'Practical C++: Collections and Records' })).toBeVisible()
   await expect(catalog.locator(`a[href="${practicalCppCoursePath}"]`)).toHaveCount(1)
-  expect(candidateDataRequests).toEqual([])
+  expect(teachingDataRequests).toEqual([])
 })
 
 test('the Practical C++ course and direct lesson explain both missing prerequisites', async ({ page, seedProgress }) => {
-  const candidateDataRequests = watchCandidateTeachingDataRequests(page)
-  await seedProgress()
+  const teachingDataRequests = watchPracticalCppTeachingDataRequests(page)
+  await seedProgress({ activeLanguage: 'cpp' })
   await page.goto(practicalCppCoursePath)
 
   await expect(page.getByRole('heading', { level: 1, name: 'Practical C++: Collections and Records' })).toBeVisible()
@@ -166,7 +454,7 @@ test('the Practical C++ course and direct lesson explain both missing prerequisi
   await expect(page.getByText('Complete Your First Compiled Program', { exact: true })).toBeVisible()
   await expect(page.getByRole('region', { name: 'Modules' }).getByRole('button')).toHaveCount(6)
   await expect(page.getByRole('link', { name: /^Start course/iu })).toHaveCount(0)
-  expect(candidateDataRequests).toHaveLength(1)
+  expect(teachingDataRequests).toHaveLength(1)
 
   await page.goto(practicalCppLessonPath)
   const lockedHeading = page.getByRole('heading', { level: 1, name: 'Trace a familiar function call is still ahead' })
@@ -179,58 +467,58 @@ test('the Practical C++ course and direct lesson explain both missing prerequisi
     'href',
     practicalCppCoursePath,
   )
-  expect(candidateDataRequests).toHaveLength(2)
-  expect(candidateDataRequests[1]).toBe(candidateDataRequests[0])
+  expect(teachingDataRequests).toHaveLength(2)
+  expect(teachingDataRequests[1]).toBe(teachingDataRequests[0])
 })
 
 test('the Practical C++ course opens its first lesson inside the same SPA', async ({ page, seedProgress }) => {
-  const candidateDataRequests = watchCandidateTeachingDataRequests(page)
+  const teachingDataRequests = watchPracticalCppTeachingDataRequests(page)
   const documentRequests = watchDocumentRequests(page)
-  await seedProgress(candidatePrerequisites)
+  await seedProgress(practicalCppPrerequisites)
   await page.goto(practicalCppCoursePath)
 
   const startCourse = page.getByRole('link', { name: /^Start course/iu })
   await expect(startCourse).toHaveAttribute('href', practicalCppLessonPath)
   await expect(page.getByRole('region', { name: 'Modules' }).getByRole('button')).toHaveCount(6)
-  expect(candidateDataRequests).toHaveLength(1)
+  expect(teachingDataRequests).toHaveLength(1)
   expect(documentRequests).toEqual([practicalCppCoursePath])
 
   await startCourse.click()
   await expectCanonicalLesson(page, practicalCppLessonPath, 'Trace a familiar function call')
   await expect(page.getByText('Lesson locked')).toHaveCount(0)
-  expect(candidateDataRequests).toHaveLength(1)
+  expect(teachingDataRequests).toHaveLength(1)
   expect(documentRequests).toEqual([practicalCppCoursePath])
 })
 
-test('first, middle, and final candidate lessons share one cached teaching-data request through history', async ({ page, seedProgress }) => {
-  const candidateDataRequests = watchCandidateTeachingDataRequests(page)
+test('first, middle, and final published lessons share one cached teaching-data request through history', async ({ page, seedProgress }) => {
+  const teachingDataRequests = watchPracticalCppTeachingDataRequests(page)
   const documentRequests = watchDocumentRequests(page)
   await seedProgress({
-    ...candidatePrerequisites,
+    ...practicalCppPrerequisites,
     completedMissions: [
-      ...candidatePrerequisites.completedMissions,
-      ...completedCandidateModulesBeforeFinal,
+      ...practicalCppPrerequisites.completedMissions,
+      ...completedPracticalCppModulesBeforeFinal,
     ],
   })
   await page.goto(practicalCppCoursePath)
 
-  await openCandidateModule(page, 1, 'Functions that return answers')
+  await openPracticalCppModule(page, 1, 'Functions that return answers')
   await page.locator(`a[href="${practicalCppLessonPath}"]`).click()
   await expectCanonicalLesson(page, practicalCppLessonPath, 'Trace a familiar function call')
 
   await page.getByRole('button', { name: 'Exit lesson' }).click()
   await expect(page).toHaveURL(new RegExp(`${practicalCppCoursePath}$`, 'u'))
-  await openCandidateModule(page, 3, 'Structs that group a record')
+  await openPracticalCppModule(page, 3, 'Structs that group a record')
   await page.locator(`a[href="${practicalCppMiddleLessonPath}"]`).click()
   await expectCanonicalLesson(page, practicalCppMiddleLessonPath, 'Build and store a part record')
 
   await page.getByRole('button', { name: 'Exit lesson' }).click()
   await expect(page).toHaveURL(new RegExp(`${practicalCppCoursePath}$`, 'u'))
-  await openCandidateModule(page, 6, 'Build a Workshop Stock Report')
+  await openPracticalCppModule(page, 6, 'Build a Workshop Stock Report')
   await page.locator(`a[href="${practicalCppFinalLessonPath}"]`).click()
   await expectCanonicalLesson(page, practicalCppFinalLessonPath, 'Build the Workshop Stock Report')
 
-  expect(candidateDataRequests).toHaveLength(1)
+  expect(teachingDataRequests).toHaveLength(1)
   expect(documentRequests).toEqual([practicalCppCoursePath])
 
   await page.goBack()
@@ -244,11 +532,11 @@ test('first, middle, and final candidate lessons share one cached teaching-data 
   await page.goForward()
   await expectCanonicalLesson(page, practicalCppFinalLessonPath, 'Build the Workshop Stock Report')
 
-  expect(candidateDataRequests).toHaveLength(1)
+  expect(teachingDataRequests).toHaveLength(1)
   expect(documentRequests).toEqual([practicalCppCoursePath])
 })
 
-test('direct candidate course and lesson history does not replace the saved language preference', async ({ page, seedProgress }) => {
+test('direct published course and lesson history does not replace the saved language preference', async ({ page, seedProgress }) => {
   await seedProgress({ activeLanguage: 'python' })
   await page.goto(practicalCppCoursePath)
 
@@ -268,9 +556,9 @@ test('direct candidate course and lesson history does not replace the saved lang
   expect(await savedActiveLanguage(page)).toBe('python')
 })
 
-test('Home and Profile own the candidate through compact records without downloading its teaching data', async ({ page, seedProgress }) => {
-  const candidateDataRequests = watchCandidateTeachingDataRequests(page)
-  await seedProgress(candidatePrerequisites)
+test('Home and Profile own Practical C++ through compact records without downloading its teaching data', async ({ page, seedProgress }) => {
+  const teachingDataRequests = watchPracticalCppTeachingDataRequests(page)
+  await seedProgress(practicalCppPrerequisites)
   await page.goto('/home')
 
   const continuation = page.locator('section.continue-panel')
@@ -280,42 +568,42 @@ test('Home and Profile own the candidate through compact records without downloa
     'href',
     practicalCppLessonPath,
   )
-  expect(candidateDataRequests).toEqual([])
+  expect(teachingDataRequests).toEqual([])
 
   await page.getByRole('link', { name: 'Learner record' }).click()
   await expect(page).toHaveURL(/\/profile$/u)
   const courseRecords = page.locator('.station-records__grid > article')
   await expect(courseRecords).toHaveCount(6)
-  const candidateRecord = courseRecords.filter({
+  const practicalCppRecord = courseRecords.filter({
     has: page.getByText('Practical C++: Collections and Records', { exact: true }),
   })
-  await expect(candidateRecord).toHaveCount(1)
-  await expect(candidateRecord.getByText('Continuing course', { exact: true })).toBeVisible()
-  await expect(candidateRecord.getByText('0 / 6', { exact: true })).toBeVisible()
-  await expect(candidateRecord.getByRole('button', { name: 'Start course' })).toBeVisible()
-  expect(candidateDataRequests).toEqual([])
+  await expect(practicalCppRecord).toHaveCount(1)
+  await expect(practicalCppRecord.getByText('Continuing course', { exact: true })).toBeVisible()
+  await expect(practicalCppRecord.getByText('0 / 6', { exact: true })).toBeVisible()
+  await expect(practicalCppRecord.getByRole('button', { name: 'Start course' })).toBeVisible()
+  expect(teachingDataRequests).toEqual([])
 })
 
-test('candidate progress does not take ownership of the prerequisite project portfolio route', async ({ page, seedProgress }) => {
-  const candidateDataRequests = watchCandidateTeachingDataRequests(page)
+test('Practical C++ progress does not take ownership of the prerequisite project portfolio route', async ({ page, seedProgress }) => {
+  const teachingDataRequests = watchPracticalCppTeachingDataRequests(page)
   await seedProgress({
-    ...candidatePrerequisites,
+    ...practicalCppPrerequisites,
     completedMissions: [
-      ...candidatePrerequisites.completedMissions,
+      ...practicalCppPrerequisites.completedMissions,
       'cpp-records-return-values',
     ],
   })
   await page.goto('/profile')
 
-  const candidateRecord = page.locator('.station-records__grid > article').filter({
+  const practicalCppRecord = page.locator('.station-records__grid > article').filter({
     has: page.getByText('Practical C++: Collections and Records', { exact: true }),
   })
-  await expect(candidateRecord.getByText('1 / 6', { exact: true })).toBeVisible()
-  await expect(candidateRecord.getByRole('progressbar', {
+  await expect(practicalCppRecord.getByText('1 / 6', { exact: true })).toBeVisible()
+  await expect(practicalCppRecord.getByRole('progressbar', {
     name: 'Practical C++: Collections and Records 17% complete',
   })).toBeVisible()
-  await expect(candidateRecord.getByRole('button', { name: 'Continue course' })).toBeVisible()
-  expect(candidateDataRequests).toEqual([])
+  await expect(practicalCppRecord.getByRole('button', { name: 'Continue course' })).toBeVisible()
+  expect(teachingDataRequests).toEqual([])
 
   await page.goto('/portfolio/cpp/first-compiled-program')
 
@@ -324,11 +612,11 @@ test('candidate progress does not take ownership of the prerequisite project por
   await expect(heading).toBeFocused()
   await expect(page).toHaveTitle('Your First Compiled Program Portfolio | SeePoundCoffeePie')
   await expect(page.getByText('Practical C++: Collections and Records')).toHaveCount(0)
-  expect(candidateDataRequests).toEqual([])
+  expect(teachingDataRequests).toEqual([])
 })
 
-test('malformed candidate teaching data fails closed with a truthful retry page', async ({ page, seedProgress }) => {
-  const candidateDataRequests = watchCandidateTeachingDataRequests(page)
+test('malformed published teaching data fails closed with a truthful retry page', async ({ page, seedProgress }) => {
+  const teachingDataRequests = watchPracticalCppTeachingDataRequests(page)
   await page.route(/\/cpp-collections-records-course-packed\.generated-[^/]+\.json$/u, async (route) => {
     await route.fulfill({
       body: JSON.stringify({ version: 1 }),
@@ -336,7 +624,7 @@ test('malformed candidate teaching data fails closed with a truthful retry page'
       status: 200,
     })
   })
-  await seedProgress(candidatePrerequisites)
+  await seedProgress(practicalCppPrerequisites)
   await page.goto(practicalCppCoursePath)
 
   const heading = page.getByRole('heading', { exact: true, level: 1, name: 'Practical C++ could not load' })
@@ -347,7 +635,7 @@ test('malformed candidate teaching data fails closed with a truthful retry page'
   await expect(page.getByRole('button', { name: 'Try again' })).toBeVisible()
   await expect(page.getByRole('region', { name: 'Modules' })).toHaveCount(0)
   await expect(page).toHaveURL(new RegExp(`${practicalCppCoursePath}$`, 'u'))
-  expect(candidateDataRequests).toHaveLength(1)
+  expect(teachingDataRequests).toHaveLength(1)
 })
 
 test('Practice includes authored Practical C++ questions after its first module is complete', async ({ page, seedProgress }) => {
@@ -358,9 +646,9 @@ test('Practice includes authored Practical C++ questions after its first module 
     strength: 5,
   }
   await seedProgress({
-    ...candidatePrerequisites,
+    ...practicalCppPrerequisites,
     completedMissions: [
-      ...candidatePrerequisites.completedMissions,
+      ...practicalCppPrerequisites.completedMissions,
       'cpp-records-return-values',
     ],
     conceptProgress: Object.fromEntries(
@@ -377,20 +665,21 @@ test('Practice includes authored Practical C++ questions after its first module 
   await expect(page.getByRole('link', { name: /^Start 5-question review$/u })).toBeVisible()
 })
 
-test('the candidate Code Reference shows exact locked C++ module labels', async ({ page, seedProgress }) => {
-  await seedProgress()
+test('the published Code Reference shows exact locked C++ module labels', async ({ page, seedProgress }) => {
+  await seedProgress({ activeLanguage: 'cpp' })
   await page.goto('/codebook/cpp')
 
   await expect(page.getByRole('heading', { level: 1, name: 'Code reference' })).toBeVisible()
-  for (const { module, term } of candidateCodeReferenceEntries) {
+  for (const { module, term } of practicalCppCodeReferenceEntries) {
     const entry = await codeReferenceEntry(page, term)
     await expect(entry.getByText('Example not available yet', { exact: true })).toBeVisible()
     await expect(entry).toContainText(`Complete ${module} to see it.`)
   }
 })
 
-test('the candidate Code Reference reveals exact C++ examples after their modules', async ({ page, seedProgress }) => {
+test('the published Code Reference reveals exact C++ examples after their modules', async ({ page, seedProgress }) => {
   await seedProgress({
+    activeLanguage: 'cpp',
     completedMissions: [
       'cpp-records-return-values',
       'cpp-records-vectors',
@@ -401,7 +690,7 @@ test('the candidate Code Reference reveals exact C++ examples after their module
   })
   await page.goto('/codebook/cpp')
 
-  for (const { example, term } of candidateCodeReferenceEntries) {
+  for (const { example, term } of practicalCppCodeReferenceEntries) {
     const entry = await codeReferenceEntry(page, term)
     await expect(entry.getByText('C++ example', { exact: true })).toBeVisible()
     await expect(entry.getByText(example, { exact: true })).toBeVisible()

@@ -100,10 +100,9 @@ export function practicalCppCandidateSitemap() {
 }
 
 /**
- * Keeps the checked-in sitemap unchanged for an unpublished production build.
- * The exact published route projection enables the complete canonical course
- * sitemap through the same source-controlled state that selects application
- * and Worker publication sources.
+ * Keeps the checked-in sitemap unchanged. The exact published route projection
+ * enables the complete canonical course sitemap in build output through the
+ * same source-controlled state that selects application and Worker sources.
  */
 export function controlledPracticalCppSitemap(routes) {
   if (!Array.isArray(routes)) {
