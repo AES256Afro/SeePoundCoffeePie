@@ -105,6 +105,10 @@ Or run the same complete local release gate with one command:
 npm run check:release
 ```
 
+`npm run test:e2e` builds the site and runs the production Chromium browser gate against a loopback-only preview. The harness blocks service workers, live API access, and external origins. It covers the five-course catalog, continuing-course prerequisites, canonical lesson URLs, the unpublished Practical C++ boundary, keyboard exit from the editor, navigation and language switching at 390 CSS pixels, Practice, Code Reference, and scoped WCAG A and AA checks on representative pages. `npm run check:cpp-browser-candidate` separately exercises the controlled six-course Practical C++ candidate without publishing it. `npm run check:release` includes both browser gates.
+
+Automated browser checks do not replace manual keyboard, screen-reader, 200 percent zoom, reduced-motion, multi-browser, staging, or production review. Those remain separate release evidence.
+
 The runner has a separate Docker and operating-system boundary check. It builds all four pinned images and verifies successful programs, compiler errors, CPU, memory, storage, output, and network denial:
 
 ```bash
@@ -112,7 +116,9 @@ npm run check:runner:image
 ```
 
 The production bundle is written to `dist/`.
-`npm run check:bundle` enforces raw and gzip budgets for emitted JavaScript, CSS, and HTML. It gives the lazy portfolio, Practical Python route, Practical Python teaching content, Practical Python CSS, and Code reference assets their own limits, so course growth cannot silently create an oversized first load.
+`npm run check:bundle` enforces raw and gzip budgets for emitted JavaScript, CSS, HTML, and inert JSON teaching data, plus an aggregate transfer cap so moving bytes between file types cannot hide growth. It separately caps the lazy Portfolio and shared continuing-course route JavaScript, Practical Python and packed foundation teaching content, Code Reference JavaScript, the combined initial application stylesheet, and the lazy learning-workspace stylesheet. It also requires at least 15 percent raw and gzip headroom for initial JavaScript and CSS, so course growth cannot silently create an oversized first load.
+`npm run check:foundation-content` verifies that the lazy packed foundation curriculum is deterministic and still matches the readable curriculum source. `npm run check:cpp-content-candidate` verifies the complete unpublished Practical C++ candidate: deterministic generated JSON, one lazy owning loader, the controlled six-course application, 112 candidate runner assignments, the 43-location candidate sitemap, fixed JavaScript, CSS, route, teaching-data, and aggregate limits, absence of protected server markers, and 11 Chromium cases. Candidate artifacts are written under ignored `.vite` directories. The ordinary production build still writes to `dist`, selects five courses and 100 runner assignments, and emits no Practical C++ candidate JSON. The current candidate total-JavaScript result is 217,952 gzip bytes against a 218,000-byte cap, so the complete candidate gate must run after every source change.
+`npm run check:project-bundle` recursively rejects emitted source maps and scans the production browser output for unpublished teaching content and server-owned assessment material before a direct deployment wrapper can invoke Wrangler.
 `npm run check:social-preview` verifies the Open Graph and large-card metadata plus the exact 1200 by 630 share image used by Discord and other social platforms.
 
 ## Production hosting
@@ -148,6 +154,10 @@ Verify the live social preview, apex domain, `www` redirect, security headers, a
 ```bash
 npm run check:live
 ```
+
+The default live check requires the code checker to be fully configured and enabled, then proves a known published lesson can receive a grant while every unpublished Practical C++ assignment still returns not found. During a deliberately paused public-site release, use `npm run check:live:paused`; it requires a configured paused checker, rejects the published grant with the expected paused response, and retains the same unpublished-assignment checks.
+
+The DNS, TLS, WAF, cache, security-reporting, and intentional-exception state verified on 2026-08-27 is recorded in the [dated production domain security baseline](docs/PRODUCTION_DOMAIN_SECURITY_BASELINE_2026-08-27.md).
 
 ## GitHub sign-in
 
@@ -185,7 +195,7 @@ The Learner Record can also download a versioned JSON backup and restore it afte
 
 ## How editable code runs
 
-The 48 editable foundation exercises, 12 editable Practical Python exercises, and 40 editable project steps use real server-side Python, C++, C#, and Java toolchains. The browser requests a five-minute exercise-scoped run grant, submits only the versioned language, source, optional text input, and `run` or `check` purpose, then polls an opaque learner-owned result ID. Learners cannot choose an executable, command, compiler flag, package, image, path, mount, or network destination.
+The 48 editable foundation exercises, 12 editable Practical Python exercises, and 40 editable project steps use real server-side Python, C++, C#, and Java toolchains. The browser requests a five-minute exercise-scoped run grant, submits only the versioned language, source, optional text input, and `run` or `check` purpose, then polls an opaque learner-owned result ID. Each grant and stored result is bound to grading-only assignment data and a checked revision of the grading implementation. The browser receives only a keyed opaque binding, not the protected revision. Changed, revoked, or legacy assignments fail closed before source acceptance, sandbox creation, or stored output return. Learners cannot choose an executable, command, compiler flag, package, image, path, mount, or network destination.
 
 Every attempt starts in a fresh Cloudflare Sandbox VM with a pinned base image and fixed server-owned toolchain commands. A trusted supervisor drops privileges, blocks socket syscalls, measures the whole process tree, caps CPU, wall time, memory, processes, writable storage, stdout, and stderr, and destroys the VM after the result. Each final project check replaces caller-supplied input with one visible and three server-owned cases. Every case uses a different fresh VM. Python's parser, C++'s pinned compiler front end, C#'s pinned Roslyn parser, and Java's pinned compiler-tree analyzer verify the deliberately small program shapes taught by their projects. The Practical Python Supply Tracker has fixed in-memory data and uses a separate protected Python AST profile to verify the four taught functions, the supplied harness, and statement order. Comments, inactive code, early exits, aliases, Unicode escapes, added members, moved statements, and unsupported control flow cannot earn structural credit. The browser receives only visible output and pass summaries. Private inputs, reference solutions, assessment profiles, and internal syntax analysis stay out of the browser bundle and result. Language errors are translated into beginner language while sanitized raw diagnostics remain available under a disclosure.
 
@@ -205,12 +215,13 @@ The teaching approach uses:
 - one complete guided project after each language's foundation course.
 
 Read the full [product and curriculum blueprint](docs/PRODUCT_BLUEPRINT.md).
+The dependency-ordered work ahead is maintained in the [milestone roadmap](MILESTONES.md).
 The verified Phase 1 scope and handoff are recorded in the [Phase 1 learning foundation release](docs/PHASE_1_RELEASE.md).
 The verified Phase 2 execution boundary is recorded in the [Phase 2 real execution release](docs/PHASE_2_RELEASE.md).
 The Phase 3 account and durable-learning-data contract is recorded in the [Phase 3 release](docs/PHASE_3_RELEASE.md).
 The Python project studio, protected assessment, local-draft boundary, and Phase 4A verification are recorded in the [Phase 4A release](docs/PHASE_4A_RELEASE.md). The multi-project registry and first compiled C++ project are recorded in the [Phase 4B release](docs/PHASE_4B_RELEASE.md). The first complete C# project and its trusted Roslyn grading boundary are recorded in the [Phase 4C release](docs/PHASE_4C_RELEASE.md). The Java picnic project, compiler-tree grading boundary, and final four-language project parity are recorded in the [Phase 4D release](docs/PHASE_4D_RELEASE.md). The bounded cross-module review selector, private same-tab session routing, zero-reward Practice flow, and progress-schema hardening are recorded in the [Phase 4E release](docs/PHASE_4E_RELEASE.md). Durable per-lesson resume, honest project completion semantics, and the private portfolio export boundary are recorded in the [Phase 4F release](docs/PHASE_4F_RELEASE.md).
 The second Python course, two-part prerequisite, language-wide Practice pool, protected Supply Tracker grading, compatibility floor, lazy boundaries, and controlled rollout are recorded in the [Phase 5A release](docs/PHASE_5A_RELEASE.md).
-The course, lesson, navigation, accessibility, and visual direction is recorded in the [Open Learning Workshop milestone](docs/UI_REDESIGN_MOCKUPS.md). The milestone is live, and its release record includes the exact source commit, deployed Worker version, accessibility review, route checks, runner regressions, and production browser evidence.
+The course, lesson, navigation, accessibility, and visual direction is recorded in the [Open Learning Workshop milestone](docs/UI_REDESIGN_MOCKUPS.md). Its 2026-08-25 release record includes the exact source commit, deployed Worker version, accessibility review, route checks, runner regressions, and production browser evidence for that historical release. It does not claim that later local changes have been deployed.
 
 ## Research references
 

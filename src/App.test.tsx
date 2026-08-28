@@ -5,6 +5,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import App from './App'
 import { cppCompiledProject } from './data/cpp-compiled-project'
 import { trackById } from './data/curriculum'
+import * as foundationCourseLoader from './data/foundation-course-loaders'
+import * as practicePublicationLoader from './data/practice-publication'
 import { pythonInteractiveProject } from './data/python-interactive-project'
 import { saveProjectDraft } from './lib/project-drafts'
 import { dateKey, initialProgress } from './lib/progress'
@@ -118,7 +120,7 @@ describe('beginner lesson interactions', () => {
 
   async function openFirstEditableStep() {
     render(<App />)
-    fireEvent.click(screen.getByRole('link', { name: /Meet the console/iu }))
+    fireEvent.click(await screen.findByRole('link', { name: /Meet the console/iu }))
     fireEvent.click(await screen.findByRole('radio', { name: /Shows text from the program/iu }))
     fireEvent.click(screen.getByRole('button', { name: 'Check answer' }))
     fireEvent.click(screen.getByRole('button', { name: 'Continue' }))
@@ -181,6 +183,9 @@ describe('beginner lesson interactions', () => {
     const tabWasNotCancelled = fireEvent.keyDown(editor, { key: 'Tab' })
 
     expect(tabWasNotCancelled).toBe(true)
+    expect(editor.getAttribute('wrap')).toBe('off')
+    expect(editor.getAttribute('autocapitalize')).toBe('off')
+    expect(editor.getAttribute('autocorrect')).toBe('off')
     expect(screen.getByLabelText('Code editor keyboard controls').textContent).toContain('Tab moves out of the editor normally')
   })
 
@@ -200,10 +205,12 @@ describe('beginner lesson interactions', () => {
   it('ignores a runner response after routing to another exercise', async () => {
     type RunResult = Awaited<ReturnType<typeof runExercise>>
     let finishRun!: (result: RunResult) => void
+    let runSignal: AbortSignal | undefined
     const delayedRun = new Promise<RunResult>((resolve) => {
       finishRun = resolve
     })
-    vi.mocked(runExercise).mockImplementationOnce((_exerciseId, _language, _source, onStatus) => {
+    vi.mocked(runExercise).mockImplementationOnce((_exerciseId, _language, _source, onStatus, options) => {
+      runSignal = options?.signal
       onStatus?.('running')
       return delayedRun
     })
@@ -215,6 +222,7 @@ describe('beginner lesson interactions', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Back' }))
 
     expect(await screen.findByRole('heading', { name: 'Meet the console' })).toBeTruthy()
+    expect(runSignal?.aborted).toBe(true)
     await act(async () => {
       finishRun({
         version: 1,
@@ -246,10 +254,12 @@ describe('beginner lesson interactions', () => {
   it('ignores a runner response after using Back inside legacy practice', async () => {
     type RunResult = Awaited<ReturnType<typeof runExercise>>
     let finishRun!: (result: RunResult) => void
+    let runSignal: AbortSignal | undefined
     const delayedRun = new Promise<RunResult>((resolve) => {
       finishRun = resolve
     })
-    vi.mocked(runExercise).mockImplementationOnce((_exerciseId, _language, _source, onStatus) => {
+    vi.mocked(runExercise).mockImplementationOnce((_exerciseId, _language, _source, onStatus, options) => {
+      runSignal = options?.signal
       onStatus?.('running')
       return delayedRun
     })
@@ -287,6 +297,7 @@ describe('beginner lesson interactions', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Back' }))
 
     expect(await screen.findByRole('heading', { name: 'Meet the console' })).toBeTruthy()
+    expect(runSignal?.aborted).toBe(true)
     await act(async () => {
       finishRun({
         version: 1,
@@ -321,10 +332,12 @@ describe('beginner lesson interactions', () => {
   it('ignores a runner response after exiting the lesson', async () => {
     type RunResult = Awaited<ReturnType<typeof runExercise>>
     let finishRun!: (result: RunResult) => void
+    let runSignal: AbortSignal | undefined
     const delayedRun = new Promise<RunResult>((resolve) => {
       finishRun = resolve
     })
-    vi.mocked(runExercise).mockImplementationOnce((_exerciseId, _language, _source, onStatus) => {
+    vi.mocked(runExercise).mockImplementationOnce((_exerciseId, _language, _source, onStatus, options) => {
+      runSignal = options?.signal
       onStatus?.('running')
       return delayedRun
     })
@@ -342,6 +355,7 @@ describe('beginner lesson interactions', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Exit lesson' }))
 
     expect(await screen.findByRole('heading', { name: 'Python Foundations' })).toBeTruthy()
+    expect(runSignal?.aborted).toBe(true)
     await act(async () => {
       finishRun({
         version: 1,
@@ -400,7 +414,7 @@ describe('beginner lesson interactions', () => {
     render(<App />)
     fireEvent.click(screen.getByRole('link', { name: 'Practice' }))
 
-    const reviewLink = screen.getByRole('link', { name: 'Start 2-question review' })
+    const reviewLink = await screen.findByRole('link', { name: 'Start 2-question review' })
     expect(reviewLink.getAttribute('href')).toBe('/practice/java/session')
     expect(screen.getByRole('heading', { name: 'Questions' })).toBeTruthy()
     const reviewPlan = screen.getByRole('list', { name: 'Practice questions' })
@@ -479,7 +493,7 @@ describe('beginner lesson interactions', () => {
     window.history.replaceState({}, '', '/practice/java')
 
     render(<App />)
-    fireEvent.click(screen.getByRole('link', { name: 'Start 2-question review' }))
+    fireEvent.click(await screen.findByRole('link', { name: 'Start 2-question review' }))
     fireEvent.click(await screen.findByRole('radio', { name: /true and falseJava writes/iu }))
     fireEvent.click(screen.getByRole('button', { name: 'Check answer' }))
     fireEvent.click(screen.getByRole('button', { name: 'Continue' }))
@@ -740,7 +754,7 @@ describe('beginner lesson interactions', () => {
 
     render(<App />)
 
-    expect(screen.getByRole('heading', { name: 'Nothing to review yet' })).toBeTruthy()
+    expect(await screen.findByRole('heading', { name: 'Nothing to review yet' })).toBeTruthy()
     expect(screen.getByRole('link', { name: 'Open practice' }).getAttribute('href')).toBe('/practice/python')
 
     fireEvent.change(screen.getByRole('combobox'), { target: { value: 'java' } })
@@ -749,22 +763,40 @@ describe('beginner lesson interactions', () => {
     expect(screen.getByRole('link', { name: 'Start practice' }).getAttribute('href')).toBe('/practice/java')
   })
 
-  it('counts review concepts from the published continuing-course manifest', () => {
+  it('counts review concepts from the published continuing-course manifest', async () => {
+    const foundation = trackById('python')
     storeTestProgress({
       ...initialProgress('python'),
       callsign: 'Review Cadet',
       onboardingComplete: true,
-      completedMissions: [practicalPythonFirstMissionId],
+      completedMissions: [
+        ...foundation.missions.map((mission) => mission.id),
+        practicalPythonFirstMissionId,
+      ],
+      completedProjects: ['first-interactive-program'],
+      conceptProgress: Object.fromEntries(foundation.missions.flatMap((mission) => (
+        mission.exercises.flatMap((exercise) => (
+          ['python-parameters-and-calls', 'python-return-values', 'python-returned-calculations']
+            .includes(exercise.conceptId)
+            ? []
+            : [[exercise.conceptId, {
+                strength: 4,
+                correct: 4,
+                incorrect: 0,
+                dueAt: '2099-01-01',
+              }]]
+        ))
+      ))),
     })
     window.history.replaceState({}, '', '/home')
 
     render(<App />)
 
-    expect(screen.getByRole('heading', { name: '3 ideas are ready' })).toBeTruthy()
+    expect(await screen.findByRole('heading', { name: '3 ideas are ready' })).toBeTruthy()
     expect(screen.getByRole('link', { name: 'Start practice' }).getAttribute('href')).toBe('/practice/python')
   })
 
-  it('does not count compatibility-only C++ identifiers as published review material', () => {
+  it('does not count compatibility-only C++ identifiers as published review material', async () => {
     storeTestProgress({
       ...initialProgress('cpp'),
       callsign: 'Compatibility Cadet',
@@ -775,7 +807,7 @@ describe('beginner lesson interactions', () => {
 
     render(<App />)
 
-    expect(screen.getByRole('heading', { name: 'Nothing to review yet' })).toBeTruthy()
+    expect(await screen.findByRole('heading', { name: 'Nothing to review yet' })).toBeTruthy()
     expect(screen.queryByText(/Practical C\+\+/iu)).toBeNull()
   })
 
@@ -804,7 +836,7 @@ describe('beginner lesson interactions', () => {
     window.history.replaceState({}, '', '/practice/java')
 
     const firstRender = render(<App />)
-    fireEvent.click(screen.getByRole('link', { name: 'Start 2-question review' }))
+    fireEvent.click(await screen.findByRole('link', { name: 'Start 2-question review' }))
     fireEvent.click(await screen.findByRole('radio', { name: /true and falseJava writes/iu }))
     fireEvent.click(screen.getByRole('button', { name: 'Check answer' }))
     fireEvent.click(screen.getByRole('button', { name: 'Continue' }))
@@ -833,7 +865,7 @@ describe('beginner lesson interactions', () => {
     expect(await screen.findByRole('heading', { name: 'Complete Code and variables before reviewing it' })).toBeTruthy()
   })
 
-  it('rejects unknown and mixed legacy practice concepts instead of broadening the review', () => {
+  it('rejects unknown and mixed legacy practice concepts instead of broadening the review', async () => {
     window.localStorage.setItem(progressKey, JSON.stringify({
       ...initialProgress('java'),
       callsign: 'Route Cadet',
@@ -843,12 +875,12 @@ describe('beginner lesson interactions', () => {
 
     window.history.replaceState({}, '', '/practice/java/missions/java-routing-orders?concepts=bogus')
     const unknownOnly = render(<App />)
-    expect(screen.getByRole('heading', { name: 'We could not find that page' })).toBeTruthy()
+    expect(await screen.findByRole('heading', { name: 'We could not find that page' })).toBeTruthy()
     unknownOnly.unmount()
 
     window.history.replaceState({}, '', '/practice/java/missions/java-routing-orders?concepts=java-booleans,bogus')
     render(<App />)
-    expect(screen.getByRole('heading', { name: 'We could not find that page' })).toBeTruthy()
+    expect(await screen.findByRole('heading', { name: 'We could not find that page' })).toBeTruthy()
   })
 
   it('restores a validated local progress backup from Settings', async () => {
@@ -1111,12 +1143,12 @@ describe('beginner lesson interactions', () => {
     expect(document.title).toBe('SeePoundCoffeePie | Programming from the beginning.')
   })
 
-  it('keeps Home on Python Foundations before the learner graduates', () => {
+  it('keeps Home on Python Foundations before the learner graduates', async () => {
     window.history.replaceState({}, '', '/home')
 
     render(<App />)
 
-    expect(screen.getByRole('heading', { name: 'Welcome back, Test Cadet.' })).toBeTruthy()
+    expect(await screen.findByRole('heading', { name: 'Welcome back, Test Cadet.' })).toBeTruthy()
     expect(screen.getByRole('heading', { name: 'Meet the console' })).toBeTruthy()
     expect(screen.getByRole('link', { name: /Continue lesson/iu }).getAttribute('href')).toBe(
       '/learn/python-foundations/py-first-spark/py-console',
@@ -1126,7 +1158,7 @@ describe('beginner lesson interactions', () => {
     expect(document.title).toBe('Learning Home | SeePoundCoffeePie')
   })
 
-  it('hands a Python graduate from the learning home into the guided project', () => {
+  it('hands a Python graduate from the learning home into the guided project', async () => {
     window.localStorage.setItem(progressKey, JSON.stringify({
       ...initialProgress('python'),
       callsign: 'Project Cadet',
@@ -1137,7 +1169,7 @@ describe('beginner lesson interactions', () => {
 
     const { unmount } = render(<App />)
 
-    expect(screen.getByText('Your next step')).toBeTruthy()
+    expect(await screen.findByText('Your next step')).toBeTruthy()
     expect(screen.getByRole('heading', { name: pythonInteractiveProject.title })).toBeTruthy()
     expect(screen.getByRole('link', { name: /Start project/iu }).getAttribute('href')).toBe(
       '/projects/python/first-interactive-program',
@@ -1157,14 +1189,14 @@ describe('beginner lesson interactions', () => {
 
     render(<App />)
 
-    expect(screen.getByText('Continue your project')).toBeTruthy()
+    expect(await screen.findByText('Continue your project')).toBeTruthy()
     expect(screen.getByText('1 of 12 project steps complete. Your browser saved the code for your next step.')).toBeTruthy()
     expect(screen.getByRole('link', { name: /Continue project/iu }).getAttribute('href')).toBe(
       '/projects/python/first-interactive-program/project-py-string',
     )
   })
 
-  it('moves Home from the completed Python project into Practical Python', () => {
+  it('moves Home from the completed Python project into Practical Python', async () => {
     storeTestProgress({
       ...initialProgress('python'),
       callsign: 'Practical Cadet',
@@ -1176,7 +1208,7 @@ describe('beginner lesson interactions', () => {
 
     render(<App />)
 
-    expect(screen.getByText('Your next course')).toBeTruthy()
+    expect(await screen.findByText('Your next course')).toBeTruthy()
     const practicalHeading = screen.getByRole('heading', { name: practicalPythonTitle })
     const practicalPanel = practicalHeading.closest('section')
     expect(practicalPanel).toBeTruthy()
@@ -1187,7 +1219,7 @@ describe('beginner lesson interactions', () => {
     expect(screen.queryByRole('heading', { name: pythonInteractiveProject.title })).toBeNull()
   })
 
-  it('hands a C++ graduate from the learning home into the compiled project', () => {
+  it('hands a C++ graduate from the learning home into the compiled project', async () => {
     window.localStorage.setItem(progressKey, JSON.stringify({
       ...initialProgress('cpp'),
       callsign: 'C++ Cadet',
@@ -1198,7 +1230,7 @@ describe('beginner lesson interactions', () => {
 
     render(<App />)
 
-    expect(screen.getByText('Your next step')).toBeTruthy()
+    expect(await screen.findByText('Your next step')).toBeTruthy()
     expect(screen.getByRole('heading', { name: cppCompiledProject.title })).toBeTruthy()
     expect(screen.getByRole('link', { name: /Start project/iu }).getAttribute('href')).toBe(
       '/projects/cpp/first-compiled-program',
@@ -1327,6 +1359,19 @@ describe('beginner lesson interactions', () => {
     })
   })
 
+  it('gives a continuing course one main landmark and one skip-link target', async () => {
+    window.history.replaceState({}, '', practicalPythonCoursePath)
+
+    render(<App />)
+
+    expect(await screen.findByRole('heading', { level: 1, name: practicalPythonTitle })).toBeTruthy()
+    const mainLandmarks = screen.getAllByRole('main')
+    expect(mainLandmarks).toHaveLength(1)
+    expect(mainLandmarks[0].id).toBe('main-content')
+    expect(document.querySelectorAll('#main-content')).toHaveLength(1)
+    expect(screen.getByRole('link', { name: 'Skip to main content' }).getAttribute('href')).toBe('#main-content')
+  })
+
   it('reports partial catalog progress in lessons instead of completed modules', () => {
     window.localStorage.setItem(progressKey, JSON.stringify({
       ...initialProgress('python'),
@@ -1415,12 +1460,30 @@ describe('beginner lesson interactions', () => {
     )
   })
 
-  it('shows the compiled project after the C++ course outline', () => {
+  it('keeps the active language control available as a real labeled select', async () => {
+    window.history.replaceState({}, '', '/courses')
+
+    render(<App />)
+
+    const languageSelect = screen.getByRole('combobox', { name: 'Active language' }) as HTMLSelectElement
+    expect(languageSelect.value).toBe('python')
+    expect(languageSelect.options).toHaveLength(4)
+
+    fireEvent.change(languageSelect, { target: { value: 'cpp' } })
+
+    expect(languageSelect.value).toBe('cpp')
+    await waitFor(() => {
+      const saved = JSON.parse(window.localStorage.getItem(progressKey) ?? '{}')
+      expect(saved.activeLanguage).toBe('cpp')
+    })
+  })
+
+  it('shows the compiled project after the C++ course outline', async () => {
     window.history.replaceState({}, '', '/courses/cpp-foundations')
 
     render(<App />)
 
-    expect(screen.getByRole('heading', { name: 'C++ Foundations' })).toBeTruthy()
+    expect(await screen.findByRole('heading', { name: 'C++ Foundations' })).toBeTruthy()
     expect(screen.getByRole('region', { name: 'Modules' })).toBeTruthy()
     expect(screen.queryByText('Course outline')).toBeNull()
     expect(screen.queryByRole('heading', { name: 'What you will learn' })).toBeNull()
@@ -1431,12 +1494,12 @@ describe('beginner lesson interactions', () => {
     )
   })
 
-  it('shows the picnic project after the Java course outline', () => {
+  it('shows the picnic project after the Java course outline', async () => {
     window.history.replaceState({}, '', '/courses/java-foundations')
 
     render(<App />)
 
-    expect(screen.getByRole('heading', { name: 'Java Foundations' })).toBeTruthy()
+    expect(await screen.findByRole('heading', { name: 'Java Foundations' })).toBeTruthy()
     expect(screen.getByRole('heading', { name: 'Community Picnic Planner' })).toBeTruthy()
     expect(screen.getByText(/downloadable \.java source file/iu)).toBeTruthy()
     expect(screen.getByRole('link', { name: /Preview project/iu }).getAttribute('href')).toBe(
@@ -1645,7 +1708,7 @@ describe('beginner lesson interactions', () => {
 
     render(<App />)
 
-    expect(screen.getByRole('heading', { name: 'Java Foundations' })).toBeTruthy()
+    expect(await screen.findByRole('heading', { name: 'Java Foundations' })).toBeTruthy()
     expect((screen.getByRole('combobox', { name: 'Active language' }) as HTMLSelectElement).value).toBe('java')
     expect(screen.getByRole('link', { name: 'Practice' }).getAttribute('href')).toBe('/practice/java')
     expect(screen.getByRole('link', { name: 'Code reference' }).getAttribute('href')).toBe('/codebook/java')
@@ -1655,11 +1718,124 @@ describe('beginner lesson interactions', () => {
     })
   })
 
+  it('keeps canonical lesson context out of the saved preference across browser history', async () => {
+    const cppMission = trackById('cpp').missions[0]
+    const cppExercise = cppMission.exercises[0]
+    const pythonMission = trackById('python').missions[0]
+    const pythonExercise = pythonMission.exercises[0]
+    storeTestProgress({
+      ...initialProgress('python'),
+      callsign: 'Bookmark Cadet',
+      onboardingComplete: true,
+    })
+    window.history.replaceState(
+      {},
+      '',
+      `/learn/cpp-foundations/${cppMission.id}/${cppExercise.id}`,
+    )
+
+    render(<App />)
+
+    expect(await screen.findByRole('heading', { name: cppExercise.title })).toBeTruthy()
+    await waitFor(() => {
+      expect(JSON.parse(window.localStorage.getItem(progressKey) ?? '{}').activeLanguage).toBe('python')
+    })
+
+    act(() => {
+      window.history.pushState(
+        {},
+        '',
+        `/learn/python-foundations/${pythonMission.id}/${pythonExercise.id}`,
+      )
+      window.dispatchEvent(new PopStateEvent('popstate'))
+    })
+    expect(await screen.findByRole('heading', { name: pythonExercise.title })).toBeTruthy()
+
+    window.history.back()
+    expect(await screen.findByRole('heading', { name: cppExercise.title })).toBeTruthy()
+    expect(JSON.parse(window.localStorage.getItem(progressKey) ?? '{}').activeLanguage).toBe('python')
+
+    window.history.forward()
+    expect(await screen.findByRole('heading', { name: pythonExercise.title })).toBeTruthy()
+    expect(JSON.parse(window.localStorage.getItem(progressKey) ?? '{}').activeLanguage).toBe('python')
+  })
+
+  it('keeps legacy lesson routes as explicit language preference changes', async () => {
+    const mission = trackById('java').missions[0]
+    storeTestProgress({
+      ...initialProgress('python'),
+      callsign: 'Legacy Route Cadet',
+      onboardingComplete: true,
+    })
+    window.history.replaceState({}, '', `/academy/java/missions/${mission.id}`)
+
+    render(<App />)
+
+    await waitFor(() => {
+      expect(JSON.parse(window.localStorage.getItem(progressKey) ?? '{}').activeLanguage).toBe('java')
+    })
+  })
+
+  it('moves route focus from the loading boundary to the resolved foundation heading', async () => {
+    window.history.replaceState({}, '', '/courses/java-foundations')
+
+    render(<App />)
+
+    expect(screen.getByRole('heading', { name: 'Loading course' })).toBeTruthy()
+    expect(document.querySelectorAll('#main-content')).toHaveLength(1)
+    expect(screen.getAllByRole('main')).toHaveLength(1)
+
+    const heading = await screen.findByRole('heading', { name: 'Java Foundations' })
+    await waitFor(() => expect(document.activeElement).toBe(heading))
+    expect(document.querySelectorAll('#main-content')).toHaveLength(1)
+    expect(screen.getAllByRole('main')).toHaveLength(1)
+  })
+
+  it('shows a truthful retry state when foundation content cannot load', async () => {
+    vi.spyOn(foundationCourseLoader, 'foundationCourseContentRequestForLanguage')
+      .mockReturnValue(Promise.resolve(null))
+    window.history.replaceState({}, '', '/home')
+
+    render(<App />)
+
+    expect(screen.getByRole('heading', { name: 'Loading your course' })).toBeTruthy()
+    const heading = await screen.findByRole('heading', { name: 'Course could not load' })
+    expect(screen.getByText(/Your progress is saved/iu)).toBeTruthy()
+    expect(screen.getByRole('button', { name: 'Reload page' })).toBeTruthy()
+    expect(screen.queryByRole('heading', { name: 'We could not find that page' })).toBeNull()
+    expect(document.querySelectorAll('#main-content')).toHaveLength(1)
+    expect(screen.getAllByRole('main')).toHaveLength(1)
+    await waitFor(() => expect(document.activeElement).toBe(heading))
+  })
+
+  it('moves focus and the title to a truthful Practice load failure', async () => {
+    vi.spyOn(practicePublicationLoader, 'loadPracticeTrackForSurface').mockResolvedValue({
+      ok: false,
+      reason: 'continuing-content-unavailable',
+      courseId: 'python-data-tools',
+    })
+    storeTestProgress({
+      ...initialProgress('python'),
+      callsign: 'Practice Tester',
+      onboardingComplete: true,
+    })
+    window.history.replaceState({}, '', '/practice/python')
+
+    render(<App />)
+
+    expect(screen.getByRole('heading', { name: 'Loading practice' })).toBeTruthy()
+    const heading = await screen.findByRole('heading', { name: 'Practice could not load' })
+    expect(screen.getByText(/Your progress is saved/iu)).toBeTruthy()
+    expect(screen.getByRole('button', { name: 'Reload page' })).toBeTruthy()
+    await waitFor(() => expect(document.activeElement).toBe(heading))
+    expect(document.title).toBe('Practice could not load | SeePoundCoffeePie')
+  })
+
   it('updates course context when browser history changes between bookmarked courses', async () => {
     window.history.replaceState({}, '', '/courses/java-foundations')
     render(<App />)
 
-    expect(screen.getByRole('heading', { name: 'Java Foundations' })).toBeTruthy()
+    expect(await screen.findByRole('heading', { name: 'Java Foundations' })).toBeTruthy()
     expect((screen.getByRole('combobox', { name: 'Active language' }) as HTMLSelectElement).value).toBe('java')
 
     act(() => {
@@ -1715,18 +1891,18 @@ describe('beginner lesson interactions', () => {
 
     render(<App />)
 
-    expect(screen.getByRole('heading', { name: 'Java Foundations' })).toBeTruthy()
+    expect(await screen.findByRole('heading', { name: 'Java Foundations' })).toBeTruthy()
     await waitFor(() => {
       expect(JSON.parse(window.localStorage.getItem(progressKey) ?? '{}').activeLanguage).toBe('java')
     })
   })
 
-  it('opens an exact lesson from its canonical bookmarkable URL', () => {
+  it('opens an exact lesson from its canonical bookmarkable URL', async () => {
     window.history.replaceState({}, '', '/learn/python-foundations/py-first-spark/py-console')
 
     render(<App />)
 
-    expect(screen.getByRole('heading', { name: 'Meet the console' })).toBeTruthy()
+    expect(await screen.findByRole('heading', { name: 'Meet the console' })).toBeTruthy()
     expect(window.location.pathname).toBe('/learn/python-foundations/py-first-spark/py-console')
     expect(document.title).toBe('Meet the console | SeePoundCoffeePie')
   })
@@ -1753,7 +1929,7 @@ describe('beginner lesson interactions', () => {
     window.history.replaceState({}, '', '/learn/python-foundations/py-first-spark/py-console')
 
     render(<App />)
-    fireEvent.click(screen.getByRole('radio', { name: /Shows text from the program/iu }))
+    fireEvent.click(await screen.findByRole('radio', { name: /Shows text from the program/iu }))
     fireEvent.click(screen.getByRole('button', { name: 'Check answer' }))
     fireEvent.click(screen.getByRole('button', { name: 'Continue' }))
 

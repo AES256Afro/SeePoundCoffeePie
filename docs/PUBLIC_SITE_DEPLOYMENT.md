@@ -83,10 +83,10 @@ The ordinary production command now means public site only. Do not replace it wi
 4. Confirm `npx wrangler kv key get enabled --binding RUNNER_CONFIG --remote` returns `false`.
 5. Run `npm run deploy`.
 6. Record the new Worker version printed by the wrapper.
-7. Run `npm run check:live:paused` while the code checker remains paused. This verifies the site but states clearly that runner-assignment absence is not yet proven.
+7. Run `npm run check:live:paused` while the code checker remains paused. This requires a configured paused checker, confirms a published assignment cannot receive a grant while paused, and confirms every unpublished Practical C++ assignment still returns not found without issuing a grant or guest cookie.
 8. Repeat the signed-out desktop and mobile browser checks on the custom domain.
 9. Confirm the wrapper reports all four production runner applications unchanged.
-10. If the pre-release value recorded in step 3 was `true`, open one controlled runner window by setting `RUNNER_CONFIG.enabled` to `true`. Run `npm run check:live`, `npm run check:runner:production`, `npm run check:runner:project:production`, `npm run check:runner:cpp-project:production`, `npm run check:runner:csharp-project:production`, `npm run check:runner:java-project:production`, and `npm run check:runner:python-data-tools:production`. If the recorded value was already `false`, do not enable the checker and record that assignment absence remains unproven until the separate pause reason is resolved.
+10. If the pre-release value recorded in step 3 was `true`, open one controlled runner window by setting `RUNNER_CONFIG.enabled` to `true`. Run `npm run check:live`, `npm run check:runner:production`, `npm run check:runner:project:production`, `npm run check:runner:cpp-project:production`, `npm run check:runner:csharp-project:production`, `npm run check:runner:java-project:production`, and `npm run check:runner:python-data-tools:production`. The live check requires a valid grant for the published `py-print` assignment before the full runner regressions begin. If the recorded value was already `false`, do not enable the checker and record that execution remains untested until the separate pause reason is resolved; the paused check still proves that unpublished assignments remain unavailable.
 11. If any regression fails, set `RUNNER_CONFIG.enabled` to `false` immediately. If every applicable check passes, restore the exact pre-release value recorded in step 3. Never enable a checker that was already paused for another reason.
 
 ## Rollback

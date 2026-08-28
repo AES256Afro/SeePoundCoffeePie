@@ -189,7 +189,11 @@ describe('C# guided project UI', () => {
       'csharp',
       expect.stringContaining('using System;'),
       expect.any(Function),
-      { purpose: 'run', stdin: 'Alex Kim\n4\n' },
+      expect.objectContaining({
+        purpose: 'run',
+        signal: expect.objectContaining({ aborted: false }),
+        stdin: 'Alex Kim\n4\n',
+      }),
     )
     expect(document.title).toBe('Open the Community Workshop | SeePoundCoffeePie')
   })

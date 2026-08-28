@@ -3,8 +3,18 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { cppCompiledProjectServerAssessment } from './data/cpp-compiled-project.server'
 import { pythonDataToolsServerAssessment } from './data/python-data-tools.server'
 import { pythonInteractiveProjectServerAssessment } from './data/python-interactive-project.server'
-import type { CppAnalysis, PythonAnalysis, PythonDataToolsAnalysis } from './lib/runner-assignments'
+import {
+  findRunnerAssignment,
+  RUNNER_ASSIGNMENT_REVISION_VERSION,
+  runnerAssignmentRevision,
+  type CppAnalysis,
+  type PythonAnalysis,
+  type PythonDataToolsAnalysis,
+} from './lib/runner-assignments'
 import type { RunnerPurpose, RunnerResult } from './lib/runner-contract'
+
+const staleAssignmentRevision = `${RUNNER_ASSIGNMENT_REVISION_VERSION}:${'0'.repeat(64)}`
+const testSessionSecret = 'a-test-session-secret-that-is-long-enough-for-hmac'
 
 const sandboxMocks = vi.hoisted(() => ({
   getSandbox: vi.fn(),
@@ -22,6 +32,7 @@ interface TestQueuedRun {
   ownerId: string
   ipHash: string
   exerciseId: string
+  assignmentRevision: string
   language: 'python' | 'cpp'
   source: string
   stdin: string
@@ -42,6 +53,19 @@ interface ExecutableCoordinator {
 
 class MemoryStorage {
   readonly data = new Map<string, unknown>()
+  alarm: number | null = null
+
+  async get<T>(key: string): Promise<T | undefined> {
+    return this.data.get(key) as T | undefined
+  }
+
+  async list<T>(options: { prefix: string }): Promise<Map<string, T>> {
+    return new Map(
+      [...this.data.entries()]
+        .filter(([key]) => key.startsWith(options.prefix))
+        .map(([key, value]) => [key, value as T]),
+    )
+  }
 
   async put(keyOrEntries: string | Record<string, unknown>, value?: unknown): Promise<void> {
     if (typeof keyOrEntries === 'string') {
@@ -50,7 +74,29 @@ class MemoryStorage {
     }
     for (const [key, entry] of Object.entries(keyOrEntries)) this.data.set(key, entry)
   }
+
+  async delete(keys: string | string[]): Promise<void> {
+    for (const key of Array.isArray(keys) ? keys : [keys]) this.data.delete(key)
+  }
+
+  async getAlarm(): Promise<number | null> {
+    return this.alarm
+  }
+
+  async setAlarm(value: number): Promise<void> {
+    this.alarm = value
+  }
 }
+
+function requiredAssignment(exerciseId: string) {
+  const assignment = findRunnerAssignment(exerciseId)
+  if (!assignment) throw new Error(`Missing test runner assignment ${exerciseId}.`)
+  return assignment
+}
+
+const pythonProjectRevision = await runnerAssignmentRevision(requiredAssignment('project-py-final'))
+const cppProjectRevision = await runnerAssignmentRevision(requiredAssignment('project-cpp-final'))
+const pythonDataToolsRevision = await runnerAssignmentRevision(requiredAssignment('pydata6-supply-tracker'))
 
 function supervisorResult(
   outcome: RunnerResult['outcome'],
@@ -164,6 +210,7 @@ function queuedRun(source: string, purpose: RunnerPurpose, stdin = ''): TestQueu
     ownerId: 'owner-identifier-that-is-long-enough',
     ipHash: 'ip-hash-that-is-long-enough',
     exerciseId: 'project-py-final',
+    assignmentRevision: pythonProjectRevision,
     language: 'python',
     source,
     stdin,
@@ -180,6 +227,7 @@ function queuedCppRun(source: string, purpose: RunnerPurpose, stdin = ''): TestQ
     ...queuedRun(source, purpose, stdin),
     id: 'cppprojectrunnercase00000000001',
     exerciseId: 'project-cpp-final',
+    assignmentRevision: cppProjectRevision,
     language: 'cpp',
   }
 }
@@ -189,6 +237,7 @@ function queuedPythonDataToolsRun(source: string, purpose: RunnerPurpose = 'chec
     ...queuedRun(source, purpose),
     id: 'pythondatatoolsrunnercase000001',
     exerciseId: 'pydata6-supply-tracker',
+    assignmentRevision: pythonDataToolsRevision,
   }
 }
 
@@ -211,16 +260,20 @@ function pythonDataToolsAnalysis(
 }
 
 function coordinatorWith(storage: MemoryStorage): ExecutableCoordinator {
-  const coordinator = new RunnerCoordinator(
+  return coordinatorInstance(storage) as unknown as ExecutableCoordinator
+}
+
+function coordinatorInstance(storage: MemoryStorage): RunnerCoordinator {
+  return new RunnerCoordinator(
     { storage } as never,
     {
+      SESSION_SECRET: testSessionSecret,
       RUNNER_PYTHON: {},
       RUNNER_CPP: {},
       RUNNER_CSHARP: {},
       RUNNER_JAVA: {},
     } as never,
   )
-  return coordinator as unknown as ExecutableCoordinator
 }
 
 function storedResult(storage: MemoryStorage, runId: string) {
@@ -237,6 +290,7 @@ beforeEach(() => {
   sandboxMocks.getSandbox.mockReset()
   vi.spyOn(console, 'info').mockImplementation(() => undefined)
   vi.spyOn(console, 'error').mockImplementation(() => undefined)
+  vi.spyOn(console, 'warn').mockImplementation(() => undefined)
 })
 
 afterEach(() => {
@@ -444,6 +498,212 @@ describe('project multi-case sandbox execution', () => {
     expect(result.tests).toHaveLength(10)
     expect(result.tests.every((test) => !test.passed)).toBe(true)
     expect(JSON.stringify(result)).not.toContain('python_analysis')
+  })
+})
+
+describe('queued assignment release boundary', () => {
+  it.each([
+    ['missing assignment', 'removed-runner-assignment', 'python' as const],
+    ['language mismatch', 'project-py-final', 'cpp' as const],
+  ])('stores a generic system error without creating a sandbox for a %s', async (
+    _label,
+    exerciseId,
+    language,
+  ) => {
+    const storage = new MemoryStorage()
+    const record: TestQueuedRun = {
+      ...queuedRun('source must never enter a sandbox', 'check'),
+      id: `failclosedrunnercase${language}00000001`,
+      exerciseId,
+      language,
+    }
+
+    await coordinatorWith(storage).execute(record)
+
+    const result = storedResult(storage, record.id)
+    expect(sandboxMocks.getSandbox).not.toHaveBeenCalled()
+    expect(result).toMatchObject({
+      outcome: 'system_error',
+      stdout: '',
+      stderr: '',
+      exitCode: null,
+      durationMs: 0,
+      truncated: false,
+      limit: null,
+      tests: [],
+      diagnostic: {
+        title: 'The code checker had a problem',
+        explanation: 'This was a service problem, not proof that your code is wrong.',
+        line: null,
+      },
+    })
+    expect(JSON.stringify(result)).not.toContain(exerciseId)
+    expect(JSON.stringify(result)).not.toContain(record.source)
+  })
+
+  it('stores a generic system error when queued grading semantics no longer match', async () => {
+    const storage = new MemoryStorage()
+    const record: TestQueuedRun = {
+      ...queuedRun('source must never enter a sandbox', 'check'),
+      assignmentRevision: staleAssignmentRevision,
+    }
+
+    await coordinatorWith(storage).execute(record)
+
+    const result = storedResult(storage, record.id)
+    expect(sandboxMocks.getSandbox).not.toHaveBeenCalled()
+    expect(result).toMatchObject({
+      outcome: 'system_error',
+      stdout: '',
+      stderr: '',
+      tests: [],
+    })
+    expect(JSON.stringify(result)).not.toContain(record.assignmentRevision)
+    expect(JSON.stringify(result)).not.toContain(record.source)
+  })
+})
+
+describe('assignment revision coordinator boundary', () => {
+  it('returns an opaque keyed assignment binding on a valid pending result', async () => {
+    const storage = new MemoryStorage()
+    const now = Date.now()
+    const record = {
+      ...queuedRun('print("private source")', 'check'),
+      createdAt: now,
+      startedAt: now,
+    }
+    storage.data.set(`run:${record.id}`, record)
+
+    const response = await coordinatorInstance(storage).fetch(new Request(
+      `https://runner.internal/result/${record.id}`,
+      { headers: { 'X-Runner-Owner': record.ownerId } },
+    ))
+
+    const key = await crypto.subtle.importKey(
+      'raw',
+      new TextEncoder().encode(testSessionSecret),
+      { name: 'HMAC', hash: 'SHA-256' },
+      false,
+      ['sign'],
+    )
+    const signature = await crypto.subtle.sign(
+      'HMAC',
+      key,
+      new TextEncoder().encode(`runner-assignment:${record.assignmentRevision}`),
+    )
+    const expectedBinding = Buffer.from(signature).toString('base64url')
+
+    expect(response.status).toBe(200)
+    await expect(response.json()).resolves.toMatchObject({ status: 'running' })
+    expect(response.headers.get('X-Runner-Assignment-Id')).toBe(record.exerciseId)
+    expect(response.headers.get('X-Runner-Assignment-Binding')).toBe(expectedBinding)
+    expect(expectedBinding).toMatch(/^[A-Za-z0-9_-]{43}$/u)
+    expect(expectedBinding).not.toContain(record.assignmentRevision)
+  })
+
+  it('rejects an internal submission whose revision does not match current grading semantics', async () => {
+    const storage = new MemoryStorage()
+    const runId = 'revisionmismatchsubmit000001'
+    const response = await coordinatorInstance(storage).fetch(new Request('https://runner.internal/submit', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        runId,
+        ownerId: 'owner-identifier-that-is-long-enough',
+        ipHash: 'ip-hash-that-is-long-enough',
+        exerciseId: 'project-py-final',
+        assignmentRevision: staleAssignmentRevision,
+        request: {
+          version: 1,
+          language: 'python',
+          source: 'print("private source")',
+        },
+      }),
+    }))
+
+    expect(response.status).toBe(400)
+    await expect(response.json()).resolves.toEqual({
+      error: 'This lesson changed while you were working. Reload the page and try again.',
+    })
+    expect(storage.data.has(`run:${runId}`)).toBe(false)
+    expect(storage.data.has('queue')).toBe(false)
+  })
+
+  it('persists the verified revision on a queued submission', async () => {
+    const storage = new MemoryStorage()
+    const runId = 'revisionmatchedsubmit0000001'
+    const response = await coordinatorInstance(storage).fetch(new Request('https://runner.internal/submit', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        runId,
+        ownerId: 'owner-identifier-that-is-long-enough',
+        ipHash: 'ip-hash-that-is-long-enough',
+        exerciseId: 'project-py-final',
+        assignmentRevision: pythonProjectRevision,
+        request: {
+          version: 1,
+          language: 'python',
+          source: 'print("private source")',
+        },
+      }),
+    }))
+
+    expect(response.status).toBe(200)
+    expect(storage.data.get(`run:${runId}`)).toMatchObject({
+      exerciseId: 'project-py-final',
+      assignmentRevision: pythonProjectRevision,
+      status: 'queued',
+    })
+  })
+
+  it.each([
+    ['changed', 'project-py-final', staleAssignmentRevision],
+    ['removed', 'removed-runner-assignment', pythonProjectRevision],
+    ['legacy', 'project-py-final', undefined],
+  ])('does not return a completed result for a %s assignment', async (
+    _label,
+    exerciseId,
+    assignmentRevision,
+  ) => {
+    const storage = new MemoryStorage()
+    const runId = `invalidatedresult${_label}000001`
+    const ownerId = 'owner-identifier-that-is-long-enough'
+    storage.data.set(`run:${runId}`, {
+      id: runId,
+      ownerId,
+      exerciseId,
+      assignmentRevision,
+      language: 'python',
+      status: 'complete',
+      createdAt: 1,
+      completedAt: 2,
+      expiresAt: Date.now() + 60_000,
+      result: {
+        version: 1,
+        runId,
+        outcome: 'completed',
+        exitCode: 0,
+        durationMs: 5,
+        truncated: false,
+        limit: null,
+        tests: [],
+        diagnostic: null,
+      },
+    })
+    storage.data.set(`output:${runId}`, 'must not be returned')
+    storage.data.set(`error:${runId}`, 'private error')
+
+    const response = await coordinatorInstance(storage).fetch(new Request(
+      `https://runner.internal/result/${runId}`,
+      { headers: { 'X-Runner-Owner': ownerId } },
+    ))
+
+    expect(response.status).toBe(404)
+    await expect(response.json()).resolves.toEqual({ error: 'Run not found.' })
+    expect(storage.data.has(`run:${runId}`)).toBe(false)
+    expect(storage.data.has(`output:${runId}`)).toBe(false)
+    expect(storage.data.has(`error:${runId}`)).toBe(false)
   })
 })
 

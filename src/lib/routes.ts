@@ -1,5 +1,6 @@
 import type { LanguageId } from '../types'
 import type { CourseId } from '../types'
+import type { CourseDefinition } from '../data/course-registry'
 import { projectManifests } from '../data/project-manifests'
 import {
   courseDefinition,
@@ -37,6 +38,19 @@ export interface AppRoute {
   practiceStep?: number
   conceptIds: string[]
 }
+
+export interface AppRouteCourseOwnership {
+  courseDefinitionForSlug: (
+    slug: string,
+  ) => Pick<CourseDefinition, 'id' | 'language'> | undefined
+  courseMissionOwnsLesson: (
+    courseId: CourseId,
+    missionId: string,
+    lessonId: string,
+  ) => boolean
+}
+
+export type AppRouteParser = (pathname: string, search?: string) => AppRoute
 
 const languageIds: LanguageId[] = ['python', 'cpp', 'csharp', 'java']
 
@@ -136,122 +150,146 @@ export function pagePath(page: 'academy' | 'practice' | 'codebook', language: La
   return academyPath(language)
 }
 
-export function parseAppRoute(pathname: string, search = ''): AppRoute {
-  const segments = pathname.split('/').filter(Boolean).map(safeDecode)
-  const emptyConcepts: string[] = []
+export function createAppRouteParser(
+  courseOwnership: AppRouteCourseOwnership,
+): AppRouteParser {
+  return (pathname: string, search = ''): AppRoute => {
+    const emptyConcepts: string[] = []
+    const hasEmptyPathSegment = pathname !== '/' && (
+      !pathname.startsWith('/')
+      || pathname.endsWith('/')
+      || pathname.includes('//')
+    )
+    if (hasEmptyPathSegment) return { page: 'not-found', conceptIds: emptyConcepts }
 
-  if (segments.length === 0) return { page: 'landing', conceptIds: emptyConcepts }
-  if (segments.length === 1 && segments[0] === 'home') return { page: 'home', conceptIds: emptyConcepts }
-  if (segments.length === 1 && segments[0] === 'start') return { page: 'start', conceptIds: emptyConcepts }
-  if (segments.length === 1 && segments[0] === 'courses') return { page: 'courses', conceptIds: emptyConcepts }
-  if (segments.length === 1 && segments[0] === 'profile') return { page: 'profile', conceptIds: emptyConcepts }
-  if (segments.length === 1 && segments[0] === 'settings') return { page: 'settings', conceptIds: emptyConcepts }
+    const segments = pathname.split('/').filter(Boolean).map(safeDecode)
 
-  if (segments.length === 2 && segments[0] === 'courses') {
-    const course = courseDefinitionForSlug(segments[1])
-    return course
-      ? { page: 'course', language: course.language, courseId: course.id, conceptIds: emptyConcepts }
-      : { page: 'not-found', conceptIds: emptyConcepts }
-  }
+    if (segments.length === 0) return { page: 'landing', conceptIds: emptyConcepts }
+    if (segments.length === 1 && segments[0] === 'home') return { page: 'home', conceptIds: emptyConcepts }
+    if (segments.length === 1 && segments[0] === 'start') return { page: 'start', conceptIds: emptyConcepts }
+    if (segments.length === 1 && segments[0] === 'courses') return { page: 'courses', conceptIds: emptyConcepts }
+    if (segments.length === 1 && segments[0] === 'profile') return { page: 'profile', conceptIds: emptyConcepts }
+    if (segments.length === 1 && segments[0] === 'settings') return { page: 'settings', conceptIds: emptyConcepts }
 
-  if (segments.length === 4 && segments[0] === 'learn') {
-    const course = courseDefinitionForSlug(segments[1])
-    if (!course || !courseMissionOwnsLesson(course.id, segments[2], segments[3])) {
-      return { page: 'not-found', conceptIds: emptyConcepts }
+    if (segments.length === 2 && segments[0] === 'courses') {
+      const course = courseOwnership.courseDefinitionForSlug(segments[1])
+      return course
+        ? { page: 'course', language: course.language, courseId: course.id, conceptIds: emptyConcepts }
+        : { page: 'not-found', conceptIds: emptyConcepts }
     }
-    return {
-      page: 'lesson',
-      language: course.language,
-      courseId: course.id,
-      missionId: segments[2],
-      exerciseId: segments[3],
-      practice: false,
-      conceptIds: emptyConcepts,
+
+    if (segments.length === 4 && segments[0] === 'learn') {
+      if (search) return { page: 'not-found', conceptIds: emptyConcepts }
+      const course = courseOwnership.courseDefinitionForSlug(segments[1])
+      if (
+        !course
+        || !courseOwnership.courseMissionOwnsLesson(course.id, segments[2], segments[3])
+      ) {
+        return { page: 'not-found', conceptIds: emptyConcepts }
+      }
+      return {
+        page: 'lesson',
+        language: course.language,
+        courseId: course.id,
+        missionId: segments[2],
+        exerciseId: segments[3],
+        practice: false,
+        conceptIds: emptyConcepts,
+      }
     }
-  }
 
-  if (segments[0] === 'projects' && (segments.length === 3 || segments.length === 4)) {
-    const projectLanguage = languageFromSegment(segments[1])
-    const projectId = segments[2]
-    const knownProject = projectLanguage
-      ? projectIdsByLanguage[projectLanguage]?.includes(projectId)
-      : false
+    if (segments[0] === 'projects' && (segments.length === 3 || segments.length === 4)) {
+      const projectLanguage = languageFromSegment(segments[1])
+      const projectId = segments[2]
+      const knownProject = projectLanguage
+        ? projectIdsByLanguage[projectLanguage]?.includes(projectId)
+        : false
 
-    if (!projectLanguage || !knownProject) return { page: 'not-found', conceptIds: emptyConcepts }
-    return {
-      page: 'project',
-      language: projectLanguage,
-      projectId,
-      checkpointId: segments[3],
-      conceptIds: emptyConcepts,
+      if (!projectLanguage || !knownProject) return { page: 'not-found', conceptIds: emptyConcepts }
+      return {
+        page: 'project',
+        language: projectLanguage,
+        projectId,
+        checkpointId: segments[3],
+        conceptIds: emptyConcepts,
+      }
     }
-  }
 
-  if (segments[0] === 'portfolio' && segments.length === 3) {
-    if (search) return { page: 'not-found', conceptIds: emptyConcepts }
-    const projectLanguage = languageFromSegment(segments[1])
-    const projectId = segments[2]
-    const knownProject = projectLanguage
-      ? projectIdsByLanguage[projectLanguage]?.includes(projectId)
-      : false
+    if (segments[0] === 'portfolio' && segments.length === 3) {
+      if (search) return { page: 'not-found', conceptIds: emptyConcepts }
+      const projectLanguage = languageFromSegment(segments[1])
+      const projectId = segments[2]
+      const knownProject = projectLanguage
+        ? projectIdsByLanguage[projectLanguage]?.includes(projectId)
+        : false
 
-    if (!projectLanguage || !knownProject) return { page: 'not-found', conceptIds: emptyConcepts }
-    return {
-      page: 'portfolio',
-      language: projectLanguage,
-      projectId,
-      conceptIds: emptyConcepts,
+      if (!projectLanguage || !knownProject) return { page: 'not-found', conceptIds: emptyConcepts }
+      return {
+        page: 'portfolio',
+        language: projectLanguage,
+        projectId,
+        conceptIds: emptyConcepts,
+      }
     }
-  }
 
-  const area = segments[0]
-  const language = languageFromSegment(segments[1])
-  if (!language) return { page: 'not-found', conceptIds: emptyConcepts }
+    const area = segments[0]
+    const language = languageFromSegment(segments[1])
+    if (!language) return { page: 'not-found', conceptIds: emptyConcepts }
 
-  if (segments.length === 2 && area === 'academy') return { page: 'academy', language, conceptIds: emptyConcepts }
-  if (segments.length === 2 && area === 'practice') return { page: 'practice', language, conceptIds: emptyConcepts }
-  if (segments.length === 2 && area === 'codebook') return { page: 'codebook', language, conceptIds: emptyConcepts }
+    if (segments.length === 2 && area === 'academy') return { page: 'academy', language, conceptIds: emptyConcepts }
+    if (segments.length === 2 && area === 'practice') return { page: 'practice', language, conceptIds: emptyConcepts }
+    if (segments.length === 2 && area === 'codebook') return { page: 'codebook', language, conceptIds: emptyConcepts }
 
-  if (
-    area === 'practice'
-    && segments[2] === 'session'
-    && (segments.length === 3 || segments.length === 4)
-  ) {
-    if (search) return { page: 'not-found', conceptIds: emptyConcepts }
-    const stepText = segments[3]
-    if (stepText && !/^[2-5]$/u.test(stepText)) {
-      return { page: 'not-found', conceptIds: emptyConcepts }
-    }
-    return {
-      page: 'practice-session',
-      language,
-      practice: true,
-      practiceStep: stepText ? Number(stepText) : 1,
-      conceptIds: emptyConcepts,
-    }
-  }
-
-  if (segments.length === 4 && segments[2] === 'missions' && (area === 'academy' || area === 'practice')) {
-    const params = new URLSearchParams(search)
-    const rawConcepts = params.get('concepts')
-    const conceptParameters = params.getAll('concepts')
-    const conceptIds = rawConcepts ? rawConcepts.split(',') : []
     if (
-      search.length > 1_024
-      || conceptParameters.length > 1
-      || conceptIds.length > 5
-      || conceptIds.some((conceptId) => !conceptId || conceptId.length > 100)
-      || new Set(conceptIds).size !== conceptIds.length
-      || [...params.keys()].some((key) => key !== 'concepts')
-    ) return { page: 'not-found', conceptIds: emptyConcepts }
-    return {
-      page: 'lesson',
-      language,
-      missionId: segments[3],
-      practice: area === 'practice',
-      conceptIds,
+      area === 'practice'
+      && segments[2] === 'session'
+      && (segments.length === 3 || segments.length === 4)
+    ) {
+      if (search) return { page: 'not-found', conceptIds: emptyConcepts }
+      const stepText = segments[3]
+      if (stepText && !/^[2-5]$/u.test(stepText)) {
+        return { page: 'not-found', conceptIds: emptyConcepts }
+      }
+      return {
+        page: 'practice-session',
+        language,
+        practice: true,
+        practiceStep: stepText ? Number(stepText) : 1,
+        conceptIds: emptyConcepts,
+      }
     }
-  }
 
-  return { page: 'not-found', conceptIds: emptyConcepts }
+    if (segments.length === 4 && segments[2] === 'missions' && (area === 'academy' || area === 'practice')) {
+      const params = new URLSearchParams(search)
+      const rawConcepts = params.get('concepts')
+      const conceptParameters = params.getAll('concepts')
+      const conceptIds = rawConcepts ? rawConcepts.split(',') : []
+      if (
+        search.length > 1_024
+        || conceptParameters.length > 1
+        || conceptIds.length > 5
+        || conceptIds.some((conceptId) => !conceptId || conceptId.length > 100)
+        || new Set(conceptIds).size !== conceptIds.length
+        || [...params.keys()].some((key) => key !== 'concepts')
+      ) return { page: 'not-found', conceptIds: emptyConcepts }
+      return {
+        page: 'lesson',
+        language,
+        missionId: segments[3],
+        practice: area === 'practice',
+        conceptIds,
+      }
+    }
+
+    return { page: 'not-found', conceptIds: emptyConcepts }
+  }
+}
+
+const productionAppRouteParser = createAppRouteParser({
+  courseDefinitionForSlug,
+  courseMissionOwnsLesson,
+})
+
+export function parseAppRoute(pathname: string, search = ''): AppRoute {
+  return productionAppRouteParser(pathname, search)
 }

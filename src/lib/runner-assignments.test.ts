@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { computeRunnerGradingBehaviorRevision } from '../../scripts/runner-grading-revision.mjs'
 import { cppCompiledProject } from '../data/cpp-compiled-project'
 import { tracks } from '../data/curriculum'
 import { csharpWorkshopProject } from '../data/csharp-workshop-project'
@@ -9,8 +10,12 @@ import { pythonInteractiveProject } from '../data/python-interactive-project'
 import {
   evaluateRunnerAssignment,
   findRunnerAssignment,
+  isRunnerAssignmentRevision,
   registerRunnerAssignment,
+  RUNNER_ASSIGNMENT_REVISION_VERSION,
+  RUNNER_GRADING_BEHAVIOR_REVISION,
   runnerAssignmentCount,
+  runnerAssignmentRevision,
 } from './runner-assignments'
 
 const editableAcademyExercises = [
@@ -28,6 +33,10 @@ const editableProjectExercises = [
 ].flatMap((project) => project.checkpoints.map((checkpoint) => checkpoint.exercise)).filter((exercise) => (
   (exercise.type === 'code' || exercise.type === 'bugfix') && exercise.output !== undefined
 ))
+const assignmentRevisionPattern = new RegExp(
+  `^${RUNNER_ASSIGNMENT_REVISION_VERSION}:[a-f0-9]{64}$`,
+  'u',
+)
 
 describe('server-owned runner assignments', () => {
   it('covers every authored editable exercise with real output', () => {
@@ -63,6 +72,61 @@ describe('server-owned runner assignments', () => {
         language: 'python',
         kind: 'academy',
       })),
+    )
+  })
+
+  it('derives an opaque deterministic revision from visible and protected grading semantics', async () => {
+    const assignment = findRunnerAssignment('project-py-final')
+    expect(assignment?.projectAssessment).toBeDefined()
+
+    const identical = structuredClone(assignment!)
+    const changedHiddenCase = structuredClone(assignment!)
+    const hiddenCase = changedHiddenCase.projectAssessment?.testCases.find((testCase) => (
+      testCase.visibility === 'hidden'
+    ))
+    expect(hiddenCase).toBeDefined()
+    hiddenCase!.expectedStdout = `${hiddenCase!.expectedStdout}\nchanged`
+
+    const changedStructuralCheck = structuredClone(assignment!)
+    changedStructuralCheck.projectAssessment!.structuralChecks[0].message = 'Changed protected requirement.'
+    const changedTeachingCopy = structuredClone(assignment!)
+    changedTeachingCopy.exercise.explanation = 'Copy changed without changing the grade.'
+    const changedReferenceSolution = structuredClone(assignment!)
+    changedReferenceSolution.projectAssessment!.referenceSolution = 'Unused author reference changed.'
+    const changedBehaviorRevision = `sha256:${'f'.repeat(64)}`
+
+    const [
+      revision,
+      identicalRevision,
+      hiddenRevision,
+      structuralRevision,
+      copyRevision,
+      referenceSolutionRevision,
+      behaviorRevision,
+    ] = await Promise.all([
+      runnerAssignmentRevision(assignment!),
+      runnerAssignmentRevision(identical),
+      runnerAssignmentRevision(changedHiddenCase),
+      runnerAssignmentRevision(changedStructuralCheck),
+      runnerAssignmentRevision(changedTeachingCopy),
+      runnerAssignmentRevision(changedReferenceSolution),
+      runnerAssignmentRevision(assignment!, changedBehaviorRevision),
+    ])
+
+    expect(isRunnerAssignmentRevision(revision)).toBe(true)
+    expect(identicalRevision).toBe(revision)
+    expect(hiddenRevision).not.toBe(revision)
+    expect(structuralRevision).not.toBe(revision)
+    expect(copyRevision).toBe(revision)
+    expect(referenceSolutionRevision).toBe(revision)
+    expect(behaviorRevision).not.toBe(revision)
+    expect(revision).not.toContain(hiddenCase!.expectedStdout)
+    expect(revision).toMatch(assignmentRevisionPattern)
+  })
+
+  it('binds grading code, analyzers, runner images, and sandbox library to a checked revision', async () => {
+    await expect(computeRunnerGradingBehaviorRevision()).resolves.toBe(
+      RUNNER_GRADING_BEHAVIOR_REVISION,
     )
   })
 

@@ -7,6 +7,7 @@ import {
   useRef,
   useState,
   type Dispatch,
+  type ReactNode,
   type SetStateAction,
 } from 'react'
 import {
@@ -30,67 +31,76 @@ import {
   type ContinuingCourseContent,
 } from './data/published-continuing-course-loaders'
 import { completeMission } from './lib/progress'
+import { lessonActivityLabel } from './lib/course-model'
 import { coursePath, coursesPath, lessonPath } from './lib/routes'
 import { RouteLink as NavigateLink, RouteNotFoundPage } from './RouteNotFoundPage'
-import type { CourseId, LearnerProgress, Mission } from './types'
-import './python-data-tools.css'
+import type { CourseId, LearnerProgress } from './types'
 
 const LessonPlayer = lazy(async () => {
   const module = await import('./LessonPlayer')
   return { default: module.LessonPlayer }
 })
 
-function percent(completed: number, total: number): number {
-  return total > 0 ? Math.round((completed / total) * 100) : 0
-}
-
-function exerciseLabel(type: Mission['exercises'][number]['type']): string {
-  if (type === 'bugfix') return 'Fix a problem'
-  if (type === 'choice') return 'Choose an answer'
-  if (type === 'prediction') return 'Predict the result'
-  if (type === 'ordering') return 'Put steps in order'
-  return 'Edit code'
-}
-
-function useContinuingCourseContent(courseId: string): ContinuingCourseContent | null {
-  const request = publishedContinuingCourseContentRequest(courseId)
-  return request ? use(request) : null
-}
-
-function languageLabel(definition: CourseDefinition): string {
-  if (definition.language === 'cpp') return 'C++'
-  if (definition.language === 'csharp') return 'C#'
-  if (definition.language === 'java') return 'Java'
-  return 'Python'
+const languageLabels: Record<CourseDefinition['language'], string> = {
+  cpp: 'C++',
+  csharp: 'C#',
+  java: 'Java',
+  python: 'Python',
 }
 
 function courseSymbol(definition: CourseDefinition) {
   if (definition.symbol === 'hash') return '#'
-  if (definition.symbol === 'eye') return <Eye aria-hidden="true" />
-  if (definition.symbol === 'coffee') return <Coffee aria-hidden="true" />
+  if (definition.symbol === 'eye') return <Eye aria-hidden />
+  if (definition.symbol === 'coffee') return <Coffee aria-hidden />
   return 'π'
+}
+
+function useRouteHeading(title: string) {
+  useEffect(() => {
+    document.title = `${title} | SeePoundCoffeePie`
+    document.querySelector<HTMLElement>('h1')?.focus({ preventScroll: true })
+  }, [title])
 }
 
 function prerequisiteSentence(definition: CourseDefinition): string {
   const labels = definition.prerequisites.map((prerequisite) => (
-    prerequisite.label.replace(/^Complete\s+/u, '')
+    prerequisite.label.replace(/^Complete\s+/, '')
   ))
-  if (labels.length === 0) return 'This course is ready to begin.'
+  if (!labels.length) return 'This course is ready to begin.'
   if (labels.length === 1) return `Complete ${labels[0]} before starting this course.`
   return `Complete ${labels.slice(0, -1).join(', ')} and ${labels.at(-1)} before starting this course.`
+}
+
+function RouteMessagePage({ busy, children }: { busy?: boolean; children: ReactNode }) {
+  return (
+    <main aria-busy={busy} className="route-message-page" id="main-content" tabIndex={-1}>
+      <section className="route-message-card">{children}</section>
+    </main>
+  )
 }
 
 function LoadingLesson({ definition }: { definition: CourseDefinition }) {
   return (
     <div className="lesson-overlay">
-      <main className="route-message-page" aria-busy="true" id="main-content" tabIndex={-1}>
-        <section className="route-message-card">
-          <p className="kicker"><BookOpen size={15} /> {definition.shortName}</p>
-          <h1>Opening your lesson</h1>
-          <p>Loading the explanation, exercise, and code workspace.</p>
-        </section>
-      </main>
+      <RouteMessagePage busy>
+        <p className="kicker"><BookOpen size={15} /> {definition.shortName}</p>
+        <h1>Opening your lesson</h1>
+        <p>Loading the explanation, exercise, and code workspace.</p>
+      </RouteMessagePage>
     </div>
+  )
+}
+
+function ContinuingCourseLoadFailure({ courseId }: { courseId: CourseId }) {
+  const definition = courseDefinition(courseId)
+  const failureTitle = `${definition.shortName} could not load`
+  useRouteHeading(failureTitle)
+  return (
+    <RouteMessagePage>
+      <h1 tabIndex={-1}>{failureTitle}</h1>
+      <p>Your progress is saved. Check your connection, then try loading the course again.</p>
+      <button className="primary-action" onClick={() => location.reload()}>Try again</button>
+    </RouteMessagePage>
   )
 }
 
@@ -117,10 +127,13 @@ function ContinuingCoursePageContent({ course, courseId, onNavigate, onProgress,
   const missing = missingCoursePrerequisites(definition.id, progress)
   const completedMissions = new Set(progress.completedMissions)
   const completedLessons = new Set(progress.completedLessons)
+  const moduleCount = definition.missionIds.length
+  const lessonCount = definition.lessonIds.length
   const completedModuleCount = definition.missionIds.filter((id) => completedMissions.has(id)).length
   const completedLessonCount = definition.lessonIds.filter((id) => completedLessons.has(id)).length
-  const courseComplete = completedModuleCount === definition.missionIds.length
-  const hasActivity = completedModuleCount > 0 || completedLessonCount > 0
+  const completionPercent = lessonCount ? Math.round((completedLessonCount / lessonCount) * 100) : 0
+  const courseComplete = completedModuleCount === moduleCount
+  const hasActivity = Boolean(completedModuleCount || completedLessonCount)
   const currentModuleIndex = courseComplete
     ? -1
     : course.missions.findIndex((mission) => !completedMissions.has(mission.id))
@@ -130,24 +143,19 @@ function ContinuingCoursePageContent({ course, courseId, onNavigate, onProgress,
   const [expandedModule, setExpandedModule] = useState(currentModule?.id ?? course.missions[0]?.id ?? '')
   const [completionNotice, setCompletionNotice] = useState('')
   const [focusModuleId, setFocusModuleId] = useState<string | null>(null)
-  const courseHeadingRef = useRef<HTMLHeadingElement>(null)
+  useRouteHeading(definition.title)
   const moduleSummaryRefs = useRef(new Map<string, HTMLButtonElement>())
   const continueTo = currentModule && currentLesson
     ? lessonPath(definition.id, currentModule.id, currentLesson.id)
     : coursePath(definition.id)
 
   useEffect(() => {
-    document.title = `${definition.title} | SeePoundCoffeePie`
-    courseHeadingRef.current?.focus({ preventScroll: true })
-  }, [definition.title])
-
-  useEffect(() => {
     if (!focusModuleId) return
-    const timer = window.setTimeout(() => {
+    const timer = setTimeout(() => {
       moduleSummaryRefs.current.get(focusModuleId)?.focus({ preventScroll: true })
       setFocusModuleId(null)
     }, 0)
-    return () => window.clearTimeout(timer)
+    return () => clearTimeout(timer)
   }, [focusModuleId])
 
   const finishModule = (missionId: string) => {
@@ -166,17 +174,17 @@ function ContinuingCoursePageContent({ course, courseId, onNavigate, onProgress,
     <main className="workshop-page course-outline" id="main-content" tabIndex={-1}>
       <NavigateLink className="back-link" onNavigate={onNavigate} to={coursesPath()}><ArrowLeft size={16} /> All courses</NavigateLink>
       <header className={`course-hero course-hero--${definition.language} course-hero--continuing`}>
-        <span aria-label={languageLabel(definition)} className={`language-symbol language-symbol--${definition.language} language-symbol--large`}>{courseSymbol(definition)}</span>
+        <span aria-label={languageLabels[definition.language]} className={`language-symbol language-symbol--${definition.language} language-symbol--large`}>{courseSymbol(definition)}</span>
         <div>
-          <p className="eyebrow">{languageLabel(definition)} course</p>
-          <h1 ref={courseHeadingRef} tabIndex={-1}>{definition.title}</h1>
+          <p className="eyebrow">{languageLabels[definition.language]} course</p>
+          <h1 tabIndex={-1}>{definition.title}</h1>
           <p>{definition.description}</p>
-          <span>{definition.missionIds.length} modules · {definition.lessonIds.length} short lessons</span>
+          <span>{moduleCount} modules · {lessonCount} short lessons</span>
         </div>
         <div className="course-hero__action">
-          <b>{completedLessonCount} of {definition.lessonIds.length} lessons complete</b>
-          <small>{percent(completedLessonCount, definition.lessonIds.length)}% of course</small>
-          <i aria-label={`${definition.title} progress`} aria-valuemax={100} aria-valuemin={0} aria-valuenow={percent(completedLessonCount, definition.lessonIds.length)} role="progressbar"><span style={{ width: `${percent(completedLessonCount, definition.lessonIds.length)}%` }} /></i>
+          <b>{completedLessonCount} of {lessonCount} lessons complete</b>
+          <small>{completionPercent}% of course</small>
+          <i aria-label={`${definition.title} progress`} aria-valuemax={100} aria-valuemin={0} aria-valuenow={completionPercent} role="progressbar"><span style={{ width: `${completionPercent}%` }} /></i>
           {prerequisiteReady ? (
             <NavigateLink className="primary-action" onNavigate={onNavigate} to={continueTo}>
               {courseComplete ? 'Review course' : hasActivity ? 'Continue course' : 'Start course'} <ArrowRight size={17} />
@@ -239,7 +247,7 @@ function ContinuingCoursePageContent({ course, courseId, onNavigate, onProgress,
                       onNavigate={onNavigate}
                       to={lessonPath(definition.id, mission.id, exercise.id)}
                     >
-                      <span>{completed ? <Check size={15} /> : lessonIndex + 1}</span><b>{exercise.title}</b><small>{completed ? 'Complete' : current && currentLesson?.id === exercise.id ? 'Next lesson' : 'Start lesson'} · {exerciseLabel(exercise.type)}</small><ArrowRight size={15} />
+                      <span>{completed ? <Check size={15} /> : lessonIndex + 1}</span><b>{exercise.title}</b><small>{completed ? 'Complete' : current && currentLesson?.id === exercise.id ? 'Next lesson' : 'Start lesson'} · {lessonActivityLabel(exercise.type)}</small><ArrowRight size={15} />
                     </NavigateLink>
                   ) : <div className="is-locked" key={exercise.id}><span><LockKeyhole size={13} /></span><b>{exercise.title}</b><small>{prerequisiteReady ? 'Complete the previous module first' : `Complete ${prerequisiteQuantity} item${singlePrerequisite ? '' : 's'} below first`}</small></div>
                 })}
@@ -254,10 +262,13 @@ function ContinuingCoursePageContent({ course, courseId, onNavigate, onProgress,
 }
 
 export function ContinuingCoursePage(props: ContinuingCoursePageProps) {
-  const course = useContinuingCourseContent(props.courseId)
+  const request = publishedContinuingCourseContentRequest(props.courseId)
+  const course = request ? use(request) : null
   return course
     ? <ContinuingCoursePageContent {...props} course={course} />
-    : <RouteNotFoundPage onNavigate={props.onNavigate} progress={props.progress} />
+    : request
+      ? <ContinuingCourseLoadFailure courseId={props.courseId} />
+      : <RouteNotFoundPage onNavigate={props.onNavigate} progress={props.progress} />
 }
 
 interface LessonPageProps {
@@ -293,32 +304,27 @@ function ContinuingCourseLessonPageContent({
   const previousComplete = missionIndex === 0 || progress.completedMissions.includes(course.missions[missionIndex - 1]?.id)
   const available = Boolean(mission && exercise && prerequisiteReady && previousComplete)
   const missing = useMemo(() => missingCoursePrerequisites(definition.id, progress), [definition.id, progress])
-
-  useEffect(() => {
-    document.title = `${exercise?.title ?? definition.title} | SeePoundCoffeePie`
-  }, [definition.title, exercise?.title])
+  useRouteHeading(exercise?.title ?? definition.title)
 
   if (!mission || !exercise) {
-    return <main className="route-message-page"><section className="route-message-card"><h1>Lesson not found</h1><NavigateLink className="primary-action" onNavigate={onNavigate} to={coursePath(definition.id)}>Return to the course</NavigateLink></section></main>
+    return <RouteMessagePage><h1 tabIndex={-1}>Lesson not found</h1><NavigateLink className="primary-action" onNavigate={onNavigate} to={coursePath(definition.id)}>Return to the course</NavigateLink></RouteMessagePage>
   }
 
   if (!available) {
     return (
-      <main className="route-message-page" id="main-content" tabIndex={-1}>
-        <section className="route-message-card">
-          <p className="kicker"><LockKeyhole size={15} /> Lesson locked</p>
-          <h1>{exercise.title} is still ahead</h1>
-          <p>{!prerequisiteReady
-            ? prerequisiteSentence(definition)
-            : `Complete ${course.missions[missionIndex - 1]?.title ?? 'the previous module'} first. Each module uses ideas from the one before it.`}</p>
-          {!prerequisiteReady && <ul className="locked-route-prerequisites">{missing.map((item) => (
-            <li key={`${item.kind}:${item.id}`}>
-              <NavigateLink onNavigate={onNavigate} to={item.kind === 'course' ? coursePath(item.id) : item.path}>{item.label}</NavigateLink>
-            </li>
-          ))}</ul>}
-          <NavigateLink className="primary-action" onNavigate={onNavigate} to={coursePath(definition.id)}>Return to {definition.shortName}</NavigateLink>
-        </section>
-      </main>
+      <RouteMessagePage>
+        <p className="kicker"><LockKeyhole size={15} /> Lesson locked</p>
+        <h1 tabIndex={-1}>{exercise.title} is still ahead</h1>
+        <p>{!prerequisiteReady
+          ? prerequisiteSentence(definition)
+          : `Complete ${course.missions[missionIndex - 1]?.title ?? 'the previous module'} first. Each module uses ideas from the one before it.`}</p>
+        {!prerequisiteReady && <ul className="locked-route-prerequisites">{missing.map((item) => (
+          <li key={`${item.kind}:${item.id}`}>
+            <NavigateLink onNavigate={onNavigate} to={item.kind === 'course' ? coursePath(item.id) : item.path}>{item.label}</NavigateLink>
+          </li>
+        ))}</ul>}
+        <NavigateLink className="primary-action" onNavigate={onNavigate} to={coursePath(definition.id)}>Return to {definition.shortName}</NavigateLink>
+      </RouteMessagePage>
     )
   }
 
@@ -338,10 +344,13 @@ function ContinuingCourseLessonPageContent({
 }
 
 export function ContinuingCourseLessonPage(props: ContinuingCourseLessonPageProps) {
-  const course = useContinuingCourseContent(props.courseId)
+  const request = publishedContinuingCourseContentRequest(props.courseId)
+  const course = request ? use(request) : null
   return course
     ? <ContinuingCourseLessonPageContent {...props} course={course} />
-    : <RouteNotFoundPage onNavigate={props.onNavigate} progress={props.progress} />
+    : request
+      ? <ContinuingCourseLoadFailure courseId={props.courseId} />
+      : <RouteNotFoundPage onNavigate={props.onNavigate} progress={props.progress} />
 }
 
 export function PythonDataToolsCoursePage(props: CoursePageProps) {

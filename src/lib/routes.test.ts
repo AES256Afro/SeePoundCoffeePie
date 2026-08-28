@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest'
+import type { CourseId } from '../types'
 import {
   academyPath,
   codebookPath,
+  createAppRouteParser,
   coursePath,
   coursesPath,
   homePath,
@@ -90,6 +92,10 @@ describe('bookmarkable application routes', () => {
     })
     expect(parseAppRoute('/learn/python-foundations/py-data-return-values/pydata1-return-purpose').page).toBe('not-found')
     expect(parseAppRoute('/learn/python-data-tools/py-first-spark/py-console').page).toBe('not-found')
+    expect(parseAppRoute(
+      '/learn/python-data-tools/py-data-return-values/pydata1-return-purpose',
+      '?preview=true',
+    ).page).toBe('not-found')
   })
 
   it('parses academy pages and focused practice lessons', () => {
@@ -242,5 +248,106 @@ describe('bookmarkable application routes', () => {
     expect(parseAppRoute('/projects/python/not-a-project').page).toBe('not-found')
     expect(parseAppRoute('/projects/python/first-interactive-program/checkpoint/extra').page).toBe('not-found')
     expect(parseAppRoute('/anything-else').page).toBe('not-found')
+  })
+
+  it('rejects duplicate and trailing slashes instead of treating them as canonical URLs', () => {
+    const nonCanonicalPaths = [
+      '/home/',
+      '/courses/',
+      '/courses//python-foundations',
+      '/courses/python-foundations/',
+      '/learn//python-foundations/py-first-spark/py-print',
+      '/learn/python-foundations//py-first-spark/py-print',
+      '/learn/python-foundations/py-first-spark//py-print',
+      '/learn/python-foundations/py-first-spark/py-print/',
+    ]
+
+    for (const pathname of nonCanonicalPaths) {
+      expect(parseAppRoute(pathname).page, pathname).toBe('not-found')
+    }
+  })
+})
+
+describe('injected canonical course route ownership', () => {
+  const candidateCourseId = 'cpp-collections-records' as CourseId
+  const candidateSlug = 'cpp-collections-records'
+  const candidateMissionId = 'cpp-records'
+  const candidateLessonId = 'cpp-records-create'
+  const parseCandidateRoute = createAppRouteParser({
+    courseDefinitionForSlug: (slug) => slug === candidateSlug
+      ? { id: candidateCourseId, language: 'cpp' }
+      : undefined,
+    courseMissionOwnsLesson: (courseId, missionId, lessonId) => (
+      courseId === candidateCourseId
+      && missionId === candidateMissionId
+      && lessonId === candidateLessonId
+    ),
+  })
+
+  it('resolves a candidate continuing course only through explicitly injected ownership', () => {
+    expect(parseCandidateRoute(`/courses/${candidateSlug}`)).toEqual({
+      page: 'course',
+      language: 'cpp',
+      courseId: candidateCourseId,
+      conceptIds: [],
+    })
+    expect(parseCandidateRoute(
+      `/learn/${candidateSlug}/${candidateMissionId}/${candidateLessonId}`,
+    )).toEqual({
+      page: 'lesson',
+      language: 'cpp',
+      courseId: candidateCourseId,
+      missionId: candidateMissionId,
+      exerciseId: candidateLessonId,
+      practice: false,
+      conceptIds: [],
+    })
+
+    expect(parseAppRoute(`/courses/${candidateSlug}`).page).toBe('not-found')
+    expect(parseAppRoute(
+      `/learn/${candidateSlug}/${candidateMissionId}/${candidateLessonId}`,
+    ).page).toBe('not-found')
+  })
+
+  it('fails closed when candidate lesson ownership does not match exactly', () => {
+    expect(parseCandidateRoute(
+      `/learn/${candidateSlug}/other-mission/${candidateLessonId}`,
+    ).page).toBe('not-found')
+    expect(parseCandidateRoute(
+      `/learn/${candidateSlug}/${candidateMissionId}/other-lesson`,
+    ).page).toBe('not-found')
+    expect(parseCandidateRoute('/courses/unknown-course').page).toBe('not-found')
+    expect(parseCandidateRoute('/learn/unknown-course/unknown-mission/unknown-lesson').page).toBe('not-found')
+  })
+
+  it('rejects extra segments, malformed escapes, encoded separators, and NUL bytes', () => {
+    const unsafePaths = [
+      `/courses//${candidateSlug}`,
+      `/courses/${candidateSlug}/`,
+      `/learn/${candidateSlug}//${candidateMissionId}/${candidateLessonId}`,
+      `/learn/${candidateSlug}/${candidateMissionId}/${candidateLessonId}/`,
+      `/courses/${candidateSlug}/extra`,
+      `/learn/${candidateSlug}/${candidateMissionId}/${candidateLessonId}/extra`,
+      '/courses/cpp-collections-%ZZ',
+      `/learn/${candidateSlug}/cpp-records-%ZZ/${candidateLessonId}`,
+      `/learn/${candidateSlug}/${candidateMissionId}/cpp-records-%ZZ`,
+      '/courses/cpp-collections%2Frecords',
+      `/learn/${candidateSlug}/cpp%2Frecords/${candidateLessonId}`,
+      `/learn/${candidateSlug}/${candidateMissionId}/cpp-records%2Fcreate`,
+      `/courses/${candidateSlug}%00`,
+      `/learn/${candidateSlug}/${candidateMissionId}%00/${candidateLessonId}`,
+      `/learn/${candidateSlug}/${candidateMissionId}/${candidateLessonId}%00`,
+    ]
+
+    for (const pathname of unsafePaths) {
+      expect(parseCandidateRoute(pathname).page, pathname).toBe('not-found')
+    }
+  })
+
+  it('rejects query-bearing canonical candidate lesson URLs', () => {
+    expect(parseCandidateRoute(
+      `/learn/${candidateSlug}/${candidateMissionId}/${candidateLessonId}`,
+      '?preview=true',
+    ).page).toBe('not-found')
   })
 })

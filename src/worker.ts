@@ -1,4 +1,7 @@
-import { findRunnerAssignment } from './lib/runner-assignments'
+import {
+  findRunnerAssignment,
+  runnerAssignmentRevision,
+} from './lib/runner-assignments'
 import { RUNNER_API_VERSION, validateRunnerRequest } from './lib/runner-contract'
 import { parseLearnerProgress, PROGRESS_BACKUP_MAX_BYTES } from './lib/progress-backup'
 import { PROGRESS_RECORD_VERSION } from './lib/progress-sync'
@@ -41,6 +44,7 @@ interface RunnerGrantPayload {
   ownerId: string
   exerciseId: string
   language: 'python' | 'cpp' | 'csharp' | 'java'
+  assignmentBinding: string
   expiresAt: number
   nonce: string
 }
@@ -61,6 +65,8 @@ const OAUTH_COOKIE_AGE = 10 * 60
 const SESSION_COOKIE_AGE = 7 * 24 * 60 * 60
 const RUNNER_GUEST_COOKIE_AGE = 30 * 24 * 60 * 60
 const RUNNER_GRANT_AGE = 5 * 60
+const RUNNER_ASSIGNMENT_ID_HEADER = 'X-Runner-Assignment-Id'
+const RUNNER_ASSIGNMENT_BINDING_HEADER = 'X-Runner-Assignment-Binding'
 const OAUTH_STATE_COOKIE = '__Host-spp_oauth_state'
 const PKCE_COOKIE = '__Host-spp_oauth_pkce'
 const SESSION_COOKIE = '__Host-spp_session'
@@ -639,6 +645,8 @@ function validGrantPayload(value: unknown): value is RunnerGrantPayload {
     && payload.ownerId.length >= 32
     && typeof payload.exerciseId === 'string'
     && ['python', 'cpp', 'csharp', 'java'].includes(payload.language ?? '')
+    && typeof payload.assignmentBinding === 'string'
+    && /^[A-Za-z0-9_-]{43}$/u.test(payload.assignmentBinding)
     && typeof payload.expiresAt === 'number'
     && payload.expiresAt > Math.floor(Date.now() / 1000)
     && typeof payload.nonce === 'string'
@@ -686,11 +694,6 @@ async function runnerGrant(request: Request, env: WorkerEnv): Promise<Response> 
   if (!sameOrigin(request, env)) {
     return json({ error: 'Reload this page before starting the check again.' }, 403)
   }
-  if (!env.SESSION_SECRET || env.SESSION_SECRET.length < 32 || !env.RUNNER_CONTROL) {
-    return json({ error: 'The code checker is not available right now. Try again later.' }, 503)
-  }
-  if (!await runnerEnabled(env)) return json({ error: 'The code checker is paused right now. Try again later.' }, 503)
-
   let body: unknown
   try {
     body = await request.json()
@@ -706,13 +709,23 @@ async function runnerGrant(request: Request, env: WorkerEnv): Promise<Response> 
 
   const assignment = findRunnerAssignment(exerciseId)
   if (!assignment) return json({ error: 'This page does not have a code check yet.' }, 404)
+  if (!env.SESSION_SECRET || env.SESSION_SECRET.length < 32 || !env.RUNNER_CONTROL) {
+    return json({ error: 'The code checker is not available right now. Try again later.' }, 503)
+  }
+  if (!await runnerEnabled(env)) return json({ error: 'The code checker is paused right now. Try again later.' }, 503)
+
   const owner = await runnerOwner(request, env, true)
   if (!owner) return json({ error: 'The code checker could not start. Reload the page and try again.' }, 503)
 
+  const assignmentRevision = await runnerAssignmentRevision(assignment)
   const payload: RunnerGrantPayload = {
     ownerId: owner.ownerId,
     exerciseId,
     language: assignment.language,
+    assignmentBinding: await hmacTag(
+      `runner-assignment:${assignmentRevision}`,
+      env.SESSION_SECRET,
+    ),
     expiresAt: Math.floor(Date.now() / 1000) + RUNNER_GRANT_AGE,
     nonce: randomBase64Url(18),
   }
@@ -739,16 +752,35 @@ async function submitRunnerRun(request: Request, env: WorkerEnv): Promise<Respon
   if (!sameOrigin(request, env)) {
     return json({ error: 'Reload this page before starting the check again.' }, 403)
   }
-  if (!env.SESSION_SECRET || !env.RUNNER_CONTROL) {
+  if (!env.SESSION_SECRET || env.SESSION_SECRET.length < 32) {
     return json({ error: 'The code checker is not available right now. Try again later.' }, 503)
   }
-  if (!await runnerEnabled(env)) return json({ error: 'The code checker is paused right now. Try again later.' }, 503)
 
   const grant = await readRunnerGrant(request, env)
   const owner = await runnerOwner(request, env, false)
   if (!grant || !owner || grant.ownerId !== owner.ownerId) {
     return json({ error: 'This check expired. Start the check again.' }, 401)
   }
+
+  const assignment = findRunnerAssignment(grant.exerciseId)
+  if (!assignment) {
+    return json({ error: 'This page does not have a code check yet.' }, 404)
+  }
+  const assignmentRevision = await runnerAssignmentRevision(assignment)
+  const assignmentBinding = await hmacTag(
+    `runner-assignment:${assignmentRevision}`,
+    env.SESSION_SECRET,
+  )
+  if (
+    assignment.language !== grant.language
+    || assignmentBinding !== grant.assignmentBinding
+  ) {
+    return json({ error: 'This lesson changed while you were working. Reload the page and try again.' }, 400)
+  }
+  if (!env.RUNNER_CONTROL) {
+    return json({ error: 'The code checker is not available right now. Try again later.' }, 503)
+  }
+  if (!await runnerEnabled(env)) return json({ error: 'The code checker is paused right now. Try again later.' }, 503)
 
   const contentLength = Number(request.headers.get('Content-Length') ?? '0')
   if (Number.isFinite(contentLength) && contentLength > 25_000) {
@@ -772,17 +804,13 @@ async function submitRunnerRun(request: Request, env: WorkerEnv): Promise<Respon
     return json({ error: 'The language for this check changed. Reload the page and try again.' }, 400)
   }
 
-  const assignment = findRunnerAssignment(grant.exerciseId)
-  if (!assignment || assignment.language !== grant.language) {
-    return json({ error: 'This lesson changed while you were working. Reload the page and try again.' }, 400)
-  }
-
   const address = request.headers.get('CF-Connecting-IP') ?? 'unknown'
   const payload = {
     runId: randomBase64Url(24),
     ownerId: owner.ownerId,
     ipHash: await hmacTag(`runner-ip:${address}`, env.SESSION_SECRET),
     exerciseId: grant.exerciseId,
+    assignmentRevision,
     request: validation.request,
   }
   const stub = env.RUNNER_CONTROL.getByName('global-v1')
@@ -795,7 +823,7 @@ async function submitRunnerRun(request: Request, env: WorkerEnv): Promise<Respon
 }
 
 async function runnerResult(request: Request, env: WorkerEnv, runId: string): Promise<Response> {
-  if (!env.RUNNER_CONTROL) {
+  if (!env.RUNNER_CONTROL || !env.SESSION_SECRET || env.SESSION_SECRET.length < 32) {
     return json({ error: 'The code checker is not available right now. Try again later.' }, 503)
   }
   const owner = await runnerOwner(request, env, false)
@@ -805,15 +833,45 @@ async function runnerResult(request: Request, env: WorkerEnv, runId: string): Pr
   const response = await stub.fetch(`https://runner.internal/result/${encodeURIComponent(runId)}`, {
     headers: { 'X-Runner-Owner': owner.ownerId },
   })
-  return new Response(response.body, { status: response.status, headers: response.headers })
+  const headers = new Headers(response.headers)
+  const exerciseId = headers.get(RUNNER_ASSIGNMENT_ID_HEADER)
+  const assignmentBinding = headers.get(RUNNER_ASSIGNMENT_BINDING_HEADER)
+  headers.delete(RUNNER_ASSIGNMENT_ID_HEADER)
+  headers.delete(RUNNER_ASSIGNMENT_BINDING_HEADER)
+  if (response.ok) {
+    const assignment = exerciseId ? findRunnerAssignment(exerciseId) : undefined
+    const currentBinding = assignment
+      ? await hmacTag(
+          `runner-assignment:${await runnerAssignmentRevision(assignment)}`,
+          env.SESSION_SECRET,
+        )
+      : null
+    if (
+      !assignment
+      || typeof assignmentBinding !== 'string'
+      || !/^[A-Za-z0-9_-]{43}$/u.test(assignmentBinding)
+      || currentBinding !== assignmentBinding
+    ) {
+      return json({ error: 'This check could not be found. Start it again.' }, 404)
+    }
+  }
+  return new Response(response.body, { status: response.status, headers })
 }
 
 async function runnerRequest(request: Request, env: WorkerEnv): Promise<Response> {
   const url = new URL(request.url)
   if (url.pathname === '/api/runner/status') {
     if (request.method !== 'GET') return methodNotAllowed('GET')
+    const configured = Boolean(
+      env.RUNNER_CONTROL
+      && env.SESSION_SECRET
+      && env.SESSION_SECRET.length >= 32,
+    )
+    const enabled = configured && await runnerEnabled(env)
     return json({
-      enabled: Boolean(env.RUNNER_CONTROL) && await runnerEnabled(env),
+      configured,
+      enabled,
+      paused: configured && !enabled,
       version: RUNNER_API_VERSION,
       languages: ['python', 'cpp', 'csharp', 'java'],
     })

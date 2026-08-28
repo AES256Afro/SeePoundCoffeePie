@@ -6,6 +6,7 @@ export type CourseId =
   | 'csharp-foundations'
   | 'java-foundations'
   | 'python-data-tools'
+  | 'cpp-collections-records'
 
 export type ExerciseType = 'choice' | 'prediction' | 'ordering' | 'bugfix' | 'code'
 

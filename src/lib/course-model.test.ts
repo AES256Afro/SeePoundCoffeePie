@@ -292,7 +292,7 @@ describe('course presentation model', () => {
       ...initialProgress(),
       completedMissions: [...pythonMissionIds, 'java-coffee-protocol'],
     }
-    const [python, cpp] = buildCourseModels(progress)
+    const [python, cpp] = buildCourseModels(tracks, progress)
 
     expect(python).toMatchObject({
       completedModuleCount: 6,
@@ -314,7 +314,7 @@ describe('course presentation model', () => {
   it('resolves course slugs and reports the active course', () => {
     const progress = initialProgress('csharp')
 
-    expect(courseBySlug('csharp-foundations', progress)).toMatchObject({
+    expect(courseBySlug('csharp-foundations', progress, tracks[2])).toMatchObject({
       id: 'csharp-foundations',
       title: 'C# Foundations',
       active: true,

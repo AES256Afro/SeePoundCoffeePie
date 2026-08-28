@@ -23,6 +23,7 @@ import {
   TerminalSquare,
   X,
 } from 'lucide-react'
+import './learning-workspace.css'
 import { orderedChoices } from './lib/choice-order'
 import { evaluateExercise } from './lib/evaluator'
 import { buildPracticeExercises, type AdaptivePracticeSession } from './lib/practice'
@@ -115,6 +116,12 @@ export function LessonPlayer({ initialExerciseId, mission, onExerciseChange, onP
     : sessionExercises[activeStep]
   const [renderedExerciseId, setRenderedExerciseId] = useState(exercise?.id)
   const runnerRequestIdRef = useRef(0)
+  const runnerAbortControllerRef = useRef<AbortController | null>(null)
+  const abortRunnerRequest = () => {
+    runnerRequestIdRef.current += 1
+    runnerAbortControllerRef.current?.abort()
+    runnerAbortControllerRef.current = null
+  }
   const resetExerciseUi = () => {
     setFeedback(null)
     setRunnerBusy(false)
@@ -135,8 +142,12 @@ export function LessonPlayer({ initialExerciseId, mission, onExerciseChange, onP
 
   useLayoutEffect(() => {
     runnerRequestIdRef.current += 1
+    runnerAbortControllerRef.current?.abort()
+    runnerAbortControllerRef.current = null
     return () => {
       runnerRequestIdRef.current += 1
+      runnerAbortControllerRef.current?.abort()
+      runnerAbortControllerRef.current = null
     }
   }, [exercise?.id])
 
@@ -219,7 +230,11 @@ export function LessonPlayer({ initialExerciseId, mission, onExerciseChange, onP
       if (rewardsDisabled || lessonWasComplete) {
         onProgress((current) => recordAttempt(current, exercise.conceptId, true, 0))
       } else {
-        onProgress((current) => recordLessonSuccess(current, exercise.id))
+        onProgress((current) => recordLessonSuccess(current, {
+          id: exercise.id,
+          conceptId: exercise.conceptId,
+          xp: exercise.xp,
+        }))
       }
     }
   }
@@ -237,8 +252,11 @@ export function LessonPlayer({ initialExerciseId, mission, onExerciseChange, onP
       return
     }
 
+    abortRunnerRequest()
     const requestId = runnerRequestIdRef.current + 1
     runnerRequestIdRef.current = requestId
+    const controller = new AbortController()
+    runnerAbortControllerRef.current = controller
     const isCurrentRunnerRequest = () => runnerRequestIdRef.current === requestId
     setFeedback(null)
     setRunnerBusy(true)
@@ -246,7 +264,7 @@ export function LessonPlayer({ initialExerciseId, mission, onExerciseChange, onP
     try {
       const result = await runExercise(exercise.id, mission.language, answer, (status) => {
         if (isCurrentRunnerRequest()) setRunnerStatus(status)
-      })
+      }, { signal: controller.signal })
       if (!isCurrentRunnerRequest()) return
       setRunnerResult(result)
       const correct = result.outcome === 'completed'
@@ -261,7 +279,7 @@ export function LessonPlayer({ initialExerciseId, mission, onExerciseChange, onP
         output: result.stdout,
       }, result.outcome !== 'system_error')
     } catch (error) {
-      if (!isCurrentRunnerRequest()) return
+      if (!isCurrentRunnerRequest() || controller.signal.aborted) return
       const message = error instanceof Error
         ? error.message
         : 'The isolated runner could not be reached. Your code was not marked wrong.'
@@ -269,6 +287,7 @@ export function LessonPlayer({ initialExerciseId, mission, onExerciseChange, onP
       setFeedback({ correct: false, message })
     } finally {
       if (isCurrentRunnerRequest()) {
+        if (runnerAbortControllerRef.current === controller) runnerAbortControllerRef.current = null
         setRunnerBusy(false)
         setRunnerStatus(null)
       }
@@ -276,12 +295,14 @@ export function LessonPlayer({ initialExerciseId, mission, onExerciseChange, onP
   }
 
   const finishSession = () => {
+    abortRunnerRequest()
     if (practiceMode) onPracticeComplete?.()
     else onProgress((current) => completeMission(current, mission.id))
     setFinished(true)
   }
 
   const showExercise = (index: number) => {
+    abortRunnerRequest()
     setStep(index)
     const nextExercise = sessionExercises[index]
     if (nextExercise) onExerciseChange?.(nextExercise.id)
@@ -289,6 +310,7 @@ export function LessonPlayer({ initialExerciseId, mission, onExerciseChange, onP
   }
 
   const startReview = (queue: string[]) => {
+    abortRunnerRequest()
     setAnswers((current) => resetReviewAnswers(current, queue))
     setReviewQueue(queue)
     setReviewIndex(0)
@@ -296,6 +318,7 @@ export function LessonPlayer({ initialExerciseId, mission, onExerciseChange, onP
   }
 
   const continueLesson = () => {
+    abortRunnerRequest()
     if (reviewing) {
       if (reviewIndex === reviewQueue.length - 1) {
         if (!practiceMode && !missionAlreadyComplete && nextUncreditedStep >= 0) {
@@ -346,10 +369,15 @@ export function LessonPlayer({ initialExerciseId, mission, onExerciseChange, onP
   const returnToPreviousExercise = () => {
     const previous = sessionExercises[activeStep - 1]
     if (!previous) return
-    runnerRequestIdRef.current += 1
+    abortRunnerRequest()
     setStep(activeStep - 1)
     resetExerciseUi()
     onExerciseChange?.(previous.id)
+  }
+
+  const exitLesson = () => {
+    abortRunnerRequest()
+    onExit()
   }
 
   const handleEditorKeyDown = (event: ReactKeyboardEvent<HTMLTextAreaElement>) => {
@@ -375,7 +403,7 @@ export function LessonPlayer({ initialExerciseId, mission, onExerciseChange, onP
             <div><RotateCcw /><b>{reviewQueue.length}</b><span>questions retried</span></div>
           </div>
           <div className="what-learned"><h2>{practiceMode ? 'Reviewed in this session' : 'Reviewed in this module'}</h2><div>{reviewedConcepts.map((concept) => <span key={concept}><Check size={14} /> {concept}</span>)}</div></div>
-          <button className="primary-action primary-action--wide" onClick={onExit}>Return to {practiceMode ? 'Practice' : 'course'} <ArrowRight size={18} /></button>
+          <button className="primary-action primary-action--wide" onClick={exitLesson}>Return to {practiceMode ? 'Practice' : 'course'} <ArrowRight size={18} /></button>
         </main>
       </div>
     )
@@ -384,7 +412,7 @@ export function LessonPlayer({ initialExerciseId, mission, onExerciseChange, onP
   return (
     <div className="lesson-overlay">
       <header className="lesson-header">
-        <button onClick={onExit} className="icon-button" aria-label={practiceMode ? 'Exit practice' : 'Exit lesson'}><X /></button>
+        <button onClick={exitLesson} className="icon-button" aria-label={practiceMode ? 'Exit practice' : 'Exit lesson'}><X /></button>
         <div className="lesson-progress" aria-label={practiceMode ? 'Practice progress' : 'Lesson progress'} aria-valuemax={100} aria-valuemin={0} aria-valuenow={Math.round(progressPercent)} aria-valuetext={`${reviewing ? 'Retry question' : practiceMode ? 'Question' : 'Lesson'} ${reviewing ? reviewIndex + 1 : activeStep + 1} of ${reviewing ? reviewQueue.length : sessionExercises.length}`} role="progressbar"><i style={{ width: `${progressPercent}%` }} /></div>
         <div className="lesson-step"><b>{reviewing ? reviewIndex + 1 : activeStep + 1}</b><span>/ {reviewing ? reviewQueue.length : sessionExercises.length}</span></div>
       </header>
@@ -522,10 +550,13 @@ export function LessonPlayer({ initialExerciseId, mission, onExerciseChange, onP
                   <textarea
                     aria-label="Code editor"
                     aria-keyshortcuts="Control+Enter Meta+Enter"
+                    autoCapitalize="off"
+                    autoCorrect="off"
                     value={answer}
                     onChange={(event) => setAnswer(event.target.value)}
                     onKeyDown={handleEditorKeyDown}
                     spellCheck={false}
+                    wrap="off"
                     disabled={feedback?.correct || runnerBusy}
                   />
                 </div>

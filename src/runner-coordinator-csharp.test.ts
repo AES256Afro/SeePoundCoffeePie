@@ -1,6 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { csharpWorkshopProjectServerAssessment } from './data/csharp-workshop-project.server'
-import type { CsharpAnalysis } from './lib/runner-assignments'
+import {
+  findRunnerAssignment,
+  runnerAssignmentRevision,
+  type CsharpAnalysis,
+} from './lib/runner-assignments'
 import type { RunnerPurpose, RunnerResult } from './lib/runner-contract'
 
 const sandboxMocks = vi.hoisted(() => ({
@@ -19,6 +23,7 @@ interface TestQueuedRun {
   ownerId: string
   ipHash: string
   exerciseId: string
+  assignmentRevision: string
   language: 'csharp'
   source: string
   stdin: string
@@ -36,6 +41,10 @@ interface TestCompletedRun {
 interface ExecutableCoordinator {
   execute(record: TestQueuedRun): Promise<void>
 }
+
+const csharpAssignment = findRunnerAssignment('project-csharp-final')
+if (!csharpAssignment) throw new Error('Missing C# test runner assignment.')
+const csharpAssignmentRevision = await runnerAssignmentRevision(csharpAssignment)
 
 class MemoryStorage {
   readonly data = new Map<string, unknown>()
@@ -164,6 +173,7 @@ function queuedRun(source: string, purpose: RunnerPurpose): TestQueuedRun {
     ownerId: 'owner-identifier-that-is-long-enough',
     ipHash: 'ip-hash-that-is-long-enough',
     exerciseId: 'project-csharp-final',
+    assignmentRevision: csharpAssignmentRevision,
     language: 'csharp',
     source,
     stdin: '',

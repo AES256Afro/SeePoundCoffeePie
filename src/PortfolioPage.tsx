@@ -1,7 +1,7 @@
 import { ArrowLeft, ArrowRight, CheckCircle2, Download, FileCode2, LockKeyhole, Shield, TriangleAlert } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState, type MouseEvent as ReactMouseEvent, type ReactNode } from 'react'
 import { projectManifestByRoute } from './data/project-manifests'
-import { trackById } from './data/curriculum'
+import { foundationTrackMetadataByLanguage } from './data/foundation-track-metadata'
 import { loadProjectDraft } from './lib/project-drafts'
 import {
   createPortfolioExport,
@@ -9,7 +9,6 @@ import {
 } from './lib/portfolio-export'
 import { projectPath } from './lib/routes'
 import type { LanguageId, LearnerProgress } from './types'
-import './portfolio.css'
 
 interface PortfolioPageProps {
   language: LanguageId
@@ -90,7 +89,7 @@ export function PortfolioPage({ language, onNavigate, progress, projectId }: Por
     ? null
     : {
       callsign: progress.callsign,
-      languageLabel: trackById(language).shortName,
+      languageLabel: foundationTrackMetadataByLanguage(language)?.shortName ?? language,
       projectTitle: project.title,
       subtitle: project.subtitle,
       description: project.description,
@@ -134,7 +133,7 @@ export function PortfolioPage({ language, onNavigate, progress, projectId }: Por
   }
 
   return (
-    <main className="portfolio-page workshop-page">
+    <main className="portfolio-page workshop-page" id="main-content" tabIndex={-1}>
       <PortfolioLink className="back-link" onNavigate={onNavigate} to="/profile">
         <ArrowLeft size={16} /> Back to profile
       </PortfolioLink>

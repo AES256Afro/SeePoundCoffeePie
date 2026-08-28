@@ -7,6 +7,8 @@ import {
   environmentContainerSnapshot,
   parseDeploymentArgs,
   parseWranglerVersionId,
+  runnerPublicationAlias,
+  verifyPublicBundleBoundary,
   verifyStableContainerSnapshot,
   waitForExpectedValue,
   wranglerDeploySpawnOptions,
@@ -74,10 +76,37 @@ describe('public-site deployment arguments', () => {
     ]))
   })
 
+  it('pins the checked-in runner publication source for every Worker build', () => {
+    const expectedAlias = '../data/controlled-runner-publication:./src/data/runner-publication.base.ts'
+    for (const environmentName of ['production', 'staging']) {
+      const args = buildWranglerDeployArgs(environmentName)
+      expect(args.slice(args.indexOf('--alias'), args.indexOf('--alias') + 2)).toEqual([
+        '--alias',
+        expectedAlias,
+      ])
+    }
+    expect(runnerPublicationAlias('src/data/runner-publication.with-cpp.ts')).toBe(
+      '../data/controlled-runner-publication:./src/data/runner-publication.with-cpp.ts',
+    )
+    expect(() => runnerPublicationAlias('src/data/unreviewed.ts')).toThrow(/unreviewed/iu)
+  })
+
   it('runs Wrangler without interactive input so strict conflicts cannot be accepted', () => {
     const options = wranglerDeploySpawnOptions()
     expect(options.stdio).toEqual(['ignore', 'pipe', 'pipe'])
     expect(options.encoding).toBe('utf8')
+  })
+
+  it('runs the production bundle privacy check before the deployment wrapper can continue', () => {
+    const run = vi.fn()
+    verifyPublicBundleBoundary(run)
+
+    expect(run).toHaveBeenCalledOnce()
+    const [command, args, options] = run.mock.calls[0]
+    expect(command).toBe(process.execPath)
+    expect(args).toHaveLength(1)
+    expect(args[0]).toMatch(/check-project-bundle\.mjs$/u)
+    expect(options).toMatchObject({ stdio: 'inherit' })
   })
 })
 

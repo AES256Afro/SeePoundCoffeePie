@@ -55,6 +55,14 @@ for (const environmentName of ['production', 'staging']) {
     if (rolloutIndex < 0 || args[rolloutIndex + 1] !== 'none') {
       throw new Error(`The ${environmentName} public-site deployment does not freeze runner container rollouts.`)
     }
+    const aliasIndex = args.indexOf('--alias')
+    if (
+      aliasIndex < 0
+      || args[aliasIndex + 1]
+        !== '../data/controlled-runner-publication:./src/data/runner-publication.base.ts'
+    ) {
+      throw new Error(`The ${environmentName} public-site deployment does not pin the fail-closed runner registry.`)
+    }
   }
 }
 
@@ -126,4 +134,4 @@ for (const environmentName of ['production', 'staging']) {
   }
 }
 
-console.log('Public-site deployment contract passed. Default releases freeze all runner container images, and both dry runs succeed with Docker disabled.')
+console.log('Public-site deployment contract passed. Default releases pin the fail-closed runner registry, freeze all runner container images, and both dry runs succeed with Docker disabled.')

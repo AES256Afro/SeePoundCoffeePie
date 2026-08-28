@@ -89,14 +89,20 @@ function ProjectHarness({ initialCheckpointId, startingProgress }: ProjectHarnes
 
 function delayedRunner() {
   let finish!: (result: RunResult) => void
+  let signal: AbortSignal | undefined
   const result = new Promise<RunResult>((resolve) => {
     finish = resolve
   })
-  vi.mocked(runExercise).mockImplementationOnce((_exerciseId, _language, _source, onStatus) => {
+  vi.mocked(runExercise).mockImplementationOnce((_exerciseId, _language, _source, onStatus, options) => {
+    signal = options?.signal
     onStatus?.('running')
     return result
   })
-  return { finish, result }
+  return {
+    finish,
+    result,
+    get signal() { return signal },
+  }
 }
 
 async function beginFirstCheckpointCheck() {
@@ -166,6 +172,7 @@ describe('ProjectStudio stale runner protection', () => {
     fireEvent.click(screen.getByRole('link', { name: /Step 1: Let the program speak.*complete/iu }))
 
     expect(await screen.findByRole('heading', { level: 1, name: 'Let the program speak' })).toBeTruthy()
+    expect(pending.signal?.aborted).toBe(true)
     await act(async () => {
       pending.finish(successfulRun('run_stale_checkpoint_navigation_123'))
       await pending.result
@@ -193,6 +200,7 @@ describe('ProjectStudio stale runner protection', () => {
 
     expect((screen.getByRole('textbox', { name: 'Project code editor' }) as HTMLTextAreaElement).value).toContain('_____')
     expect(screen.getByRole('button', { name: /Check work/iu })).toBeTruthy()
+    expect(pending.signal?.aborted).toBe(true)
     await act(async () => {
       pending.finish(successfulRun('run_stale_checkpoint_reset_123456'))
       await pending.result
@@ -219,6 +227,7 @@ describe('ProjectStudio stale runner protection', () => {
     await beginFirstCheckpointCheck()
     fireEvent.click(screen.getByRole('link', { name: 'Back to project overview' }))
     expect(await screen.findByRole('heading', { name: pythonInteractiveProject.title })).toBeTruthy()
+    expect(pending.signal?.aborted).toBe(true)
 
     await act(async () => {
       pending.finish(successfulRun('run_stale_project_overview_1234567'))
@@ -249,6 +258,7 @@ describe('ProjectStudio stale runner protection', () => {
 
     await beginFirstCheckpointCheck()
     rendered.unmount()
+    expect(pending.signal?.aborted).toBe(true)
     await act(async () => {
       pending.finish(successfulRun('run_stale_project_exit_123456789'))
       await pending.result

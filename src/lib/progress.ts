@@ -1,5 +1,9 @@
 import { projectManifests } from '../data/project-manifests'
-import { tracks } from '../data/curriculum'
+import {
+  foundationLessonIds,
+  foundationLessonMetadataById,
+  foundationMissionLessonIds,
+} from '../data/foundation-curriculum-index'
 import {
   cppCollectionsRecordsLessons,
   cppCollectionsRecordsManifest,
@@ -13,25 +17,32 @@ import { normalizeLocalLearnerProgress } from './progress-schema'
 import { mergeLearnerProgress } from './progress-sync'
 
 const REVIEW_INTERVALS = [0, 1, 3, 7, 14, 30]
-const foundationLessons = tracks.flatMap((track) => track.missions.flatMap((mission) => (
-  mission.exercises.map((exercise) => ({
-    conceptId: exercise.conceptId,
-    id: exercise.id,
-    missionId: mission.id,
-    xp: exercise.xp,
-  }))
-)))
-const lessons = [
-  ...foundationLessons,
+
+export interface LessonCompletionMetadata {
+  conceptId: string
+  id: string
+  xp: number
+}
+
+const registeredContinuingLessons = [
   ...pythonDataToolsLessons,
   ...cppCollectionsRecordsLessons,
 ]
-const lessonsById = new Map(lessons.map((lesson) => [lesson.id, lesson]))
-const lessonIds: ReadonlySet<string> = new Set(lessonsById.keys())
+const continuingLessonsById = new Map<string, LessonCompletionMetadata>(
+  registeredContinuingLessons.map((lesson) => [lesson.id, lesson]),
+)
+const lessonIds: ReadonlySet<string> = new Set([
+  ...foundationLessonIds,
+  ...continuingLessonsById.keys(),
+])
+if (
+  continuingLessonsById.size !== registeredContinuingLessons.length
+  || registeredContinuingLessons.some((lesson) => foundationLessonIds.has(lesson.id))
+) {
+  throw new Error('Registered lesson IDs must be globally unique.')
+}
 const missionLessons = new Map([
-  ...tracks.flatMap((track) => track.missions.map((mission) => (
-    [mission.id, mission.exercises.map((exercise) => exercise.id)] as const
-  ))),
+  ...foundationMissionLessonIds,
   ...Object.entries(pythonDataToolsManifest).map(([missionId, missionLessons]) => (
     [missionId, missionLessons.map((lesson) => lesson.id)] as const
   )),
@@ -162,14 +173,21 @@ export function recordAttempt(
 
 export function recordLessonSuccess(
   current: LearnerProgress,
-  lessonId: string,
+  lesson: LessonCompletionMetadata,
   awardXp = true,
   now = new Date(),
 ): LearnerProgress {
-  const lesson = lessonsById.get(lessonId)
-  if (!lesson) return current
+  const foundationLesson = foundationLessonMetadataById.get(lesson.id)
+  const continuingLesson = continuingLessonsById.get(lesson.id)
+  const registeredConceptId = foundationLesson?.[1] ?? continuingLesson?.conceptId
+  const registeredXp = foundationLesson?.[2] ?? continuingLesson?.xp
+  if (
+    registeredConceptId === undefined
+    || registeredConceptId !== lesson.conceptId
+    || registeredXp !== lesson.xp
+  ) return current
   const completedLessons = knownIds(current.completedLessons, lessonIds)
-  const alreadyCompleted = completedLessons.includes(lessonId)
+  const alreadyCompleted = completedLessons.includes(lesson.id)
   const withAttempt = recordAttempt(
     current,
     lesson.conceptId,
@@ -181,7 +199,7 @@ export function recordLessonSuccess(
     ...withAttempt,
     completedLessons: alreadyCompleted
       ? completedLessons
-      : [...completedLessons, lessonId],
+      : [...completedLessons, lesson.id],
   }
 }
 

@@ -19,6 +19,7 @@ import {
   RotateCcw,
   TerminalSquare,
 } from 'lucide-react'
+import './learning-workspace.css'
 import {
   useEffect,
   useLayoutEffect,
@@ -33,7 +34,9 @@ import {
 } from 'react'
 import { loadGuidedProject } from './data/project-registry'
 import type { GuidedProject, GuidedProjectCheckpoint } from './data/project-types'
-import { trackById } from './data/curriculum'
+import { courseIsComplete } from './data/course-registry'
+import { foundationTrackMetadataByLanguage } from './data/foundation-track-metadata'
+import { publishedProjectUnit } from './data/learning-sequence'
 import { orderedChoices } from './lib/choice-order'
 import { evaluateExercise } from './lib/evaluator'
 import {
@@ -94,7 +97,12 @@ function StudioLink({ children, onClick, onNavigate, target, to, ...props }: Stu
 }
 
 function projectUnlocked(progress: LearnerProgress, project: GuidedProject): boolean {
-  return trackById(project.language).missions.every((mission) => progress.completedMissions.includes(mission.id))
+  const unit = publishedProjectUnit(project.language, project.id)
+  return unit ? courseIsComplete(unit.prerequisiteCourseId, progress) : false
+}
+
+function languageName(language: LanguageId): string {
+  return foundationTrackMetadataByLanguage(language)?.shortName ?? language
 }
 
 function checkpointAvailable(
@@ -152,9 +160,9 @@ function ProjectOverview({ onNavigate, progress, project }: Pick<ProjectContentP
   const percent = Math.round((completedCount / project.checkpoints.length) * 100)
 
   return (
-    <main className="project-overview workshop-page">
+    <main className="project-overview workshop-page" id="main-content" tabIndex={-1}>
       <StudioLink className="back-link" onNavigate={onNavigate} to={coursePath(project.language)}>
-        <ArrowLeft size={16} /> {trackById(project.language).shortName} Foundations
+        <ArrowLeft size={16} /> {languageName(project.language)} Foundations
       </StudioLink>
 
       <header className="project-overview__hero">
@@ -199,7 +207,7 @@ function ProjectOverview({ onNavigate, progress, project }: Pick<ProjectContentP
             </StudioLink>
           ) : (
             <StudioLink className="primary-action" onNavigate={onNavigate} to={coursePath(project.language)}>
-              Continue {trackById(project.language).shortName} Foundations <ArrowRight size={17} />
+              Continue {languageName(project.language)} Foundations <ArrowRight size={17} />
             </StudioLink>
           )}
           {completed && finalDraft && (
@@ -299,6 +307,7 @@ function CheckpointWorkspace({ checkpoint, onNavigate, onProgress, progress, pro
   const [history, setHistory] = useState<ProjectCheckSummary[]>(() => loadProjectHistory(project.id))
   const failedRecorded = useRef(false)
   const runnerRequestIdRef = useRef(0)
+  const runnerAbortControllerRef = useRef<AbortController | null>(null)
   const stepperRef = useRef<HTMLElement>(null)
   const alreadyComplete = progress.completedProjectCheckpoints.includes(checkpoint.id)
   const finalCheckpoint = checkpoint.order === project.checkpoints.length
@@ -315,8 +324,16 @@ function CheckpointWorkspace({ checkpoint, onNavigate, onProgress, progress, pro
     }
   }, [checkpoint.id])
 
+  const abortRunnerRequest = () => {
+    runnerRequestIdRef.current += 1
+    runnerAbortControllerRef.current?.abort()
+    runnerAbortControllerRef.current = null
+  }
+
   useLayoutEffect(() => () => {
     runnerRequestIdRef.current += 1
+    runnerAbortControllerRef.current?.abort()
+    runnerAbortControllerRef.current = null
   }, [])
 
   const updateAnswer = (value: string) => {
@@ -359,8 +376,11 @@ function CheckpointWorkspace({ checkpoint, onNavigate, onProgress, progress, pro
       return
     }
 
+    abortRunnerRequest()
     const requestId = runnerRequestIdRef.current + 1
     runnerRequestIdRef.current = requestId
+    const controller = new AbortController()
+    runnerAbortControllerRef.current = controller
     const isCurrentRunnerRequest = () => runnerRequestIdRef.current === requestId
     setRunnerBusy(true)
     setRunnerPurpose('check')
@@ -374,7 +394,7 @@ function CheckpointWorkspace({ checkpoint, onNavigate, onProgress, progress, pro
         (status) => {
           if (isCurrentRunnerRequest()) setRunnerStatus(status)
         },
-        { purpose: 'check' },
+        { purpose: 'check', signal: controller.signal },
       )
       if (!isCurrentRunnerRequest()) return
       setRunnerResult(result)
@@ -407,7 +427,7 @@ function CheckpointWorkspace({ checkpoint, onNavigate, onProgress, progress, pro
       if (passed) awardCheckpoint()
       else if (result.outcome !== 'system_error') recordFailure()
     } catch (error) {
-      if (!isCurrentRunnerRequest()) return
+      if (!isCurrentRunnerRequest() || controller.signal.aborted) return
       setFeedback({
         correct: false,
         message: error instanceof Error
@@ -417,6 +437,7 @@ function CheckpointWorkspace({ checkpoint, onNavigate, onProgress, progress, pro
       setRunnerAnnouncement('The check could not finish. Your progress was not changed.')
     } finally {
       if (isCurrentRunnerRequest()) {
+        if (runnerAbortControllerRef.current === controller) runnerAbortControllerRef.current = null
         setRunnerBusy(false)
         setRunnerStatus(null)
       }
@@ -429,8 +450,11 @@ function CheckpointWorkspace({ checkpoint, onNavigate, onProgress, progress, pro
       setFeedback({ correct: false, message: 'The editor is empty. Add an instruction before running the program.' })
       return
     }
+    abortRunnerRequest()
     const requestId = runnerRequestIdRef.current + 1
     runnerRequestIdRef.current = requestId
+    const controller = new AbortController()
+    runnerAbortControllerRef.current = controller
     const isCurrentRunnerRequest = () => runnerRequestIdRef.current === requestId
     setRunnerBusy(true)
     setRunnerPurpose('run')
@@ -445,13 +469,13 @@ function CheckpointWorkspace({ checkpoint, onNavigate, onProgress, progress, pro
         (status) => {
           if (isCurrentRunnerRequest()) setRunnerStatus(status)
         },
-        { purpose: 'run', stdin: practiceInput },
+        { purpose: 'run', stdin: practiceInput, signal: controller.signal },
       )
       if (!isCurrentRunnerRequest()) return
       setRunnerResult(result)
       setRunnerAnnouncement('Run complete. Output is available below.')
     } catch (error) {
-      if (!isCurrentRunnerRequest()) return
+      if (!isCurrentRunnerRequest() || controller.signal.aborted) return
       setFeedback({
         correct: false,
         message: error instanceof Error
@@ -461,6 +485,7 @@ function CheckpointWorkspace({ checkpoint, onNavigate, onProgress, progress, pro
       setRunnerAnnouncement('The run could not finish. Your project progress was not changed.')
     } finally {
       if (isCurrentRunnerRequest()) {
+        if (runnerAbortControllerRef.current === controller) runnerAbortControllerRef.current = null
         setRunnerBusy(false)
         setRunnerStatus(null)
       }
@@ -469,7 +494,7 @@ function CheckpointWorkspace({ checkpoint, onNavigate, onProgress, progress, pro
 
   const resetDraft = () => {
     if (!window.confirm('Reset this step to its starting code? Other saved code and completed steps will stay unchanged.')) return
-    runnerRequestIdRef.current += 1
+    abortRunnerRequest()
     resetProjectDraft(project.id, checkpoint.id)
     setAnswer(exercise.starterCode ?? '')
     setFeedback(null)
@@ -481,11 +506,17 @@ function CheckpointWorkspace({ checkpoint, onNavigate, onProgress, progress, pro
   }
 
   const continueProject = () => {
+    abortRunnerRequest()
     if (nextCheckpoint) {
       onNavigate(projectPath(project.language, project.id, nextCheckpoint.id))
       return
     }
     onNavigate(projectPath(project.language, project.id))
+  }
+
+  const navigateFromCheckpoint = (path: string) => {
+    abortRunnerRequest()
+    onNavigate(path)
   }
 
   const handleEditorKeyDown = (event: ReactKeyboardEvent<HTMLTextAreaElement>) => {
@@ -495,9 +526,9 @@ function CheckpointWorkspace({ checkpoint, onNavigate, onProgress, progress, pro
   }
 
   return (
-    <main className="project-workspace">
+    <main className="project-workspace" id="main-content" tabIndex={-1}>
       <header className="project-workspace__header">
-        <StudioLink aria-label="Back to project overview" className="icon-button" onNavigate={onNavigate} to={projectPath(project.language, project.id)}>
+        <StudioLink aria-label="Back to project overview" className="icon-button" onNavigate={navigateFromCheckpoint} to={projectPath(project.language, project.id)}>
           <ArrowLeft />
         </StudioLink>
         <div>
@@ -533,7 +564,7 @@ function CheckpointWorkspace({ checkpoint, onNavigate, onProgress, progress, pro
                     aria-current={current ? 'step' : undefined}
                     aria-label={`Step ${step.order}: ${step.title}. ${current ? 'Current step, ' : ''}${done ? 'complete' : 'not complete'}.`}
                     className={`${current ? 'is-current' : ''} ${done ? 'is-complete' : ''}`}
-                    onNavigate={onNavigate}
+                    onNavigate={navigateFromCheckpoint}
                     to={projectPath(project.language, project.id, step.id)}
                   >
                     {done ? <Check size={13} /> : step.order}
@@ -630,11 +661,14 @@ function CheckpointWorkspace({ checkpoint, onNavigate, onProgress, progress, pro
                 <textarea
                   aria-keyshortcuts="Control+Enter Meta+Enter"
                   aria-label="Project code editor"
+                  autoCapitalize="off"
+                  autoCorrect="off"
                   onChange={(event) => updateAnswer(event.target.value)}
                   onKeyDown={handleEditorKeyDown}
                   readOnly={runnerBusy}
                   spellCheck={false}
                   value={answer}
+                  wrap="off"
                 />
                 {(checkpoint.practiceStdin !== undefined || finalCheckpoint) && (
                   <label className="project-input">
@@ -796,7 +830,7 @@ export function ProjectStudio({ checkpointId, language, onNavigate, onProgress, 
 
   if (loadFailed) {
     return (
-      <main className="content-page">
+      <main className="content-page" id="main-content" tabIndex={-1}>
         <section className="route-message-card route-message-card--inside" role="alert">
           <p className="kicker"><CircleHelp size={15} /> Project</p>
           <h1>The project notes did not finish loading</h1>
@@ -806,7 +840,7 @@ export function ProjectStudio({ checkpointId, language, onNavigate, onProgress, 
               Try again <RefreshCw size={16} />
             </button>
             <StudioLink className="secondary-action" onNavigate={onNavigate} to={coursePath(language)}>
-              Back to {trackById(language).shortName} Foundations
+              Back to {languageName(language)} Foundations
             </StudioLink>
           </div>
         </section>
@@ -816,7 +850,7 @@ export function ProjectStudio({ checkpointId, language, onNavigate, onProgress, 
 
   if (!project) {
     return (
-      <main aria-busy="true" className="content-page">
+      <main aria-busy="true" className="content-page" id="main-content" tabIndex={-1}>
         <section className="route-message-card route-message-card--inside">
           <p className="kicker"><Code2 size={15} /> Project</p>
           <h1>Opening your project</h1>

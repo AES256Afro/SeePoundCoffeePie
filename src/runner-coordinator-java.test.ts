@@ -1,6 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { javaPicnicProjectServerAssessment } from './data/java-picnic-project.server'
-import type { JavaAnalysis } from './lib/runner-assignments'
+import {
+  findRunnerAssignment,
+  runnerAssignmentRevision,
+  type JavaAnalysis,
+} from './lib/runner-assignments'
 import type { RunnerPurpose, RunnerResult } from './lib/runner-contract'
 
 const sandboxMocks = vi.hoisted(() => ({
@@ -19,6 +23,7 @@ interface TestQueuedRun {
   ownerId: string
   ipHash: string
   exerciseId: string
+  assignmentRevision: string
   language: 'java'
   source: string
   stdin: string
@@ -36,6 +41,10 @@ interface TestCompletedRun {
 interface ExecutableCoordinator {
   execute(record: TestQueuedRun): Promise<void>
 }
+
+const javaAssignment = findRunnerAssignment('project-java-final')
+if (!javaAssignment) throw new Error('Missing Java test runner assignment.')
+const javaAssignmentRevision = await runnerAssignmentRevision(javaAssignment)
 
 class MemoryStorage {
   readonly data = new Map<string, unknown>()
@@ -172,6 +181,7 @@ function queuedRun(source: string, purpose: RunnerPurpose): TestQueuedRun {
     ownerId: 'owner-identifier-that-is-long-enough',
     ipHash: 'ip-hash-that-is-long-enough',
     exerciseId: 'project-java-final',
+    assignmentRevision: javaAssignmentRevision,
     language: 'java',
     source,
     stdin: '',

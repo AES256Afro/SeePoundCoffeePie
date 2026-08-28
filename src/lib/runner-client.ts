@@ -16,6 +16,7 @@ export type RunnerClientStatus = 'requesting' | 'queued' | 'running'
 export interface RunExerciseOptions {
   stdin?: string
   purpose?: RunnerPurpose
+  signal?: AbortSignal
 }
 
 export class RunnerClientError extends Error {
@@ -49,20 +50,29 @@ function plainServerError(value: unknown): string | null {
   return 'The code checker could not complete this check. Try again.'
 }
 
-async function readJson(response: Response): Promise<Record<string, unknown>> {
+async function readJson(
+  response: Response,
+  signal?: AbortSignal,
+): Promise<Record<string, unknown>> {
   const contentType = response.headers.get('Content-Type') ?? ''
   if (!contentType.toLowerCase().includes('application/json')) {
     throw new RunnerClientError('The code checker could not be reached. Your code was not marked wrong. Please try again.', true)
   }
   try {
     return await response.json() as Record<string, unknown>
-  } catch {
+  } catch (error) {
+    if (runnerRequestWasAborted(error, signal)) {
+      throw signal?.aborted ? abortReason(signal) : error
+    }
     throw new RunnerClientError('The code checker sent an incomplete response. Your code was not marked wrong. Please try again.', true)
   }
 }
 
-async function expectJson(response: Response): Promise<Record<string, unknown>> {
-  const body = await readJson(response)
+async function expectJson(
+  response: Response,
+  signal?: AbortSignal,
+): Promise<Record<string, unknown>> {
+  const body = await readJson(response, signal)
   if (!response.ok) {
     const message = plainServerError(body.error)
       ?? 'The code checker could not start this check. Please try again.'
@@ -95,8 +105,44 @@ function isResult(value: Record<string, unknown>): value is Record<string, unkno
     && Boolean(value.diagnostic)
 }
 
-function wait(milliseconds: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, milliseconds))
+function abortReason(signal: AbortSignal): unknown {
+  if (signal.reason !== undefined) return signal.reason
+  const error = new Error('The runner request was cancelled.')
+  error.name = 'AbortError'
+  return error
+}
+
+export function runnerRequestWasAborted(
+  error: unknown,
+  signal?: AbortSignal,
+): boolean {
+  return signal?.aborted === true
+    || (
+      typeof error === 'object'
+      && error !== null
+      && 'name' in error
+      && error.name === 'AbortError'
+    )
+}
+
+function throwIfAborted(signal?: AbortSignal): void {
+  if (signal?.aborted) throw abortReason(signal)
+}
+
+function wait(milliseconds: number, signal?: AbortSignal): Promise<void> {
+  throwIfAborted(signal)
+  return new Promise((resolve, reject) => {
+    const finish = () => {
+      signal?.removeEventListener('abort', cancel)
+      resolve()
+    }
+    const cancel = () => {
+      clearTimeout(timer)
+      reject(abortReason(signal as AbortSignal))
+    }
+    const timer = setTimeout(finish, milliseconds)
+    signal?.addEventListener('abort', cancel, { once: true })
+  })
 }
 
 export async function runExercise(
@@ -106,13 +152,17 @@ export async function runExercise(
   onStatus?: (status: RunnerClientStatus) => void,
   options: RunExerciseOptions = {},
 ): Promise<RunnerResult> {
+  const { signal } = options
+  throwIfAborted(signal)
   onStatus?.('requesting')
   const grantBody = await expectJson(await fetch('/api/runner/grants', {
     method: 'POST',
     credentials: 'same-origin',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ exerciseId, language }),
-  }))
+    signal,
+  }), signal)
+  throwIfAborted(signal)
   if (typeof grantBody.grant !== 'string') {
     throw new RunnerClientError('The code checker could not start this run. Please try again.', true)
   }
@@ -131,7 +181,9 @@ export async function runExercise(
       ...(options.stdin === undefined ? {} : { stdin: options.stdin }),
       ...(options.purpose === undefined ? {} : { purpose: options.purpose }),
     }),
-  }))
+    signal,
+  }), signal)
+  throwIfAborted(signal)
   if (!isAccepted(acceptedBody)) {
     throw new RunnerClientError('The code checker did not confirm the run. Please try again.', true)
   }
@@ -140,11 +192,13 @@ export async function runExercise(
   const startedAt = Date.now()
   let pollAfterMs = acceptedBody.pollAfterMs
   while (Date.now() - startedAt < MAX_WAIT_MS) {
-    await wait(Math.min(MAX_POLL_MS, Math.max(MIN_POLL_MS, pollAfterMs)))
+    await wait(Math.min(MAX_POLL_MS, Math.max(MIN_POLL_MS, pollAfterMs)), signal)
     const body = await expectJson(await fetch(`/api/runner/runs/${encodeURIComponent(acceptedBody.runId)}`, {
       credentials: 'same-origin',
       headers: { Accept: 'application/json' },
-    }))
+      signal,
+    }), signal)
+    throwIfAborted(signal)
     if (isResult(body)) return body
     if (!isPending(body)) {
       throw new RunnerClientError('The code checker returned an unknown result. Please try again.', true)

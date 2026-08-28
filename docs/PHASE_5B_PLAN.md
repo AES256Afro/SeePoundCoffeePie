@@ -1,6 +1,6 @@
 # Phase 5B Practical C++ Collections and Records Plan
 
-Status: compatibility floor released and course still unpublished. This document reserves the curriculum contract for the next continuing course. A compact identifier-only manifest is deployed so compatible clients and Workers preserve future Phase 5B progress, but it does not publish a catalog card, route, lesson, runner assignment, Practice item, Codebook example, or sitemap entry.
+Status: the compatibility floor was released on 2026-08-26, and the current working source still keeps the course unpublished. This document reserves the curriculum contract for the next continuing course. A compact identifier-only manifest is deployed so compatible clients and Workers preserve future Phase 5B progress, but it does not publish a catalog card, route, lesson, runner assignment, Practice item, Codebook example, or sitemap entry.
 
 ## Released compatibility checkpoint
 
@@ -21,7 +21,7 @@ The 2026-08-26 compatibility release contains the complete unpublished TypeScrip
 - desktop and 390-pixel browser checks passed for the launch page, catalog, Practical Python course, and invalid Phase 5B course and lesson links. Each route fit its viewport, lazy course navigation focused the final heading, and no hidden C++ teaching marker appeared;
 - production live checks passed for canonical routes, redirects, security headers, social previews, runner boundaries, and account-progress authentication. All 30 reserved Phase 5B exercise IDs returned `404` from the enabled production runner grant endpoint, while a published C++ exercise and the protected Practical Python capstone still ran successfully;
 
-The compatibility floor is now live from source commit `46175bfaf1f5c2005bdbbb3a183c58aa6551aebd`. The detailed release record is in `docs/PHASE_5B_COMPATIBILITY_RELEASE.md`. The Phase 5B course itself remains unpublished: no Phase 5B runner assignment, public route, catalog card, Practice item, Codebook example, or sitemap entry exists.
+The historical compatibility floor was released on 2026-08-26 from source commit `46175bfaf1f5c2005bdbbb3a183c58aa6551aebd`. The detailed production evidence is in `docs/PHASE_5B_COMPATIBILITY_RELEASE.md`. The current default production selection still keeps Phase 5B unpublished and exposes no Phase 5B runner assignment, public route, catalog card, Practice item, Code Reference example, or sitemap entry. The current controlled local candidate deliberately includes all of those complete surfaces as release-gate inputs. That candidate is not public publication or deployment evidence.
 
 ## Current unpublished authoring checkpoint
 
@@ -31,10 +31,18 @@ The current unpublished development checkpoint extends the hidden teaching draft
 - all 12 editable authentic solutions pass their visible checks, the supplied incorrect sources fail, and the 4 new Module 5 and 6 solutions pass local C++20 syntax validation;
 - Module 5 defines accumulator initialization, expanded updates, filtering, result collections, and the deliberate small-vector copy before learners must use those ideas;
 - Module 6 defines helper responsibility, data flow, dependency order, and the strict below-limit boundary before the learner repairs or assembles the final report;
-- a dedicated Clang-based analyzer now checks the taught collections-and-records shape for the protected final assessment. Its profile and facts remain server-owned, its runner-image files are root-owned and mode `0500`, and authentic plus adversarial image cases pass;
-- the focused Phase 5B plan and hidden-draft suite passes 2 files and 33 tests. The protected analyzer, coordinator, and runner-image checks also pass;
-- `npm run check:release` passes 54 test files and 627 tests, lint, repository text style, social-preview verification, TypeScript, the production build, the server-owned bundle boundary, and every bundle budget;
-- the current local build measures 470.23 kB raw and 125.79 kB gzip initial JavaScript, 72.44 kB raw and 13.46 kB gzip initial CSS, 758.23 kB raw and 210.81 kB gzip total JavaScript, and 85.44 kB raw and 16.47 kB gzip total CSS;
+- a dedicated Clang-based analyzer now checks the taught collections-and-records shape for the protected final assessment. Its profile and facts remain server-owned, the image recipe installs its files as root-owned and mode `0500`, and the source-level authentic and adversarial analyzer fixtures pass;
+- a Node-only private course release catalog now records Practical C++ as `unpublished`. Unknown course IDs resolve to `unavailable`, and public availability is true only for an exact source-controlled `published` state. There is no environment switch that can publish hidden content;
+- local bundle, staging, and production boundary checks derive the hidden course paths, lesson IDs, and browser markers from that catalog and stop if the reviewed unpublished state changes;
+- the focused Phase 5B plan and hidden-draft suite passes 2 files and 33 tests. The protected analyzer and coordinator regressions also pass. The current four-image rebuild remains a separate gate and could not run on 2026-08-28 because the local Docker daemon was unavailable;
+- the compact durable foundation manifest is the source of truth for each foundation lesson's exact lesson ID, concept ID, and XP. Progress credit rejects a mismatched concept or XP even when each individual value is otherwise known;
+- a controlled unpublished candidate surface exercises the real 6-module, 30-lesson Practical C++ draft through the same fail-closed publication decision used by the production build. It includes the sixth catalog card, Home and Learner Record continuation, both prerequisites, exact course and lesson routes, one cached lazy content request, Practice ownership, all 11 Code Reference contributions, portfolio ownership, and a 43-location candidate sitemap. The production surface remains the same five courses and its module graph does not import the candidate publication or packed content;
+- a deterministic packed candidate reconstructs every authored Practical C++ module and exercise exactly. Its one lazy JSON asset measures 42,222 bytes raw and 14,300 bytes gzip. The isolated candidate publication pieces measure 63,694 bytes raw and 18,611 bytes gzip JavaScript, and 105,916 bytes raw and 32,911 bytes gzip in aggregate. The complete candidate-enabled application measures 747,504 bytes raw and 217,952 bytes gzip total JavaScript, 83,132 bytes raw and 16,012 bytes gzip total CSS, and 876,281 bytes raw and 249,320 bytes gzip in aggregate. It passes every unchanged cap, although total JavaScript has only 48 gzip bytes of headroom. The release gate rejects stale generation, unexpected placement, protected-marker leakage, or any category or aggregate limit violation. The readable draft remains the source of truth and the production build emits no candidate JSON;
+- the controlled runner publication validates all 12 protected Practical C++ assignments and a 112-assignment candidate registry through a pinned Wrangler dry run. The production registry remains at 100 assignments and rejects all 12 private IDs;
+- public runner grants and queued results now bind a deterministic SHA-256 revision of grading-only assignment data plus a checked grading-behavior revision covering evaluator code, analyzers, runner images, the coordinator, and the Sandbox package. The browser sees only a keyed opaque binding. The Worker and coordinator reject changed, revoked, or legacy assignments before source acceptance, sandbox creation, and stored-result return. Browser navigation cancels local runner requests and ignores stale results, but does not cancel a job the server already accepted;
+- the current local release gate passes 78 Vitest files and 808 tests, 11 candidate Chromium cases, and 15 production Chromium cases. It also verifies deterministic foundation and Practical C++ generation, the complete candidate application and runner selections, lint, a 299-file repository text-style check, social-preview metadata, TypeScript, the production build, the server-owned bundle boundary, both local Wrangler dry runs with Docker disabled, and every category and aggregate bundle budget;
+- the current production build measures 332,089 bytes raw and 99,794 bytes gzip initial JavaScript, 53,329 bytes raw and 10,034 bytes gzip initial CSS, 736,319 bytes raw and 214,421 bytes gzip total JavaScript, and 83,132 bytes raw and 16,012 bytes gzip total CSS. Its lazy packed foundation curriculum measures 113,957 bytes raw and 28,661 bytes gzip, it emits no JSON teaching data while Practical C++ is unpublished, and aggregate transfer is 822,874 bytes raw and 231,491 bytes gzip;
+- the production browser gate covers the five-course catalog, existing prerequisites and canonical lesson URLs, editor keyboard exit, 390-pixel navigation and language switching, Practice, Code Reference, unpublished Practical C++ URLs, unexpected console and network failures, and scoped WCAG A and AA checks. The separate candidate gate covers the sixth catalog card, missing prerequisites, same-page course-to-lesson navigation, first, middle, and final lesson history, title and focus, saved-language preservation, Home, Learner Record, portfolio ownership, malformed teaching data, Practice, and all 11 Code Reference contributions. Both are local evidence only; hosted CI and manual accessibility review remain outstanding;
 - all 12 draft editable lessons remain outside the public runner registry, the course and lesson routes remain unavailable, and the complete teaching draft and protected analyzer facts remain outside emitted browser assets.
 
 These are local unpublished development facts. They do not replace the recorded production compatibility-floor versions above and do not authorize a public course release or deployment.
@@ -487,7 +495,7 @@ Required route behavior:
 - A bookmarked C++ course or lesson supplies page context without silently replacing the saved language preference.
 - Document title, main heading, and focus update after every route transition, including Back and Forward navigation.
 
-Implementation should extract or reuse the existing continuing-course outline behavior instead of copying a second large module component. The released Practical Python route must retain parity through tests before the shared component is used for C++. Continuing-course styling should be shared as one lazy asset, not copied into initial CSS or emitted twice.
+Implementation should extract or reuse the existing continuing-course outline behavior instead of copying a second large module component. The released Practical Python route must retain parity through tests before the shared component is used for C++. Continuing-course overview rules belong in the combined initial application stylesheet, while lesson and project workspace rules stay in the combined lazy learning-workspace stylesheet. Practical C++ must not add a second copy of either stylesheet.
 
 Accessibility gates:
 
@@ -505,12 +513,18 @@ Accessibility gates:
 
 The Phase 5A release measured 470.49 kB raw and 127.80 kB gzip initial JavaScript, 72.37 kB raw and 13.46 kB gzip initial CSS, 758.19 kB raw and 212.98 kB gzip total JavaScript, and 85.22 kB raw and 16.45 kB gzip total CSS. Initial CSS and total JavaScript already have little headroom.
 
+The current M007 production build reduces initial JavaScript to 332,089 bytes raw and 99,794 bytes gzip, with 31.53 percent and 24.40 percent headroom. Initial CSS is 53,329 bytes raw and 10,034 bytes gzip, with 26.44 percent and 25.67 percent headroom. Total JavaScript is 736,319 bytes raw and 214,421 bytes gzip, leaving 28,681 bytes raw and 3,579 bytes gzip under the current enforced cap. Total CSS is 83,132 bytes raw and 16,012 bytes gzip. Aggregate transfer is 822,874 bytes raw and 231,491 bytes gzip, leaving 88,126 bytes raw and 21,009 bytes gzip. The initial-load goal is complete, and the complete candidate-enabled application also fits every unchanged category and aggregate limit.
+
+The readable foundation curriculum now generates one deterministic lazy packed asset measuring 113.957 kB raw and 28.661 kB gzip. The hidden Practical C++ draft generates one lazy JSON asset measuring 42.222 kB raw and 14.300 kB gzip while reconstructing all authored data exactly. It passes the fixed 54.00 kB raw and 15.00 kB gzip teaching-data limits, with 11.778 kB raw and 0.700 kB gzip headroom. Regeneration, deep equality, strict decoding, fresh measurements, and lazy placement run in the release gate. The unpublished production build emits no Practical C++ JSON and reports 0 kB of emitted teaching data.
+
+The isolated candidate publication pieces measure 63,694 bytes raw and 18,611 bytes gzip JavaScript, 42,222 bytes raw and 14,300 bytes gzip teaching data, and 105,916 bytes raw and 32,911 bytes gzip aggregate transfer. The complete candidate-enabled application measures 333,877 bytes raw and 100,008 bytes gzip initial JavaScript, 747,504 bytes raw and 217,952 bytes gzip total JavaScript, 83,132 bytes raw and 16,012 bytes gzip total CSS, and 876,281 bytes raw and 249,320 bytes gzip aggregate transfer. Its Practical Python route, shared by both continuing courses, measures 10,306 bytes raw and 3,617 bytes gzip. The candidate JSON remains behind one lazy loader and is not initial-load content. M005 meets its local integration rule, but the 48-byte total-JavaScript gzip margin is fragile and must be rechecked after every source change. Do not weaken teaching copy or raise a cap automatically.
+
 Phase 5B therefore requires these boundaries:
 
 1. Keep only the compact Phase 5B manifest and course registry metadata in the initial application.
 2. Put the course and lesson route shell in one lazy continuing-course route asset.
 3. Put all 30 lessons of teaching copy in a separate lazy content asset.
-4. Reuse one lazy continuing-course CSS asset across Practical Python and Practical C++.
+4. Keep continuing-course overview and Portfolio rules in the one combined initial application stylesheet. Keep lesson and project workspace rules in the one lazy learning-workspace stylesheet. Do not emit a duplicate Practical C++ stylesheet.
 5. Keep Codebook data on its existing lazy route.
 6. Load the full Phase 5B course for C++ Practice only when that Practice route opens.
 7. Keep every server assessment, profile, structural message, analyzer command, and trusted fact out of all browser assets.
@@ -523,14 +537,18 @@ Provisional hard caps for implementation are:
 | Initial CSS | 72.50 kB | 13.50 kB |
 | Practical C++ route JavaScript | 11.00 kB | 4.00 kB |
 | Practical C++ teaching content | 54.00 kB | 15.00 kB |
-| Shared continuing-course CSS | 10.00 kB | 2.20 kB |
+| Foundation teaching content | 120.00 kB | 30.00 kB |
+| Combined initial application CSS | 56.00 kB | 10.75 kB |
+| Combined learning-workspace CSS | 32.00 kB | 6.50 kB |
 | Codebook route JavaScript | 38.00 kB | 12.00 kB |
-| Total JavaScript | 835.00 kB | 240.00 kB |
+| Total JavaScript | 765.00 kB | 218.00 kB |
 | Total CSS | 87.00 kB | 17.50 kB |
+| Total emitted teaching data | 54.00 kB | 15.00 kB |
+| Aggregate transfer | 911.00 kB | 252.50 kB |
 
-The initial limits and total CSS limit do not move. The higher total JavaScript and Codebook limits are provisional ceilings for one complete reviewed course, not permission to add unrelated code. Record actual clean-build measurements before release. If an asset exceeds its cap, split or simplify it. Do not raise a cap automatically.
+The initial limits and total limits do not move without a separate reviewed decision. The Practical C++ and Codebook rows are provisional per-asset ceilings, not permission to add unrelated code. The complete generated Practical C++ candidate fits its JavaScript, CSS, teaching-data, route, Code Reference, foundation-content, and aggregate limits. M005 is locally accepted behind the unpublished boundary. Publication still requires M009 and M010 evidence. Do not raise a cap automatically.
 
-The bundle gate must assert exactly one matching route asset, one teaching-content asset, and one shared continuing-course CSS asset. It must also prove that the server-owned assessment strings and profile do not appear anywhere in `dist`.
+The bundle gate must review each route and teaching-content asset for size and lazy placement. It must assert exactly one combined initial application stylesheet and one lazy learning-workspace stylesheet, and it must prove that unpublished teaching markers, server-owned assessment strings, and the protected profile do not appear anywhere in `dist`.
 
 ## Staged implementation slices
 
@@ -575,11 +593,13 @@ The bundle gate must assert exactly one matching route asset, one teaching-conte
 
 ### Slice 5: Product integration behind the release boundary
 
+Local status as of 2026-08-28: complete behind the fail-closed unpublished selection. This does not authorize staging or production publication.
+
 - Add the `CourseId`, course definition, conjunctive prerequisites, strict route ownership, lazy route, and lazy content boundaries.
 - Generalize the continuing-course outline while preserving Practical Python behavior.
 - Add C++ Practice aggregation and exact Codebook unlocks.
 - Register the 12 editable assignments behind the disabled release boundary and update the expected runner count from 100 to 112.
-- Add catalog, home continuation, profile, backup, route, sitemap, live-check, and bundle tests.
+- Add catalog, Home continuation, Learner Record, portfolio ownership, backup, canonical route and history, malformed-content failure, 43-location candidate sitemap, complete candidate bundle, controlled Worker selection, and live-boundary tests.
 - Keep production publication disabled until every local release gate and manual learner check passes.
 
 ### Slice 6: Controlled release
@@ -621,6 +641,8 @@ npm run check:runner:image
 git diff --check
 ```
 
+`npm run check:release` now includes both built-site Playwright gates. `npm run test:e2e` runs the five-course production surface independently, and `npm run check:cpp-browser-candidate` runs the six-course unpublished candidate surface independently. Each serves a built site on loopback, blocks service workers, live APIs, and external origins, and records unexpected page, console, network, and API failures. Neither exercises staging, production, OAuth, synchronized progress, or the isolated runner. The dated local evidence is in `docs/PHASE_5B_BROWSER_GATE.md`.
+
 The release gate must cover:
 
 - exact course ID, runtime language, route, both prerequisites, six modules, 30 lessons, and global ID uniqueness;
@@ -638,10 +660,10 @@ The release gate must cover:
 - exact capstone starter, five public edits, exact visible output, six protected facts, protocol failures, and adversarial rejection;
 - analyzer root-only mode, language separation, browser-bundle privacy, network denial, resource ceilings, output bounds, and cleanup;
 - every existing foundation, project, Practical Python, authentication, progress, Practice, Codebook, portfolio, route, runner, and analyzer regression;
-- exact lazy assets and raw and gzip budgets;
+- reviewed initial-versus-lazy placement, exactly one combined initial stylesheet and one lazy learning-workspace stylesheet, and raw and gzip budgets with initial-load headroom;
 - repository-wide text style, including no Unicode U+2014.
 
-Add dedicated controlled probes:
+Future M009 and M010 commands, not yet implemented:
 
 ```text
 npm run check:runner:cpp-collections:staging
@@ -650,7 +672,7 @@ npm run check:runner:cpp-collections:production
 
 The probe must reject hardcoded output, comment-only decoys, unreachable required code, behavior aliases, moved harness statements, malformed source, wrong profiles, and malformed analyzer envelopes while accepting the exact authentic solution. It must assert that no profile or structural fact appears in the response.
 
-Passing TypeScript, unit tests, or a production build does not prove the runner image, Cloudflare Sandbox isolation, browser interaction, mobile layout, accessibility, deployed Worker compatibility, or live progress safety. Those remain separate gates.
+Passing TypeScript, unit tests, a production build, or the closed-loopback Playwright gate does not prove the runner image, Cloudflare Sandbox isolation, a complete manual keyboard or screen-reader walkthrough, 200 percent zoom, reduced-motion behavior, other browsers, deployed Worker compatibility, or live progress safety. Runner, manual accessibility, staging, and production evidence remain separate gates.
 
 ## Manual learner QA
 

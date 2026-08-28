@@ -5,6 +5,8 @@ import {
   evaluateProtectedRunnerAssignment,
   evaluateRunnerAssignment,
   findRunnerAssignment,
+  isRunnerAssignmentRevision,
+  runnerAssignmentRevision,
   runnerAssessment,
   runnerInputCases,
   type CsharpAnalysis,
@@ -51,6 +53,8 @@ const RUN_RECORD_PREFIX = 'run:'
 const RUN_OUTPUT_PREFIX = 'output:'
 const RUN_ERROR_PREFIX = 'error:'
 const QUEUE_KEY = 'queue'
+const RUNNER_ASSIGNMENT_ID_HEADER = 'X-Runner-Assignment-Id'
+const RUNNER_ASSIGNMENT_BINDING_HEADER = 'X-Runner-Assignment-Binding'
 const RESULT_TTL_MS = 15 * 60 * 1000
 const QUEUE_LIMIT = 32
 const CONCURRENT_LIMIT = 4
@@ -69,6 +73,7 @@ const CPP_COLLECTIONS_ASSESSMENT_PROFILE = 'cpp-collections-records-workshop-rep
 const textEncoder = new TextEncoder()
 
 interface RunnerCoordinatorEnv {
+  SESSION_SECRET?: string
   RUNNER_PYTHON: DurableObjectNamespace<RunnerPythonSandbox>
   RUNNER_CPP: DurableObjectNamespace<RunnerCppSandbox>
   RUNNER_CSHARP: DurableObjectNamespace<RunnerCsharpSandbox>
@@ -80,6 +85,7 @@ interface StoredQueuedRun {
   ownerId: string
   ipHash: string
   exerciseId: string
+  assignmentRevision: string
   language: LanguageId
   source: string
   stdin: string
@@ -94,6 +100,7 @@ interface StoredCompletedRun {
   id: string
   ownerId: string
   exerciseId: string
+  assignmentRevision: string
   language: LanguageId
   status: 'complete'
   createdAt: number
@@ -109,6 +116,7 @@ interface SubmitPayload {
   ownerId: string
   ipHash: string
   exerciseId: string
+  assignmentRevision: string
   request: RunnerRequest
 }
 
@@ -128,14 +136,48 @@ interface SupervisorResult {
   java_analysis?: JavaAnalysis
 }
 
-function json(body: unknown, status = 200): Response {
+function json(
+  body: unknown,
+  status = 200,
+  additionalHeaders: Record<string, string> = {},
+): Response {
   return Response.json(body, {
     status,
     headers: {
       'Cache-Control': 'no-store',
       'X-Content-Type-Options': 'nosniff',
+      ...additionalHeaders,
     },
   })
+}
+
+function bytesToBase64Url(bytes: Uint8Array): string {
+  let binary = ''
+  for (const byte of bytes) binary += String.fromCharCode(byte)
+  return btoa(binary).replaceAll('+', '-').replaceAll('/', '_').replaceAll('=', '')
+}
+
+async function resultBindingHeaders(
+  record: StoredRun,
+  secret: string | undefined,
+): Promise<Record<string, string>> {
+  if (!secret || secret.length < 32) return {}
+  const key = await crypto.subtle.importKey(
+    'raw',
+    textEncoder.encode(secret),
+    { name: 'HMAC', hash: 'SHA-256' },
+    false,
+    ['sign'],
+  )
+  const signature = await crypto.subtle.sign(
+    'HMAC',
+    key,
+    textEncoder.encode(`runner-assignment:${record.assignmentRevision}`),
+  )
+  return {
+    [RUNNER_ASSIGNMENT_ID_HEADER]: record.exerciseId,
+    [RUNNER_ASSIGNMENT_BINDING_HEADER]: bytesToBase64Url(new Uint8Array(signature)),
+  }
 }
 
 function isSubmitPayload(value: unknown): value is SubmitPayload {
@@ -148,6 +190,7 @@ function isSubmitPayload(value: unknown): value is SubmitPayload {
     && typeof payload.ipHash === 'string'
     && payload.ipHash.length >= 16
     && typeof payload.exerciseId === 'string'
+    && isRunnerAssignmentRevision(payload.assignmentRevision)
     && Boolean(payload.request)
     && typeof payload.request?.source === 'string'
     && typeof payload.request?.stdin !== 'number'
@@ -1311,8 +1354,12 @@ export class RunnerCoordinator {
     if (!validated.ok) return json({ error: 'Invalid internal runner request.' }, 400)
 
     const assignment = findRunnerAssignment(body.exerciseId)
-    if (!assignment || assignment.language !== validated.request.language) {
-      return json({ error: 'The exercise does not match the selected language.' }, 400)
+    if (
+      !assignment
+      || assignment.language !== validated.request.language
+      || await runnerAssignmentRevision(assignment) !== body.assignmentRevision
+    ) {
+      return json({ error: 'This lesson changed while you were working. Reload the page and try again.' }, 400)
     }
 
     const now = Date.now()
@@ -1340,6 +1387,7 @@ export class RunnerCoordinator {
       ownerId: body.ownerId,
       ipHash: body.ipHash,
       exerciseId: body.exerciseId,
+      assignmentRevision: body.assignmentRevision,
       language: validated.request.language,
       source: validated.request.source,
       stdin: validated.request.stdin ?? '',
@@ -1382,6 +1430,20 @@ export class RunnerCoordinator {
     if (!record || record.ownerId !== ownerId || (record.status === 'complete' && record.expiresAt <= Date.now())) {
       return json({ error: 'Run not found.' }, 404)
     }
+    const assignment = findRunnerAssignment(record.exerciseId)
+    if (
+      !assignment
+      || assignment.language !== record.language
+      || await runnerAssignmentRevision(assignment) !== record.assignmentRevision
+    ) {
+      await this.state.storage.delete([
+        `${RUN_RECORD_PREFIX}${runId}`,
+        `${RUN_OUTPUT_PREFIX}${runId}`,
+        `${RUN_ERROR_PREFIX}${runId}`,
+      ])
+      console.warn(JSON.stringify({ event: 'runner.invalidated', runId }))
+      return json({ error: 'Run not found.' }, 404)
+    }
     if (
       record.status !== 'complete'
       && isRunnerRecordStale(record.status, record.createdAt, record.startedAt, Date.now(), STALE_RUN_MS)
@@ -1394,7 +1456,11 @@ export class RunnerCoordinator {
         language: record.language,
         previousStatus: record.status,
       }))
-      return json({ ...failed.result, stdout: '', stderr: '' })
+      return json(
+        { ...failed.result, stdout: '', stderr: '' },
+        200,
+        await resultBindingHeaders(failed, this.env.SESSION_SECRET),
+      )
     }
     if (record.status !== 'complete') {
       const pending: RunnerPending = {
@@ -1403,23 +1469,49 @@ export class RunnerCoordinator {
         status: record.status,
         pollAfterMs: POLL_AFTER_MS,
       }
-      return json(pending)
+      return json(
+        pending,
+        200,
+        await resultBindingHeaders(record, this.env.SESSION_SECRET),
+      )
     }
 
     const [stdout, stderr] = await Promise.all([
       this.state.storage.get<string>(`${RUN_OUTPUT_PREFIX}${runId}`),
       this.state.storage.get<string>(`${RUN_ERROR_PREFIX}${runId}`),
     ])
-    return json({ ...record.result, stdout: stdout ?? '', stderr: stderr ?? '' })
+    return json(
+      { ...record.result, stdout: stdout ?? '', stderr: stderr ?? '' },
+      200,
+      await resultBindingHeaders(record, this.env.SESSION_SECRET),
+    )
   }
 
   private async execute(record: StoredQueuedRun): Promise<void> {
     const assignment = findRunnerAssignment(record.exerciseId)
+    if (
+      !assignment
+      || assignment.language !== record.language
+      || await runnerAssignmentRevision(assignment) !== record.assignmentRevision
+    ) {
+      const failed = this.systemErrorResult(record, Date.now())
+      await this.state.storage.put({
+        [`${RUN_RECORD_PREFIX}${record.id}`]: failed,
+        [`${RUN_OUTPUT_PREFIX}${record.id}`]: '',
+        [`${RUN_ERROR_PREFIX}${record.id}`]: '',
+      })
+      console.error(JSON.stringify({
+        event: 'runner.system_error',
+        runId: record.id,
+        language: record.language,
+        outcome: 'system_error',
+      }))
+      return
+    }
+
     const purpose = record.purpose ?? 'check'
-    const inputs = assignment
-      ? runnerInputCases(assignment, purpose, record.stdin)
-      : [record.stdin]
-    const officialAssessment = assignment && purpose === 'check'
+    const inputs = runnerInputCases(assignment, purpose, record.stdin)
+    const officialAssessment = purpose === 'check'
       ? runnerAssessment(assignment) ?? null
       : null
     let supervisorRuns: SupervisorResult[] = []
@@ -1586,6 +1678,7 @@ export class RunnerCoordinator {
       id: record.id,
       ownerId: record.ownerId,
       exerciseId: record.exerciseId,
+      assignmentRevision: record.assignmentRevision,
       language: record.language,
       status: 'complete',
       createdAt: record.createdAt,
@@ -1686,6 +1779,7 @@ export class RunnerCoordinator {
       id: record.id,
       ownerId: record.ownerId,
       exerciseId: record.exerciseId,
+      assignmentRevision: record.assignmentRevision,
       language: record.language,
       status: 'complete',
       createdAt: record.createdAt,

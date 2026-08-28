@@ -1,5 +1,5 @@
 import type { CourseId } from '../types'
-import { pythonDataToolsManifest } from './python-data-tools-manifest'
+import { controlledContinuingCourseRegistrations } from './controlled-continuing-course-publication'
 
 export interface PublishedContinuingCourseModuleManifest {
   id: string
@@ -12,16 +12,9 @@ export interface PublishedContinuingCourseManifest {
   modules: readonly PublishedContinuingCourseModuleManifest[]
 }
 
-export const publishedContinuingCourseManifests: readonly PublishedContinuingCourseManifest[] = [
-  {
-    courseId: 'python-data-tools',
-    modules: Object.entries(pythonDataToolsManifest).map(([id, lessons]) => ({
-      id,
-      lessonIds: lessons.map((lesson) => lesson.id),
-      conceptIds: [...new Set(lessons.map((lesson) => lesson.conceptId))],
-    })),
-  },
-]
+export const publishedContinuingCourseManifests: readonly PublishedContinuingCourseManifest[] = Object.freeze(
+  controlledContinuingCourseRegistrations.map((registration) => registration.manifest),
+)
 
 const manifestsByCourseId = new Map(
   publishedContinuingCourseManifests.map((manifest) => [manifest.courseId, manifest]),

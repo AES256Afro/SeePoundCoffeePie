@@ -152,11 +152,15 @@ describe('beginner curriculum scaffolding', () => {
     }
   })
 
-  it('matches the exact version 1 durable mission and lesson ownership manifest', () => {
+  it('matches the exact version 1 durable lesson metadata manifest', () => {
     const currentOwnership = Object.fromEntries(tracks.flatMap((track) => (
       track.missions.map((mission) => [
         `${track.id}/${mission.id}`,
-        mission.exercises.map((exercise) => exercise.id),
+        mission.exercises.map((exercise) => [
+          exercise.id,
+          exercise.conceptId,
+          exercise.xp,
+        ]),
       ])
     )))
 

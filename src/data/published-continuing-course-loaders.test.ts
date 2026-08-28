@@ -1,8 +1,10 @@
 import { describe, expect, it } from 'vitest'
 import { courseDefinitions } from './course-registry'
+import { basePublishedContinuingCourseRegistrations } from './continuing-course-publications.base'
 import {
+  continuingCourseContentMatchesRegistration,
   publishedContinuingCourseContentRequest,
-  publishedContinuingCourseContentRequestForLanguage,
+  publishedContinuingCourseContentRequestsForLanguage,
   publishedContinuingCourseLoaders,
 } from './published-continuing-course-loaders'
 import { publishedContinuingCourseManifests } from './published-continuing-course-manifests'
@@ -32,7 +34,32 @@ describe('published continuing-course loaders', () => {
     expect(content?.id).toBe('python-data-tools')
     expect(content?.missions).toHaveLength(6)
     expect(content?.missions.at(-1)?.id).toBe('py-data-supply-tracker')
-    expect(await publishedContinuingCourseContentRequestForLanguage('python')).toBe(content)
-    expect(publishedContinuingCourseContentRequestForLanguage('cpp')).toBeUndefined()
+    expect(await Promise.all(publishedContinuingCourseContentRequestsForLanguage('python'))).toEqual([content])
+    expect(publishedContinuingCourseContentRequestsForLanguage('cpp')).toEqual([])
+  })
+
+  it('rejects content that does not exactly match its selected registration', async () => {
+    const registration = basePublishedContinuingCourseRegistrations[0]
+    const content = await registration.loadContent()
+    const reversed = { ...content, missions: [...content.missions].reverse() }
+    const wrongLesson = {
+      ...content,
+      missions: content.missions.map((mission, index) => index === 0
+        ? {
+            ...mission,
+            exercises: mission.exercises.map((exercise, lessonIndex) => lessonIndex === 0
+              ? { ...exercise, id: 'wrong-lesson' }
+              : exercise),
+          }
+        : mission),
+    }
+
+    expect(continuingCourseContentMatchesRegistration(content, registration)).toBe(true)
+    expect(continuingCourseContentMatchesRegistration(
+      { ...content, language: 'cpp' },
+      registration,
+    )).toBe(false)
+    expect(continuingCourseContentMatchesRegistration(reversed, registration)).toBe(false)
+    expect(continuingCourseContentMatchesRegistration(wrongLesson, registration)).toBe(false)
   })
 })

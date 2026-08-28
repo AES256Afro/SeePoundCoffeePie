@@ -1,6 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { cppCollectionsRecordsServerAssessment } from './data/cpp-collections-records.server'
-import type { CppAnalysis, CppCollectionsAnalysis, RunnerAssignment } from './lib/runner-assignments'
+import {
+  runnerAssignmentRevision,
+  type CppAnalysis,
+  type CppCollectionsAnalysis,
+  type RunnerAssignment,
+} from './lib/runner-assignments'
 import type { RunnerResult } from './lib/runner-contract'
 
 const mocks = vi.hoisted(() => ({
@@ -67,6 +72,8 @@ function assignment(): RunnerAssignment {
   }
 }
 
+const privateAssignmentRevision = await runnerAssignmentRevision(assignment())
+
 function analysis(overrides: Partial<CppCollectionsAnalysis> = {}): CppCollectionsAnalysis {
   return {
     version: 1,
@@ -117,6 +124,7 @@ function record() {
     ownerId: 'owner-identifier-that-is-long-enough',
     ipHash: 'ip-hash-that-is-long-enough',
     exerciseId: 'private-cpp-collections-assessment',
+    assignmentRevision: privateAssignmentRevision,
     language: 'cpp' as const,
     source: 'private source',
     stdin: 'caller input must be ignored',

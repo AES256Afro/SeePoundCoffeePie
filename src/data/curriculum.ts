@@ -1,4 +1,8 @@
 import type { Exercise, LanguageId, LanguageTrack, Mission } from '../types'
+import { durableCurriculumV1 } from './durable-curriculum-v1'
+import { foundationTrackMetadataByLanguage } from './foundation-track-metadata'
+
+type FoundationExercise = Omit<Exercise, 'id' | 'conceptId' | 'xp'>
 
 const cppProgramFrame = [
   {
@@ -30,10 +34,8 @@ const javaProgramFrame = [
   },
 ]
 
-const pythonExercises: Exercise[] = [
+const pythonExercises: FoundationExercise[] = [
   {
-    id: 'py-console',
-    conceptId: 'python-console',
     eyebrow: 'Orientation 1 of 5',
     title: 'Meet the console',
     explanation:
@@ -50,11 +52,8 @@ const pythonExercises: Exercise[] = [
     correctChoice: 'a',
     hint: 'Look for the answer that describes a text window.',
     recap: 'The console displays text and other information produced by your program.',
-    xp: 8,
   },
   {
-    id: 'py-print',
-    conceptId: 'python-print',
     eyebrow: 'Transmission 2 of 5',
     title: 'Print your first message',
     explanation:
@@ -76,11 +75,8 @@ const pythonExercises: Exercise[] = [
     output: 'Signal online',
     hint: 'The command is print("Signal online"). Type it exactly, including the parentheses.',
     recap: 'Use print("message") whenever a Python program needs to display text.',
-    xp: 12,
   },
   {
-    id: 'py-string',
-    conceptId: 'python-variables',
     eyebrow: 'Cargo label 3 of 5',
     title: 'Store text in a variable',
     explanation:
@@ -104,11 +100,8 @@ const pythonExercises: Exercise[] = [
     output: 'Wayfarer',
     hint: 'A complete assignment looks like ship_name = "Wayfarer".',
     recap: 'A text value is called a string. Python strings can use double or single quotation marks.',
-    xp: 14,
   },
   {
-    id: 'py-number',
-    conceptId: 'python-variables',
     eyebrow: 'Supply count 4 of 5',
     title: 'Store a number in a variable',
     explanation:
@@ -132,11 +125,8 @@ const pythonExercises: Exercise[] = [
     output: '3',
     hint: 'Write power_cells = 3. A number is not surrounded by quotation marks.',
     recap: 'An integer is a whole number. Python can store it directly in a variable.',
-    xp: 14,
   },
   {
-    id: 'py-launch',
-    conceptId: 'python-output-and-variables',
     eyebrow: 'Bridge check 5 of 5',
     title: 'Print values from variables',
     explanation:
@@ -160,14 +150,11 @@ const pythonExercises: Exercise[] = [
     output: 'Ship: Wayfarer\nCells: 3',
     hint: 'The blanks need the variable labels ship_name and power_cells, not their values.',
     recap: 'You can reuse a variable by writing its name. Python reads the value stored under that label.',
-    xp: 22,
   },
 ]
 
-const cppExercises: Exercise[] = [
+const cppExercises: FoundationExercise[] = [
   {
-    id: 'cpp-compiler',
-    conceptId: 'cpp-compiler',
     eyebrow: 'Reactor school 1 of 5',
     title: 'Meet the compiler',
     explanation:
@@ -184,11 +171,8 @@ const cppExercises: Exercise[] = [
     correctChoice: 'a',
     hint: 'Think about the translator between your instructions and the computer.',
     recap: 'A compiler checks and translates C++ source code before it runs.',
-    xp: 8,
   },
   {
-    id: 'cpp-output',
-    conceptId: 'cpp-output',
     eyebrow: 'Status line 2 of 5',
     title: 'Print your first message',
     explanation:
@@ -210,11 +194,8 @@ const cppExercises: Exercise[] = [
     output: 'Reactor online',
     hint: 'The full line is std::cout << "Reactor online";',
     recap: 'C++ statements usually end with a semicolon. std::cout displays console output.',
-    xp: 12,
   },
   {
-    id: 'cpp-string',
-    conceptId: 'cpp-variables',
     eyebrow: 'Core registry 3 of 5',
     title: 'Store text in a variable',
     explanation:
@@ -237,11 +218,8 @@ const cppExercises: Exercise[] = [
     output: 'Ember',
     hint: 'The assignment is std::string core_name = "Ember";',
     recap: 'C++ variable declarations include a type, a name, a value, and a semicolon.',
-    xp: 14,
   },
   {
-    id: 'cpp-number',
-    conceptId: 'cpp-variables',
     eyebrow: 'Charge test 4 of 5',
     title: 'Store a number in a variable',
     explanation:
@@ -264,11 +242,8 @@ const cppExercises: Exercise[] = [
     output: '80',
     hint: 'A whole-number declaration begins with int: int charge = 80;',
     recap: 'Use int for whole numbers such as counts, levels, and scores.',
-    xp: 14,
   },
   {
-    id: 'cpp-reactor-report',
-    conceptId: 'cpp-output-and-variables',
     eyebrow: 'Ignition check 5 of 5',
     title: 'Print values from variables',
     explanation:
@@ -292,14 +267,11 @@ const cppExercises: Exercise[] = [
     output: 'Core: Ember | Charge: 80',
     hint: 'The first blank is core_name. The second blank is charge.',
     recap: 'Chain text and variables with << to build a C++ console report.',
-    xp: 22,
   },
 ]
 
-const csharpExercises: Exercise[] = [
+const csharpExercises: FoundationExercise[] = [
   {
-    id: 'cs-dotnet',
-    conceptId: 'csharp-runtime',
     eyebrow: 'Shield school 1 of 5',
     title: 'Meet the .NET runtime',
     explanation:
@@ -316,11 +288,8 @@ const csharpExercises: Exercise[] = [
     correctChoice: 'a',
     hint: 'Choose the answer describing the system beneath a C# program.',
     recap: 'C# works with .NET, which provides a runtime and reusable libraries.',
-    xp: 8,
   },
   {
-    id: 'cs-output',
-    conceptId: 'csharp-output',
     eyebrow: 'Status line 2 of 5',
     title: 'Print your first message',
     explanation:
@@ -343,11 +312,8 @@ const csharpExercises: Exercise[] = [
     output: 'Shields online',
     hint: 'The complete command is Console.WriteLine("Shields online");',
     recap: 'Console.WriteLine displays a line of text in a C# console program.',
-    xp: 12,
   },
   {
-    id: 'cs-string',
-    conceptId: 'csharp-variables',
     eyebrow: 'Shield registry 3 of 5',
     title: 'Store text in a variable',
     explanation:
@@ -370,11 +336,8 @@ const csharpExercises: Exercise[] = [
     output: 'Aegis',
     hint: 'The declaration is string shieldName = "Aegis";',
     recap: 'A C# text variable starts with the string type and ends with a semicolon.',
-    xp: 14,
   },
   {
-    id: 'cs-number',
-    conceptId: 'csharp-variables',
     eyebrow: 'Power test 4 of 5',
     title: 'Store a number in a variable',
     explanation:
@@ -397,11 +360,8 @@ const csharpExercises: Exercise[] = [
     output: '100',
     hint: 'A whole-number declaration begins with int: int strength = 100;',
     recap: 'Use int for whole-number values in C#.',
-    xp: 14,
   },
   {
-    id: 'cs-shield-report',
-    conceptId: 'csharp-output-and-variables',
     eyebrow: 'Tactical check 5 of 5',
     title: 'Print values from variables',
     explanation:
@@ -425,14 +385,11 @@ const csharpExercises: Exercise[] = [
     output: 'Shield: Aegis | Strength: 100',
     hint: 'The first blank is shieldName. The second is strength.',
     recap: 'String interpolation inserts values with {variableName} inside text that begins with $.',
-    xp: 22,
   },
 ]
 
-const javaExercises: Exercise[] = [
+const javaExercises: FoundationExercise[] = [
   {
-    id: 'java-jvm',
-    conceptId: 'java-runtime',
     eyebrow: 'Galley systems 1 of 5',
     title: 'Meet the Java runtime',
     explanation:
@@ -449,11 +406,8 @@ const javaExercises: Exercise[] = [
     correctChoice: 'a',
     hint: 'Look for the answer about running Java instructions on different computers.',
     recap: 'The JVM runs compiled Java instructions and helps Java programs stay portable.',
-    xp: 8,
   },
   {
-    id: 'java-output',
-    conceptId: 'java-output',
     eyebrow: 'Galley report 2 of 5',
     title: 'Print your first message',
     explanation:
@@ -475,11 +429,8 @@ const javaExercises: Exercise[] = [
     output: 'Coffee online',
     hint: 'The full command is System.out.println("Coffee online");',
     recap: 'System.out.println displays one line of text in a Java console program.',
-    xp: 12,
   },
   {
-    id: 'java-string',
-    conceptId: 'java-variables',
     eyebrow: 'Blend registry 3 of 5',
     title: 'Store text in a variable',
     explanation:
@@ -502,11 +453,8 @@ const javaExercises: Exercise[] = [
     output: 'Nebula Roast',
     hint: 'The declaration is String blendName = "Nebula Roast";',
     recap: 'A Java text variable uses the capitalized String type and ends with a semicolon.',
-    xp: 14,
   },
   {
-    id: 'java-number',
-    conceptId: 'java-variables',
     eyebrow: 'Supply count 4 of 5',
     title: 'Store a number in a variable',
     explanation:
@@ -529,11 +477,8 @@ const javaExercises: Exercise[] = [
     output: '12',
     hint: 'A whole-number declaration begins with int: int podCount = 12;',
     recap: 'Java uses int for whole numbers such as counts, scores, and system levels.',
-    xp: 14,
   },
   {
-    id: 'java-galley-report',
-    conceptId: 'java-output-and-variables',
     eyebrow: 'Morning watch 5 of 5',
     title: 'Print values from variables',
     explanation:
@@ -558,14 +503,11 @@ const javaExercises: Exercise[] = [
     output: 'Blend: Nebula Roast | Pods: 12',
     hint: 'The first blank is blendName. The second blank is podCount.',
     recap: 'Use + to join text and stored values in a beginner Java console message.',
-    xp: 22,
   },
 ]
 
-const pythonSignalProtocolExercises: Exercise[] = [
+const pythonSignalProtocolExercises: FoundationExercise[] = [
   {
-    id: 'py2-retrieve-output',
-    conceptId: 'python-output-and-variables',
     eyebrow: 'Memory ping 1 of 5',
     title: 'Predict what the code displays',
     explanation:
@@ -584,11 +526,8 @@ const pythonSignalProtocolExercises: Exercise[] = [
     output: 'Ship: Wayfarer',
     hint: 'Read the assignment first. What value is stored under ship_name?',
     recap: 'Python reads the stored value Wayfarer when print uses ship_name without quotation marks.',
-    xp: 8,
   },
   {
-    id: 'py2-boolean',
-    conceptId: 'python-booleans',
     eyebrow: 'Decision school 2 of 5',
     title: 'Meet a true-or-false value',
     explanation:
@@ -605,11 +544,8 @@ const pythonSignalProtocolExercises: Exercise[] = [
     correctChoice: 'a',
     hint: 'Think of a question that can be answered yes or no.',
     recap: 'A condition evaluates to a Boolean value: True or False.',
-    xp: 10,
   },
   {
-    id: 'py2-order-route',
-    conceptId: 'python-conditions',
     eyebrow: 'Route planner 3 of 5',
     title: 'Put the branches in order',
     explanation:
@@ -629,11 +565,8 @@ const pythonSignalProtocolExercises: Exercise[] = [
     output: 'Signal accepted',
     hint: 'The if line asks first. Each indented print belongs beneath the route that should trigger it.',
     recap: 'Python reads the if route first and the else route second. Indentation shows which instruction belongs to each route.',
-    xp: 14,
   },
   {
-    id: 'py2-fix-comparison',
-    conceptId: 'python-comparisons',
     eyebrow: 'Diagnostic 4 of 5',
     title: 'Fix the condition',
     explanation:
@@ -655,11 +588,8 @@ const pythonSignalProtocolExercises: Exercise[] = [
     output: 'Docking approved',
     hint: 'The repaired line is if clearance == 7:',
     recap: 'Use = to store a value and == to ask whether two values are equal.',
-    xp: 16,
   },
   {
-    id: 'py2-signal-decision',
-    conceptId: 'python-conditions',
     eyebrow: 'Signal protocol 5 of 5',
     title: 'Choose the matching branch',
     explanation:
@@ -682,14 +612,11 @@ const pythonSignalProtocolExercises: Exercise[] = [
     output: 'Signal accepted',
     hint: 'Write signal_strength >= 60 in the blank. Read >= as “at least.”',
     recap: 'An if statement chooses a route from a Boolean condition. >= includes values above and exactly on the boundary.',
-    xp: 22,
   },
 ]
 
-const cppHullLogicExercises: Exercise[] = [
+const cppHullLogicExercises: FoundationExercise[] = [
   {
-    id: 'cpp2-retrieve-output',
-    conceptId: 'cpp-output-and-variables',
     eyebrow: 'Memory ping 1 of 5',
     title: 'Predict what the code displays',
     explanation:
@@ -708,11 +635,8 @@ const cppHullLogicExercises: Exercise[] = [
     output: 'Charge: 80',
     hint: 'Follow each << from left to right.',
     recap: 'C++ sends each chained value to std::cout from left to right.',
-    xp: 8,
   },
   {
-    id: 'cpp2-boolean',
-    conceptId: 'cpp-booleans',
     eyebrow: 'Damage control 2 of 5',
     title: 'Meet a true-or-false value',
     explanation:
@@ -729,11 +653,8 @@ const cppHullLogicExercises: Exercise[] = [
     correctChoice: 'a',
     hint: 'The two values mean yes and no, written as C++ keywords.',
     recap: 'C++ Boolean values are true and false.',
-    xp: 10,
   },
   {
-    id: 'cpp2-order-repair',
-    conceptId: 'cpp-conditions',
     eyebrow: 'Repair routes 3 of 5',
     title: 'Put the branches in order',
     explanation:
@@ -754,11 +675,8 @@ const cppHullLogicExercises: Exercise[] = [
     output: 'Patch outer hull',
     hint: 'The first piece begins with if. The last piece is the final closing brace.',
     recap: 'C++ uses parentheses around a condition and braces around each route’s instructions.',
-    xp: 14,
   },
   {
-    id: 'cpp2-fix-comparison',
-    conceptId: 'cpp-comparisons',
     eyebrow: 'Diagnostic 4 of 5',
     title: 'Fix the condition',
     explanation:
@@ -781,11 +699,8 @@ const cppHullLogicExercises: Exercise[] = [
     output: 'Breach located',
     hint: 'The repaired condition is if (hullIntegrity == 40) {',
     recap: 'In C++, = assigns and == compares.',
-    xp: 16,
   },
   {
-    id: 'cpp2-hull-decision',
-    conceptId: 'cpp-conditions',
     eyebrow: 'Hull logic 5 of 5',
     title: 'Choose the matching branch',
     explanation:
@@ -808,14 +723,11 @@ const cppHullLogicExercises: Exercise[] = [
     output: 'Patch outer hull',
     hint: 'Write hullIntegrity < 50 in the blank. Read < as “is less than.”',
     recap: 'A C++ if statement runs one brace group when its condition is true and the else group when it is false.',
-    xp: 22,
   },
 ]
 
-const csharpCommandLogicExercises: Exercise[] = [
+const csharpCommandLogicExercises: FoundationExercise[] = [
   {
-    id: 'cs2-retrieve-output',
-    conceptId: 'csharp-output-and-variables',
     eyebrow: 'Memory ping 1 of 5',
     title: 'Predict what the code displays',
     explanation:
@@ -834,11 +746,8 @@ const csharpCommandLogicExercises: Exercise[] = [
     output: 'Strength: 100',
     hint: 'The $ and braces make this a live text template.',
     recap: 'C# string interpolation replaces {strength} with the stored value 100.',
-    xp: 8,
   },
   {
-    id: 'cs2-boolean',
-    conceptId: 'csharp-booleans',
     eyebrow: 'Command school 2 of 5',
     title: 'Meet a true-or-false value',
     explanation:
@@ -855,11 +764,8 @@ const csharpCommandLogicExercises: Exercise[] = [
     correctChoice: 'a',
     hint: 'The language keywords are the lowercase forms of true and false.',
     recap: 'C# Boolean values are true and false.',
-    xp: 10,
   },
   {
-    id: 'cs2-order-command',
-    conceptId: 'csharp-conditions',
     eyebrow: 'Tactical routes 3 of 5',
     title: 'Put the branches in order',
     explanation:
@@ -880,11 +786,8 @@ const csharpCommandLogicExercises: Exercise[] = [
     output: 'Hold formation',
     hint: 'The if line comes first. The final closing brace comes last.',
     recap: 'C# uses parentheses for the condition and braces for the two instruction routes.',
-    xp: 14,
   },
   {
-    id: 'cs2-fix-comparison',
-    conceptId: 'csharp-comparisons',
     eyebrow: 'Diagnostic 4 of 5',
     title: 'Fix the condition',
     explanation:
@@ -906,11 +809,8 @@ const csharpCommandLogicExercises: Exercise[] = [
     output: 'Battle stations',
     hint: 'The repaired condition is if (alertLevel == 3) {',
     recap: 'In C#, = assigns and == compares.',
-    xp: 16,
   },
   {
-    id: 'cs2-shield-decision',
-    conceptId: 'csharp-conditions',
     eyebrow: 'Command logic 5 of 5',
     title: 'Choose the matching branch',
     explanation:
@@ -933,14 +833,11 @@ const csharpCommandLogicExercises: Exercise[] = [
     output: 'Hold formation',
     hint: 'Write shieldPower >= 80 in the blank. Read >= as “at least.”',
     recap: 'A C# if statement selects one brace group from a Boolean condition.',
-    xp: 22,
   },
 ]
 
-const javaRoutingOrdersExercises: Exercise[] = [
+const javaRoutingOrdersExercises: FoundationExercise[] = [
   {
-    id: 'java2-retrieve-output',
-    conceptId: 'java-output-and-variables',
     eyebrow: 'Memory ping 1 of 5',
     title: 'Predict what the code displays',
     explanation:
@@ -959,11 +856,8 @@ const javaRoutingOrdersExercises: Exercise[] = [
     output: 'Pods: 12',
     hint: 'Read the assignment, then follow the pieces joined by +.',
     recap: 'Java joins the label and stored pod count into Pods: 12.',
-    xp: 8,
   },
   {
-    id: 'java2-boolean',
-    conceptId: 'java-booleans',
     eyebrow: 'Routing school 2 of 5',
     title: 'Meet a true-or-false value',
     explanation:
@@ -980,11 +874,8 @@ const javaRoutingOrdersExercises: Exercise[] = [
     correctChoice: 'a',
     hint: 'The two Java keywords mean yes and no.',
     recap: 'Java Boolean values are true and false.',
-    xp: 10,
   },
   {
-    id: 'java2-order-route',
-    conceptId: 'java-conditions',
     eyebrow: 'Supply routes 3 of 5',
     title: 'Put the branches in order',
     explanation:
@@ -1005,11 +896,8 @@ const javaRoutingOrdersExercises: Exercise[] = [
     output: 'Restock reserve',
     hint: 'The if line comes first. The final closing brace comes last.',
     recap: 'Java uses parentheses for the Boolean condition and braces to group both routes.',
-    xp: 14,
   },
   {
-    id: 'java2-fix-comparison',
-    conceptId: 'java-comparisons',
     eyebrow: 'Diagnostic 4 of 5',
     title: 'Fix the condition',
     explanation:
@@ -1032,11 +920,8 @@ const javaRoutingOrdersExercises: Exercise[] = [
     output: 'Galley deck',
     hint: 'The repaired condition is if (deckNumber == 4) {',
     recap: 'In Java, = assigns and == compares primitive values such as integers.',
-    xp: 16,
   },
   {
-    id: 'java2-pod-decision',
-    conceptId: 'java-conditions',
     eyebrow: 'Routing orders 5 of 5',
     title: 'Choose the matching branch',
     explanation:
@@ -1060,14 +945,11 @@ const javaRoutingOrdersExercises: Exercise[] = [
     output: 'Restock reserve',
     hint: 'Write podCount < 6 in the blank. Read < as “is less than.”',
     recap: 'A Java if statement selects one brace group from a Boolean condition.',
-    xp: 22,
   },
 ]
 
-const pythonCargoLogicExercises: Exercise[] = [
+const pythonCargoLogicExercises: FoundationExercise[] = [
   {
-    id: 'py3-retrieve-route',
-    conceptId: 'python-conditions',
     eyebrow: 'Memory ping 1 of 5',
     title: 'Predict what the condition does',
     explanation:
@@ -1086,11 +968,8 @@ const pythonCargoLogicExercises: Exercise[] = [
     output: 'Restock hold',
     hint: 'Read 2 < 3 as “is two less than three?”',
     recap: 'A true Python if condition runs its indented route and skips else.',
-    xp: 8,
   },
   {
-    id: 'py3-list-purpose',
-    conceptId: 'python-collections',
     eyebrow: 'Hold registry 2 of 5',
     title: 'Meet a list',
     explanation:
@@ -1107,11 +986,8 @@ const pythonCargoLogicExercises: Exercise[] = [
     correctChoice: 'a',
     hint: 'Look for the answer about one container holding several related items.',
     recap: 'A Python list is an ordered collection written with square brackets and comma-separated items.',
-    xp: 10,
   },
   {
-    id: 'py3-first-index',
-    conceptId: 'python-indexes',
     eyebrow: 'Locker address 3 of 5',
     title: 'Read the first item',
     explanation:
@@ -1130,11 +1006,8 @@ const pythonCargoLogicExercises: Exercise[] = [
     output: 'crystal',
     hint: 'Python begins list indexes at 0, not 1.',
     recap: 'Use list_name[0] to retrieve the first item from a Python list.',
-    xp: 14,
   },
   {
-    id: 'py3-fix-index',
-    conceptId: 'python-indexes',
     eyebrow: 'Manifest repair 4 of 5',
     title: 'Fix the last position',
     explanation:
@@ -1156,11 +1029,8 @@ const pythonCargoLogicExercises: Exercise[] = [
     output: 'map',
     hint: 'The three positions are 0, 1, and 2. Replace cargo[3] with cargo[2].',
     recap: 'For three items, index 2 is the final valid position because indexing starts at zero.',
-    xp: 16,
   },
   {
-    id: 'py3-cargo-report',
-    conceptId: 'python-collections-and-indexes',
     eyebrow: 'Cargo report 5 of 5',
     title: 'Read the first and last items',
     explanation:
@@ -1184,14 +1054,11 @@ const pythonCargoLogicExercises: Exercise[] = [
     output: 'First: crystal\nLast: map',
     hint: 'The two blanks are cargo[0] and cargo[2], in that order.',
     recap: 'A Python list keeps related values together, and a zero-based index retrieves one item.',
-    xp: 22,
   },
 ]
 
-const cppCargoArrayExercises: Exercise[] = [
+const cppCargoArrayExercises: FoundationExercise[] = [
   {
-    id: 'cpp3-retrieve-route',
-    conceptId: 'cpp-conditions',
     eyebrow: 'Memory ping 1 of 5',
     title: 'Predict what the condition does',
     explanation:
@@ -1210,11 +1077,8 @@ const cppCargoArrayExercises: Exercise[] = [
     output: 'Restock parts',
     hint: 'The comparison 2 < 3 is true.',
     recap: 'A true C++ if condition runs its first brace group and skips else.',
-    xp: 8,
   },
   {
-    id: 'cpp3-array-purpose',
-    conceptId: 'cpp-collections',
     eyebrow: 'Parts rack 2 of 5',
     title: 'Meet an array',
     explanation:
@@ -1231,11 +1095,8 @@ const cppCargoArrayExercises: Exercise[] = [
     correctChoice: 'a',
     hint: 'Look for the answer about an ordered group with one item type.',
     recap: 'A C++ array stores a fixed ordered group of values that share one type.',
-    xp: 10,
   },
   {
-    id: 'cpp3-first-index',
-    conceptId: 'cpp-indexes',
     eyebrow: 'Rack address 3 of 5',
     title: 'Read the first item',
     explanation:
@@ -1254,11 +1115,8 @@ const cppCargoArrayExercises: Exercise[] = [
     output: 'crystal',
     hint: 'C++ begins array indexes at 0, not 1.',
     recap: 'Use arrayName[0] to retrieve the first value in a C++ array.',
-    xp: 14,
   },
   {
-    id: 'cpp3-fix-index',
-    conceptId: 'cpp-indexes',
     eyebrow: 'Rack repair 4 of 5',
     title: 'Fix the last position',
     explanation:
@@ -1281,11 +1139,8 @@ const cppCargoArrayExercises: Exercise[] = [
     output: 'rune',
     hint: 'The three positions are 0, 1, and 2. Replace parts[3] with parts[2].',
     recap: 'A three-item C++ array ends at index 2 because array indexing starts at zero.',
-    xp: 16,
   },
   {
-    id: 'cpp3-parts-report',
-    conceptId: 'cpp-collections-and-indexes',
     eyebrow: 'Forge report 5 of 5',
     title: 'Read the first and last items',
     explanation:
@@ -1310,14 +1165,11 @@ const cppCargoArrayExercises: Exercise[] = [
     output: 'First: crystal\nLast: rune',
     hint: 'The two blanks are parts[0] and parts[2], in that order.',
     recap: 'A C++ array groups same-type values, and a zero-based index retrieves one slot.',
-    xp: 22,
   },
 ]
 
-const csharpCrewRosterExercises: Exercise[] = [
+const csharpCrewRosterExercises: FoundationExercise[] = [
   {
-    id: 'cs3-retrieve-route',
-    conceptId: 'csharp-conditions',
     eyebrow: 'Memory ping 1 of 5',
     title: 'Predict what the condition does',
     explanation:
@@ -1336,11 +1188,8 @@ const csharpCrewRosterExercises: Exercise[] = [
     output: 'Call reserves',
     hint: 'The comparison 2 < 3 is true.',
     recap: 'A true C# if condition runs the first brace group and skips else.',
-    xp: 8,
   },
   {
-    id: 'cs3-array-purpose',
-    conceptId: 'csharp-collections',
     eyebrow: 'Roster registry 2 of 5',
     title: 'Meet an array',
     explanation:
@@ -1357,11 +1206,8 @@ const csharpCrewRosterExercises: Exercise[] = [
     correctChoice: 'a',
     hint: 'Look for the answer about one ordered group of related names.',
     recap: 'A C# array stores an ordered group of values that share one declared type.',
-    xp: 10,
   },
   {
-    id: 'cs3-first-index',
-    conceptId: 'csharp-indexes',
     eyebrow: 'Roster address 3 of 5',
     title: 'Read the first item',
     explanation:
@@ -1380,11 +1226,8 @@ const csharpCrewRosterExercises: Exercise[] = [
     output: 'Mira',
     hint: 'C# begins array indexes at 0, not 1.',
     recap: 'Use arrayName[0] to retrieve the first value in a C# array.',
-    xp: 14,
   },
   {
-    id: 'cs3-fix-index',
-    conceptId: 'csharp-indexes',
     eyebrow: 'Roster repair 4 of 5',
     title: 'Fix the last position',
     explanation:
@@ -1406,11 +1249,8 @@ const csharpCrewRosterExercises: Exercise[] = [
     output: 'Pip',
     hint: 'The three positions are 0, 1, and 2. Replace crew[3] with crew[2].',
     recap: 'A three-item C# array ends at index 2 because indexing starts at zero.',
-    xp: 16,
   },
   {
-    id: 'cs3-roster-report',
-    conceptId: 'csharp-collections-and-indexes',
     eyebrow: 'Bridge report 5 of 5',
     title: 'Read the first and last items',
     explanation:
@@ -1434,14 +1274,11 @@ const csharpCrewRosterExercises: Exercise[] = [
     output: 'First: Mira\nLast: Pip',
     hint: 'The two blanks are crew[0] and crew[2], in that order.',
     recap: 'A C# array groups related values, and a zero-based index retrieves one element.',
-    xp: 22,
   },
 ]
 
-const javaCrewArrayExercises: Exercise[] = [
+const javaCrewArrayExercises: FoundationExercise[] = [
   {
-    id: 'java3-retrieve-route',
-    conceptId: 'java-conditions',
     eyebrow: 'Memory ping 1 of 5',
     title: 'Predict what the condition does',
     explanation:
@@ -1460,11 +1297,8 @@ const javaCrewArrayExercises: Exercise[] = [
     output: 'Call reserves',
     hint: 'The comparison 2 < 3 is true.',
     recap: 'A true Java if condition runs the first brace group and skips else.',
-    xp: 8,
   },
   {
-    id: 'java3-array-purpose',
-    conceptId: 'java-collections',
     eyebrow: 'Watch registry 2 of 5',
     title: 'Meet an array',
     explanation:
@@ -1481,11 +1315,8 @@ const javaCrewArrayExercises: Exercise[] = [
     correctChoice: 'a',
     hint: 'Look for the answer about one ordered group of related names.',
     recap: 'A Java array stores an ordered group of values that share one declared type.',
-    xp: 10,
   },
   {
-    id: 'java3-first-index',
-    conceptId: 'java-indexes',
     eyebrow: 'Roster address 3 of 5',
     title: 'Read the first item',
     explanation:
@@ -1504,11 +1335,8 @@ const javaCrewArrayExercises: Exercise[] = [
     output: 'MOP-1',
     hint: 'Java begins array indexes at 0, not 1.',
     recap: 'Use arrayName[0] to retrieve the first value in a Java array.',
-    xp: 14,
   },
   {
-    id: 'java3-fix-index',
-    conceptId: 'java-indexes',
     eyebrow: 'Roster repair 4 of 5',
     title: 'Fix the last position',
     explanation:
@@ -1531,11 +1359,8 @@ const javaCrewArrayExercises: Exercise[] = [
     output: 'HEX-3',
     hint: 'The three positions are 0, 1, and 2. Replace droids[3] with droids[2].',
     recap: 'A three-item Java array ends at index 2 because indexing starts at zero.',
-    xp: 16,
   },
   {
-    id: 'java3-roster-report',
-    conceptId: 'java-collections-and-indexes',
     eyebrow: 'Guild report 5 of 5',
     title: 'Read the first and last items',
     explanation:
@@ -1560,14 +1385,11 @@ const javaCrewArrayExercises: Exercise[] = [
     output: 'First: MOP-1\nLast: HEX-3',
     hint: 'The two blanks are droids[0] and droids[2], in that order.',
     recap: 'A Java array groups related values, and a zero-based index retrieves one element.',
-    xp: 22,
   },
 ]
 
-const pythonLoopingOrbitExercises: Exercise[] = [
+const pythonLoopingOrbitExercises: FoundationExercise[] = [
   {
-    id: 'py4-retrieve-index',
-    conceptId: 'python-collections-and-indexes',
     eyebrow: 'Memory ping 1 of 5',
     title: 'Read an item by position',
     explanation:
@@ -1586,11 +1408,8 @@ const pythonLoopingOrbitExercises: Exercise[] = [
     output: 'medkit',
     hint: 'Count the list positions as 0, 1, and 2.',
     recap: 'Index 1 retrieves the second item from a zero-based Python list.',
-    xp: 8,
   },
   {
-    id: 'py4-loop-purpose',
-    conceptId: 'python-loops',
     eyebrow: 'Orbit school 2 of 5',
     title: 'Meet a loop',
     explanation:
@@ -1607,11 +1426,8 @@ const pythonLoopingOrbitExercises: Exercise[] = [
     correctChoice: 'a',
     hint: 'Look for the answer about one instruction working across several items.',
     recap: 'A loop repeats a useful action without copying the same code for every list item.',
-    xp: 10,
   },
   {
-    id: 'py4-predict-loop',
-    conceptId: 'python-iteration',
     eyebrow: 'Scanner pass 3 of 5',
     title: 'Trace two loop passes',
     explanation:
@@ -1630,11 +1446,8 @@ const pythonLoopingOrbitExercises: Exercise[] = [
     output: 'crystal\nmap',
     hint: 'Trace the first pass with item as crystal, then the second with item as map.',
     recap: 'A Python for loop visits every list value in order and runs its indented body each time.',
-    xp: 14,
   },
   {
-    id: 'py4-order-loop',
-    conceptId: 'python-iteration',
     eyebrow: 'Flight plan 4 of 5',
     title: 'Put the loop in order',
     explanation:
@@ -1653,11 +1466,8 @@ const pythonLoopingOrbitExercises: Exercise[] = [
     output: 'crystal\nmedkit\nmap',
     hint: 'The list must exist before the for line can visit it.',
     recap: 'Create the collection, open the loop, then indent the instruction that repeats.',
-    xp: 16,
   },
   {
-    id: 'py4-scan-manifest',
-    conceptId: 'python-loops-and-collections',
     eyebrow: 'Orbit report 5 of 5',
     title: 'Process every item',
     explanation:
@@ -1681,14 +1491,11 @@ const pythonLoopingOrbitExercises: Exercise[] = [
     output: 'Scanned: crystal\nScanned: medkit\nScanned: map',
     hint: 'The loop header should read for item in cargo:',
     recap: 'A Python for loop can visit every list item with one indented instruction body.',
-    xp: 22,
   },
 ]
 
-const cppEngineLoopExercises: Exercise[] = [
+const cppEngineLoopExercises: FoundationExercise[] = [
   {
-    id: 'cpp4-retrieve-index',
-    conceptId: 'cpp-collections-and-indexes',
     eyebrow: 'Memory ping 1 of 5',
     title: 'Read an item by position',
     explanation:
@@ -1707,11 +1514,8 @@ const cppEngineLoopExercises: Exercise[] = [
     output: 'coupler',
     hint: 'Count the array positions as 0, 1, and 2.',
     recap: 'Index 1 retrieves the second item from a zero-based C++ array.',
-    xp: 8,
   },
   {
-    id: 'cpp4-loop-purpose',
-    conceptId: 'cpp-loops',
     eyebrow: 'Engine cycle 2 of 5',
     title: 'Meet a loop',
     explanation:
@@ -1728,11 +1532,8 @@ const cppEngineLoopExercises: Exercise[] = [
     correctChoice: 'a',
     hint: 'Look for the answer about one instruction working across several array values.',
     recap: 'A C++ loop repeats an action without copying the same code for every array item.',
-    xp: 10,
   },
   {
-    id: 'cpp4-predict-loop',
-    conceptId: 'cpp-iteration',
     eyebrow: 'Inspection pass 3 of 5',
     title: 'Trace two loop passes',
     explanation:
@@ -1751,11 +1552,8 @@ const cppEngineLoopExercises: Exercise[] = [
     output: 'crystal\nrune',
     hint: 'Trace one pass with part as crystal, then another with part as rune.',
     recap: 'A range-based C++ for loop visits every array value in order.',
-    xp: 14,
   },
   {
-    id: 'cpp4-order-loop',
-    conceptId: 'cpp-iteration',
     eyebrow: 'Work order 4 of 5',
     title: 'Put the loop in order',
     explanation:
@@ -1775,11 +1573,8 @@ const cppEngineLoopExercises: Exercise[] = [
     output: 'crystal\ncoupler\nrune',
     hint: 'The array comes first and the final closing brace comes last.',
     recap: 'Create the array, open the loop, run its body, then close the loop brace.',
-    xp: 16,
   },
   {
-    id: 'cpp4-inspect-parts',
-    conceptId: 'cpp-loops-and-collections',
     eyebrow: 'Engine report 5 of 5',
     title: 'Process every item',
     explanation:
@@ -1804,14 +1599,11 @@ const cppEngineLoopExercises: Exercise[] = [
     output: 'Checked: crystal\nChecked: coupler\nChecked: rune',
     hint: 'The loop header should read for (std::string part : parts) {',
     recap: 'A range-based C++ for loop visits every array value with one brace-group body.',
-    xp: 22,
   },
 ]
 
-const csharpPatrolLoopExercises: Exercise[] = [
+const csharpPatrolLoopExercises: FoundationExercise[] = [
   {
-    id: 'cs4-retrieve-index',
-    conceptId: 'csharp-collections-and-indexes',
     eyebrow: 'Memory ping 1 of 5',
     title: 'Read an item by position',
     explanation:
@@ -1830,11 +1622,8 @@ const csharpPatrolLoopExercises: Exercise[] = [
     output: 'Tov',
     hint: 'Count the array positions as 0, 1, and 2.',
     recap: 'Index 1 retrieves the second item from a zero-based C# array.',
-    xp: 8,
   },
   {
-    id: 'cs4-loop-purpose',
-    conceptId: 'csharp-loops',
     eyebrow: 'Patrol school 2 of 5',
     title: 'Meet a loop',
     explanation:
@@ -1851,11 +1640,8 @@ const csharpPatrolLoopExercises: Exercise[] = [
     correctChoice: 'a',
     hint: 'Look for the answer about one instruction working across the roster.',
     recap: 'A C# loop repeats an action without copying the same code for every array item.',
-    xp: 10,
   },
   {
-    id: 'cs4-predict-loop',
-    conceptId: 'csharp-iteration',
     eyebrow: 'Roll call 3 of 5',
     title: 'Trace two loop passes',
     explanation:
@@ -1874,11 +1660,8 @@ const csharpPatrolLoopExercises: Exercise[] = [
     output: 'Mira\nPip',
     hint: 'Trace one pass with name as Mira, then another with name as Pip.',
     recap: 'A C# foreach loop visits every array value in order.',
-    xp: 14,
   },
   {
-    id: 'cs4-order-loop',
-    conceptId: 'csharp-iteration',
     eyebrow: 'Patrol order 4 of 5',
     title: 'Put the loop in order',
     explanation:
@@ -1898,11 +1681,8 @@ const csharpPatrolLoopExercises: Exercise[] = [
     output: 'Mira\nTov\nPip',
     hint: 'The array comes first and the final closing brace comes last.',
     recap: 'Create the array, open foreach, run its body, then close the loop brace.',
-    xp: 16,
   },
   {
-    id: 'cs4-call-roster',
-    conceptId: 'csharp-loops-and-collections',
     eyebrow: 'Patrol report 5 of 5',
     title: 'Process every item',
     explanation:
@@ -1926,14 +1706,11 @@ const csharpPatrolLoopExercises: Exercise[] = [
     output: 'Ready: Mira\nReady: Tov\nReady: Pip',
     hint: 'The loop header should read foreach (string name in crew)',
     recap: 'A C# foreach loop visits every array value with one brace-group body.',
-    xp: 22,
   },
 ]
 
-const javaRepeatBrewExercises: Exercise[] = [
+const javaRepeatBrewExercises: FoundationExercise[] = [
   {
-    id: 'java4-retrieve-index',
-    conceptId: 'java-collections-and-indexes',
     eyebrow: 'Memory ping 1 of 5',
     title: 'Read an item by position',
     explanation:
@@ -1952,11 +1729,8 @@ const javaRepeatBrewExercises: Exercise[] = [
     output: 'BEEP-7',
     hint: 'Count the array positions as 0, 1, and 2.',
     recap: 'Index 1 retrieves the second item from a zero-based Java array.',
-    xp: 8,
   },
   {
-    id: 'java4-loop-purpose',
-    conceptId: 'java-loops',
     eyebrow: 'Automation school 2 of 5',
     title: 'Meet a loop',
     explanation:
@@ -1973,11 +1747,8 @@ const javaRepeatBrewExercises: Exercise[] = [
     correctChoice: 'a',
     hint: 'Look for the answer about one instruction working across the roster.',
     recap: 'A Java loop repeats an action without copying the same code for every array item.',
-    xp: 10,
   },
   {
-    id: 'java4-predict-loop',
-    conceptId: 'java-iteration',
     eyebrow: 'Service pass 3 of 5',
     title: 'Trace two loop passes',
     explanation:
@@ -1996,11 +1767,8 @@ const javaRepeatBrewExercises: Exercise[] = [
     output: 'MOP-1\nHEX-3',
     hint: 'Trace one pass with droid as MOP-1, then another with droid as HEX-3.',
     recap: 'A Java enhanced for loop visits every array value in order.',
-    xp: 14,
   },
   {
-    id: 'java4-order-loop',
-    conceptId: 'java-iteration',
     eyebrow: 'Service order 4 of 5',
     title: 'Put the loop in order',
     explanation:
@@ -2020,11 +1788,8 @@ const javaRepeatBrewExercises: Exercise[] = [
     output: 'MOP-1\nBEEP-7\nHEX-3',
     hint: 'The array comes first and the final closing brace comes last.',
     recap: 'Create the array, open the for loop, run its body, then close the loop brace.',
-    xp: 16,
   },
   {
-    id: 'java4-check-roster',
-    conceptId: 'java-loops-and-collections',
     eyebrow: 'Guild report 5 of 5',
     title: 'Process every item',
     explanation:
@@ -2049,14 +1814,11 @@ const javaRepeatBrewExercises: Exercise[] = [
     output: 'Checked: MOP-1\nChecked: BEEP-7\nChecked: HEX-3',
     hint: 'The loop header should read for (String droid : droids) {',
     recap: 'A Java enhanced for loop visits every array value with one brace-group body.',
-    xp: 22,
   },
 ]
 
-const pythonFunctionFoundryExercises: Exercise[] = [
+const pythonFunctionFoundryExercises: FoundationExercise[] = [
   {
-    id: 'py5-retrieve-loop',
-    conceptId: 'python-loops-and-collections',
     eyebrow: 'Memory ping 1 of 5',
     title: 'Trace a loop',
     explanation:
@@ -2075,11 +1837,8 @@ const pythonFunctionFoundryExercises: Exercise[] = [
     output: 'Scanned: crystal\nScanned: map',
     hint: 'Trace one pass for crystal and a second pass for map.',
     recap: 'A Python for loop runs its indented body once for every list item.',
-    xp: 8,
   },
   {
-    id: 'py5-function-purpose',
-    conceptId: 'python-functions',
     eyebrow: 'Foundry school 2 of 5',
     title: 'Meet a function',
     explanation:
@@ -2096,11 +1855,8 @@ const pythonFunctionFoundryExercises: Exercise[] = [
     correctChoice: 'a',
     hint: 'Look for the answer about defining once and using again.',
     recap: 'A function packages a job under one reusable name.',
-    xp: 10,
   },
   {
-    id: 'py5-predict-call',
-    conceptId: 'python-parameters-and-calls',
     eyebrow: 'Control test 3 of 5',
     title: 'Trace a function call',
     explanation:
@@ -2119,11 +1875,8 @@ const pythonFunctionFoundryExercises: Exercise[] = [
     output: 'Ready: crystal',
     hint: 'Move the argument "crystal" into the parameter named item.',
     recap: 'A call supplies an argument, and the function receives it through a parameter.',
-    xp: 14,
   },
   {
-    id: 'py5-order-function',
-    conceptId: 'python-function-order',
     eyebrow: 'Assembly plan 4 of 5',
     title: 'Put the function in order',
     explanation:
@@ -2142,11 +1895,8 @@ const pythonFunctionFoundryExercises: Exercise[] = [
     output: 'Ready: crystal',
     hint: 'The def line comes first. The unindented call comes last.',
     recap: 'Python reads the definition before the later call uses that reusable job.',
-    xp: 16,
   },
   {
-    id: 'py5-report-each',
-    conceptId: 'python-functions-and-loops',
     eyebrow: 'Foundry report 5 of 5',
     title: 'Call the function for every item',
     explanation:
@@ -2170,14 +1920,11 @@ const pythonFunctionFoundryExercises: Exercise[] = [
     output: 'Checked: crystal\nChecked: medkit\nChecked: map',
     hint: 'The call inside the loop should be report(item).',
     recap: 'A loop can call one reusable Python function with a different current value each time.',
-    xp: 22,
   },
 ]
 
-const cppCommandFunctionExercises: Exercise[] = [
+const cppCommandFunctionExercises: FoundationExercise[] = [
   {
-    id: 'cpp5-retrieve-loop',
-    conceptId: 'cpp-loops-and-collections',
     eyebrow: 'Memory ping 1 of 5',
     title: 'Trace a loop',
     explanation:
@@ -2196,11 +1943,8 @@ const cppCommandFunctionExercises: Exercise[] = [
     output: 'Checked: crystal\nChecked: rune',
     hint: 'Trace one pass for crystal and a second pass for rune.',
     recap: 'A range-based C++ for loop runs its brace-group body for every array value.',
-    xp: 8,
   },
   {
-    id: 'cpp5-function-purpose',
-    conceptId: 'cpp-functions',
     eyebrow: 'Command school 2 of 5',
     title: 'Meet a function',
     explanation:
@@ -2217,11 +1961,8 @@ const cppCommandFunctionExercises: Exercise[] = [
     correctChoice: 'a',
     hint: 'Look for the answer about defining once and using again.',
     recap: 'A C++ function packages an operation under one reusable name.',
-    xp: 10,
   },
   {
-    id: 'cpp5-predict-call',
-    conceptId: 'cpp-parameters-and-calls',
     eyebrow: 'Module test 3 of 5',
     title: 'Trace a function call',
     explanation:
@@ -2240,11 +1981,8 @@ const cppCommandFunctionExercises: Exercise[] = [
     output: 'Ready: crystal',
     hint: 'Move the argument "crystal" into the parameter named part.',
     recap: 'A C++ call supplies an argument, and the function receives it through a typed parameter.',
-    xp: 14,
   },
   {
-    id: 'cpp5-order-function',
-    conceptId: 'cpp-function-order',
     eyebrow: 'Module plan 4 of 5',
     title: 'Put the function in order',
     explanation:
@@ -2264,11 +2002,8 @@ const cppCommandFunctionExercises: Exercise[] = [
     output: 'Ready: crystal',
     hint: 'The void announce line comes first. The call ending in a semicolon comes last.',
     recap: 'C++ needs the function definition available before later code calls it.',
-    xp: 16,
   },
   {
-    id: 'cpp5-report-each',
-    conceptId: 'cpp-functions-and-loops',
     eyebrow: 'Command report 5 of 5',
     title: 'Call the function for every item',
     explanation:
@@ -2292,14 +2027,11 @@ const cppCommandFunctionExercises: Exercise[] = [
     output: 'Checked: crystal\nChecked: coupler\nChecked: rune',
     hint: 'The call inside the loop should be report(part);',
     recap: 'A C++ loop can call one reusable function with a different current value each time.',
-    xp: 22,
   },
 ]
 
-const csharpCommandMethodExercises: Exercise[] = [
+const csharpCommandMethodExercises: FoundationExercise[] = [
   {
-    id: 'cs5-retrieve-loop',
-    conceptId: 'csharp-loops-and-collections',
     eyebrow: 'Memory ping 1 of 5',
     title: 'Trace a loop',
     explanation:
@@ -2318,11 +2050,8 @@ const csharpCommandMethodExercises: Exercise[] = [
     output: 'Ready: Mira\nReady: Pip',
     hint: 'Trace one pass for Mira and a second pass for Pip.',
     recap: 'A C# foreach loop runs its brace-group body for every array value.',
-    xp: 8,
   },
   {
-    id: 'cs5-method-purpose',
-    conceptId: 'csharp-functions',
     eyebrow: 'Command school 2 of 5',
     title: 'Meet a method',
     explanation:
@@ -2339,11 +2068,8 @@ const csharpCommandMethodExercises: Exercise[] = [
     correctChoice: 'a',
     hint: 'Look for the answer about defining once and using again.',
     recap: 'A C# method packages a command under one reusable name.',
-    xp: 10,
   },
   {
-    id: 'cs5-predict-call',
-    conceptId: 'csharp-parameters-and-calls',
     eyebrow: 'Control test 3 of 5',
     title: 'Trace a method call',
     explanation:
@@ -2362,11 +2088,8 @@ const csharpCommandMethodExercises: Exercise[] = [
     output: 'Ready: Mira',
     hint: 'Move the argument "Mira" into the parameter named name.',
     recap: 'A C# call supplies an argument, and the method receives it through a typed parameter.',
-    xp: 14,
   },
   {
-    id: 'cs5-order-method',
-    conceptId: 'csharp-function-order',
     eyebrow: 'Command plan 4 of 5',
     title: 'Put the method in order',
     explanation:
@@ -2386,11 +2109,8 @@ const csharpCommandMethodExercises: Exercise[] = [
     output: 'Ready: Mira',
     hint: 'The void Announce line comes first. The call ending in a semicolon comes last.',
     recap: 'C# reads the local method definition before the later call uses it.',
-    xp: 16,
   },
   {
-    id: 'cs5-report-each',
-    conceptId: 'csharp-functions-and-loops',
     eyebrow: 'Command report 5 of 5',
     title: 'Call the method for every item',
     explanation:
@@ -2414,14 +2134,11 @@ const csharpCommandMethodExercises: Exercise[] = [
     output: 'Checked: Mira\nChecked: Tov\nChecked: Pip',
     hint: 'The call inside the loop should be Report(name);',
     recap: 'A C# loop can call one reusable method with a different current value each time.',
-    xp: 22,
   },
 ]
 
-const javaDroidRoutineExercises: Exercise[] = [
+const javaDroidRoutineExercises: FoundationExercise[] = [
   {
-    id: 'java5-retrieve-loop',
-    conceptId: 'java-loops-and-collections',
     eyebrow: 'Memory ping 1 of 5',
     title: 'Trace a loop',
     explanation:
@@ -2440,11 +2157,8 @@ const javaDroidRoutineExercises: Exercise[] = [
     output: 'Checked: MOP-1\nChecked: HEX-3',
     hint: 'Trace one pass for MOP-1 and a second pass for HEX-3.',
     recap: 'A Java enhanced for loop runs its brace-group body for every array value.',
-    xp: 8,
   },
   {
-    id: 'java5-method-purpose',
-    conceptId: 'java-functions',
     eyebrow: 'Routine school 2 of 5',
     title: 'Meet a method',
     explanation:
@@ -2461,11 +2175,8 @@ const javaDroidRoutineExercises: Exercise[] = [
     correctChoice: 'a',
     hint: 'Look for the answer about defining once and using again.',
     recap: 'A Java method packages a routine under one reusable name.',
-    xp: 10,
   },
   {
-    id: 'java5-predict-call',
-    conceptId: 'java-parameters-and-calls',
     eyebrow: 'Routine test 3 of 5',
     title: 'Trace a method call',
     explanation:
@@ -2484,11 +2195,8 @@ const javaDroidRoutineExercises: Exercise[] = [
     output: 'Ready: MOP-1',
     hint: 'Move the argument "MOP-1" into the parameter named droid.',
     recap: 'A Java call supplies an argument, and the method receives it through a typed parameter.',
-    xp: 14,
   },
   {
-    id: 'java5-order-method',
-    conceptId: 'java-function-order',
     eyebrow: 'Blueprint plan 4 of 5',
     title: 'Put the method in order',
     explanation:
@@ -2508,11 +2216,8 @@ const javaDroidRoutineExercises: Exercise[] = [
     output: 'Ready: MOP-1',
     hint: 'The static void announce line comes first. The call ending in a semicolon comes last.',
     recap: 'Java keeps the method definition in its class before main later calls it.',
-    xp: 16,
   },
   {
-    id: 'java5-report-each',
-    conceptId: 'java-functions-and-loops',
     eyebrow: 'Blueprint report 5 of 5',
     title: 'Call the method for every item',
     explanation:
@@ -2536,14 +2241,11 @@ const javaDroidRoutineExercises: Exercise[] = [
     output: 'Checked: MOP-1\nChecked: BEEP-7\nChecked: HEX-3',
     hint: 'The call inside the loop should be report(droid);',
     recap: 'A Java loop can call one reusable method with a different current value each time.',
-    xp: 22,
   },
 ]
 
-const pythonVoidWyrmExercises: Exercise[] = [
+const pythonVoidWyrmExercises: FoundationExercise[] = [
   {
-    id: 'py6-trace-threat',
-    conceptId: 'python-conditions',
     eyebrow: 'Systems recall 1 of 5',
     title: 'Trace a complete program',
     explanation:
@@ -2562,11 +2264,8 @@ const pythonVoidWyrmExercises: Exercise[] = [
     output: 'Alert: wyrm',
     hint: 'Trace the condition once with mist and once with wyrm.',
     recap: 'A condition inside a loop can choose which visited values trigger an action.',
-    xp: 10,
   },
   {
-    id: 'py6-plan-system',
-    conceptId: 'python-program-planning',
     eyebrow: 'Captain plan 2 of 5',
     title: 'Plan the parts of a program',
     explanation:
@@ -2583,11 +2282,8 @@ const pythonVoidWyrmExercises: Exercise[] = [
     correctChoice: 'a',
     hint: 'Match storage, repetition, and reusable work to the tool that performs each job.',
     recap: 'Plan a program as several small responsibilities that work together.',
-    xp: 12,
   },
   {
-    id: 'py6-order-system',
-    conceptId: 'python-capstone-assembly',
     eyebrow: 'Flight plan 3 of 5',
     title: 'Put the program in order',
     explanation:
@@ -2608,11 +2304,8 @@ const pythonVoidWyrmExercises: Exercise[] = [
     output: 'Scanned: mist\nScanned: wyrm',
     hint: 'Build the function before the list and loop use it.',
     recap: 'Definitions come before calls, and indentation shows which instructions belong inside each structure.',
-    xp: 16,
   },
   {
-    id: 'py6-repair-filter',
-    conceptId: 'python-capstone-repair',
     eyebrow: 'Damage control 4 of 5',
     title: 'Fix the comparison',
     explanation:
@@ -2635,11 +2328,8 @@ const pythonVoidWyrmExercises: Exercise[] = [
     output: 'Alert: wyrm',
     hint: 'The repaired question is if hazard == "wyrm":',
     recap: 'Use = to store a value and == to compare two values.',
-    xp: 18,
   },
   {
-    id: 'py6-void-wyrm',
-    conceptId: 'python-capstone',
     eyebrow: 'Captain trial 5 of 5',
     title: 'Build a complete program',
     explanation:
@@ -2664,14 +2354,11 @@ const pythonVoidWyrmExercises: Exercise[] = [
     output: 'Alert: wyrm',
     hint: 'The final two lines should read for hazard in hazards: and report(hazard).',
     recap: 'You combined storage, repetition, decisions, and a reusable function into one working Python system.',
-    xp: 29,
   },
 ]
 
-const cppTitanForgeExercises: Exercise[] = [
+const cppTitanForgeExercises: FoundationExercise[] = [
   {
-    id: 'cpp6-trace-damage',
-    conceptId: 'cpp-conditions',
     eyebrow: 'Systems recall 1 of 5',
     title: 'Trace a complete program',
     explanation:
@@ -2690,11 +2377,8 @@ const cppTitanForgeExercises: Exercise[] = [
     output: 'Repair: cracked seal',
     hint: 'Trace the condition once for each array value.',
     recap: 'A condition inside a loop can select which inspected values trigger an action.',
-    xp: 10,
   },
   {
-    id: 'cpp6-plan-system',
-    conceptId: 'cpp-program-planning',
     eyebrow: 'Engineer plan 2 of 5',
     title: 'Plan the parts of a program',
     explanation:
@@ -2711,11 +2395,8 @@ const cppTitanForgeExercises: Exercise[] = [
     correctChoice: 'a',
     hint: 'Match storage, repetition, and reusable work to their separate tools.',
     recap: 'Plan a larger program as several small responsibilities that cooperate.',
-    xp: 12,
   },
   {
-    id: 'cpp6-order-system',
-    conceptId: 'cpp-capstone-assembly',
     eyebrow: 'Forge plan 3 of 5',
     title: 'Put the program in order',
     explanation:
@@ -2736,11 +2417,8 @@ const cppTitanForgeExercises: Exercise[] = [
     output: 'plate\nseal',
     hint: 'Build the function before the array and loop use it.',
     recap: 'C++ definitions come before calls, and braces group the instructions that a loop repeats.',
-    xp: 16,
   },
   {
-    id: 'cpp6-repair-filter',
-    conceptId: 'cpp-capstone-repair',
     eyebrow: 'Damage control 4 of 5',
     title: 'Fix the comparison',
     explanation:
@@ -2763,11 +2441,8 @@ const cppTitanForgeExercises: Exercise[] = [
     output: 'Repair: cracked seal',
     hint: 'The repaired question is if (part == "cracked seal") {',
     recap: 'Use = to store a value and == to compare two values in C++.',
-    xp: 18,
   },
   {
-    id: 'cpp6-titan-forge',
-    conceptId: 'cpp-capstone',
     eyebrow: 'Engineer trial 5 of 5',
     title: 'Build a complete program',
     explanation:
@@ -2792,14 +2467,11 @@ const cppTitanForgeExercises: Exercise[] = [
     output: 'Repair: cracked seal',
     hint: 'The loop header ends with : parts, and its body calls inspect(part);',
     recap: 'You combined typed storage, repetition, decisions, and a reusable function into one working C++ system.',
-    xp: 29,
   },
 ]
 
-const csharpCaptainsTrialExercises: Exercise[] = [
+const csharpCaptainsTrialExercises: FoundationExercise[] = [
   {
-    id: 'cs6-trace-scout',
-    conceptId: 'csharp-conditions',
     eyebrow: 'Systems recall 1 of 5',
     title: 'Trace a complete program',
     explanation:
@@ -2818,11 +2490,8 @@ const csharpCaptainsTrialExercises: Exercise[] = [
     output: 'Scout: Pip',
     hint: 'Trace the comparison once for Mira and once for Pip.',
     recap: 'A condition inside a foreach loop can select which roster values trigger an action.',
-    xp: 10,
   },
   {
-    id: 'cs6-plan-system',
-    conceptId: 'csharp-program-planning',
     eyebrow: 'Captain plan 2 of 5',
     title: 'Plan the parts of a program',
     explanation:
@@ -2839,11 +2508,8 @@ const csharpCaptainsTrialExercises: Exercise[] = [
     correctChoice: 'a',
     hint: 'Match storage, repetition, and reusable work to their separate tools.',
     recap: 'Plan a larger program as several small responsibilities that cooperate.',
-    xp: 12,
   },
   {
-    id: 'cs6-order-system',
-    conceptId: 'csharp-capstone-assembly',
     eyebrow: 'Command plan 3 of 5',
     title: 'Put the program in order',
     explanation:
@@ -2864,11 +2530,8 @@ const csharpCaptainsTrialExercises: Exercise[] = [
     output: 'Mira\nPip',
     hint: 'Build the method before the array and loop use it.',
     recap: 'C# method definitions come before calls, and braces group the instructions that a loop repeats.',
-    xp: 16,
   },
   {
-    id: 'cs6-repair-scout',
-    conceptId: 'csharp-capstone-repair',
     eyebrow: 'Command repair 4 of 5',
     title: 'Fix the comparison',
     explanation:
@@ -2891,11 +2554,8 @@ const csharpCaptainsTrialExercises: Exercise[] = [
     output: 'Scout: Pip',
     hint: 'The repaired question is if (name == "Pip")',
     recap: 'Use = to store a value and == to compare two values in C#.',
-    xp: 18,
   },
   {
-    id: 'cs6-captains-trial',
-    conceptId: 'csharp-capstone',
     eyebrow: 'Captain trial 5 of 5',
     title: 'Build a complete program',
     explanation:
@@ -2920,14 +2580,11 @@ const csharpCaptainsTrialExercises: Exercise[] = [
     output: 'Scout: Pip',
     hint: 'The foreach header ends with in crew, and its body calls Report(name);',
     recap: 'You combined typed storage, repetition, decisions, and a reusable method into one working C# system.',
-    xp: 29,
   },
 ]
 
-const javaNebulaTrialExercises: Exercise[] = [
+const javaNebulaTrialExercises: FoundationExercise[] = [
   {
-    id: 'java6-trace-power',
-    conceptId: 'java-conditions',
     eyebrow: 'Systems recall 1 of 5',
     title: 'Trace a complete program',
     explanation:
@@ -2946,11 +2603,8 @@ const javaNebulaTrialExercises: Exercise[] = [
     output: 'Low: 25',
     hint: 'Compare each battery level with 30, one loop pass at a time.',
     recap: 'A condition inside an enhanced for loop can select which array values trigger an action.',
-    xp: 10,
   },
   {
-    id: 'java6-plan-system',
-    conceptId: 'java-program-planning',
     eyebrow: 'Guild plan 2 of 5',
     title: 'Plan the parts of a program',
     explanation:
@@ -2967,11 +2621,8 @@ const javaNebulaTrialExercises: Exercise[] = [
     correctChoice: 'a',
     hint: 'Match storage, repetition, and reusable work to their separate tools.',
     recap: 'Plan a larger program as several small responsibilities that cooperate.',
-    xp: 12,
   },
   {
-    id: 'java6-order-system',
-    conceptId: 'java-capstone-assembly',
     eyebrow: 'Expedition plan 3 of 5',
     title: 'Put the program in order',
     explanation:
@@ -2992,11 +2643,8 @@ const javaNebulaTrialExercises: Exercise[] = [
     output: '80\n25',
     hint: 'Build the method before the array and loop use it.',
     recap: 'Java method definitions live in the class, and braces group the instructions that a loop repeats.',
-    xp: 16,
   },
   {
-    id: 'java6-repair-power',
-    conceptId: 'java-capstone-repair',
     eyebrow: 'Service repair 4 of 5',
     title: 'Fix the comparison',
     explanation:
@@ -3019,11 +2667,8 @@ const javaNebulaTrialExercises: Exercise[] = [
     output: 'Low: 25',
     hint: 'The repaired question is if (level == 25) {',
     recap: 'Use = to store a value and == to compare two values in Java.',
-    xp: 18,
   },
   {
-    id: 'java6-nebula-trial',
-    conceptId: 'java-capstone',
     eyebrow: 'Systems trial 5 of 5',
     title: 'Build a complete program',
     explanation:
@@ -3049,7 +2694,6 @@ const javaNebulaTrialExercises: Exercise[] = [
     output: 'Low: 25',
     hint: 'The loop header ends with : levels, and its body calls inspect(level);',
     recap: 'You combined typed storage, repetition, decisions, and a reusable method into one working Java system.',
-    xp: 29,
   },
 ]
 
@@ -3062,87 +2706,111 @@ const mission = (
   description: string,
   icon: Mission['icon'],
   status: Mission['status'],
-  exercises: Exercise[] = [],
-): Mission => ({
-  id,
-  language,
-  chapter,
-  title,
-  subtitle,
-  description,
-  duration: exercises.length ? '8 min' : 'Coming soon',
-  icon,
-  status,
-  exercises,
-})
+  exercises: FoundationExercise[] = [],
+): Mission => {
+  const lessonMetadata = durableCurriculumV1[
+    `${language}/${id}` as keyof typeof durableCurriculumV1
+  ]
+  if (!lessonMetadata || lessonMetadata.length !== exercises.length) {
+    throw new Error(`Foundation lesson metadata does not match: ${language}/${id}.`)
+  }
+  return {
+    id,
+    language,
+    chapter,
+    title,
+    subtitle,
+    description,
+    duration: exercises.length ? '8 min' : 'Coming soon',
+    icon,
+    status,
+    exercises: exercises.map((exercise, index) => {
+      const metadata = lessonMetadata[index]
+      return {
+        ...exercise,
+        id: metadata[0],
+        conceptId: metadata[1],
+        xp: metadata[2],
+      }
+    }),
+  }
+}
+
+function foundationTrackDetails(language: LanguageId) {
+  const metadata = foundationTrackMetadataByLanguage(language)
+  if (!metadata) throw new Error(`Foundation metadata is missing: ${language}.`)
+  const {
+    accent,
+    accentSoft,
+    capstoneDescription,
+    capstoneTitle,
+    description,
+    id,
+    shortName,
+  } = metadata
+  return {
+    capstoneDescription,
+    capstoneTitle,
+    summary: { accent, accentSoft, description, id, shortName },
+  }
+}
+
+const pythonTrack = foundationTrackDetails('python')
+const cppTrack = foundationTrackDetails('cpp')
+const csharpTrack = foundationTrackDetails('csharp')
+const javaTrack = foundationTrackDetails('java')
 
 export const tracks: LanguageTrack[] = [
   {
-    id: 'python',
+    ...pythonTrack.summary,
     name: 'Python Flight School',
-    shortName: 'Python',
     role: 'Explorer path',
-    description: 'Start with short instructions and learn the basic ideas used in programs.',
-    accent: '#f2c14e',
-    accentSoft: '#332c19',
     missions: [
       mission('py-first-spark', 'python', 1, 'Code and variables', 'Read and change simple code', 'Show text and numbers, then store values under clear names.', 'signal', 'available', pythonExercises),
       mission('py-signal-protocol', 'python', 2, 'Conditions', 'Make a decision', 'Use true and false values with if statements to choose what happens.', 'satellite', 'locked', pythonSignalProtocolExercises),
       mission('py-cargo-logic', 'python', 3, 'Lists', 'Store several values', 'Keep several values in one ordered list and read them by position.', 'package', 'locked', pythonCargoLogicExercises),
       mission('py-looping-orbit', 'python', 4, 'Loops', 'Repeat an instruction', 'Visit every list item without copying the same instruction.', 'terminal', 'locked', pythonLoopingOrbitExercises),
       mission('py-function-foundry', 'python', 5, 'Functions', 'Reuse working code', 'Give a group of instructions a name, pass in values, and return an answer.', 'shield', 'locked', pythonFunctionFoundryExercises),
-      mission('py-void-wyrm', 'python', 6, 'Build a complete Python program', 'Use the ideas together', 'Combine stored values, decisions, lists, loops, and functions in one program.', 'crown', 'locked', pythonVoidWyrmExercises),
+      mission('py-void-wyrm', 'python', 6, pythonTrack.capstoneTitle, 'Use the ideas together', pythonTrack.capstoneDescription, 'crown', 'locked', pythonVoidWyrmExercises),
     ],
   },
   {
-    id: 'cpp',
+    ...cppTrack.summary,
     name: 'C++ Engineering Corps',
-    shortName: 'C++',
     role: 'Engineer path',
-    description: 'See how C++ code becomes a program, show results, and store different kinds of values.',
-    accent: '#79d6ff',
-    accentSoft: '#15303a',
     missions: [
       mission('cpp-reactor', 'cpp', 1, 'Code and variables', 'Read and compile simple code', 'See how C++ code becomes a program, show output, and store text and numbers.', 'signal', 'available', cppExercises),
       mission('cpp-hull-logic', 'cpp', 2, 'Conditions', 'Make a decision', 'Use true and false values with if statements to choose what happens.', 'shield', 'locked', cppHullLogicExercises),
       mission('cpp-cargo-array', 'cpp', 3, 'Arrays', 'Store several values', 'Keep several values in one ordered array and read them by position.', 'package', 'locked', cppCargoArrayExercises),
       mission('cpp-engine-loop', 'cpp', 4, 'Loops', 'Repeat an instruction', 'Visit every array item without copying the same instruction.', 'terminal', 'locked', cppEngineLoopExercises),
       mission('cpp-command-function', 'cpp', 5, 'Functions', 'Reuse working code', 'Give a group of instructions a name, pass in values, and return an answer.', 'satellite', 'locked', cppCommandFunctionExercises),
-      mission('cpp-titan-forge', 'cpp', 6, 'Build a complete C++ program', 'Use the ideas together', 'Combine types, decisions, arrays, loops, and functions in one compiled program.', 'crown', 'locked', cppTitanForgeExercises),
+      mission('cpp-titan-forge', 'cpp', 6, cppTrack.capstoneTitle, 'Use the ideas together', cppTrack.capstoneDescription, 'crown', 'locked', cppTitanForgeExercises),
     ],
   },
   {
-    id: 'csharp',
+    ...csharpTrack.summary,
     name: 'C# Command Academy',
-    shortName: 'C#',
     role: 'Captain path',
-    description: 'Write simple C# programs, show results, and store different kinds of values.',
-    accent: '#cf9cff',
-    accentSoft: '#2d1d39',
     missions: [
       mission('cs-shield', 'csharp', 1, 'Code and variables', 'Read and run simple code', 'Run a simple C# program, show output, and store text and numbers.', 'signal', 'available', csharpExercises),
       mission('cs-command-logic', 'csharp', 2, 'Conditions', 'Make a decision', 'Use true and false values with if statements to choose what happens.', 'shield', 'locked', csharpCommandLogicExercises),
       mission('cs-crew-roster', 'csharp', 3, 'Arrays', 'Store several values', 'Keep several values in one ordered array and read them by position.', 'package', 'locked', csharpCrewRosterExercises),
       mission('cs-patrol-loop', 'csharp', 4, 'Loops', 'Repeat an instruction', 'Visit every array item without copying the same instruction.', 'satellite', 'locked', csharpPatrolLoopExercises),
       mission('cs-command-method', 'csharp', 5, 'Methods', 'Reuse working code', 'Give a group of instructions a name and pass in the values it needs.', 'terminal', 'locked', csharpCommandMethodExercises),
-      mission('cs-captains-trial', 'csharp', 6, 'Build a complete C# program', 'Use the ideas together', 'Combine types, decisions, arrays, loops, and methods in one console program.', 'crown', 'locked', csharpCaptainsTrialExercises),
+      mission('cs-captains-trial', 'csharp', 6, csharpTrack.capstoneTitle, 'Use the ideas together', csharpTrack.capstoneDescription, 'crown', 'locked', csharpCaptainsTrialExercises),
     ],
   },
   {
-    id: 'java',
+    ...javaTrack.summary,
     name: 'Java Systems Guild',
-    shortName: 'Java',
     role: 'Builder path',
-    description: 'Write simple Java programs, show results, and store different kinds of values.',
-    accent: '#ff936b',
-    accentSoft: '#3a2118',
     missions: [
       mission('java-coffee-protocol', 'java', 1, 'Code and variables', 'Read and run simple code', 'Run a simple Java program, show output, and store text and numbers.', 'signal', 'available', javaExercises),
       mission('java-routing-orders', 'java', 2, 'Conditions', 'Make a decision', 'Use true and false values with if statements to choose what happens.', 'satellite', 'locked', javaRoutingOrdersExercises),
       mission('java-crew-array', 'java', 3, 'Arrays', 'Store several values', 'Keep several values in one ordered array and read them by position.', 'package', 'locked', javaCrewArrayExercises),
       mission('java-repeat-brew', 'java', 4, 'Loops', 'Repeat an instruction', 'Visit every array item without copying the same instruction.', 'terminal', 'locked', javaRepeatBrewExercises),
       mission('java-droid-routine', 'java', 5, 'Methods', 'Reuse working code', 'Give a group of instructions a name and pass in the values it needs.', 'shield', 'locked', javaDroidRoutineExercises),
-      mission('java-nebula-trial', 'java', 6, 'Build a complete Java program', 'Use the ideas together', 'Combine types, decisions, arrays, loops, and methods in one console program.', 'crown', 'locked', javaNebulaTrialExercises),
+      mission('java-nebula-trial', 'java', 6, javaTrack.capstoneTitle, 'Use the ideas together', javaTrack.capstoneDescription, 'crown', 'locked', javaNebulaTrialExercises),
     ],
   },
 ]

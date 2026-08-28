@@ -14,6 +14,7 @@ import {
   PythonDataToolsCoursePage,
   PythonDataToolsLessonPage,
 } from './PythonDataToolsRoute'
+import * as continuingCourseLoaders from './data/published-continuing-course-loaders'
 import { courseDefinition } from './data/course-registry'
 import { trackById } from './data/curriculum'
 import { pythonDataToolsCourse } from './data/python-data-tools-course'
@@ -87,7 +88,7 @@ describe('Practical Python route components', () => {
   afterEach(() => {
     cleanup()
     document.title = ''
-    vi.clearAllMocks()
+    vi.restoreAllMocks()
   })
 
   it('previews the locked course and routes both prerequisite links', async () => {
@@ -282,6 +283,25 @@ describe('Practical Python route components', () => {
     expect(within(lockedLesson).queryByRole('link')).toBeNull()
   })
 
+  it('keeps the missing-lesson fallback as the single skip-link target', async () => {
+    await renderCourse(
+      <PythonDataToolsLessonPage
+        exerciseId="not-a-lesson"
+        missionId="not-a-module"
+        onNavigate={vi.fn()}
+        onProgress={progressDispatcher()}
+        progress={progressWithPrerequisites()}
+      />,
+    )
+
+    const main = await screen.findByRole('main')
+    expect(main.id).toBe('main-content')
+    expect(main.tabIndex).toBe(-1)
+    expect(document.querySelectorAll('main')).toHaveLength(1)
+    expect(document.querySelectorAll('#main-content')).toHaveLength(1)
+    expect(screen.getByRole('heading', { name: 'Lesson not found' })).toBeTruthy()
+  })
+
   it('offers module completion only after all five lessons and sends the progress update', async () => {
     const mission = pythonDataToolsCourse.missions[0]
     const lessonIds = mission.exercises.map((exercise) => exercise.id)
@@ -368,5 +388,26 @@ describe('Practical Python route components', () => {
       name: 'We could not find that page',
     })).toBeTruthy()
     expect(screen.getByRole('link', { name: /Go to the start page/iu }).getAttribute('href')).toBe('/')
+  })
+
+  it('explains a registered course download failure without calling the route missing', async () => {
+    vi.spyOn(continuingCourseLoaders, 'publishedContinuingCourseContentRequest')
+      .mockReturnValue(Promise.resolve(null))
+
+    await renderCourse(
+      <PythonDataToolsCoursePage
+        onNavigate={vi.fn()}
+        onProgress={progressDispatcher()}
+        progress={progressWithPrerequisites()}
+      />,
+    )
+
+    expect(await screen.findByRole('heading', {
+      level: 1,
+      name: 'Practical Python could not load',
+    })).toBeTruthy()
+    expect(screen.getByText(/Your progress is saved/iu)).toBeTruthy()
+    expect(screen.getByRole('button', { name: 'Try again' })).toBeTruthy()
+    expect(screen.queryByText('We could not find that page')).toBeNull()
   })
 })

@@ -46,6 +46,8 @@ export const cppCollectionsRecordsManifest = {
   ],
 } as const
 
+export type CppCollectionsRecordsManifest = typeof cppCollectionsRecordsManifest
+
 export const cppCollectionsRecordsMissionIds = Object.keys(cppCollectionsRecordsManifest)
 
 export const cppCollectionsRecordsLessons = Object.entries(cppCollectionsRecordsManifest).flatMap(

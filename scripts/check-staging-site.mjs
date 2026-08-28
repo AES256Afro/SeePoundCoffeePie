@@ -1,11 +1,25 @@
 import { inspectDeployedJavaScriptChunkGraph } from './deployed-javascript-graph.mjs'
 import {
+  assertReviewedPublishedGrant,
+  assertReviewedRunnerStatus,
+} from './runner-deployment-checks.mjs'
+import {
+  privateCourseIsPublished,
+  privateCourseReleaseState,
+  unpublishedCppCourseId,
   unpublishedCppCoursePath,
   unpublishedCppJavaScriptMarkers,
   unpublishedCppLessonIds,
   unpublishedCppLessonPath,
   unpublishedCppLessonPrefix,
 } from './unpublished-cpp-release-boundary.mjs'
+
+if (
+  privateCourseReleaseState(unpublishedCppCourseId) !== 'unpublished'
+  || privateCourseIsPublished(unpublishedCppCourseId)
+) {
+  throw new Error('The staging boundary check requires Practical C++ to remain unpublished.')
+}
 
 const cliArgs = process.argv.slice(2)
 const requireEnabled = cliArgs.includes('--require-enabled')
@@ -19,6 +33,7 @@ if (base.protocol !== 'https:' || base.pathname !== '/' || base.search || base.h
 }
 
 const expectedTitle = '<title>SeePoundCoffeePie | Programming from the beginning.</title>'
+const publishedRunnerExerciseId = 'py-print'
 
 async function request(path, init = {}) {
   return fetch(new URL(path, base), { redirect: 'manual', ...init })
@@ -91,9 +106,30 @@ for (const path of [
 
 const statusResponse = await request('/api/runner/status')
 const status = await statusResponse.json()
-if (statusResponse.status !== 200 || status?.enabled !== requireEnabled || status?.version !== 1) {
-  throw new Error(`The staging code checker is not ${requireEnabled ? 'enabled' : 'paused'} at the reviewed version.`)
-}
+assertReviewedRunnerStatus({
+  body: status,
+  httpStatus: statusResponse.status,
+  label: 'staging',
+  requireEnabled,
+})
+
+const publishedGrantResponse = await request('/api/runner/grants', {
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json',
+    Origin: base.origin,
+  },
+  body: JSON.stringify({ exerciseId: publishedRunnerExerciseId }),
+})
+const publishedGrant = await publishedGrantResponse.json()
+assertReviewedPublishedGrant({
+  body: publishedGrant,
+  exerciseId: publishedRunnerExerciseId,
+  hasSetCookie: publishedGrantResponse.headers.has('set-cookie'),
+  httpStatus: publishedGrantResponse.status,
+  label: 'staging',
+  requireEnabled,
+})
 
 const progressResponse = await request('/api/progress')
 if (progressResponse.status !== 401) {
@@ -112,19 +148,13 @@ for (const exerciseId of unpublishedCppLessonIds) {
   const body = await response.json()
   const safelyRejected = response.status === 404
     && ['That exercise does not support live execution.', 'This page does not have a code check yet.'].includes(body?.error)
-  const safelyPaused = response.status === 503
-    && ['Live code execution is temporarily paused.', 'The code checker is paused right now. Try again later.'].includes(body?.error)
   if (
-    (!safelyRejected && !(safelyPaused && !requireEnabled))
+    !safelyRejected
     || typeof body?.grant === 'string'
     || response.headers.has('set-cookie')
   ) {
     throw new Error(`The unpublished staging exercise ${exerciseId} crossed the run-grant boundary.`)
   }
-}
-
-if (!requireEnabled) {
-  console.warn('Staging verification warning: the code checker was paused, so absence of unpublished Phase 5B runner assignments was not proven.')
 }
 
 const sitemapResponse = await request('/sitemap.xml')
@@ -138,4 +168,4 @@ if (
   throw new Error('The staging sitemap does not preserve the reviewed public and unpublished course boundary.')
 }
 
-console.log(`Staging site verification passed for ${base.origin}, the teaching-first entry, a ${deployedJavaScriptAssets.size}-asset JavaScript chunk graph, six routes, account shell, ${requireEnabled ? `enabled code checker with all ${unpublishedCppLessonIds.length} unpublished lesson assignments rejected` : 'paused code checker; assignment absence not proven'}, and sitemap.`)
+console.log(`Staging site verification passed for ${base.origin}, the teaching-first entry, a ${deployedJavaScriptAssets.size}-asset JavaScript chunk graph, six routes, account shell, configured ${requireEnabled ? `enabled code checker with a published ${publishedRunnerExerciseId} grant` : 'paused code checker with its published grant rejected'}, all ${unpublishedCppLessonIds.length} unpublished lesson assignments rejected with 404, and sitemap.`)

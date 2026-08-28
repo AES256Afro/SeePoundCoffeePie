@@ -1,5 +1,8 @@
 import { projectManifests } from '../data/project-manifests'
-import { tracks } from '../data/curriculum'
+import {
+  foundationLessonIds,
+  foundationMissionLessonIds,
+} from '../data/foundation-curriculum-index'
 import {
   cppCollectionsRecordsLessons,
   cppCollectionsRecordsManifest,
@@ -36,16 +39,12 @@ export type SaveProgressResult =
 
 const projectIds = new Set(projectManifests.map((project) => project.id))
 const lessonIds = new Set([
-  ...tracks.flatMap((track) => (
-    track.missions.flatMap((mission) => mission.exercises.map((exercise) => exercise.id))
-  )),
+  ...foundationLessonIds,
   ...pythonDataToolsLessons.map((lesson) => lesson.id),
   ...cppCollectionsRecordsLessons.map((lesson) => lesson.id),
 ])
 const missionLessonIds = new Map([
-  ...tracks.flatMap((track) => track.missions.map((mission) => (
-    [mission.id, mission.exercises.map((exercise) => exercise.id)] as const
-  ))),
+  ...foundationMissionLessonIds,
   ...Object.entries(pythonDataToolsManifest).map(([missionId, lessons]) => (
     [missionId, lessons.map((lesson) => lesson.id)] as const
   )),

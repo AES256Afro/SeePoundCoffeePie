@@ -11,6 +11,7 @@ afterEach(() => {
 describe('runExercise', () => {
   it('gets a scoped grant, queues source, and polls to a real result', async () => {
     vi.useFakeTimers()
+    const controller = new AbortController()
     const statuses: string[] = []
     const fetchMock = vi.fn()
       .mockResolvedValueOnce(Response.json({ grant: 'signed-grant' }))
@@ -46,7 +47,7 @@ describe('runExercise', () => {
       'python',
       'print("Signal online")',
       (status) => statuses.push(status),
-      { stdin: 'Ada\n', purpose: 'run' },
+      { stdin: 'Ada\n', purpose: 'run', signal: controller.signal },
     )
     await vi.runAllTimersAsync()
     const result = await promise
@@ -64,6 +65,73 @@ describe('runExercise', () => {
       purpose: 'run',
     })
     expect(submission).not.toHaveProperty('command')
+    for (const [, request] of fetchMock.mock.calls) {
+      expect(request).toEqual(expect.objectContaining({ signal: controller.signal }))
+    }
+  })
+
+  it('stops before the next poll when the request is cancelled during the wait', async () => {
+    vi.useFakeTimers()
+    const controller = new AbortController()
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(Response.json({ grant: 'signed-grant' }))
+      .mockResolvedValueOnce(Response.json({
+        version: RUNNER_API_VERSION,
+        runId: 'run_cancelled_during_poll_wait_123',
+        status: 'queued',
+        pollAfterMs: 2_000,
+      }))
+    vi.stubGlobal('fetch', fetchMock)
+
+    const promise = runExercise(
+      'py-print',
+      'python',
+      'print("Signal online")',
+      undefined,
+      { signal: controller.signal },
+    )
+    await vi.advanceTimersByTimeAsync(0)
+    expect(fetchMock).toHaveBeenCalledTimes(2)
+
+    controller.abort()
+
+    await expect(promise).rejects.toEqual(expect.objectContaining({ name: 'AbortError' }))
+    await vi.runAllTimersAsync()
+    expect(fetchMock).toHaveBeenCalledTimes(2)
+  })
+
+  it('does not make a grant request when the signal is already cancelled', async () => {
+    const controller = new AbortController()
+    controller.abort()
+    const fetchMock = vi.fn()
+    vi.stubGlobal('fetch', fetchMock)
+
+    await expect(runExercise(
+      'py-print',
+      'python',
+      'print(1)',
+      undefined,
+      { signal: controller.signal },
+    )).rejects.toEqual(expect.objectContaining({ name: 'AbortError' }))
+    expect(fetchMock).not.toHaveBeenCalled()
+  })
+
+  it('preserves cancellation while reading a response body', async () => {
+    const controller = new AbortController()
+    const response = Response.json({ grant: 'signed-grant' })
+    vi.spyOn(response, 'json').mockImplementation(async () => {
+      controller.abort()
+      throw new DOMException('The operation was aborted.', 'AbortError')
+    })
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(response))
+
+    await expect(runExercise(
+      'py-print',
+      'python',
+      'print(1)',
+      undefined,
+      { signal: controller.signal },
+    )).rejects.toEqual(expect.objectContaining({ name: 'AbortError' }))
   })
 
   it('shows a plain retry message when the code checker is busy', async () => {

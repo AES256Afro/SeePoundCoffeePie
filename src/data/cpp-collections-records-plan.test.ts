@@ -21,7 +21,12 @@ import { tracks } from './curriculum'
 import { parseAppRoute } from '../lib/routes'
 import { findRunnerAssignment } from '../lib/runner-assignments'
 import {
+  privateCourseIsPublished,
+  privateCourseReleaseCatalog,
+  privateCourseReleaseState,
+  unpublishedCppCourseId,
   unpublishedCppCoursePath,
+  unpublishedCppJavaScriptMarkers,
   unpublishedCppLessonIds,
   unpublishedCppLessonPath,
   unpublishedCppLessonPrefix,
@@ -55,6 +60,21 @@ const publicSitemap = readFileSync(
 )
 
 describe('Phase 5B Practical C++ course plan', () => {
+  it('keeps private course release state fail closed', () => {
+    expect(privateCourseReleaseCatalog).toHaveLength(1)
+    expect(privateCourseReleaseCatalog[0]).toMatchObject({
+      id: cppCollectionsRecordsPlan.id,
+      state: 'unpublished',
+    })
+    expect(unpublishedCppCourseId).toBe(cppCollectionsRecordsPlan.id)
+    expect(privateCourseReleaseState(unpublishedCppCourseId)).toBe('unpublished')
+    expect(privateCourseReleaseState('unknown-private-course')).toBe('unavailable')
+    expect(privateCourseIsPublished(unpublishedCppCourseId)).toBe(false)
+    expect(privateCourseIsPublished('unknown-private-course')).toBe(false)
+    expect(Object.isFrozen(privateCourseReleaseCatalog)).toBe(true)
+    expect(Object.isFrozen(privateCourseReleaseCatalog[0])).toBe(true)
+  })
+
   it('reserves one complete six-module and thirty-lesson curriculum', () => {
     expect(cppCollectionsRecordsPlan.status).toBe('unpublished')
     expect(cppCollectionsRecordsPlan.id).toBe('cpp-collections-records')
@@ -110,6 +130,12 @@ describe('Phase 5B Practical C++ course plan', () => {
       expect(currentLesson.runnerBacked, currentLesson.id)
         .toBe(currentLesson.type === 'bugfix' || currentLesson.type === 'code')
     }
+    for (const currentLesson of runnerBacked) {
+      expect(
+        findRunnerAssignment(currentLesson.id),
+        `${currentLesson.id} must not receive a runner assignment while its course is unpublished`,
+      ).toBeUndefined()
+    }
   })
 
   it('keeps every hidden C++ course, module, and lesson identifier outside public surfaces', () => {
@@ -149,6 +175,11 @@ describe('Phase 5B Practical C++ course plan', () => {
       `/learn/${cppCollectionsRecordsPlan.id}/${hiddenModuleIds[0]}/${hiddenLessonIds[0]}`,
     )
     expect(unpublishedCppLessonIds).toEqual(hiddenLessonIds)
+    expect(privateCourseReleaseCatalog[0]?.coursePath).toBe(unpublishedCppCoursePath)
+    expect(privateCourseReleaseCatalog[0]?.lessonPrefix).toBe(unpublishedCppLessonPrefix)
+    expect(privateCourseReleaseCatalog[0]?.lessonPath).toBe(unpublishedCppLessonPath)
+    expect(privateCourseReleaseCatalog[0]?.lessonIds).toBe(unpublishedCppLessonIds)
+    expect(privateCourseReleaseCatalog[0]?.browserMarkers).toBe(unpublishedCppJavaScriptMarkers)
     expect(hiddenIds).toHaveLength(37)
     expect(new Set(hiddenIds).size).toBe(hiddenIds.length)
 

@@ -6,6 +6,13 @@ import {
   uniqueDeployedJavaScriptAssetByPath,
 } from './deployed-javascript-graph.mjs'
 import {
+  assertReviewedPublishedGrant,
+  assertReviewedRunnerStatus,
+} from './runner-deployment-checks.mjs'
+import {
+  privateCourseIsPublished,
+  privateCourseReleaseState,
+  unpublishedCppCourseId,
   unpublishedCppCoursePath,
   unpublishedCppJavaScriptMarkers,
   unpublishedCppLessonIds,
@@ -13,11 +20,19 @@ import {
   unpublishedCppLessonPrefix,
 } from './unpublished-cpp-release-boundary.mjs'
 
+if (
+  privateCourseReleaseState(unpublishedCppCourseId) !== 'unpublished'
+  || privateCourseIsPublished(unpublishedCppCourseId)
+) {
+  throw new Error('The production boundary check requires Practical C++ to remain unpublished.')
+}
+
 const canonical = 'https://seepoundcoffeepie.com/'
 const expectedTitle = '<title>SeePoundCoffeePie | Programming from the beginning.</title>'
 const socialImageUrl = 'https://seepoundcoffeepie.com/social-card-v7.jpg'
 const practicalPythonCourseUrl = 'https://seepoundcoffeepie.com/courses/python-data-tools'
 const practicalPythonLessonUrl = 'https://seepoundcoffeepie.com/learn/python-data-tools/py-data-return-values/pydata1-retrieve-call'
+const publishedRunnerExerciseId = 'py-print'
 const cliArguments = process.argv.slice(2)
 const unsupportedArguments = cliArguments.filter((argument) => argument !== '--allow-paused')
 if (unsupportedArguments.length > 0) {
@@ -182,9 +197,48 @@ for (const unpublishedRoute of [unpublishedCppCoursePath, unpublishedCppLessonPa
   }
 }
 
+const statusResponse = await requestWithFreshDns(new URL('/api/runner/status', canonical), {
+  redirect: 'manual',
+})
+let runnerStatus
+try {
+  runnerStatus = await statusResponse.json()
+} catch {
+  throw new Error('The live code checker status returned unreadable JSON')
+}
+assertReviewedRunnerStatus({
+  body: runnerStatus,
+  httpStatus: statusResponse.status,
+  label: 'live',
+  requireEnabled: !allowPaused,
+})
+
 const grantUrl = new URL('/api/runner/grants', canonical)
 const grantOrigin = new URL(canonical).origin
-let pausedGrantCheck = false
+const publishedGrantResponse = await requestWithFreshDns(grantUrl, {
+  method: 'POST',
+  redirect: 'manual',
+  headers: {
+    Origin: grantOrigin,
+    'Content-Type': 'application/json',
+  },
+  body: JSON.stringify({ exerciseId: publishedRunnerExerciseId }),
+})
+let publishedGrantResult
+try {
+  publishedGrantResult = await publishedGrantResponse.json()
+} catch {
+  throw new Error(`The live code checker returned unreadable JSON for ${publishedRunnerExerciseId}`)
+}
+assertReviewedPublishedGrant({
+  body: publishedGrantResult,
+  exerciseId: publishedRunnerExerciseId,
+  hasSetCookie: publishedGrantResponse.headers.has('set-cookie'),
+  httpStatus: publishedGrantResponse.status,
+  label: 'live',
+  requireEnabled: !allowPaused,
+})
+
 for (const exerciseId of unpublishedCppLessonIds) {
   const grantResponse = await requestWithFreshDns(grantUrl, {
     method: 'POST',
@@ -208,38 +262,21 @@ for (const exerciseId of unpublishedCppLessonIds) {
       'That exercise does not support live execution.',
       'This page does not have a code check yet.',
     ].includes(grantResult?.error)
-  const runnerClosed = grantResponse.status === 503
-    && [
-      'Live code execution is not configured.',
-      'Live code execution is temporarily paused.',
-      'The code checker is not available right now. Try again later.',
-      'The code checker is paused right now. Try again later.',
-    ].includes(grantResult?.error)
   const issuedGrant = typeof grantResult?.grant === 'string'
   const setCookie = grantResponse.headers.has('set-cookie')
 
-  if (runnerClosed && !allowPaused && !issuedGrant && !setCookie) {
-    throw new Error(
-      `The code checker was paused while checking unpublished exercise ${exerciseId}; the default live check requires an enabled runner and a 404 rejection. Use --allow-paused only for an explicitly inconclusive check.`,
-    )
-  }
-
   if (
-    (!rejectedAsUnpublished && !(allowPaused && runnerClosed))
+    !rejectedAsUnpublished
     || issuedGrant
     || setCookie
   ) {
     throw new Error(`The unpublished C++ exercise ${exerciseId} crossed the public run-grant boundary`)
   }
-  if (runnerClosed) pausedGrantCheck = true
 }
-
-if (pausedGrantCheck) {
-  console.warn('Live verification warning: the code checker was paused, so absence of unpublished Phase 5B runner assignments was not proven.')
-}
-const hiddenGrantCheck = pausedGrantCheck
-  ? 'runner paused; assignment absence not proven'
-  : 'runner enabled; all unpublished assignments rejected with 404'
+const runnerStateCheck = allowPaused
+  ? 'configured runner paused and published grant rejected with 503'
+  : `configured runner enabled and published grant issued for ${publishedRunnerExerciseId}`
+const hiddenGrantCheck = `${runnerStateCheck}; all unpublished assignments rejected with 404`
 
 const robotsResponse = await requestWithFreshDns(new URL('/robots.txt', canonical), { redirect: 'manual' })
 const robots = await robotsResponse.text()

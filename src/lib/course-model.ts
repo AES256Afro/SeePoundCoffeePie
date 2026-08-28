@@ -1,4 +1,3 @@
-import { tracks } from '../data/curriculum'
 import {
   courseDefinition,
   courseDefinitionForSlug,
@@ -23,6 +22,14 @@ import { missionAvailability } from './missions'
 
 export type CourseStatus = 'not-started' | 'in-progress' | 'complete'
 export type CourseAvailability = 'available' | 'locked' | 'coming-soon'
+
+export function lessonActivityLabel(type: ExerciseType): string {
+  if (type === 'bugfix') return 'Fix a problem'
+  if (type === 'choice') return 'Choose an answer'
+  if (type === 'prediction') return 'Predict the result'
+  if (type === 'ordering') return 'Put steps in order'
+  return 'Edit code'
+}
 
 export interface CourseLessonModel {
   id: string
@@ -106,10 +113,10 @@ function percentage(completed: number, total: number): number {
 
 function completedLessonIds(progress: LearnerProgress): Set<string> {
   const completed = new Set(progress.completedLessons)
-  for (const track of tracks) {
-    for (const mission of track.missions) {
-      if (!progress.completedMissions.includes(mission.id)) continue
-      mission.exercises.forEach((exercise) => completed.add(exercise.id))
+  for (const definition of courseDefinitions) {
+    for (const missionId of definition.missionIds) {
+      if (!progress.completedMissions.includes(missionId)) continue
+      courseMissionLessonIds(definition.id, missionId).forEach((lessonId) => completed.add(lessonId))
     }
   }
   return completed
@@ -283,6 +290,7 @@ export function buildCourseModel(
 }
 
 export function buildCourseModels(
+  tracks: readonly LanguageTrack[],
   progress: LearnerProgress,
   activeExerciseId?: string,
 ): CourseModel[] {
@@ -291,19 +299,8 @@ export function buildCourseModels(
 
 export function buildCourseCards(
   progress: LearnerProgress,
-  activeExerciseId?: string,
 ): CourseCardModel[] {
-  const foundationCards = buildCourseModels(progress, activeExerciseId).map((course) => {
-    const { modules, ...card } = course
-    void modules
-    return card
-  })
-  return [
-    ...foundationCards,
-    ...courseDefinitions
-      .filter((definition) => definition.kind === 'continuing')
-      .map((definition) => buildRegisteredCourseCard(definition.id, progress)),
-  ]
+  return courseDefinitions.map((definition) => buildRegisteredCourseCard(definition.id, progress))
 }
 
 export function courseSlugFor(language: LanguageId): string {
@@ -321,13 +318,13 @@ export function languageForCourseSlug(slug: string): LanguageId | undefined {
 export function courseBySlug(
   slug: string,
   progress: LearnerProgress,
+  track?: LanguageTrack,
   activeExerciseId?: string,
 ): CourseModel | undefined {
   const language = languageForCourseSlug(slug)
   const definition = courseDefinitionForSlug(slug)
   if (definition?.kind !== 'foundation') return undefined
-  const track = language ? tracks.find((candidate) => candidate.id === language) : undefined
-  return track ? buildCourseModel(track, progress, activeExerciseId) : undefined
+  return track && track.id === language ? buildCourseModel(track, progress, activeExerciseId) : undefined
 }
 
 export function buildRegisteredCourseCard(
@@ -336,9 +333,9 @@ export function buildRegisteredCourseCard(
 ): CourseCardModel {
   const definition = courseDefinition(courseId)
   const completedMissionIds = new Set(progress.completedMissions)
-  const completedLessonIds = new Set(progress.completedLessons)
+  const completedLessonIdSet = completedLessonIds(progress)
   const completedModuleCount = definition.missionIds.filter((missionId) => completedMissionIds.has(missionId)).length
-  const completedLessonCount = definition.lessonIds.filter((lessonId) => completedLessonIds.has(lessonId)).length
+  const completedLessonCount = definition.lessonIds.filter((lessonId) => completedLessonIdSet.has(lessonId)).length
   const complete = completedModuleCount === definition.missionIds.length && definition.missionIds.length > 0
   const hasActivity = completedModuleCount > 0 || completedLessonCount > 0
   const available = courseIsAvailable(courseId, progress)
@@ -347,7 +344,7 @@ export function buildRegisteredCourseCard(
     : definition.missionIds.findIndex((missionId) => !completedMissionIds.has(missionId))
   const currentModuleId = currentModuleIndex >= 0 ? definition.missionIds[currentModuleIndex] : null
   const currentLessonId = currentModuleId
-    ? resumeLessonId(courseMissionLessonIds(courseId, currentModuleId), completedLessonIds)
+    ? resumeLessonId(courseMissionLessonIds(courseId, currentModuleId), completedLessonIdSet)
     : null
   const status: CourseStatus = complete ? 'complete' : hasActivity ? 'in-progress' : 'not-started'
 

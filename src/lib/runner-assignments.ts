@@ -9,6 +9,7 @@ import { pythonInteractiveProject } from '../data/python-interactive-project'
 import { pythonInteractiveProjectServerAssessment } from '../data/python-interactive-project.server'
 import { pythonDataToolsCourse } from '../data/python-data-tools-course'
 import { pythonDataToolsServerAssessment } from '../data/python-data-tools.server'
+import { controlledRunnerAssignmentContributions } from '../data/controlled-runner-publication'
 import type {
   ServerOwnedProjectAssessment,
   ServerOwnedRunnerAssessment,
@@ -312,7 +313,80 @@ export interface RunnerProjectEvaluation {
   visibleStdout: string
 }
 
-const assignments = new Map<string, RunnerAssignment>()
+const assignmentRevisionEncoder = new TextEncoder()
+export const RUNNER_ASSIGNMENT_REVISION_VERSION = 'v1'
+export const RUNNER_GRADING_BEHAVIOR_REVISION =
+  'sha256:6c003477a855c2006278010bfa33e9cb4e61e9f1646d3ccd257feb69abfadfda'
+
+function canonicalRevisionValue(value: unknown): string {
+  if (value === null) return 'null'
+  if (typeof value === 'string' || typeof value === 'boolean') return JSON.stringify(value)
+  if (typeof value === 'number') {
+    if (!Number.isFinite(value)) throw new Error('Runner assignment revisions require finite numbers.')
+    return JSON.stringify(value)
+  }
+  if (Array.isArray(value)) {
+    return `[${value.map((entry) => (
+      entry === undefined ? 'null' : canonicalRevisionValue(entry)
+    )).join(',')}]`
+  }
+  if (typeof value === 'object') {
+    const record = value as Record<string, unknown>
+    const entries = Object.keys(record)
+      .filter((key) => record[key] !== undefined)
+      .sort()
+      .map((key) => `${JSON.stringify(key)}:${canonicalRevisionValue(record[key])}`)
+    return `{${entries.join(',')}}`
+  }
+  throw new Error('Runner assignment revisions contain an unsupported value.')
+}
+
+function bytesToHex(bytes: Uint8Array): string {
+  return [...bytes].map((byte) => byte.toString(16).padStart(2, '0')).join('')
+}
+
+export function isRunnerAssignmentRevision(value: unknown): value is string {
+  return typeof value === 'string'
+    && value.startsWith(`${RUNNER_ASSIGNMENT_REVISION_VERSION}:`)
+    && /^[a-f0-9]{64}$/u.test(value.slice(RUNNER_ASSIGNMENT_REVISION_VERSION.length + 1))
+}
+
+function gradingProjection(assignment: RunnerAssignment) {
+  const assessment = runnerAssessment(assignment)
+  return {
+    exerciseId: assignment.exerciseId,
+    language: assignment.language,
+    kind: assignment.kind,
+    expectedOutput: assignment.expectedOutput,
+    projectCheckStdin: assignment.projectCheckStdin ?? null,
+    authoredChecks: assignment.exercise.checks ?? [],
+    assessment: assessment
+      ? {
+          language: assessment.language,
+          analysisProfile: assessment.analysisProfile ?? null,
+          structuralChecks: assessment.structuralChecks,
+          testCases: assessment.testCases.map((testCase) => ({
+            visibility: testCase.visibility,
+            stdin: testCase.stdin,
+            expectedStdout: testCase.expectedStdout,
+          })),
+        }
+      : null,
+  }
+}
+
+export async function runnerAssignmentRevision(
+  assignment: RunnerAssignment,
+  gradingBehaviorRevision = RUNNER_GRADING_BEHAVIOR_REVISION,
+): Promise<string> {
+  const serialized = canonicalRevisionValue({
+    schema: RUNNER_ASSIGNMENT_REVISION_VERSION,
+    gradingBehaviorRevision,
+    assignment: gradingProjection(assignment),
+  })
+  const digest = await crypto.subtle.digest('SHA-256', assignmentRevisionEncoder.encode(serialized))
+  return `${RUNNER_ASSIGNMENT_REVISION_VERSION}:${bytesToHex(new Uint8Array(digest))}`
+}
 
 export function registerRunnerAssignment(
   registry: Map<string, RunnerAssignment>,
@@ -354,100 +428,145 @@ export function registerRunnerAssignment(
   registry.set(assignment.exerciseId, assignment)
 }
 
-for (const track of tracks) {
-  for (const mission of track.missions) {
+export function createRunnerAssignmentRegistry(
+  controlledContributions: readonly RunnerAssignment[] = controlledRunnerAssignmentContributions,
+): ReadonlyMap<string, RunnerAssignment> {
+  const registry = new Map<string, RunnerAssignment>()
+
+  for (const track of tracks) {
+    for (const mission of track.missions) {
+      for (const exercise of mission.exercises) {
+        if ((exercise.type !== 'code' && exercise.type !== 'bugfix') || exercise.output === undefined) continue
+        registerRunnerAssignment(registry, {
+          exerciseId: exercise.id,
+          language: track.id,
+          expectedOutput: exercise.output,
+          exercise,
+          kind: 'academy',
+        })
+      }
+    }
+  }
+
+  for (const mission of pythonDataToolsCourse.missions) {
     for (const exercise of mission.exercises) {
       if ((exercise.type !== 'code' && exercise.type !== 'bugfix') || exercise.output === undefined) continue
-      registerRunnerAssignment(assignments, {
+      registerRunnerAssignment(registry, {
         exerciseId: exercise.id,
-        language: track.id,
+        language: pythonDataToolsCourse.language,
         expectedOutput: exercise.output,
         exercise,
         kind: 'academy',
+        ...(exercise.id === 'pydata6-supply-tracker'
+          ? { assessment: pythonDataToolsServerAssessment }
+          : {}),
       })
+    }
+  }
+
+  for (const checkpoint of pythonInteractiveProject.checkpoints) {
+    const { exercise } = checkpoint
+    if ((exercise.type !== 'code' && exercise.type !== 'bugfix') || exercise.output === undefined) continue
+    registerRunnerAssignment(registry, {
+      exerciseId: exercise.id,
+      language: pythonInteractiveProject.language,
+      expectedOutput: exercise.output,
+      exercise,
+      kind: 'project',
+      projectCheckStdin: checkpoint.practiceStdin ?? '',
+      ...(exercise.id === 'project-py-final'
+        ? { projectAssessment: pythonInteractiveProjectServerAssessment }
+        : {}),
+    })
+  }
+
+  for (const checkpoint of cppCompiledProject.checkpoints) {
+    const { exercise } = checkpoint
+    if ((exercise.type !== 'code' && exercise.type !== 'bugfix') || exercise.output === undefined) continue
+    registerRunnerAssignment(registry, {
+      exerciseId: exercise.id,
+      language: cppCompiledProject.language,
+      expectedOutput: exercise.output,
+      exercise,
+      kind: 'project',
+      projectCheckStdin: checkpoint.practiceStdin ?? '',
+      ...(exercise.id === 'project-cpp-final'
+        ? { projectAssessment: cppCompiledProjectServerAssessment }
+        : {}),
+    })
+  }
+
+  for (const checkpoint of csharpWorkshopProject.checkpoints) {
+    const { exercise } = checkpoint
+    if ((exercise.type !== 'code' && exercise.type !== 'bugfix') || exercise.output === undefined) continue
+    registerRunnerAssignment(registry, {
+      exerciseId: exercise.id,
+      language: csharpWorkshopProject.language,
+      expectedOutput: exercise.output,
+      exercise,
+      kind: 'project',
+      projectCheckStdin: checkpoint.practiceStdin ?? '',
+      ...(exercise.id === 'project-csharp-final'
+        ? { projectAssessment: csharpWorkshopProjectServerAssessment }
+        : {}),
+    })
+  }
+
+  for (const checkpoint of javaPicnicProject.checkpoints) {
+    const { exercise } = checkpoint
+    if ((exercise.type !== 'code' && exercise.type !== 'bugfix') || exercise.output === undefined) continue
+    registerRunnerAssignment(registry, {
+      exerciseId: exercise.id,
+      language: javaPicnicProject.language,
+      expectedOutput: exercise.output,
+      exercise,
+      kind: 'project',
+      projectCheckStdin: checkpoint.practiceStdin ?? '',
+      ...(exercise.id === 'project-java-final'
+        ? { projectAssessment: javaPicnicProjectServerAssessment }
+        : {}),
+    })
+  }
+
+  for (const assignment of controlledContributions) {
+    registerRunnerAssignment(registry, assignment)
+  }
+
+  validateRunnerAssignmentRegistry(registry)
+  return registry
+}
+
+function validateRunnerAssignmentRegistry(
+  registry: ReadonlyMap<string, RunnerAssignment>,
+): void {
+  const supportedLanguages = new Set<LanguageId>(['python', 'cpp', 'csharp', 'java'])
+
+  for (const [exerciseId, assignment] of registry) {
+    if (!exerciseId || assignment.exerciseId !== exerciseId || assignment.exercise.id !== exerciseId) {
+      throw new Error(`Runner assignment ${exerciseId || 'unknown'} has inconsistent exercise IDs.`)
+    }
+    if (!supportedLanguages.has(assignment.language)) {
+      throw new Error(`Runner assignment ${exerciseId} has an unsupported language.`)
+    }
+    if (assignment.exercise.type !== 'code' && assignment.exercise.type !== 'bugfix') {
+      throw new Error(`Runner assignment ${exerciseId} is not an editable exercise.`)
+    }
+    if (
+      assignment.exercise.output === undefined
+      || assignment.expectedOutput !== assignment.exercise.output
+    ) {
+      throw new Error(`Runner assignment ${exerciseId} has inconsistent visible output.`)
+    }
+    if (assignment.kind === 'project' && assignment.projectCheckStdin === undefined) {
+      throw new Error(`Project runner assignment ${exerciseId} is missing its practice input.`)
+    }
+    if (assignment.kind === 'academy' && assignment.projectCheckStdin !== undefined) {
+      throw new Error(`Academy runner assignment ${exerciseId} declares project practice input.`)
     }
   }
 }
 
-for (const mission of pythonDataToolsCourse.missions) {
-  for (const exercise of mission.exercises) {
-    if ((exercise.type !== 'code' && exercise.type !== 'bugfix') || exercise.output === undefined) continue
-    registerRunnerAssignment(assignments, {
-      exerciseId: exercise.id,
-      language: pythonDataToolsCourse.language,
-      expectedOutput: exercise.output,
-      exercise,
-      kind: 'academy',
-      ...(exercise.id === 'pydata6-supply-tracker'
-        ? { assessment: pythonDataToolsServerAssessment }
-        : {}),
-    })
-  }
-}
-
-for (const checkpoint of pythonInteractiveProject.checkpoints) {
-  const { exercise } = checkpoint
-  if ((exercise.type !== 'code' && exercise.type !== 'bugfix') || exercise.output === undefined) continue
-  registerRunnerAssignment(assignments, {
-    exerciseId: exercise.id,
-    language: pythonInteractiveProject.language,
-    expectedOutput: exercise.output,
-    exercise,
-    kind: 'project',
-    projectCheckStdin: checkpoint.practiceStdin ?? '',
-    ...(exercise.id === 'project-py-final'
-      ? { projectAssessment: pythonInteractiveProjectServerAssessment }
-      : {}),
-  })
-}
-
-for (const checkpoint of cppCompiledProject.checkpoints) {
-  const { exercise } = checkpoint
-  if ((exercise.type !== 'code' && exercise.type !== 'bugfix') || exercise.output === undefined) continue
-  registerRunnerAssignment(assignments, {
-    exerciseId: exercise.id,
-    language: cppCompiledProject.language,
-    expectedOutput: exercise.output,
-    exercise,
-    kind: 'project',
-    projectCheckStdin: checkpoint.practiceStdin ?? '',
-    ...(exercise.id === 'project-cpp-final'
-      ? { projectAssessment: cppCompiledProjectServerAssessment }
-      : {}),
-  })
-}
-
-for (const checkpoint of csharpWorkshopProject.checkpoints) {
-  const { exercise } = checkpoint
-  if ((exercise.type !== 'code' && exercise.type !== 'bugfix') || exercise.output === undefined) continue
-  registerRunnerAssignment(assignments, {
-    exerciseId: exercise.id,
-    language: csharpWorkshopProject.language,
-    expectedOutput: exercise.output,
-    exercise,
-    kind: 'project',
-    projectCheckStdin: checkpoint.practiceStdin ?? '',
-    ...(exercise.id === 'project-csharp-final'
-      ? { projectAssessment: csharpWorkshopProjectServerAssessment }
-      : {}),
-  })
-}
-
-for (const checkpoint of javaPicnicProject.checkpoints) {
-  const { exercise } = checkpoint
-  if ((exercise.type !== 'code' && exercise.type !== 'bugfix') || exercise.output === undefined) continue
-  registerRunnerAssignment(assignments, {
-    exerciseId: exercise.id,
-    language: javaPicnicProject.language,
-    expectedOutput: exercise.output,
-    exercise,
-    kind: 'project',
-    projectCheckStdin: checkpoint.practiceStdin ?? '',
-    ...(exercise.id === 'project-java-final'
-      ? { projectAssessment: javaPicnicProjectServerAssessment }
-      : {}),
-  })
-}
+const assignments = createRunnerAssignmentRegistry()
 
 export function findRunnerAssignment(exerciseId: string): RunnerAssignment | undefined {
   return assignments.get(exerciseId)

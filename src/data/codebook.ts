@@ -1,18 +1,21 @@
 import type { LanguageId, LanguageTrack } from '../types'
+import { applyControlledCodebookContributions } from './controlled-codebook-publication'
+import { courseDefinitions } from './course-registry'
+import {
+  type CodebookEntry,
+} from './codebook-contributions'
 
-export interface CodebookEntry {
-  term: string
-  plain: string
-  ship: string
-  keywords: string[]
-  examples?: Partial<Record<LanguageId, string>>
-  unlockAfter?: 1 | 2 | 3 | 4 | 5
-  unlockAfterMissionId?: string
-}
+export {
+  mergeCodebookContributions,
+  type CodebookContribution,
+  type CodebookEntry,
+  type CodebookMissionOwnership,
+  type NewCodebookEntry,
+} from './codebook-contributions'
 
 export type ExampleState = 'unavailable' | 'locked' | 'unlocked'
 
-export const codebookEntries: CodebookEntry[] = [
+const baseCodebookEntries: CodebookEntry[] = [
   {
     term: 'Program',
     plain: 'A sequence of instructions a computer follows.',
@@ -583,7 +586,7 @@ export const codebookEntries: CodebookEntry[] = [
     plain: 'A result a function sends back to the line that called it, so the program can store that result or use it in another calculation.',
     ship: 'A workshop control finishes its job and sends one useful reading back to the console that activated it.',
     keywords: ['return', 'result', 'function output', 'send back', 'calculation'],
-    unlockAfterMissionId: 'py-data-return-values',
+    unlockAfterMissionIds: { python: 'py-data-return-values' },
     examples: {
       python: 'def subtotal(price, quantity):\n    return price * quantity\n\ntotal = subtotal(4, 3)',
     },
@@ -593,7 +596,7 @@ export const codebookEntries: CodebookEntry[] = [
     plain: 'An operation attached to a text value with a dot, such as strip() or lower(), that produces a new text result.',
     ship: 'A cleanup control attached to a label can trim its extra spacing or make its lettering consistent.',
     keywords: ['text operation', 'dot', 'strip', 'lower', 'method call'],
-    unlockAfterMissionId: 'py-data-text-cleanup',
+    unlockAfterMissionIds: { python: 'py-data-text-cleanup' },
     examples: {
       python: 'item_name = " Markers "\nclean_name = item_name.strip()',
     },
@@ -603,7 +606,7 @@ export const codebookEntries: CodebookEntry[] = [
     plain: 'Changing text into one consistent form before comparing it or using it as a stored name, such as trimming spaces and using lowercase.',
     ship: 'The supply desk rewrites MARKERS, markers, and padded labels in one standard logbook format.',
     keywords: ['normalize', 'clean text', 'consistent', 'strip', 'lowercase'],
-    unlockAfterMissionId: 'py-data-text-cleanup',
+    unlockAfterMissionIds: { python: 'py-data-text-cleanup' },
     examples: {
       python: 'clean_name = item_name.strip().lower()',
     },
@@ -613,7 +616,7 @@ export const codebookEntries: CodebookEntry[] = [
     plain: 'A change made to an existing list, such as adding an item with append(), so that list now contains updated items.',
     ship: 'A clerk adds another task to the same checklist instead of replacing the entire checklist.',
     keywords: ['change list', 'append', 'add item', 'update', 'mutable'],
-    unlockAfterMissionId: 'py-data-list-tools',
+    unlockAfterMissionIds: { python: 'py-data-list-tools' },
     examples: {
       python: 'tasks = ["email"]\ntasks.append("backup")',
     },
@@ -623,7 +626,7 @@ export const codebookEntries: CodebookEntry[] = [
     plain: 'The number of items in a collection. Python uses len() to count the current items in a list, dictionary, string, or other collection.',
     ship: 'The manifest computer counts how many labeled entries are currently on the supply list.',
     keywords: ['len', 'count', 'number of items', 'size', 'collection'],
-    unlockAfterMissionId: 'py-data-list-tools',
+    unlockAfterMissionIds: { python: 'py-data-list-tools' },
     examples: {
       python: 'task_count = len(tasks)',
     },
@@ -633,7 +636,7 @@ export const codebookEntries: CodebookEntry[] = [
     plain: 'A true-or-false check that asks whether a value is already inside a collection. Python commonly writes this check with in or not in.',
     ship: 'The clerk checks whether backup already appears on the task manifest before adding another copy.',
     keywords: ['in', 'not in', 'contains', 'already listed', 'boolean'],
-    unlockAfterMissionId: 'py-data-list-tools',
+    unlockAfterMissionIds: { python: 'py-data-list-tools' },
     examples: {
       python: 'if "backup" in tasks:\n    print("Already listed")',
     },
@@ -643,7 +646,7 @@ export const codebookEntries: CodebookEntry[] = [
     plain: 'A Python collection that stores values under named keys, so a program can find information by a useful label instead of a numbered position.',
     ship: 'A supply ledger pairs each item name with its current quantity, such as paper with 12 units.',
     keywords: ['dict', 'mapping', 'key', 'value', 'named data'],
-    unlockAfterMissionId: 'py-data-dictionaries',
+    unlockAfterMissionIds: { python: 'py-data-dictionaries' },
     examples: {
       python: 'inventory = {"paper": 12, "markers": 5}',
     },
@@ -653,7 +656,7 @@ export const codebookEntries: CodebookEntry[] = [
     plain: 'A dictionary entry has a key used to find it and a value stored under that key. In inventory["paper"], paper is the key and its quantity is the value.',
     ship: 'The ledger label identifies one supply, while the number beside that label records how many are available.',
     keywords: ['dictionary entry', 'lookup', 'mapping', 'label', 'stored amount'],
-    unlockAfterMissionId: 'py-data-dictionaries',
+    unlockAfterMissionIds: { python: 'py-data-dictionaries' },
     examples: {
       python: 'amount = inventory["paper"]  # key: "paper", value: 12',
     },
@@ -663,7 +666,7 @@ export const codebookEntries: CodebookEntry[] = [
     plain: 'A fallback result used when requested data is missing. A dictionary get() call can return that fallback instead of stopping with a missing-key error.',
     ship: 'If the supply ledger has no markers entry yet, the clerk begins from the agreed quantity of zero.',
     keywords: ['fallback', 'get', 'missing key', 'starting value', 'zero'],
-    unlockAfterMissionId: 'py-data-dictionaries',
+    unlockAfterMissionIds: { python: 'py-data-dictionaries' },
     examples: {
       python: 'current = inventory.get("markers", 0)',
     },
@@ -673,7 +676,7 @@ export const codebookEntries: CodebookEntry[] = [
     plain: 'A variable that keeps a running result while a loop works through several values. It is initialized before the loop and updated during each pass.',
     ship: 'A tally display starts at zero and adds each storage-bin quantity as the inspection moves along.',
     keywords: ['running total', 'total', 'loop', 'add up', 'initialize'],
-    unlockAfterMissionId: 'py-data-summaries',
+    unlockAfterMissionIds: { python: 'py-data-summaries' },
     examples: {
       python: 'total = 0\nfor amount in inventory.values():\n    total += amount',
     },
@@ -683,7 +686,7 @@ export const codebookEntries: CodebookEntry[] = [
     plain: 'A rule that selects only the collection items that match a condition, leaving unrelated items out of the result.',
     ship: 'A supply report includes only bins below the restock limit instead of copying every bin into the alert list.',
     keywords: ['select', 'condition', 'matching items', 'subset', 'low stock'],
-    unlockAfterMissionId: 'py-data-summaries',
+    unlockAfterMissionIds: { python: 'py-data-summaries' },
     examples: {
       python: 'low = []\nfor name in inventory:\n    if inventory[name] < 6:\n        low.append(name)',
     },
@@ -695,16 +698,31 @@ export function codebookExampleState(
   track: LanguageTrack,
   completedMissionIds: string[],
 ): ExampleState {
-  if (!entry.examples?.[track.id]) return 'unavailable'
-  if (entry.unlockAfterMissionId) {
-    return completedMissionIds.includes(entry.unlockAfterMissionId)
+  return codebookExampleStateForMissionIds(
+    entry,
+    track.id,
+    track.missions.map((mission) => mission.id),
+    completedMissionIds,
+  )
+}
+
+export function codebookExampleStateForMissionIds(
+  entry: CodebookEntry,
+  language: LanguageId,
+  foundationMissionIds: readonly string[],
+  completedMissionIds: readonly string[],
+): ExampleState {
+  if (!entry.examples?.[language]) return 'unavailable'
+  const exactMissionId = entry.unlockAfterMissionIds?.[language]
+  if (exactMissionId) {
+    return completedMissionIds.includes(exactMissionId)
       ? 'unlocked'
       : 'locked'
   }
   if (!entry.unlockAfter) return 'unlocked'
 
-  const requiredMission = track.missions[entry.unlockAfter - 1]
-  return requiredMission && completedMissionIds.includes(requiredMission.id)
+  const requiredMissionId = foundationMissionIds[entry.unlockAfter - 1]
+  return requiredMissionId && completedMissionIds.includes(requiredMissionId)
     ? 'unlocked'
     : 'locked'
 }
@@ -721,3 +739,12 @@ export function codebookMatches(entry: CodebookEntry, query: string, language: L
   ].join(' ').toLocaleLowerCase()
   return searchable.includes(normalized)
 }
+
+export const codebookEntries: CodebookEntry[] = applyControlledCodebookContributions(
+  baseCodebookEntries,
+  (language, missionId) => courseDefinitions.some((definition) => (
+    definition.kind === 'continuing'
+    && definition.language === language
+    && definition.missionIds.includes(missionId)
+  )),
+)

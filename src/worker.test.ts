@@ -1,15 +1,39 @@
-import { describe, expect, it, vi } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
+
+const runnerAssignmentMocks = vi.hoisted(() => ({
+  hiddenExerciseIds: new Set<string>(),
+  revisionOverride: null as string | null,
+}))
 
 vi.mock('@cloudflare/sandbox', () => ({
   Sandbox: class {},
   getSandbox: vi.fn(),
 }))
 
+vi.mock('./lib/runner-assignments', async (importOriginal) => {
+  const original = await importOriginal<typeof import('./lib/runner-assignments')>()
+  return {
+    ...original,
+    findRunnerAssignment: (exerciseId: string) => (
+      runnerAssignmentMocks.hiddenExerciseIds.has(exerciseId)
+        ? undefined
+        : original.findRunnerAssignment(exerciseId)
+    ),
+    runnerAssignmentRevision: async (
+      assignment: Parameters<typeof original.runnerAssignmentRevision>[0],
+    ) => runnerAssignmentMocks.revisionOverride
+      ?? original.runnerAssignmentRevision(assignment),
+  }
+})
+
 import worker, { handleRequest } from './worker'
 import { cppCollectionsRecordsManifest } from './data/cpp-collections-records-manifest'
 import { cppCollectionsRecordsLessons } from './data/cpp-collections-records-plan'
 import { trackById } from './data/curriculum'
 import { initialProgress } from './lib/progress'
+import {
+  RUNNER_ASSIGNMENT_REVISION_VERSION,
+} from './lib/runner-assignments'
 
 const htmlEnv = {
   ASSETS: {
@@ -24,6 +48,10 @@ const htmlEnv = {
 }
 const testVerifier = 'v'.repeat(43)
 const firstPythonLessonIds = trackById('python').missions[0].exercises.map((exercise) => exercise.id)
+const assignmentRevisionPattern = new RegExp(
+  `^${RUNNER_ASSIGNMENT_REVISION_VERSION}:[a-f0-9]{64}$`,
+  'u',
+)
 
 function setCookies(response: Response): string[] {
   const headers = response.headers as Headers & { getSetCookie?: () => string[] }
@@ -33,6 +61,13 @@ function setCookies(response: Response): string[] {
 function cookieValue(response: Response, name: string): string | null {
   const cookie = setCookies(response).find((value) => value.startsWith(`${name}=`))
   return cookie?.slice(name.length + 1).split(';', 1)[0] ?? null
+}
+
+function decodedGrantPayload(grant: string): Record<string, unknown> {
+  const encoded = grant.split('.', 1)[0]
+  const base64 = encoded.replaceAll('-', '+').replaceAll('_', '/')
+  const padded = base64.padEnd(Math.ceil(base64.length / 4) * 4, '=')
+  return JSON.parse(atob(padded)) as Record<string, unknown>
 }
 
 class MemoryD1 implements D1Database {
@@ -138,6 +173,11 @@ function progressFixture() {
     },
   }
 }
+
+afterEach(() => {
+  runnerAssignmentMocks.hiddenExerciseIds.clear()
+  runnerAssignmentMocks.revisionOverride = null
+})
 
 describe('production Worker', () => {
   it('redirects www to the canonical HTTPS host while preserving the path', async () => {
@@ -770,7 +810,7 @@ describe('production Worker', () => {
     await expect(otherLearner.json()).resolves.toEqual({ version: 1, record: null })
   })
 
-  it('reports the runner kill switch without creating a learner identity', async () => {
+  it('reports an unconfigured runner without creating a learner identity', async () => {
     const response = await handleRequest(
       new Request('https://seepoundcoffeepie.com/api/runner/status'),
       { ...htmlEnv, RUNNER_ENABLED: 'false' },
@@ -778,17 +818,74 @@ describe('production Worker', () => {
 
     expect(response.status).toBe(200)
     await expect(response.json()).resolves.toMatchObject({
+      configured: false,
       enabled: false,
+      paused: false,
       version: 1,
       languages: ['python', 'cpp', 'csharp', 'java'],
     })
     expect(response.headers.get('Set-Cookie')).toBeNull()
   })
 
+  it.each([
+    ['paused', 'false', false, true],
+    ['enabled', 'true', true, false],
+  ])('reports a configured %s runner distinctly', async (
+    _label,
+    runnerEnabled,
+    enabled,
+    paused,
+  ) => {
+    const response = await handleRequest(
+      new Request('https://seepoundcoffeepie.com/api/runner/status'),
+      {
+        ...htmlEnv,
+        RUNNER_ENABLED: runnerEnabled,
+        RUNNER_CONTROL: { getByName: vi.fn() },
+      },
+    )
+
+    expect(response.status).toBe(200)
+    await expect(response.json()).resolves.toMatchObject({
+      configured: true,
+      enabled,
+      paused,
+      version: 1,
+    })
+    expect(response.headers.get('Set-Cookie')).toBeNull()
+  })
+
+  it('returns an unknown runner assignment before requiring runner configuration', async () => {
+    const response = await handleRequest(
+      new Request('https://seepoundcoffeepie.com/api/runner/grants', {
+        method: 'POST',
+        headers: {
+          Origin: 'https://seepoundcoffeepie.com',
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ exerciseId: 'unknown-runner-exercise' }),
+      }),
+      {
+        ...htmlEnv,
+        SESSION_SECRET: undefined,
+        RUNNER_ENABLED: 'false',
+        RUNNER_CONTROL: undefined,
+      },
+    )
+
+    expect(response.status).toBe(404)
+    await expect(response.json()).resolves.toEqual({
+      error: 'This page does not have a code check yet.',
+    })
+    expect(response.headers.get('Set-Cookie')).toBeNull()
+  })
+
   it('does not issue runner grants for any unpublished Phase 5B editable lesson', async () => {
+    const runnerConfigGet = vi.fn(async () => 'false')
     const runnerEnv = {
       ...htmlEnv,
-      RUNNER_ENABLED: 'true',
+      RUNNER_CONFIG: { get: runnerConfigGet } as unknown as KVNamespace,
+      RUNNER_ENABLED: 'false',
       RUNNER_CONTROL: {
         getByName: vi.fn(),
       },
@@ -814,7 +911,9 @@ describe('production Worker', () => {
       await expect(response.json()).resolves.toEqual({
         error: 'This page does not have a code check yet.',
       })
+      expect(response.headers.get('Set-Cookie')).toBeNull()
     }
+    expect(runnerConfigGet).not.toHaveBeenCalled()
     expect(runnerEnv.RUNNER_CONTROL.getByName).not.toHaveBeenCalled()
   })
 
@@ -822,6 +921,7 @@ describe('production Worker', () => {
     const coordinatorFetch = vi.fn(async (_input: RequestInfo | URL, init?: RequestInit) => {
       const internal = JSON.parse(String(init?.body))
       expect(internal.exerciseId).toBe('py-print')
+      expect(internal.assignmentRevision).toMatch(assignmentRevisionPattern)
       expect(internal.request).toEqual({ version: 1, language: 'python', source: 'print("Signal online")' })
       expect(internal.ownerId).toMatch(/^[A-Za-z0-9_-]{40,}$/u)
       expect(internal.ipHash).toMatch(/^[A-Za-z0-9_-]{40,}$/u)
@@ -850,6 +950,12 @@ describe('production Worker', () => {
     const grantBody = await grantResponse.json() as { grant: string }
     const guestCookie = cookieValue(grantResponse, '__Host-spp_runner_guest')
     expect(grantBody.grant).toMatch(/^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$/u)
+    expect(decodedGrantPayload(grantBody.grant)).toMatchObject({
+      exerciseId: 'py-print',
+      language: 'python',
+      assignmentBinding: expect.stringMatching(/^[A-Za-z0-9_-]{43}$/u),
+    })
+    expect(decodedGrantPayload(grantBody.grant)).not.toHaveProperty('assignmentRevision')
     expect(guestCookie).toBeTruthy()
 
     const runResponse = await handleRequest(
@@ -886,6 +992,191 @@ describe('production Worker', () => {
       error: 'The code checker could not read this run. Start the check again.',
     })
     expect(coordinatorFetch).toHaveBeenCalledOnce()
+  })
+
+  it('returns only results bound to the current assignment and removes internal headers', async () => {
+    let resultHeaders: Record<string, string> = {}
+    const coordinatorFetch = vi.fn(async () => Response.json({
+      version: 1,
+      runId: 'assignmentboundresult00000001',
+      status: 'running',
+      pollAfterMs: 650,
+    }, { headers: resultHeaders }))
+    const runnerEnv = {
+      ...htmlEnv,
+      RUNNER_ENABLED: 'true',
+      RUNNER_CONTROL: {
+        getByName: vi.fn(() => ({ fetch: coordinatorFetch })),
+      },
+    }
+    const grantResponse = await handleRequest(
+      new Request('https://seepoundcoffeepie.com/api/runner/grants', {
+        method: 'POST',
+        headers: {
+          Origin: 'https://seepoundcoffeepie.com',
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ exerciseId: 'py-print' }),
+      }),
+      runnerEnv,
+    )
+    expect(grantResponse.status).toBe(200)
+    const grantBody = await grantResponse.json() as { grant: string }
+    const grantPayload = decodedGrantPayload(grantBody.grant)
+    const guestCookie = cookieValue(grantResponse, '__Host-spp_runner_guest')
+    const assignmentBinding = String(grantPayload.assignmentBinding)
+    expect(guestCookie).toBeTruthy()
+    expect(assignmentBinding).toMatch(/^[A-Za-z0-9_-]{43}$/u)
+    expect(grantPayload).not.toHaveProperty('assignmentRevision')
+    const resultRequest = () => handleRequest(
+      new Request('https://seepoundcoffeepie.com/api/runner/runs/assignmentboundresult00000001', {
+        headers: { Cookie: `__Host-spp_runner_guest=${guestCookie}` },
+      }),
+      runnerEnv,
+    )
+
+    resultHeaders = {
+      'X-Runner-Assignment-Id': 'py-print',
+      'X-Runner-Assignment-Binding': assignmentBinding,
+    }
+    const validResponse = await resultRequest()
+    expect(validResponse.status).toBe(200)
+    await expect(validResponse.json()).resolves.toMatchObject({ status: 'running' })
+    expect(validResponse.headers.get('X-Runner-Assignment-Id')).toBeNull()
+    expect(validResponse.headers.get('X-Runner-Assignment-Binding')).toBeNull()
+
+    resultHeaders = {}
+    const unboundResponse = await resultRequest()
+    expect(unboundResponse.status).toBe(404)
+    await expect(unboundResponse.json()).resolves.toEqual({
+      error: 'This check could not be found. Start it again.',
+    })
+
+    resultHeaders = {
+      'X-Runner-Assignment-Id': 'py-print',
+      'X-Runner-Assignment-Binding': 'A'.repeat(43),
+    }
+    const staleResponse = await resultRequest()
+    expect(staleResponse.status).toBe(404)
+    await expect(staleResponse.json()).resolves.toEqual({
+      error: 'This check could not be found. Start it again.',
+    })
+  })
+
+  it('rechecks the assignment after grant authentication and before reading source', async () => {
+    const coordinatorFetch = vi.fn()
+    const getByName = vi.fn(() => ({ fetch: coordinatorFetch }))
+    const runnerEnv = {
+      ...htmlEnv,
+      RUNNER_ENABLED: 'true',
+      RUNNER_CONTROL: { getByName },
+    }
+    const originHeaders = {
+      Origin: 'https://seepoundcoffeepie.com',
+      'Content-Type': 'application/json',
+    }
+    const grantResponse = await handleRequest(
+      new Request('https://seepoundcoffeepie.com/api/runner/grants', {
+        method: 'POST',
+        headers: originHeaders,
+        body: JSON.stringify({ exerciseId: 'py-print' }),
+      }),
+      runnerEnv,
+    )
+    const grantBody = await grantResponse.json() as { grant: string }
+    const guestCookie = cookieValue(grantResponse, '__Host-spp_runner_guest')
+    expect(grantResponse.status).toBe(200)
+    expect(guestCookie).toBeTruthy()
+
+    runnerAssignmentMocks.hiddenExerciseIds.add('py-print')
+    const disappearedResponse = await handleRequest(
+      new Request('https://seepoundcoffeepie.com/api/runner/runs', {
+        method: 'POST',
+        headers: {
+          ...originHeaders,
+          Cookie: `__Host-spp_runner_guest=${guestCookie}`,
+          'Content-Length': '30001',
+          'X-Runner-Grant': grantBody.grant,
+        },
+        body: 'source that is not even a runner request',
+      }),
+      {
+        ...runnerEnv,
+        RUNNER_ENABLED: 'false',
+        RUNNER_CONTROL: undefined,
+      },
+    )
+    expect(disappearedResponse.status).toBe(404)
+    await expect(disappearedResponse.json()).resolves.toEqual({
+      error: 'This page does not have a code check yet.',
+    })
+
+    runnerAssignmentMocks.hiddenExerciseIds.delete('py-print')
+    const languageMismatchResponse = await handleRequest(
+      new Request('https://seepoundcoffeepie.com/api/runner/runs', {
+        method: 'POST',
+        headers: {
+          ...originHeaders,
+          Cookie: `__Host-spp_runner_guest=${guestCookie}`,
+          'X-Runner-Grant': grantBody.grant,
+        },
+        body: JSON.stringify({ version: 1, language: 'cpp', source: 'int main() {}' }),
+      }),
+      runnerEnv,
+    )
+    expect(languageMismatchResponse.status).toBe(400)
+    await expect(languageMismatchResponse.json()).resolves.toEqual({
+      error: 'The language for this check changed. Reload the page and try again.',
+    })
+    expect(getByName).not.toHaveBeenCalled()
+    expect(coordinatorFetch).not.toHaveBeenCalled()
+  })
+
+  it('rejects a signed grant when the same assignment changes before submission', async () => {
+    const coordinatorFetch = vi.fn()
+    const runnerEnv = {
+      ...htmlEnv,
+      RUNNER_ENABLED: 'true',
+      RUNNER_CONTROL: {
+        getByName: vi.fn(() => ({ fetch: coordinatorFetch })),
+      },
+    }
+    const originHeaders = {
+      Origin: 'https://seepoundcoffeepie.com',
+      'Content-Type': 'application/json',
+    }
+    const grantResponse = await handleRequest(
+      new Request('https://seepoundcoffeepie.com/api/runner/grants', {
+        method: 'POST',
+        headers: originHeaders,
+        body: JSON.stringify({ exerciseId: 'py-print' }),
+      }),
+      runnerEnv,
+    )
+    const grantBody = await grantResponse.json() as { grant: string }
+    const guestCookie = cookieValue(grantResponse, '__Host-spp_runner_guest')
+    expect(grantResponse.status).toBe(200)
+    expect(guestCookie).toBeTruthy()
+
+    runnerAssignmentMocks.revisionOverride = `${RUNNER_ASSIGNMENT_REVISION_VERSION}:${'f'.repeat(64)}`
+    const response = await handleRequest(
+      new Request('https://seepoundcoffeepie.com/api/runner/runs', {
+        method: 'POST',
+        headers: {
+          ...originHeaders,
+          Cookie: `__Host-spp_runner_guest=${guestCookie}`,
+          'X-Runner-Grant': grantBody.grant,
+        },
+        body: JSON.stringify({ version: 1, language: 'python', source: 'print("Signal online")' }),
+      }),
+      runnerEnv,
+    )
+
+    expect(response.status).toBe(400)
+    await expect(response.json()).resolves.toEqual({
+      error: 'This lesson changed while you were working. Reload the page and try again.',
+    })
+    expect(coordinatorFetch).not.toHaveBeenCalled()
   })
 
   it('exposes only the visible Supply Tracker output in its short-lived runner grant', async () => {

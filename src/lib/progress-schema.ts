@@ -1,4 +1,10 @@
-import { tracks } from '../data/curriculum'
+import { foundationConceptIds } from '../data/foundation-concept-ids'
+import {
+  foundationLessonIds,
+  foundationMissionIds,
+  foundationMissionLessonIds,
+} from '../data/foundation-curriculum-index'
+import { foundationTrackMetadata } from '../data/foundation-track-metadata'
 import {
   cppCollectionsRecordsLessons,
   cppCollectionsRecordsManifest,
@@ -12,16 +18,14 @@ import {
 } from '../data/python-data-tools-manifest'
 import type { ConceptProgress, LanguageId, LearnerProgress } from '../types'
 
-const languages = new Set<LanguageId>(tracks.map((track) => track.id))
+const languages = new Set<LanguageId>(foundationTrackMetadata.map((track) => track.id))
 const missionIds = new Set([
-  ...tracks.flatMap((track) => track.missions.map((mission) => mission.id)),
+  ...foundationMissionIds,
   ...pythonDataToolsMissionIds,
   ...cppCollectionsRecordsMissionIds,
 ])
 const lessonIds = new Set([
-  ...tracks.flatMap((track) => (
-    track.missions.flatMap((mission) => mission.exercises.map((exercise) => exercise.id))
-  )),
+  ...foundationLessonIds,
   ...pythonDataToolsLessons.map((lesson) => lesson.id),
   ...cppCollectionsRecordsLessons.map((lesson) => lesson.id),
 ])
@@ -30,9 +34,7 @@ const projectCheckpointIds = new Set(projectManifests.flatMap((project) => (
   project.checkpoints.map((checkpoint) => checkpoint.id)
 )))
 const conceptIds = new Set([
-  ...tracks.flatMap((track) => (
-    track.missions.flatMap((mission) => mission.exercises.map((exercise) => exercise.conceptId))
-  )),
+  ...foundationConceptIds,
   ...projectManifests.flatMap((project) => project.checkpoints.map((checkpoint) => checkpoint.conceptId)),
   ...pythonDataToolsLessons.map((lesson) => lesson.conceptId),
   ...cppCollectionsRecordsLessons.map((lesson) => lesson.conceptId),
@@ -101,10 +103,8 @@ function normalizedConceptProgress(
 
 function lessonsFromCompletedMissions(completedMissions: string[]): string[] {
   const completed = new Set(completedMissions)
-  const foundationLessons = tracks.flatMap((track) => (
-    track.missions.flatMap((mission) => (
-      completed.has(mission.id) ? mission.exercises.map((exercise) => exercise.id) : []
-    ))
+  const foundationLessons = [...foundationMissionLessonIds].flatMap(([missionId, lessonIds]) => (
+    completed.has(missionId) ? lessonIds : []
   ))
   const dataToolsLessons = Object.entries(pythonDataToolsManifest).flatMap(([missionId, lessons]) => (
     completed.has(missionId) ? lessons.map((lesson) => lesson.id) : []

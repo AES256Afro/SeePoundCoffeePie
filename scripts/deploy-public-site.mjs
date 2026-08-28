@@ -3,10 +3,21 @@ import { existsSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 
+import {
+  controlledPublicationSources,
+  productionControlledPublicationSources,
+} from './controlled-course-publication.mjs'
+
 const projectRoot = fileURLToPath(new URL('../', import.meta.url))
 const wranglerPath = fileURLToPath(new URL('../node_modules/.bin/wrangler', import.meta.url))
+const projectBundleCheckPath = fileURLToPath(new URL('./check-project-bundle.mjs', import.meta.url))
 const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/iu
 const digestImagePattern = /@sha256:[0-9a-f]{64}$/iu
+const runnerPublicationSelector = '../data/controlled-runner-publication'
+const allowedRunnerPublicationSources = new Set([
+  controlledPublicationSources('unpublished').runnerAssignments,
+  controlledPublicationSources('published').runnerAssignments,
+])
 
 const containerSuffixes = [
   'runnercppsandbox',
@@ -56,7 +67,23 @@ export function deploymentMetadata(commit) {
   }
 }
 
-export function buildWranglerDeployArgs(environmentName, { commit = 'local', dryRun = false } = {}) {
+export function runnerPublicationAlias(
+  source = productionControlledPublicationSources.runnerAssignments,
+) {
+  if (!allowedRunnerPublicationSources.has(source)) {
+    throw new Error(`Unreviewed runner publication source: ${String(source)}`)
+  }
+  return `${runnerPublicationSelector}:./${source}`
+}
+
+export function buildWranglerDeployArgs(
+  environmentName,
+  {
+    commit = 'local',
+    dryRun = false,
+    runnerPublicationSource = productionControlledPublicationSources.runnerAssignments,
+  } = {},
+) {
   const environment = deploymentEnvironments[environmentName]
   if (!environment) throw new Error(`Unknown deployment environment: ${environmentName}`)
 
@@ -72,6 +99,8 @@ export function buildWranglerDeployArgs(environmentName, { commit = 'local', dry
     metadata.tag,
     '--message',
     metadata.message,
+    '--alias',
+    runnerPublicationAlias(runnerPublicationSource),
   ]
   if (dryRun) args.push('--dry-run')
   if (environment.config) args.push('--config', environment.config)
@@ -214,6 +243,13 @@ export function wranglerDeploySpawnOptions() {
   }
 }
 
+export function verifyPublicBundleBoundary(run = execFileSync) {
+  run(process.execPath, [projectBundleCheckPath], {
+    cwd: projectRoot,
+    stdio: 'inherit',
+  })
+}
+
 function output(command, args) {
   return execFileSync(command, args, {
     cwd: projectRoot,
@@ -353,6 +389,7 @@ function rollbackCommand(environmentName, previousVersion) {
 
 export async function main(argv = process.argv.slice(2)) {
   const { dryRun, environmentName } = parseDeploymentArgs(argv)
+  verifyPublicBundleBoundary()
   verifyWranglerSupport()
 
   if (dryRun) {

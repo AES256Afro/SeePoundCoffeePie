@@ -211,7 +211,11 @@ describe('Java guided project UI', () => {
       'java',
       expect.stringContaining('import java.util.Scanner;'),
       expect.any(Function),
-      { purpose: 'run', stdin: 'Alex Kim\n10\n' },
+      expect.objectContaining({
+        purpose: 'run',
+        signal: expect.objectContaining({ aborted: false }),
+        stdin: 'Alex Kim\n10\n',
+      }),
     )
     expect(document.title).toBe('Plan the Community Picnic | SeePoundCoffeePie')
   })

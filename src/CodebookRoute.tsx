@@ -5,29 +5,67 @@ import {
   Search,
   X,
 } from 'lucide-react'
-import { codebookEntries, codebookExampleState, codebookMatches } from './data/codebook'
-import { courseDefinition } from './data/course-registry'
-import { trackById } from './data/curriculum'
-import type { LearnerProgress } from './types'
+import {
+  codebookEntries,
+  codebookExampleStateForMissionIds,
+  codebookMatches,
+} from './data/codebook'
+import {
+  courseDefinition,
+  courseDefinitions,
+  foundationCourseId,
+} from './data/course-registry'
+import { foundationTrackMetadataByLanguage } from './data/foundation-track-metadata'
+import type { LanguageId, LearnerProgress } from './types'
+
+function requiredExampleLabel(
+  entry: (typeof codebookEntries)[number],
+  language: LanguageId,
+  foundationMissionTitles: readonly string[],
+): string | undefined {
+  const exactMissionId = entry.unlockAfterMissionIds?.[language]
+  if (exactMissionId) {
+    const definition = courseDefinitions.find((candidate) => (
+      candidate.kind === 'continuing'
+      && candidate.language === language
+      && candidate.missionIds.includes(exactMissionId)
+    ))
+    const moduleIndex = definition?.missionIds.indexOf(exactMissionId) ?? -1
+    return moduleIndex >= 0 ? definition?.moduleTitles[moduleIndex] : undefined
+  }
+
+  return entry.unlockAfter
+    ? foundationMissionTitles[entry.unlockAfter - 1]
+    : undefined
+}
 
 export function CodebookRoute({ progress }: { progress: LearnerProgress }) {
   const [query, setQuery] = useState('')
   const [visibleCount, setVisibleCount] = useState(16)
-  const track = trackById(progress.activeLanguage)
+  const language = progress.activeLanguage
+  const foundation = courseDefinition(foundationCourseId(language))
+  const trackMetadata = foundationTrackMetadataByLanguage(language)
+  const shortName = trackMetadata?.shortName ?? foundation.shortName
+  const foundationMissionTitles = trackMetadata?.missionTitles ?? foundation.moduleTitles
   const filteredEntries = useMemo(
-    () => codebookEntries.filter((entry) => codebookMatches(entry, query, track.id)),
-    [query, track.id],
+    () => codebookEntries.filter((entry) => codebookMatches(entry, query, language)),
+    [query, language],
   )
-  const entriesWithExamples = codebookEntries.filter((entry) => entry.examples?.[track.id])
+  const entriesWithExamples = codebookEntries.filter((entry) => entry.examples?.[language])
   const unlockedExamples = entriesWithExamples.filter((entry) => (
-    codebookExampleState(entry, track, progress.completedMissions) === 'unlocked'
+    codebookExampleStateForMissionIds(
+      entry,
+      language,
+      foundation.missionIds,
+      progress.completedMissions,
+    ) === 'unlocked'
   )).length
   const visibleEntries = query.trim()
     ? filteredEntries
     : filteredEntries.slice(0, visibleCount)
 
   return (
-    <main className="content-page">
+    <main className="content-page" id="main-content" tabIndex={-1}>
       <div className="page-heading page-heading--simple">
         <div><h1>Code reference</h1><p>Search definitions at any time. Examples appear after the related lesson.</p></div>
       </div>
@@ -39,7 +77,7 @@ export function CodebookRoute({ progress }: { progress: LearnerProgress }) {
           {query && <button onClick={() => setQuery('')} aria-label="Clear code reference search"><X size={15} /></button>}
         </label>
         <div className="codebook-unlocks">
-          <small>{track.shortName} examples</small>
+          <small>{shortName} examples</small>
           <b>{unlockedExamples} of {entriesWithExamples.length} available</b>
           <span>Examples appear as you complete lessons.</span>
         </div>
@@ -48,18 +86,18 @@ export function CodebookRoute({ progress }: { progress: LearnerProgress }) {
         <>
         <div className="glossary-grid">
           {visibleEntries.map((item, index) => {
-            const exampleState = codebookExampleState(item, track, progress.completedMissions)
-            const example = item.examples?.[track.id]
-            const requiredMission = item.unlockAfter ? track.missions[item.unlockAfter - 1] : undefined
-            const dataToolsDefinition = item.unlockAfterMissionId
-              ? courseDefinition('python-data-tools')
-              : undefined
-            const dataToolsModuleIndex = dataToolsDefinition && item.unlockAfterMissionId
-              ? dataToolsDefinition.missionIds.indexOf(item.unlockAfterMissionId)
-              : -1
-            const requiredLabel = dataToolsModuleIndex >= 0
-              ? dataToolsDefinition?.moduleTitles[dataToolsModuleIndex]
-              : requiredMission?.title
+            const exampleState = codebookExampleStateForMissionIds(
+              item,
+              language,
+              foundation.missionIds,
+              progress.completedMissions,
+            )
+            const example = item.examples?.[language]
+            const requiredLabel = requiredExampleLabel(
+              item,
+              language,
+              foundationMissionTitles,
+            )
             return (
               <details className="glossary-entry" key={item.term}>
                 <summary>
@@ -72,7 +110,7 @@ export function CodebookRoute({ progress }: { progress: LearnerProgress }) {
                 </summary>
                 <div className="glossary-entry__content">
                   {exampleState === 'unlocked' && example && (
-                    <div className="glossary-example"><small>{track.shortName} example</small><code>{example}</code></div>
+                    <div className="glossary-example"><small>{shortName} example</small><code>{example}</code></div>
                   )}
                   {exampleState === 'locked' && (
                     <div className="glossary-example-lock"><LockKeyhole size={15} /><span><b>Example not available yet</b>Complete {requiredLabel ?? 'the related module'} to see it.</span></div>

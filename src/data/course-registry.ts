@@ -1,8 +1,9 @@
-import { durableCurriculumV1 } from './durable-curriculum-v1'
+import { controlledContinuingCourseRegistrations } from './controlled-continuing-course-publication'
 import {
-  publishedContinuingCourseLessonIds,
-  publishedContinuingCourseManifest,
-} from './published-continuing-course-manifests'
+  foundationEntriesForLanguage,
+  foundationMissionLessonIds,
+} from './foundation-curriculum-index'
+import { publishedFoundationCourseId } from './learning-sequence'
 import type { CourseId, LanguageId, LearnerProgress } from '../types'
 
 export type CourseSymbol = 'pi' | 'eye' | 'hash' | 'coffee'
@@ -33,26 +34,11 @@ export interface CourseDefinition {
   prerequisites: readonly CoursePrerequisite[]
 }
 
-const foundationCourseIds: Record<LanguageId, CourseId> = {
-  python: 'python-foundations',
-  cpp: 'cpp-foundations',
-  csharp: 'csharp-foundations',
-  java: 'java-foundations',
-}
-
-const foundationPrefixes: Record<LanguageId, string> = {
-  python: 'python/',
-  cpp: 'cpp/',
-  csharp: 'csharp/',
-  java: 'java/',
-}
-
 function foundationOwnership(language: LanguageId): { missionIds: string[]; lessonIds: string[] } {
-  const prefix = foundationPrefixes[language]
-  const entries = Object.entries(durableCurriculumV1).filter(([owner]) => owner.startsWith(prefix))
+  const entries = foundationEntriesForLanguage(language)
   return {
-    missionIds: entries.map(([owner]) => owner.slice(prefix.length)),
-    lessonIds: entries.flatMap(([, lessons]) => [...lessons]),
+    missionIds: entries.map((entry) => entry.missionId),
+    lessonIds: entries.flatMap((entry) => entry.lessonIds),
   }
 }
 
@@ -78,11 +64,7 @@ const python = foundationOwnership('python')
 const cpp = foundationOwnership('cpp')
 const csharp = foundationOwnership('csharp')
 const java = foundationOwnership('java')
-const pythonDataTools = publishedContinuingCourseManifest('python-data-tools')
-
-if (!pythonDataTools) throw new Error('Published Practical Python manifest is missing.')
-
-export const courseDefinitions: readonly CourseDefinition[] = [
+export const foundationCourseDefinitions: readonly CourseDefinition[] = Object.freeze([
   {
     id: 'python-foundations',
     slug: 'python-foundations',
@@ -155,47 +137,43 @@ export const courseDefinitions: readonly CourseDefinition[] = [
     moduleKinds: foundationKinds,
     prerequisites: [],
   },
-  {
-    id: 'python-data-tools',
-    slug: 'python-data-tools',
-    language: 'python',
-    shortName: 'Practical Python',
-    title: 'Practical Python: Data Tools',
-    description: 'Turn familiar Python building blocks into useful tools that clean, organize, total, and filter information.',
-    outcome: 'Build and explain a small Supply Tracker that turns inconsistent item names and quantities into a reliable report.',
-    kind: 'continuing',
-    level: 'Beginner II',
-    symbol: 'pi',
-    symbolLabel: 'Pi',
-    completionReviewLabel: 'Your Supply Tracker',
-    missionIds: pythonDataTools.modules.map((module) => module.id),
-    lessonIds: pythonDataTools.modules.flatMap((module) => module.lessonIds),
-    moduleTitles: [
-      'Functions that return answers',
-      'Cleaning and normalizing text',
-      'Lists that grow and change',
-      'Dictionaries and named data',
-      'Totals and filters',
-      'Build a Supply Tracker',
-    ],
-    moduleKinds: ['lessons', 'lessons', 'lessons', 'lessons', 'lessons', 'capstone'],
-    prerequisites: [
-      { kind: 'course', id: 'python-foundations', label: 'Complete Python Foundations' },
-      {
-        kind: 'project',
-        id: 'first-interactive-program',
-        label: 'Complete Your First Interactive Program',
-        path: '/projects/python/first-interactive-program',
-      },
-    ],
-  },
-] as const
+])
+
+export const courseDefinitions: readonly CourseDefinition[] = Object.freeze([
+  ...foundationCourseDefinitions,
+  ...controlledContinuingCourseRegistrations.map((registration) => registration.definition),
+])
+
+const continuingRegistrationByCourseId = new Map(
+  controlledContinuingCourseRegistrations.map((registration) => [
+    registration.definition.id,
+    registration,
+  ]),
+)
+
+for (const registration of controlledContinuingCourseRegistrations) {
+  const moduleIds = registration.manifest.modules.map((module) => module.id)
+  const lessonIds = registration.manifest.modules.flatMap((module) => module.lessonIds)
+  if (
+    registration.definition.kind !== 'continuing'
+    || registration.definition.language !== registration.language
+    || registration.manifest.courseId !== registration.definition.id
+    || moduleIds.length !== registration.definition.missionIds.length
+    || moduleIds.some((moduleId, index) => moduleId !== registration.definition.missionIds[index])
+    || lessonIds.length !== registration.definition.lessonIds.length
+    || lessonIds.some((lessonId, index) => lessonId !== registration.definition.lessonIds[index])
+  ) {
+    throw new Error(`Invalid continuing-course definition: ${registration.definition.id}.`)
+  }
+}
 
 const definitionsById = new Map(courseDefinitions.map((course) => [course.id, course]))
 const definitionsBySlug = new Map<string, CourseDefinition>(courseDefinitions.map((course) => [course.slug, course]))
 
 export function foundationCourseId(language: LanguageId): CourseId {
-  return foundationCourseIds[language]
+  const courseId = publishedFoundationCourseId(language)
+  if (!courseId) throw new Error(`No published foundation course for ${language}.`)
+  return courseId
 }
 
 export function courseDefinition(courseId: CourseId): CourseDefinition {
@@ -244,9 +222,11 @@ export function courseMissionLessonIds(
   const course = courseDefinition(courseId)
   if (!course.missionIds.includes(missionId)) return []
   if (course.kind === 'continuing') {
-    return publishedContinuingCourseLessonIds(courseId, missionId) ?? []
+    return continuingRegistrationByCourseId.get(courseId)?.manifest.modules.find((module) => (
+      module.id === missionId
+    ))?.lessonIds ?? []
   }
-  return durableCurriculumV1[`${course.language}/${missionId}` as keyof typeof durableCurriculumV1] ?? []
+  return foundationMissionLessonIds.get(missionId) ?? []
 }
 
 export function courseMissionOwnsLesson(

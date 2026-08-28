@@ -35,7 +35,7 @@ describe('course registry', () => {
         candidate.language === owner.split('/')[0]
         && candidate.missionIds.includes(owner.split('/')[1])
       ))
-      expect(course?.lessonIds).toEqual(expect.arrayContaining([...lessons]))
+      expect(course?.lessonIds).toEqual(expect.arrayContaining(lessons.map(([id]) => id)))
       expect(registered.has(owner)).toBe(true)
     }
   })

@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 import { cppCollectionsRecordsManifest } from '../data/cpp-collections-records-manifest'
+import { pythonDataToolsManifest } from '../data/python-data-tools-manifest'
 import { pythonInteractiveProject } from '../data/python-interactive-project'
 import { cppCompiledProject } from '../data/cpp-compiled-project'
 import { trackById } from '../data/curriculum'
@@ -21,6 +22,10 @@ import {
 describe('progress helpers', () => {
   const firstPythonLessonIds = trackById('python').missions[0].exercises.map((exercise) => exercise.id)
   const firstJavaLessonIds = trackById('java').missions[0].exercises.map((exercise) => exercise.id)
+  const pythonPrint = trackById('python').missions[0].exercises.find((exercise) => exercise.id === 'py-print')
+  const pythonConsole = trackById('python').missions[0].exercises.find((exercise) => exercise.id === 'py-console')
+  if (!pythonPrint) throw new Error('Python print exercise is missing.')
+  if (!pythonConsole) throw new Error('Python console exercise is missing.')
 
   it('starts with no lesson or project completion metadata', () => {
     expect(initialProgress()).toMatchObject({
@@ -89,8 +94,8 @@ describe('progress helpers', () => {
 
   it('records a completed lesson once while later retrievals only strengthen memory', () => {
     const now = new Date(2026, 7, 20)
-    const first = recordLessonSuccess(initialProgress(), 'py-print', true, now)
-    const replay = recordLessonSuccess(first, 'py-print', true, now)
+    const first = recordLessonSuccess(initialProgress(), pythonPrint, true, now)
+    const replay = recordLessonSuccess(first, pythonPrint, true, now)
 
     expect(first.completedLessons).toEqual(['py-print'])
     expect(first.xp).toBe(12)
@@ -110,15 +115,49 @@ describe('progress helpers', () => {
     })
   })
 
+  it('rejects a known lesson paired with another known concept', () => {
+    const current = initialProgress()
+    const mismatched = {
+      ...pythonPrint,
+      conceptId: pythonConsole.conceptId,
+    }
+
+    expect(recordLessonSuccess(current, mismatched)).toBe(current)
+  })
+
+  it('rejects a known lesson paired with the wrong XP award', () => {
+    const current = initialProgress()
+    const mismatched = {
+      ...pythonPrint,
+      xp: pythonPrint.xp + 1,
+    }
+
+    expect(recordLessonSuccess(current, mismatched)).toBe(current)
+  })
+
+  it('rejects a known lesson paired with the maximum safe integer as XP', () => {
+    const current = initialProgress()
+    const mismatched = {
+      ...pythonPrint,
+      xp: Number.MAX_SAFE_INTEGER,
+    }
+
+    expect(recordLessonSuccess(current, mismatched)).toBe(current)
+  })
+
   it('can persist a first lesson completion without awarding XP', () => {
     const now = new Date(2026, 7, 20)
-    const updated = recordLessonSuccess(initialProgress(), 'py-print', false, now)
+    const updated = recordLessonSuccess(initialProgress(), pythonPrint, false, now)
 
     expect(updated.completedLessons).toEqual(['py-print'])
     expect(updated.xp).toBe(0)
     expect(updated.dailyXp).toBe(0)
     expect(updated.conceptProgress['python-print'].correct).toBe(1)
-    expect(recordLessonSuccess(updated, 'unknown-lesson', true, now)).toBe(updated)
+    expect(recordLessonSuccess(updated, {
+      id: 'unknown-lesson',
+      conceptId: pythonPrint.conceptId,
+      xp: pythonPrint.xp,
+    }, true, now)).toBe(updated)
   })
 
   it('awards mission shards only on first completion', () => {
@@ -506,7 +545,7 @@ describe('progress helpers', () => {
 
     try {
       const completed = completeMission(
-        recordLessonSuccess(initialProgress('python'), 'pydata1-retrieve-call'),
+        recordLessonSuccess(initialProgress('python'), pythonDataToolsManifest['py-data-return-values'][0]),
         'py-data-return-values',
         new Date(2026, 7, 26),
       )
@@ -536,11 +575,11 @@ describe('progress helpers', () => {
     const moduleLessons = cppCollectionsRecordsManifest[moduleId]
     const now = new Date(2026, 7, 26)
     const completedLessons = moduleLessons.reduce(
-      (current, lesson) => recordLessonSuccess(current, lesson.id, true, now),
+      (current, lesson) => recordLessonSuccess(current, lesson, true, now),
       initialProgress('cpp'),
     )
     const completedModule = completeMission(completedLessons, moduleId, now)
-    const replayedLesson = recordLessonSuccess(completedModule, moduleLessons[0].id, true, now)
+    const replayedLesson = recordLessonSuccess(completedModule, moduleLessons[0], true, now)
     const replayedModule = completeMission(replayedLesson, moduleId, now)
 
     expect(completedLessons.xp).toBe(70)

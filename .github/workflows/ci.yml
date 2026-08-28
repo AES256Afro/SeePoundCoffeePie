@@ -25,8 +25,17 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Install Playwright Chromium
+        run: npx playwright install --with-deps chromium
+
       - name: Run tests
         run: npm test
+
+      - name: Verify Practical C++ candidate release gates
+        run: npm run check:cpp-content-candidate
+
+      - name: Verify packed foundation curriculum
+        run: npm run check:foundation-content
 
       - name: Run lint
         run: npm run lint
@@ -48,3 +57,17 @@ jobs:
 
       - name: Verify bundle budgets
         run: npm run check:bundle
+
+      - name: Run browser release gate
+        run: npm run test:e2e:built
+
+      - name: Upload browser test artifacts
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-browser-gate
+          path: |
+            playwright-report/
+            test-results/
+          if-no-files-found: ignore
+          retention-days: 7

@@ -1,5 +1,13 @@
-import { defineConfig, loadEnv } from 'vite'
 import react from '@vitejs/plugin-react'
+import type { ConfigEnv, PluginOption, UserConfig } from 'vite'
+import { configDefaults, defineConfig } from 'vitest/config'
+import { loadEnv } from 'vite'
+
+import {
+  productionControlledPublication,
+} from './scripts/controlled-course-publication.mjs'
+import { controlledPublicationSelector } from './scripts/controlled-publication-selector.mjs'
+import { controlledPracticalCppSitemap } from './scripts/practical-cpp-candidate-sitemap.mjs'
 
 const productionOrigin = 'https://seepoundcoffeepie.com'
 const upstreamGuestCookie = '__Host-spp_runner_guest'
@@ -13,12 +21,25 @@ function safeRunnerOrigin(value: string | undefined): string {
   return url.origin
 }
 
-export default defineConfig(({ mode }) => {
+export function createSiteViteConfig(
+  { mode }: ConfigEnv,
+  publicationPlugins: PluginOption[] = [
+    controlledPublicationSelector(productionControlledPublication.sources),
+    controlledPracticalCppSitemap(productionControlledPublication.routes),
+  ],
+): UserConfig {
   const environment = loadEnv(mode, process.cwd(), 'SPCP_')
   const runnerOrigin = safeRunnerOrigin(environment.SPCP_DEV_RUNNER_ORIGIN)
 
   return {
-    plugins: [react()],
+    plugins: [react(), ...publicationPlugins],
+    test: {
+      exclude: [
+        ...configDefaults.exclude,
+        'tests/e2e/**',
+        'tests/candidate-e2e/**',
+      ],
+    },
     server: {
       host: '127.0.0.1',
       port: 4173,
@@ -54,4 +75,6 @@ export default defineConfig(({ mode }) => {
       },
     },
   }
-})
+}
+
+export default defineConfig((environment) => createSiteViteConfig(environment))
