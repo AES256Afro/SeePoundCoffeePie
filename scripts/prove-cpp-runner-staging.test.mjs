@@ -328,30 +328,53 @@ describe('guarded Practical C++ staging regression orchestration', () => {
     expect(deps.writeProof).not.toHaveBeenCalled()
   })
 
-  it('waits after pause for two stable ready snapshots without weakening exact equality', async () => {
-    const provisioning = new Error(
-      'Runner application see-pound-coffee-pie-phase2-staging-runnerjavasandbox is provisioning, not ready.',
+  it.each(['active', 'provisioning'])(
+    'waits through exact %s readiness after pause without weakening exact equality',
+    async (transientState) => {
+      const transientReadiness = new Error(
+        `Runner application see-pound-coffee-pie-phase2-staging-runnerjavasandbox is ${transientState}, not ready.`,
+      )
+      const deps = dependencies({
+        readContainerSnapshot: vi.fn()
+          .mockReturnValueOnce(stagingSnapshot())
+          .mockImplementationOnce(() => { throw transientReadiness })
+          .mockReturnValueOnce(stagingSnapshot())
+          .mockReturnValueOnce(stagingSnapshot()),
+      })
+
+      const proof = await runCppStagingRegressionProof([], deps)
+
+      expect(proof.status).toBe('passed')
+      expect(deps.setStagingRunnerEnabled).toHaveBeenLastCalledWith(false)
+      expect(deps.requireStagingRunnerState).toHaveBeenLastCalledWith(false)
+      expect(deps.readContainerSnapshot).toHaveBeenCalledTimes(4)
+      expect(deps.sleep).toHaveBeenCalledTimes(2)
+      expect(deps.sleep).toHaveBeenCalledWith(2_000)
+      expect(deps.writeProof).toHaveBeenCalledOnce()
+    },
+  )
+
+  it('rejects an unreviewed container readiness state without retrying', async () => {
+    const unreviewedReadiness = new Error(
+      'Runner application see-pound-coffee-pie-phase2-staging-runnerjavasandbox is failed, not ready.',
     )
     const deps = dependencies({
       readContainerSnapshot: vi.fn()
         .mockReturnValueOnce(stagingSnapshot())
-        .mockImplementationOnce(() => { throw provisioning })
-        .mockReturnValueOnce(stagingSnapshot())
-        .mockReturnValueOnce(stagingSnapshot()),
+        .mockImplementationOnce(() => { throw unreviewedReadiness }),
     })
 
-    const proof = await runCppStagingRegressionProof([], deps)
-
-    expect(proof.status).toBe('passed')
+    await expect(runCppStagingRegressionProof([], deps)).rejects.toThrow(
+      /is failed, not ready/iu,
+    )
     expect(deps.setStagingRunnerEnabled).toHaveBeenLastCalledWith(false)
     expect(deps.requireStagingRunnerState).toHaveBeenLastCalledWith(false)
-    expect(deps.readContainerSnapshot).toHaveBeenCalledTimes(4)
-    expect(deps.sleep).toHaveBeenCalledTimes(2)
-    expect(deps.sleep).toHaveBeenCalledWith(2_000)
-    expect(deps.writeProof).toHaveBeenCalledOnce()
+    expect(deps.readContainerSnapshot).toHaveBeenCalledTimes(2)
+    expect(deps.sleep).not.toHaveBeenCalled()
+    expect(deps.writeProof).not.toHaveBeenCalled()
   })
 
-  it('retries only provisioning and fails immediately for changed release state', async () => {
+  it('retries only reviewed readiness states and fails immediately for changed release state', async () => {
     const baseline = stagingSnapshot()
     const changed = stagingSnapshot()
     changed.find(({ name }) => name.endsWith('runnercppsandbox')).image = (

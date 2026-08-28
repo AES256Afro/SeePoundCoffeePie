@@ -197,7 +197,7 @@ export function assertStagingReleaseUnchanged({
 
 function isTransientContainerReadinessError(error) {
   return error instanceof Error
-    && /^Runner application [a-z0-9-]+ is provisioning, not ready\.$/u.test(error.message)
+    && /^Runner application [a-z0-9-]+ is (?:active|provisioning), not ready\.$/u.test(error.message)
 }
 
 export async function waitForStableStagingRelease({
