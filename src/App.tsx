@@ -1814,6 +1814,7 @@ function AppContent() {
   useEffect(() => {
     let active = true
     fetch('/api/auth/session', {
+      cache: 'no-store',
       credentials: 'same-origin',
       headers: { Accept: 'application/json' },
     })

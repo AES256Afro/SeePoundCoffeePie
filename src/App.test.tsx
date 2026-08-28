@@ -134,6 +134,20 @@ describe('beginner lesson interactions', () => {
     return screen.getByRole('textbox', { name: 'Code editor' })
   }
 
+  it('bypasses an old cached redirect when checking the current session', async () => {
+    const fetchMock = vi.mocked(fetch)
+
+    render(<App />)
+
+    await waitFor(() => {
+      expect(fetchMock).toHaveBeenCalledWith('/api/auth/session', {
+        cache: 'no-store',
+        credentials: 'same-origin',
+        headers: { Accept: 'application/json' },
+      })
+    })
+  })
+
   it('persists a passed lesson, resumes at the next lesson, and does not award replay XP', async () => {
     await openFirstEditableStep()
     await waitFor(() => {
