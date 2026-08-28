@@ -7,6 +7,11 @@ import {
   uniqueDeployedJavaScriptAssetByPath,
 } from './deployed-javascript-graph.mjs'
 import {
+  assertReviewedApplicationEntry,
+  assertReviewedInitialCourseRegistry,
+  assertReviewedPracticalPythonAssets,
+} from './deployed-course-assets.mjs'
+import {
   assertReviewedPublishedGrant,
   assertReviewedRunnerStatus,
   assertReviewedTeachingOnlyGrantRejection,
@@ -129,20 +134,24 @@ const entryAssetResponse = await requestWithFreshDns(entryAssetUrl, {
   redirect: 'manual',
 })
 const entryAsset = await entryAssetResponse.text()
-if (
-  entryAssetResponse.status !== 200
-  || !(entryAssetResponse.headers.get('content-type') ?? '').includes('javascript')
-  || !entryAsset.includes('python-data-tools')
-  || !entryAsset.includes(unpublishedCppCourseId)
-) {
-  throw new Error('The deployed application entry does not contain the reviewed Practical Python and Practical C++ course registry')
-}
+assertReviewedApplicationEntry({
+  asset: entryAsset,
+  contentType: entryAssetResponse.headers.get('content-type') ?? '',
+  httpStatus: entryAssetResponse.status,
+  label: 'Production',
+  requiredMarkers: ['Your first programming lesson'],
+})
 
 const deployedJavaScriptAssets = await inspectDeployedJavaScriptChunkGraph({
   allowedOrigin: canonicalOrigin,
   entryAsset,
   entryAssetUrl,
   request: requestWithFreshDns,
+})
+const initialJavaScriptAssetUrls = assertReviewedInitialCourseRegistry({
+  assets: deployedJavaScriptAssets,
+  html: body,
+  label: 'Production',
 })
 for (const [assetUrl, asset] of deployedJavaScriptAssets) {
   for (const marker of practicalCppPrivateMarkers) {
@@ -154,28 +163,10 @@ for (const [assetUrl, asset] of deployedJavaScriptAssets) {
   }
 }
 
-async function verifyPracticalPythonAsset(pattern, markers, label) {
-  const deployedAsset = uniqueDeployedJavaScriptAssetByPath(deployedJavaScriptAssets, pattern)
-  if (!deployedAsset) {
-    throw new Error(`The deployed JavaScript graph does not contain one unique ${label}`)
-  }
-
-  const [, asset] = deployedAsset
-  const acceptedMarkers = Array.isArray(markers) ? markers : [markers]
-  if (!acceptedMarkers.some((marker) => asset.includes(marker))) {
-    throw new Error(`The deployed ${label} is missing or does not match Phase 5A`)
-  }
-}
-
-await verifyPracticalPythonAsset(
-  /\/assets\/PythonDataToolsRoute-[A-Za-z0-9_-]+\.js$/u,
-  ['Course complete.', 'python-data-tools-course-'],
-  'Practical Python route asset',
-)
-await verifyPracticalPythonAsset(
-  /\/assets\/python-data-tools-course-[A-Za-z0-9_-]+\.js$/u,
-  'Products: 2',
-  'Practical Python teaching-content asset',
+assertReviewedPracticalPythonAssets(
+  deployedJavaScriptAssets,
+  'Production',
+  initialJavaScriptAssetUrls,
 )
 
 const practicalCppLoader = uniqueDeployedJavaScriptAssetByPath(
@@ -186,8 +177,8 @@ if (!practicalCppLoader) {
   throw new Error('The deployed JavaScript graph does not contain one unique Practical C++ teaching-data loader')
 }
 const [practicalCppLoaderUrl, practicalCppLoaderAsset] = practicalCppLoader
-if (practicalCppLoaderUrl === entryAssetUrl.href) {
-  throw new Error('The Practical C++ teaching-data loader entered the initial application asset')
+if (initialJavaScriptAssetUrls.has(practicalCppLoaderUrl)) {
+  throw new Error('The Practical C++ teaching-data loader entered the initial application graph')
 }
 const practicalCppJsonNames = [...practicalCppLoaderAsset.matchAll(
   /cpp-collections-records-course-packed\.generated-[A-Za-z0-9_-]{6,}\.json/gu,
@@ -202,7 +193,9 @@ const practicalCppJsonOwners = [...deployedJavaScriptAssets].filter(([, asset]) 
 if (
   practicalCppJsonOwners.length !== 1
   || practicalCppJsonOwners[0][0] !== practicalCppLoaderUrl
-  || entryAsset.includes(practicalCppJsonName)
+  || [...initialJavaScriptAssetUrls].some((assetUrl) => (
+    deployedJavaScriptAssets.get(assetUrl)?.includes(practicalCppJsonName)
+  ))
 ) {
   throw new Error('The Practical C++ teaching-data asset is not isolated behind its one reviewed lazy loader')
 }

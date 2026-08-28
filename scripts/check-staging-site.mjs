@@ -1,5 +1,10 @@
 import { readFile } from 'node:fs/promises'
 
+import {
+  assertReviewedApplicationEntry,
+  assertReviewedInitialCourseRegistry,
+  assertReviewedPracticalPythonAssets,
+} from './deployed-course-assets.mjs'
 import { inspectDeployedJavaScriptChunkGraph } from './deployed-javascript-graph.mjs'
 import {
   assertReviewedPublishedGrant,
@@ -85,21 +90,24 @@ const entryPath = shell.match(/<script[^>]+src="([^"]+\.js)"[^>]*><\/script>/u)?
 if (!entryPath) throw new Error('Staging did not name its JavaScript entry asset.')
 const entryResponse = await request(entryPath)
 const entry = await entryResponse.text()
-if (
-  entryResponse.status !== 200
-  || !(entryResponse.headers.get('content-type') ?? '').includes('javascript')
-  || !entry.includes('Your first programming lesson')
-  || !entry.includes('python-data-tools')
-  || !entry.includes(unpublishedCppCourseId)
-) {
-  throw new Error('Staging does not contain the reviewed Practical Python and Practical C++ application entry.')
-}
+assertReviewedApplicationEntry({
+  asset: entry,
+  contentType: entryResponse.headers.get('content-type') ?? '',
+  httpStatus: entryResponse.status,
+  label: 'Staging',
+  requiredMarkers: ['Your first programming lesson'],
+})
 
 const deployedJavaScriptAssets = await inspectDeployedJavaScriptChunkGraph({
   allowedOrigin: base.origin,
   entryAsset: entry,
   entryAssetUrl: new URL(entryPath, base),
   request,
+})
+const initialJavaScriptAssetUrls = assertReviewedInitialCourseRegistry({
+  assets: deployedJavaScriptAssets,
+  html: shell,
+  label: 'Staging',
 })
 for (const [assetUrl, asset] of deployedJavaScriptAssets) {
   for (const marker of practicalCppPrivateMarkers) {
@@ -111,6 +119,12 @@ for (const [assetUrl, asset] of deployedJavaScriptAssets) {
   }
 }
 
+assertReviewedPracticalPythonAssets(
+  deployedJavaScriptAssets,
+  'Staging',
+  initialJavaScriptAssetUrls,
+)
+
 const practicalCppLoaders = [...deployedJavaScriptAssets].filter(([assetUrl]) => (
   /\/assets\/cpp-collections-records-course-packed-[A-Za-z0-9_-]+\.js$/u.test(
     new URL(assetUrl).pathname,
@@ -120,8 +134,8 @@ if (practicalCppLoaders.length !== 1) {
   throw new Error('Staging does not contain one unique Practical C++ teaching-data loader.')
 }
 const [practicalCppLoaderUrl, practicalCppLoaderAsset] = practicalCppLoaders[0]
-if (practicalCppLoaderUrl === new URL(entryPath, base).href) {
-  throw new Error('The Practical C++ teaching-data loader entered the initial staging asset.')
+if (initialJavaScriptAssetUrls.has(practicalCppLoaderUrl)) {
+  throw new Error('The Practical C++ teaching-data loader entered the initial staging graph.')
 }
 const practicalCppJsonNames = [...practicalCppLoaderAsset.matchAll(
   /cpp-collections-records-course-packed\.generated-[A-Za-z0-9_-]{6,}\.json/gu,
@@ -136,7 +150,9 @@ const practicalCppJsonOwners = [...deployedJavaScriptAssets].filter(([, asset]) 
 if (
   practicalCppJsonOwners.length !== 1
   || practicalCppJsonOwners[0][0] !== practicalCppLoaderUrl
-  || entry.includes(practicalCppJsonName)
+  || [...initialJavaScriptAssetUrls].some((assetUrl) => (
+    deployedJavaScriptAssets.get(assetUrl)?.includes(practicalCppJsonName)
+  ))
 ) {
   throw new Error('The staging Practical C++ teaching data is not isolated behind its reviewed lazy loader.')
 }
@@ -264,4 +280,4 @@ for (const practicalCppLessonUrl of practicalCppCandidateLessonUrls) {
   }
 }
 
-console.log(`Staging site verification passed for ${base.origin}, the Practical Python and Practical C++ entry, a ${deployedJavaScriptAssets.size}-asset JavaScript chunk graph, exact ${practicalCppSitemap.lessonCount}-lesson C++ sitemap, six representative routes, all ${practicalCppCandidateLessonUrls.length} C++ lesson routes, account shell, configured ${requireEnabled ? 'enabled code checker with reviewed Python and C++ grants' : 'paused code checker with executable grants rejected'}, ${practicalCppRunnerBackedLessonIds.length} runner-backed C++ assignments, and ${practicalCppTeachingOnlyLessonIds.length} teaching-only C++ assignments rejected with 404.`)
+console.log(`Staging site verification passed for ${base.origin}, the Practical Python and Practical C++ lazy assets, a ${deployedJavaScriptAssets.size}-asset JavaScript chunk graph, exact ${practicalCppSitemap.lessonCount}-lesson C++ sitemap, six representative routes, all ${practicalCppCandidateLessonUrls.length} C++ lesson routes, account shell, configured ${requireEnabled ? 'enabled code checker with reviewed Python and C++ grants' : 'paused code checker with executable grants rejected'}, ${practicalCppRunnerBackedLessonIds.length} runner-backed C++ assignments, and ${practicalCppTeachingOnlyLessonIds.length} teaching-only C++ assignments rejected with 404.`)
