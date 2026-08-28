@@ -2,7 +2,7 @@
 
 Date: 2026-08-28
 
-Status: historical local evidence from the 2026-08-28 unpublished-candidate checkpoint, followed by the current publication-gate shape. This is not hosted CI, staging, or production evidence, and it does not claim a deployed Worker version.
+Status: historical local evidence from the 2026-08-28 unpublished-candidate checkpoint, followed by exact current source and hosted CI evidence. This is not staging or production evidence, and it does not claim a deployed Worker version.
 
 ## Purpose
 
@@ -108,7 +108,21 @@ At that checkpoint, the five-course artifact contained no Practical C++ JSON, ca
 
 The current source selects the complete six-course application: 36 modules, 180 lessons, and 112 runner assignments. Practical C++ has exactly 12 runner-backed lessons and 18 teaching-only lessons. The teaching-only IDs must always return not found from the runner boundary.
 
-Practical C++ browser coverage now runs against the ordinary production `dist` artifact. There is no second candidate-only Playwright server or candidate-only browser configuration. The merged route matrix covers the six-card catalog, both continuing-course prerequisite paths, canonical Practical C++ course and lesson routes, representative first, middle, and final lesson history, keyboard editor exit, 390-pixel navigation, Practice, Code Reference, malformed teaching data, and scoped accessibility checks. The final test and bundle counts are intentionally left for the exact release commit and later `PHASE_5B_RELEASE.md` record.
+Practical C++ browser coverage now runs against the ordinary production `dist` artifact. There is no second candidate-only Playwright server or candidate-only browser configuration. The merged route matrix covers the six-card catalog, both continuing-course prerequisite paths, canonical Practical C++ course and lesson routes, representative first, middle, and final lesson history, keyboard editor exit, 390-pixel navigation, Practice, Code Reference, malformed teaching data, and scoped accessibility checks.
+
+## Exact current source and CI evidence
+
+The reviewed publication-candidate commit is `3f7e709326cdeb9652d668ca5ee42fbbf2c48504`. At the time of this record:
+
+- the checkout was clean on `main`;
+- local `HEAD`, local `origin/main`, and the live remote `refs/heads/main` all matched that exact commit;
+- the complete local release gate passed 83 Vitest files with 1,008 tests and 60 Playwright browser cases;
+- deterministic Practical C++ generation produced one 42,222-byte lazy teaching asset;
+- the publication boundary selected exactly 12 runner-backed Practical C++ assignments and kept the other 18 lessons teaching-only;
+- the full six-course source, browser privacy scan, build, deployment contract, and bundle checks passed;
+- hosted GitHub Actions `CI` push [run 33192113526](https://github.com/AES256Afro/SeePoundCoffeePie/actions/runs/33192113526) completed successfully for that exact commit.
+
+These results finish the source and hosted CI prerequisites for M009. They do not prove that this commit or its reviewed C++ runner image is deployed to staging. The mode-0600 staging regression proof is still absent, the complete manual learner and accessibility walkthrough is still unrecorded, and `PHASE_5B_RELEASE.md` must not be created until the deployed evidence exists.
 
 ## What this does not prove
 
@@ -152,4 +166,4 @@ Run the production-dist browser surface with every other local release check:
 npm run check:release
 ```
 
-On failure, Playwright writes its HTML report and test artifacts to ignored local directories. CI uploads those artifacts for a failed run. A successful local run does not create hosted CI evidence until the exact reviewed commit is pushed and the hosted job passes. Staging and production remain separate evidence even after hosted CI succeeds.
+On failure, Playwright writes its HTML report and test artifacts to ignored local directories. CI uploads those artifacts for a failed run. The hosted source gate above is tied to one exact reviewed commit. A later source change requires a new exact-commit CI record. Staging and production remain separate evidence even after hosted CI succeeds.
