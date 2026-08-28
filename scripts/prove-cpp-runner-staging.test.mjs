@@ -28,6 +28,7 @@ import {
   parseSuccessfulExactCommitCi,
   runCppStagingRegressionProof,
   stagingRunnerKvPutArgs,
+  waitForStableStagingRelease,
 } from './prove-cpp-runner-staging.mjs'
 
 const commit = '716bd4acacbcaf892e7710cde3f38451bf9d2c90'
@@ -222,13 +223,20 @@ describe('guarded Practical C++ staging regression orchestration', () => {
       invalidateProof: vi.fn(() => events.push('proof:invalidate')),
       log: vi.fn(),
       now: vi.fn(() => nowMilliseconds),
-      readActiveDeploymentVersion: vi.fn(() => workerVersion),
-      readContainerSnapshot: vi.fn(() => structuredClone(snapshot)),
+      readActiveDeploymentVersion: vi.fn(() => {
+        events.push('worker:read')
+        return workerVersion
+      }),
+      readContainerSnapshot: vi.fn(() => {
+        events.push('containers:read')
+        return structuredClone(snapshot)
+      }),
       requireStagingRunnerState: vi.fn(async (enabled) => {
         events.push(`state:${enabled}`)
       }),
       runStagingRegressionCheck: vi.fn((command) => events.push(`check:${command}`)),
       setStagingRunnerEnabled: vi.fn((enabled) => events.push(`set:${enabled}`)),
+      sleep: vi.fn(async () => undefined),
       verifiedReleaseCommit: vi.fn(() => commit),
       verifyHostedCi: vi.fn(() => ({
         conclusion: 'success',
@@ -267,6 +275,12 @@ describe('guarded Practical C++ staging regression orchestration', () => {
     expect(deps.events.indexOf('proof:invalidate')).toBeLessThan(deps.events.indexOf('set:true'))
     expect(deps.events.indexOf('set:false')).toBeGreaterThan(
       deps.events.indexOf(`check:${CPP_STAGING_REGRESSION_CHECKS.at(-1)}`),
+    )
+    expect(deps.events.indexOf('set:false')).toBeLessThan(
+      deps.events.findIndex((event, index) => (
+        index > deps.events.indexOf(`check:${CPP_STAGING_REGRESSION_CHECKS.at(-1)}`)
+        && event === 'worker:read'
+      )),
     )
   })
 
@@ -312,6 +326,87 @@ describe('guarded Practical C++ staging regression orchestration', () => {
     await expect(runCppStagingRegressionProof([], deps)).rejects.toThrow(/complete staging runner snapshot changed/iu)
     expect(deps.setStagingRunnerEnabled).toHaveBeenLastCalledWith(false)
     expect(deps.writeProof).not.toHaveBeenCalled()
+  })
+
+  it('waits after pause for two stable ready snapshots without weakening exact equality', async () => {
+    const provisioning = new Error(
+      'Runner application see-pound-coffee-pie-phase2-staging-runnerjavasandbox is provisioning, not ready.',
+    )
+    const deps = dependencies({
+      readContainerSnapshot: vi.fn()
+        .mockReturnValueOnce(stagingSnapshot())
+        .mockImplementationOnce(() => { throw provisioning })
+        .mockReturnValueOnce(stagingSnapshot())
+        .mockReturnValueOnce(stagingSnapshot()),
+    })
+
+    const proof = await runCppStagingRegressionProof([], deps)
+
+    expect(proof.status).toBe('passed')
+    expect(deps.setStagingRunnerEnabled).toHaveBeenLastCalledWith(false)
+    expect(deps.requireStagingRunnerState).toHaveBeenLastCalledWith(false)
+    expect(deps.readContainerSnapshot).toHaveBeenCalledTimes(4)
+    expect(deps.sleep).toHaveBeenCalledTimes(2)
+    expect(deps.sleep).toHaveBeenCalledWith(2_000)
+    expect(deps.writeProof).toHaveBeenCalledOnce()
+  })
+
+  it('retries only provisioning and fails immediately for changed release state', async () => {
+    const baseline = stagingSnapshot()
+    const changed = stagingSnapshot()
+    changed.find(({ name }) => name.endsWith('runnercppsandbox')).image = (
+      changed.find(({ name }) => name.endsWith('runnercppsandbox')).image
+        .replace(/sha256:[0-9a-f]{64}$/u, `sha256:${'f'.repeat(64)}`)
+    )
+    const readContainerSnapshot = vi.fn()
+      .mockReturnValueOnce(baseline)
+      .mockReturnValueOnce(changed)
+    const deps = dependencies({ readContainerSnapshot })
+
+    await expect(runCppStagingRegressionProof([], deps)).rejects.toThrow(
+      /complete staging runner snapshot changed/iu,
+    )
+    expect(readContainerSnapshot).toHaveBeenCalledTimes(2)
+    expect(deps.sleep).not.toHaveBeenCalled()
+    expect(deps.writeProof).not.toHaveBeenCalled()
+  })
+
+  it('does not mask a changed Worker when containers are also provisioning', async () => {
+    const provisioning = new Error(
+      'Runner application see-pound-coffee-pie-phase2-staging-runnerjavasandbox is provisioning, not ready.',
+    )
+    const readContainerSnapshot = vi.fn()
+      .mockReturnValueOnce(stagingSnapshot())
+      .mockImplementationOnce(() => { throw provisioning })
+    const deps = dependencies({
+      readActiveDeploymentVersion: vi.fn()
+        .mockReturnValueOnce(workerVersion)
+        .mockReturnValueOnce('22222222-2222-4222-8222-222222222222'),
+      readContainerSnapshot,
+    })
+
+    await expect(runCppStagingRegressionProof([], deps)).rejects.toThrow(
+      /active staging Worker changed/iu,
+    )
+    expect(deps.verifyVersionMetadata).toHaveBeenCalledOnce()
+    expect(readContainerSnapshot).toHaveBeenCalledOnce()
+    expect(deps.sleep).not.toHaveBeenCalled()
+    expect(deps.writeProof).not.toHaveBeenCalled()
+  })
+
+  it('rejects invalid staging readiness wait bounds before reading live state', async () => {
+    const deps = dependencies()
+
+    await expect(waitForStableStagingRelease({
+      baselineContainers: stagingSnapshot(),
+      baselineWorkerVersion: workerVersion,
+      metadata: {},
+    }, {
+      ...deps,
+      attempts: 1,
+      requiredSamples: 2,
+    })).rejects.toThrow(/attempt and sample counts/iu)
+    expect(deps.readContainerSnapshot).not.toHaveBeenCalled()
   })
 
   it('does not open staging or record a proof without a clean remote commit and successful CI', async () => {

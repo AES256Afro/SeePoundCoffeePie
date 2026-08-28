@@ -195,6 +195,70 @@ export function assertStagingReleaseUnchanged({
   }
 }
 
+function isTransientContainerReadinessError(error) {
+  return error instanceof Error
+    && /^Runner application [a-z0-9-]+ is provisioning, not ready\.$/u.test(error.message)
+}
+
+export async function waitForStableStagingRelease({
+  baselineContainers,
+  baselineWorkerVersion,
+  metadata,
+}, {
+  attempts = 60,
+  readActiveDeploymentVersion: readWorkerVersion,
+  readContainerSnapshot: readContainers,
+  requiredSamples = 2,
+  sleep,
+  verifyVersionMetadata: verifyMetadata,
+}) {
+  if (
+    !Number.isSafeInteger(attempts)
+    || attempts < 1
+    || !Number.isSafeInteger(requiredSamples)
+    || requiredSamples < 1
+    || requiredSamples > attempts
+  ) {
+    throw new Error('The staging readiness wait needs valid attempt and sample counts.')
+  }
+
+  let stableSamples = 0
+  let lastReadinessError
+  for (let attempt = 1; attempt <= attempts; attempt += 1) {
+    const currentWorkerVersion = readWorkerVersion('staging')
+    if (currentWorkerVersion !== baselineWorkerVersion) {
+      throw new Error('The active staging Worker changed during the recorded regression run.')
+    }
+    verifyMetadata('staging', currentWorkerVersion, metadata)
+    try {
+      const currentContainers = readContainers('staging')
+      assertStagingReleaseUnchanged({
+        baselineContainers,
+        baselineWorkerVersion,
+        currentContainers,
+        currentWorkerVersion,
+      })
+      stableSamples += 1
+      if (stableSamples >= requiredSamples) {
+        return {
+          containers: currentContainers,
+          workerVersion: currentWorkerVersion,
+        }
+      }
+    } catch (error) {
+      if (!isTransientContainerReadinessError(error)) throw error
+      stableSamples = 0
+      lastReadinessError = error
+    }
+    if (attempt < attempts) await sleep(2_000)
+  }
+
+  throw new Error(
+    'The staging runner applications did not return to two stable ready snapshots.',
+    { cause: lastReadinessError },
+  )
+}
+
 export function defaultCppStagingRegressionDependencies() {
   return {
     invalidateProof: invalidateCppStagingRegressionProof,
@@ -205,6 +269,7 @@ export function defaultCppStagingRegressionDependencies() {
     requireStagingRunnerState,
     runStagingRegressionCheck,
     setStagingRunnerEnabled,
+    sleep: (milliseconds) => new Promise((resolvePromise) => setTimeout(resolvePromise, milliseconds)),
     verifiedReleaseCommit,
     verifyHostedCi,
     verifyVersionMetadata,
@@ -260,15 +325,6 @@ export async function runCppStagingRegressionProof(
       dependencies.log(`Running ${command}.`)
       dependencies.runStagingRegressionCheck(command)
     }
-    const checkedWorkerVersion = dependencies.readActiveDeploymentVersion('staging')
-    dependencies.verifyVersionMetadata('staging', checkedWorkerVersion, metadata)
-    const checkedContainers = dependencies.readContainerSnapshot('staging')
-    assertStagingReleaseUnchanged({
-      baselineContainers,
-      baselineWorkerVersion,
-      currentContainers: checkedContainers,
-      currentWorkerVersion: checkedWorkerVersion,
-    })
   } catch (error) {
     regressionError = error
   } finally {
@@ -285,15 +341,13 @@ export async function runCppStagingRegressionProof(
     )
   }
 
-  const finalWorkerVersion = dependencies.readActiveDeploymentVersion('staging')
-  dependencies.verifyVersionMetadata('staging', finalWorkerVersion, metadata)
-  const finalContainers = dependencies.readContainerSnapshot('staging')
-  assertStagingReleaseUnchanged({
+  const stableRelease = await waitForStableStagingRelease({
     baselineContainers,
     baselineWorkerVersion,
-    currentContainers: finalContainers,
-    currentWorkerVersion: finalWorkerVersion,
-  })
+    metadata,
+  }, dependencies)
+  const finalWorkerVersion = stableRelease.workerVersion
+  const finalContainers = stableRelease.containers
   const finalCommit = dependencies.verifiedReleaseCommit()
   if (finalCommit !== commit) {
     throw new Error('The exact clean remote release commit changed during the staging regression run.')
