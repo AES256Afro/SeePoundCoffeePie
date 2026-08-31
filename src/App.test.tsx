@@ -4,6 +4,7 @@ import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testi
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import App from './App'
 import { cppCompiledProject } from './data/cpp-compiled-project'
+import { academyCourses, academyModuleForId, academyPathForId } from './data/academy-manifest'
 import { trackById } from './data/curriculum'
 import * as foundationCourseLoader from './data/foundation-course-loaders'
 import * as practicePublicationLoader from './data/practice-publication'
@@ -1619,6 +1620,35 @@ describe('beginner lesson interactions', () => {
     expect(pythonCard).toBeTruthy()
     expect(within(pythonCard as HTMLElement).getByText('1 of 30 lessons complete')).toBeTruthy()
     expect(within(pythonCard as HTMLElement).queryByText(/modules complete/iu)).toBeNull()
+  })
+
+  it('keeps every Other subjects course open in a compact, non-repeating card', () => {
+    window.history.replaceState({}, '', '/courses')
+
+    render(<App />)
+    fireEvent.click(screen.getByRole('button', { name: 'Other subjects' }))
+
+    const section = screen.getByRole('region', { name: 'Other subjects' })
+    expect(within(section).queryByText(/Course reference/iu)).toBeNull()
+    expect(within(section).queryByText('Open to guests')).toBeNull()
+
+    for (const course of academyCourses) {
+      const path = academyPathForId(course.pathId)
+      if (!path) throw new Error(`Missing academy path ${course.pathId}.`)
+      const unitCount = course.moduleIds.flatMap((moduleId) => academyModuleForId(moduleId)?.unitIds ?? []).length
+      const card = within(section).getByRole('heading', { name: course.title }).closest('article')
+      expect(card).toBeTruthy()
+      const cardQueries = within(card as HTMLElement)
+      expect(cardQueries.getByText(course.outcome)).toBeTruthy()
+      expect(cardQueries.queryByText(course.summary)).toBeNull()
+      expect(cardQueries.getByText(`${unitCount} units · ${course.time}`)).toBeTruthy()
+      expect(cardQueries.getByText(`0 of ${unitCount} units complete`)).toBeTruthy()
+      expect(cardQueries.getByRole('progressbar', { name: `${course.title} progress` }).getAttribute('aria-valuenow')).toBe('0')
+      const links = cardQueries.getAllByRole('link')
+      expect(links).toHaveLength(1)
+      expect(links[0].textContent).toMatch(/Open course/iu)
+      expect(links[0].getAttribute('href')).toBe(`/paths/${path.slug}/${course.slug}`)
+    }
   })
 
   it('keeps Python Foundations complete and its guided project unlocked after Data Tools exists', async () => {

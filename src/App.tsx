@@ -752,27 +752,37 @@ function CourseCatalog({ progress }: { progress: LearnerProgress }) {
       {showCourses && <section className="course-grid" aria-label="Courses">
         {filteredCourses.map((course) => <CourseCard course={course} key={course.id} />)}
       </section>}
-      {showOpenLearning && <section className="academy-catalog-section" aria-labelledby="open-learning-title">
+      {showOpenLearning && <section className="guided-project-list academy-catalog-section" aria-labelledby="open-learning-title">
         <div className="section-heading-open">
           <div><p className="eyebrow">No earlier course required</p><h2 id="open-learning-title">Other subjects</h2></div>
           <p>Read the material and use prepared exercises in your browser. Every published page is open.</p>
         </div>
-        <div className="academy-card-grid">
+        <div className="course-grid">
           {academyCourses.map((course) => {
             const path = academyPathForId(course.pathId)
             if (!path) return null
             const unitIds = course.moduleIds.flatMap((moduleId) => academyModuleForId(moduleId)?.unitIds ?? [])
             const complete = unitIds.filter((unitId) => progress.completedLessons.includes(unitId)).length
+            const progressPercent = unitIds.length === 0 ? 0 : Math.round((complete / unitIds.length) * 100)
             return (
-              <article className={`academy-card academy-catalog-card${course.pathId === 'RVF-PATH' ? ' academy-catalog-card--reality' : ''}`} key={course.id}>
-                <small>{path.title} · Course reference {course.id}</small>
-                <h2>{course.title}</h2>
-                <p>{course.summary}</p>
+              <article className="course-card academy-catalog-card" key={course.id}>
+                <div className="course-card__heading"><div><h3>{course.title}</h3></div></div>
+                <p>{course.outcome}</p>
                 <dl>
-                  <div><dt>What you will learn</dt><dd>{course.outcome}</dd></div>
                   <div><dt>Course size</dt><dd>{unitIds.length} units · {course.time}</dd></div>
+                  <div><dt>Progress</dt><dd>{complete} of {unitIds.length} units complete</dd></div>
                 </dl>
-                <div className="academy-card__meta"><span>Open to guests</span><span>{complete} of {unitIds.length} units complete</span></div>
+                <div className="course-card__progress">
+                  <i
+                    aria-label={`${course.title} progress`}
+                    aria-valuemax={100}
+                    aria-valuemin={0}
+                    aria-valuenow={progressPercent}
+                    role="progressbar"
+                  >
+                    <b style={{ width: `${progressPercent}%` }} />
+                  </i>
+                </div>
                 <AppLink className="primary-action" to={academyCoursePath(path.id, course.id)}>Open course <ArrowRight aria-hidden="true" size={17} /></AppLink>
               </article>
             )

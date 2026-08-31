@@ -265,16 +265,12 @@ function PreparationPage({ course, onNavigate, pageId, path }: { course: Academy
 }
 
 const unitSectionLinks = [
-  ['unit-start', 'Before you begin'],
-  ['unit-words', 'Words on this page'],
-  ['unit-example', 'Example and prediction'],
-  ['unit-result', 'Prepared result'],
-  ['unit-explanation', 'Step-by-step explanation'],
-  ['unit-practice', 'Practice'],
-  ['unit-check', 'Knowledge check'],
-  ['unit-recap', 'Recap and limits'],
-  ['unit-sources', 'Sources'],
-  ['unit-stop', 'Stop and resume'],
+  ['unit-start', 'Start'],
+  ['unit-words', 'Words'],
+  ['unit-example', 'Example'],
+  ['unit-practice', 'Try it'],
+  ['unit-check', 'Check'],
+  ['unit-review', 'Review and continue'],
 ] as const
 
 function ContentParagraphs({ paragraphs }: { paragraphs: readonly string[] }) {
@@ -316,10 +312,9 @@ function UnitPage({ course, module, onNavigate, path, progress, unit, onProgress
     <main className="academy-page academy-unit-page" id="main-content" tabIndex={-1}>
       <AcademyBreadcrumbs course={course} module={module} onNavigate={onNavigate} path={path} />
       <header className="academy-heading">
-        <p className="eyebrow">Unit reference {unit.id} · Open unit</p>
+        <p className="eyebrow">Unit {unitIndex + 1} of {allCourseUnits.length} · Unit reference {unit.id}</p>
         <h1>{unit.title}</h1>
         <p>{unit.summary}</p>
-        <AcademyFacts activity={unit.activity} platform={unit.platform} time={unit.time} />
       </header>
       <div className="academy-unit-layout">
         <nav className="academy-unit-nav" aria-label="Sections on this page">
@@ -333,34 +328,32 @@ function UnitPage({ course, module, onNavigate, path, progress, unit, onProgress
           <ol className={mobileSectionsOpen ? 'is-open' : undefined}>{unitSectionLinks.map(([id, label]) => <li key={id}><a href={`#${id}`} onClick={() => setMobileSectionsOpen(false)}>{label}</a></li>)}</ol>
         </nav>
         <article className="academy-reading">
-          {completed && <p className="academy-unit-summary" role="status"><b><CheckCircle2 aria-hidden="true" size={17} /> Unit complete</b>You can read or answer again. The page remains open.</p>}
+          {completed && <p className="academy-unit-summary academy-unit-summary--complete" role="status"><b><CheckCircle2 aria-hidden="true" size={17} /> Unit complete</b>You can review this unit or answer the check again.</p>}
           <section className="academy-section" id="unit-start">
-            <h2>Before you begin</h2>
+            <h2>Start here</h2>
             <dl className="academy-terms">
-              <div><dt>Where you are</dt><dd>{content.location}</dd></div>
-              <div><dt>Goal</dt><dd>{content.goal}</dd></div>
-              <div><dt>Why it matters</dt><dd>{content.purpose}</dd></div>
-              <div><dt>Time</dt><dd>{content.scope.estimatedTime}</dd></div>
-              <div><dt>Actions</dt><dd>{content.scope.requiredActions} required actions: read the prepared material and answer one check.</dd></div>
-              <div><dt>What changes</dt><dd>{content.scope.changes}</dd></div>
+              <div><dt>Learn</dt><dd>{content.goal}</dd></div>
+              <div><dt>Why</dt><dd>{content.purpose}</dd></div>
+              <div><dt>Time</dt><dd>{unit.time}</dd></div>
+              <div><dt>Do</dt><dd>Read the example, try the prepared activity, and answer one check.</dd></div>
             </dl>
-            <div className="academy-unit-summary">
-              <b>Nothing is assumed</b>
+            <details className="academy-stop">
+              <summary>Need a refresher or more context?</summary>
               <p>{content.preparation.startNow}</p>
               <p>{content.preparation.refresher}</p>
               <p>{content.preparation.shortContext}</p>
-            </div>
-            <p><b>Page boundary:</b> {content.boundary.statement}</p>
-            {content.beforeWeCompare && (
-              <div className="academy-evidence-grid" aria-label="Before we compare">
-                <article className="academy-evidence-card"><b>Outcome</b><p>{content.beforeWeCompare.outcome}</p></article>
-                <article className="academy-evidence-card"><b>System boundary</b><p>{content.beforeWeCompare.systemBoundary}</p></article>
-                <article className="academy-evidence-card"><b>Prepared material</b><p>{content.beforeWeCompare.prepared}</p></article>
-                <article className="academy-evidence-card"><b>Your action</b><p>{content.beforeWeCompare.learnerAction}</p></article>
-                <article className="academy-evidence-card"><b>What you need</b><p>{content.beforeWeCompare.requirements}</p></article>
-                <article className="academy-evidence-card"><b>Ways to begin</b><p>{content.beforeWeCompare.choices.join(', ')}. These are choices, not access requirements.</p></article>
-              </div>
-            )}
+              <p><b>Page boundary:</b> {content.boundary.statement}</p>
+              {content.beforeWeCompare && (
+                <dl className="academy-terms">
+                  <div><dt>Outcome</dt><dd>{content.beforeWeCompare.outcome}</dd></div>
+                  <div><dt>System boundary</dt><dd>{content.beforeWeCompare.systemBoundary}</dd></div>
+                  <div><dt>Prepared material</dt><dd>{content.beforeWeCompare.prepared}</dd></div>
+                  <div><dt>Your action</dt><dd>{content.beforeWeCompare.learnerAction}</dd></div>
+                  <div><dt>What you need</dt><dd>{content.beforeWeCompare.requirements}</dd></div>
+                  <div><dt>Ways to begin</dt><dd>{content.beforeWeCompare.choices.join(', ')}. These are choices, not access requirements.</dd></div>
+                </dl>
+              )}
+            </details>
           </section>
 
           <section className="academy-section" id="unit-words">
@@ -379,19 +372,13 @@ function UnitPage({ course, module, onNavigate, path, progress, unit, onProgress
           )}
 
           <section className="academy-section" id="unit-example">
-            <h2>Concrete example and prediction</h2>
+            <h2>Work through an example</h2>
             <div className="academy-example">{content.example.input}</div>
             <p><b>Question:</b> {content.example.question}</p>
             <p><b>Predict before revealing the result:</b> {content.prediction}</p>
-          </section>
-
-          <section className="academy-section" id="unit-result">
-            <h2>Prepared result</h2>
+            <h3>Prepared result</h3>
             <p>{content.preparedResult}</p>
-          </section>
-
-          <section className="academy-section" id="unit-explanation">
-            <h2>Step-by-step explanation</h2>
+            <h3>Why this happens</h3>
             <ol>{content.explanationSteps.map((step) => <li key={step}>{step}</li>)}</ol>
           </section>
 
@@ -436,56 +423,57 @@ function UnitPage({ course, module, onNavigate, path, progress, unit, onProgress
                   <b>{selectedChoice.correct ? 'Correct' : 'Not yet'}</b>
                   <p>{selectedChoice.feedback}</p>
                   {!selectedChoice.correct && <p>{content.knowledgeCheck.retry}</p>}
+                  {selectedChoice.correct && (nextUnit
+                    ? <RouteLink className="primary-action" onNavigate={onNavigate} to={academyUnitPath(path.id, course.id, nextUnit.moduleId, nextUnit.id)}>Continue: {nextUnit.title} <ArrowRight aria-hidden="true" size={17} /></RouteLink>
+                    : <RouteLink className="primary-action" onNavigate={onNavigate} to={academyCoursePath(path.id, course.id)}>Return to course outline <ArrowRight aria-hidden="true" size={17} /></RouteLink>)}
                 </div>
               )}
             </div>
           </section>
 
-          <section className="academy-section" id="unit-recap">
-            <h2>Recap and limits</h2>
-            <h3>What this unit established</h3>
-            <ul>{content.recap.map((item) => <li key={item}>{item}</li>)}</ul>
-            <h3>What this unit did not claim</h3>
-            <ul>{content.notClaimed.map((item) => <li key={item}>{item}</li>)}</ul>
-          </section>
-
-          <section className="academy-section" id="unit-sources">
-            <h2>Sources and evidence limits</h2>
-            <p>These records show what each source supports and what it does not prove.</p>
-            {content.claimRecord && (
-              <article className="academy-unit-summary">
-                <b>Fictional claim record</b>
-                <p>{content.claimRecord.note}</p>
-                <p><small>Created for this lesson · {content.claimRecord.observedAt} · {content.claimRecord.rightsNotes}</small></p>
-              </article>
-            )}
-            <div className="academy-evidence-grid">
-              {sources.map((source) => (
-                <article className="academy-evidence-card" key={source.id}>
-                  <small>{source.publisher} · {source.version} · Observed {source.observedAt} · Review by {source.reviewDueAt}</small>
-                  <h3><a href={source.url} rel="noreferrer" target="_blank">{source.title}</a></h3>
-                  <p><b>Supports:</b> {source.supports}</p>
-                  <p><b>Scope:</b> {source.scope}</p>
-                  <p><b>Does not prove:</b> {source.limits}</p>
-                  <p><b>Use on this page:</b> {source.rightsNotes}</p>
-                </article>
-              ))}
+          <section className="academy-section" id="unit-review">
+            <h2>Review and continue</h2>
+            <div className="academy-next-actions">
+              {previousUnit ? <RouteLink className="secondary-action" onNavigate={onNavigate} to={academyUnitPath(path.id, course.id, previousUnit.moduleId, previousUnit.id)}><ArrowLeft aria-hidden="true" size={17} /> Previous unit: {previousUnit.title}</RouteLink> : <RouteLink className="secondary-action" onNavigate={onNavigate} to={academyModulePath(path.id, course.id, module.id)}><ArrowLeft aria-hidden="true" size={17} /> Module outline</RouteLink>}
+              {nextUnit ? <RouteLink className="primary-action" onNavigate={onNavigate} to={academyUnitPath(path.id, course.id, nextUnit.moduleId, nextUnit.id)}>Next unit: {nextUnit.title} <ArrowRight aria-hidden="true" size={17} /></RouteLink> : <RouteLink className="primary-action" onNavigate={onNavigate} to={academyCoursePath(path.id, course.id)}>Course outline <ArrowRight aria-hidden="true" size={17} /></RouteLink>}
             </div>
-          </section>
-
-          <section className="academy-section" id="unit-stop">
-            <div className="academy-stop">
-              <h2>Stop here if you want</h2>
-              <p><b>Keep this fact:</b> {content.stopResume.savedFact}</p>
+            <details className="academy-stop">
+              <summary>Review key points and lesson limits</summary>
+              <h3>Keep these points</h3>
+              <ul>{content.recap.map((item) => <li key={item}>{item}</li>)}</ul>
+              <h3>Limits of this lesson</h3>
+              <ul>{content.notClaimed.map((item) => <li key={item}>{item}</li>)}</ul>
+            </details>
+            <details className="academy-stop">
+              <summary>Pause and return later</summary>
+              <p><b>If you stop here:</b> {content.stopResume.savedFact}</p>
               <p><b>When you return, ask:</b> {content.stopResume.returnQuestion}</p>
               <p>{content.stopResume.nextChoice}</p>
-            </div>
+            </details>
+            <details className="academy-stop" id="unit-sources">
+              <summary>Sources and evidence limits ({sources.length})</summary>
+              <p>These records show what each source supports and what it does not prove.</p>
+              {content.claimRecord && (
+                <article className="academy-unit-summary">
+                  <b>Fictional claim record</b>
+                  <p>{content.claimRecord.note}</p>
+                  <p><small>Created for this lesson · {content.claimRecord.observedAt} · {content.claimRecord.rightsNotes}</small></p>
+                </article>
+              )}
+              <div className="academy-evidence-grid">
+                {sources.map((source) => (
+                  <article className="academy-evidence-card" key={source.id}>
+                    <small>{source.publisher} · {source.version} · Observed {source.observedAt} · Review by {source.reviewDueAt}</small>
+                    <h3><a href={source.url} rel="noreferrer" target="_blank">{source.title}</a></h3>
+                    <p><b>Supports:</b> {source.supports}</p>
+                    <p><b>Scope:</b> {source.scope}</p>
+                    <p><b>Does not prove:</b> {source.limits}</p>
+                    <p><b>Use on this page:</b> {source.rightsNotes}</p>
+                  </article>
+                ))}
+              </div>
+            </details>
           </section>
-
-          <div className="academy-next-actions">
-            {previousUnit ? <RouteLink className="secondary-action" onNavigate={onNavigate} to={academyUnitPath(path.id, course.id, previousUnit.moduleId, previousUnit.id)}><ArrowLeft aria-hidden="true" size={17} /> Previous unit</RouteLink> : <RouteLink className="secondary-action" onNavigate={onNavigate} to={academyModulePath(path.id, course.id, module.id)}><ArrowLeft aria-hidden="true" size={17} /> Module outline</RouteLink>}
-            {nextUnit ? <RouteLink className="primary-action" onNavigate={onNavigate} to={academyUnitPath(path.id, course.id, nextUnit.moduleId, nextUnit.id)}>Next unit <ArrowRight aria-hidden="true" size={17} /></RouteLink> : <RouteLink className="primary-action" onNavigate={onNavigate} to={academyCoursePath(path.id, course.id)}>Course outline <ArrowRight aria-hidden="true" size={17} /></RouteLink>}
-          </div>
         </article>
       </div>
     </main>
@@ -502,7 +490,7 @@ export function AcademyRoute(props: AcademyRouteProps) {
 
   if (!records.path) return null
   if (props.academyUnitId && records.course && records.module && records.unit) {
-    return <UnitPage course={records.course} module={records.module} onNavigate={props.onNavigate} onProgress={props.onProgress} path={records.path} progress={props.progress} unit={records.unit} />
+    return <UnitPage course={records.course} key={records.unit.id} module={records.module} onNavigate={props.onNavigate} onProgress={props.onProgress} path={records.path} progress={props.progress} unit={records.unit} />
   }
   if (props.academyPreparationPageId && records.course) {
     return <PreparationPage course={records.course} onNavigate={props.onNavigate} pageId={props.academyPreparationPageId} path={records.path} />

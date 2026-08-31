@@ -1207,7 +1207,8 @@ button:disabled,
   font-size: var(--text-meta);
 }
 
-.course-card__heading h2 {
+.course-card__heading h2,
+.course-card__heading h3 {
   margin: 0.2rem 0 0;
   font-size: var(--display-card);
 }

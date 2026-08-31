@@ -8,6 +8,7 @@ const modelPath = '/paths/models-from-zero'
 const modelCoursePath = `${modelPath}/what-a-model-is`
 const modelModulePath = `${modelCoursePath}/learned-behavior`
 const modelUnitPath = `${modelModulePath}/model-and-rule`
+const modelSecondUnitPath = `${modelModulePath}/inputs-and-outputs`
 const modelRefresherPath = `${modelCoursePath}/preparation/computer-words-refresher`
 const modelContextPath = `${modelCoursePath}/preparation/model-context`
 
@@ -97,6 +98,24 @@ test('academy links preserve canonical bookmark, refresh, and Back navigation', 
   await expect(page.getByRole('heading', { level: 1, name: 'A model and an ordinary rule' })).toBeVisible()
 })
 
+test('next opens a visibly different unit at its heading with fresh interaction state', async ({
+  page,
+  seedProgress,
+}) => {
+  await seedProgress({ onboardingComplete: false })
+  await page.goto(modelUnitPath)
+
+  await page.getByRole('radio', { name: 'It must use a learned model.' }).click()
+  await page.getByRole('link', { name: 'Next unit: Inputs and outputs' }).click()
+
+  await expect(page).toHaveURL(modelSecondUnitPath)
+  const heading = page.getByRole('heading', { level: 1, name: 'Inputs and outputs' })
+  await expect(heading).toBeFocused()
+  await expect(page.getByText('Unit 2 of 6 · Unit reference LM-101-U2')).toBeVisible()
+  await expect(page.getByRole('radio').first()).toHaveAttribute('aria-checked', 'false')
+  await expect.poll(() => page.evaluate(() => window.scrollY)).toBe(0)
+})
+
 test('optional preparation offers three equal choices and does not gate or record progress', async ({
   page,
   seedProgress,
@@ -169,7 +188,7 @@ test('the knowledge check supports keyboard retry, records only a correct answer
   expect((await savedProgress(page)).completedLessons).toContain('LM-101-U1')
 
   const evidence = page.locator('#unit-sources')
-  await expect(evidence.getByRole('heading', { name: 'Sources and evidence limits' })).toBeVisible()
+  await evidence.getByText(/Sources and evidence limits/iu).click()
   await expect(evidence.getByText(/Observed 2026-08-31 · Review by 2027-02-28/iu)).toBeVisible()
   await expect(evidence.getByRole('link', {
     name: 'Artificial Intelligence Risk Management Framework resource page',
