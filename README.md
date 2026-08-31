@@ -9,6 +9,16 @@ The name is the curriculum:
 - **Coffee** = Java
 - **Pie** = Python
 
+## Planned academy expansion
+
+The current application is still the six-course programming academy described below. The long-range plan now adds large Linux, networking, cybersecurity, and local-model schools, along with optional preparation and refresher paths.
+
+The new schools use one access rule: a learner may start anywhere. Recommended preparation offers `Start now`, `Review a refresher`, and `Read the short context`. It never locks or hides published teaching material.
+
+The current Practical Python and Practical C++ continuation courses still use the older completion gates documented below. That behavior is a legacy application constraint, not the academy model. M102 and M103 in the roadmap remove those gates before the expanded academy is published; new schools must not copy them.
+
+The complete scope, curriculum inventories, learner-controlled lab boundary, credentials, and dependency order are indexed in the [academy curriculum expansion](docs/curriculum/README.md) and [milestone roadmap](MILESTONES.md). These are implementation plans, not claims that the planned courses are already live.
+
 Lessons are short and guided across four foundation courses, Practical Python, and Practical C++. Each new term is explained in plain language, shown in a concrete example, used immediately, and revisited in later practice. Story-based exercises remain where they make an idea easier to understand or remember.
 
 ## What the repository includes

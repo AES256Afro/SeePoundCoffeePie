@@ -2,7 +2,9 @@
 
 Date: 2026-08-28
 
-Status: historical local evidence from the 2026-08-28 unpublished-candidate checkpoint, followed by exact current source and hosted CI evidence. This is not staging or production evidence, and it does not claim a deployed Worker version.
+Status: historical local evidence from 2026-08-28, including an exact source and hosted CI record for that dated checkpoint. Later commits require new evidence. This is not staging or production evidence, and it does not claim a deployed Worker version.
+
+The access-lock expectations in this record describe the legacy continuing-course behavior at that checkpoint. They are superseded as a future product direction by M102 and M103: published academy teaching will stay open, and earlier material will be offered only as optional context, an introduction, or a refresher. Until that implementation ships, this record must remain accurate about the current application rather than implying that the gates have already been removed.
 
 ## Purpose
 
@@ -104,13 +106,13 @@ The bundle evidence recorded at that checkpoint was:
 
 At that checkpoint, the five-course artifact contained no Practical C++ JSON, candidate title, or `with-cpp` module reference. A no-write inspection of its 121-module Vite graph found no candidate publication or packed-content module. The separate candidate artifact contained exactly one byte-identical teaching JSON asset behind one lazy owning loader, and none of the 20 reviewed private server markers appeared in either browser surface.
 
-## Current publication gate
+## Publication gate structure at the dated checkpoint
 
-The current source selects the complete six-course application: 36 modules, 180 lessons, and 112 runner assignments. Practical C++ has exactly 12 runner-backed lessons and 18 teaching-only lessons. The teaching-only IDs must always return not found from the runner boundary.
+The source at the dated checkpoint selected the complete six-course application: 36 modules, 180 lessons, and 112 runner assignments. Practical C++ had exactly 12 runner-backed lessons and 18 teaching-only lessons. The teaching-only IDs must always return not found from the runner boundary.
 
-Practical C++ browser coverage now runs against the ordinary production `dist` artifact. There is no second candidate-only Playwright server or candidate-only browser configuration. The merged route matrix covers the six-card catalog, both continuing-course prerequisite paths, canonical Practical C++ course and lesson routes, representative first, middle, and final lesson history, keyboard editor exit, 390-pixel navigation, Practice, Code Reference, malformed teaching data, and scoped accessibility checks.
+At that checkpoint, Practical C++ browser coverage ran against the ordinary production `dist` artifact. There was no second candidate-only Playwright server or candidate-only browser configuration. The merged route matrix covered the six-card catalog, both continuing-course prerequisite paths, canonical Practical C++ course and lesson routes, representative first, middle, and final lesson history, keyboard editor exit, 390-pixel navigation, Practice, Code Reference, malformed teaching data, and scoped accessibility checks.
 
-## Exact current source and CI evidence
+## Dated exact source and CI evidence
 
 The reviewed publication-candidate commit is `3f7e709326cdeb9652d668ca5ee42fbbf2c48504`. At the time of this record:
 
