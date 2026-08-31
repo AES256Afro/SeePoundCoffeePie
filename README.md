@@ -9,9 +9,9 @@ The name is the curriculum:
 - **Coffee** = Java
 - **Pie** = Python
 
-## Planned academy expansion
+## Academy expansion
 
-The current application is still the six-course programming academy described below. The long-range plan now adds large Linux, networking, cybersecurity, and local-model schools, along with optional preparation and refresher paths.
+The source still contains the six-course programming academy described below. It now also contains the first complete open-academy reading slice: `What a model is` and `Programming on screen and at work`. The longer plan adds large Linux, networking, cybersecurity, and local-model schools, along with optional preparation and refresher paths. A source commit, hosted build, staging deployment, and production deployment remain separate facts.
 
 The new schools use one access rule: a learner may start anywhere. Recommended preparation offers `Start now`, `Review a refresher`, and `Read the short context`. It never locks or hides published teaching material.
 
@@ -21,7 +21,7 @@ The expansion includes an optional Reality versus Fiction path across programmin
 
 The current Practical Python and Practical C++ continuation courses still use the older completion gates documented below. That behavior is a legacy application constraint, not the academy model. M102 and M103 in the roadmap remove those gates before the expanded academy is published; new schools must not copy them.
 
-The complete scope, curriculum inventories, learner-controlled lab boundary, credentials, and dependency order are indexed in the [academy curriculum expansion](docs/curriculum/README.md) and [milestone roadmap](MILESTONES.md). These are implementation plans, not claims that the planned courses are already live.
+The complete scope, curriculum inventories, learner-controlled lab boundary, credentials, and dependency order are indexed in the [academy curriculum expansion](docs/curriculum/README.md) and [milestone roadmap](MILESTONES.md). Those larger inventories remain plans, not claims that Linux, networking, cybersecurity, or the complete local-model school is published.
 
 Lessons are short and guided across four foundation courses, Practical Python, and Practical C++. Each new term is explained in plain language, shown in a concrete example, used immediately, and revisited in later practice. Story-based exercises remain where they make an idea easier to understand or remember.
 
@@ -33,6 +33,7 @@ The current implementation includes:
 - a four-question beginner intake that asks one plain-language question at a time and recommends, but does not lock, a course;
 - an open learner home with one continuation action, review priorities, and visible course progress;
 - a bookmarkable course catalog and separate outlines for Python, C++, C#, and Java Foundations, `Practical Python: Data Tools`, and `Practical C++: Collections and Records`;
+- two generic, open reading courses with bookmarkable path, course, module, unit, and optional-context pages;
 - six fully playable five-lesson modules in each of the six courses;
 - four bookmarkable 12-step projects: Python's `Your First Interactive Program`, C++'s `Your First Compiled Program`, C#'s `Community Workshop Check-In`, and Java's `Community Picnic Planner`;
 - a private portfolio preview for each completed project with a deliberate, script-free HTML download;
@@ -60,6 +61,9 @@ The site uses clean application URLs instead of separate `.html` files. Cloudfla
 - `/start` is beginner intake;
 - `/home` is the learner home and continuation page;
 - `/courses` is the complete course catalog;
+- `/paths/models-from-zero` is the open Models from zero path, and `/paths/models-from-zero/what-a-model-is` is its first complete course;
+- `/paths/reality-versus-fiction` is the open Reality versus fiction path, and `/paths/reality-versus-fiction/programming-on-screen-and-at-work` is its first complete course;
+- adding a published module slug, unit slug, or `/preparation/:preparation-slug` to one of those course routes opens that exact reading page without sign-in or an earlier completion;
 - `/courses/python-foundations`, `/courses/cpp-foundations`, `/courses/csharp-foundations`, and `/courses/java-foundations` are the four foundation-course outlines;
 - `/courses/python-data-tools` is the Practical Python outline. It can be previewed while locked and opens only after both Python Foundations and `/projects/python/first-interactive-program` are complete;
 - `/courses/cpp-collections-records` is the Practical C++ outline. It can be previewed while locked and opens only after both C++ Foundations and `/projects/cpp/first-compiled-program` are complete;
@@ -88,7 +92,7 @@ Practical Python begins only after the learner completes both Python Foundations
 
 Practical C++ begins only after the learner completes both C++ Foundations and `Your First Compiled Program`. Its modules retrieve functions and collections before introducing returned helper values, vectors, records, references, record updates, accumulators, and filters. The final Workshop Stock Report uses fixed in-memory records and no files, packages, or network access.
 
-The current source totals 36 playable modules and 180 authored lessons across six courses, plus four 12-step projects. The selected runner registry contains exactly 112 editable assignments: 48 foundation lessons, 12 Practical Python lessons, 12 Practical C++ lessons, and 40 project steps. The other 18 Practical C++ lessons use choices, predictions, or ordering in the browser and never request an execution grant.
+The current source totals 36 playable programming modules and 180 authored programming lessons across six programming courses, plus four 12-step projects. The open-academy reading slice adds two paths, two courses, three modules, eight units, and four optional context pages. The selected runner registry contains exactly 112 editable assignments: 48 foundation lessons, 12 Practical Python lessons, 12 Practical C++ lessons, and 40 project steps. The open-academy units and the other 18 Practical C++ lessons use prepared reading, choices, predictions, or ordering in the browser and never request an execution grant.
 
 These counts describe the source-controlled Practical C++ publication candidate. The last recorded live compatibility release still has five courses, 30 modules, 150 lessons, and 100 runner assignments. Staging and production publication remain separate release steps and are not claimed by this README.
 

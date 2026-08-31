@@ -1,4 +1,5 @@
 import { projectManifests } from '../data/project-manifests'
+import { academyModuleUnitIds, academyUnits } from '../data/academy-manifest'
 import {
   foundationLessonIds,
   foundationLessonMetadataById,
@@ -31,13 +32,21 @@ const registeredContinuingLessons = [
 const continuingLessonsById = new Map<string, LessonCompletionMetadata>(
   registeredContinuingLessons.map((lesson) => [lesson.id, lesson]),
 )
+const academyLessonsById = new Map<string, LessonCompletionMetadata>(
+  academyUnits.map(({ conceptId, id, xp }) => [id, { conceptId, id, xp }]),
+)
 const lessonIds: ReadonlySet<string> = new Set([
   ...foundationLessonIds,
   ...continuingLessonsById.keys(),
+  ...academyLessonsById.keys(),
 ])
 if (
   continuingLessonsById.size !== registeredContinuingLessons.length
   || registeredContinuingLessons.some((lesson) => foundationLessonIds.has(lesson.id))
+  || academyLessonsById.size !== academyUnits.length
+  || academyUnits.some((lesson) => (
+    foundationLessonIds.has(lesson.id) || continuingLessonsById.has(lesson.id)
+  ))
 ) {
   throw new Error('Registered lesson IDs must be globally unique.')
 }
@@ -49,6 +58,7 @@ const missionLessons = new Map([
   ...Object.entries(cppCollectionsRecordsManifest).map(([missionId, missionLessons]) => (
     [missionId, missionLessons.map((lesson) => lesson.id)] as const
   )),
+  ...Object.entries(academyModuleUnitIds),
 ])
 const projectCheckpointIds = new Set(projectManifests.flatMap((project) => (
   project.checkpoints.map((checkpoint) => checkpoint.id)
@@ -179,8 +189,9 @@ export function recordLessonSuccess(
 ): LearnerProgress {
   const foundationLesson = foundationLessonMetadataById.get(lesson.id)
   const continuingLesson = continuingLessonsById.get(lesson.id)
-  const registeredConceptId = foundationLesson?.[1] ?? continuingLesson?.conceptId
-  const registeredXp = foundationLesson?.[2] ?? continuingLesson?.xp
+  const academyLesson = academyLessonsById.get(lesson.id)
+  const registeredConceptId = foundationLesson?.[1] ?? continuingLesson?.conceptId ?? academyLesson?.conceptId
+  const registeredXp = foundationLesson?.[2] ?? continuingLesson?.xp ?? academyLesson?.xp
   if (
     registeredConceptId === undefined
     || registeredConceptId !== lesson.conceptId

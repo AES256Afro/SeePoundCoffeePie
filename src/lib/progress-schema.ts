@@ -1,5 +1,11 @@
 import { foundationConceptIds } from '../data/foundation-concept-ids'
 import {
+  academyConceptIds,
+  academyModuleIds,
+  academyModuleUnitIds,
+  academyUnitIds,
+} from '../data/academy-manifest'
+import {
   foundationLessonIds,
   foundationMissionIds,
   foundationMissionLessonIds,
@@ -23,11 +29,13 @@ const missionIds = new Set([
   ...foundationMissionIds,
   ...pythonDataToolsMissionIds,
   ...cppCollectionsRecordsMissionIds,
+  ...academyModuleIds,
 ])
 const lessonIds = new Set([
   ...foundationLessonIds,
   ...pythonDataToolsLessons.map((lesson) => lesson.id),
   ...cppCollectionsRecordsLessons.map((lesson) => lesson.id),
+  ...academyUnitIds,
 ])
 const projectIds = new Set(projectManifests.map((project) => project.id))
 const projectCheckpointIds = new Set(projectManifests.flatMap((project) => (
@@ -38,6 +46,7 @@ const conceptIds = new Set([
   ...projectManifests.flatMap((project) => project.checkpoints.map((checkpoint) => checkpoint.conceptId)),
   ...pythonDataToolsLessons.map((lesson) => lesson.conceptId),
   ...cppCollectionsRecordsLessons.map((lesson) => lesson.conceptId),
+  ...academyConceptIds,
 ])
 const datePattern = /^\d{4}-\d{2}-\d{2}$/u
 
@@ -113,7 +122,10 @@ function lessonsFromCompletedMissions(completedMissions: string[]): string[] {
     .flatMap(([missionId, lessons]) => (
       completed.has(missionId) ? lessons.map((lesson) => lesson.id) : []
     ))
-  return [...foundationLessons, ...dataToolsLessons, ...collectionsRecordsLessons]
+  const academyLessons = Object.entries(academyModuleUnitIds).flatMap(([moduleId, unitIds]) => (
+    completed.has(moduleId) ? unitIds : []
+  ))
+  return [...foundationLessons, ...dataToolsLessons, ...collectionsRecordsLessons, ...academyLessons]
 }
 
 function withCompletedMissionLessons(completedLessons: string[], completedMissions: string[]): string[] {

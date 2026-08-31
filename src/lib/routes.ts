@@ -1,6 +1,29 @@
 import type { LanguageId } from '../types'
 import type { CourseId } from '../types'
 import type { CourseDefinition } from '../data/course-registry'
+import type {
+  AcademyCourseId,
+  AcademyModuleId,
+  AcademyPathId,
+  AcademyPreparationPageId,
+  AcademyUnitId,
+} from '../data/academy-manifest'
+import {
+  academyCourseForId,
+  academyCourseForRoute,
+  academyCourseOwnsModule,
+  academyCourseOwnsPreparationPage,
+  academyModuleForId,
+  academyModuleForRoute,
+  academyModuleOwnsUnit,
+  academyPathForId,
+  academyPathForSlug,
+  academyPathOwnsCourse,
+  academyPreparationPageForId,
+  academyPreparationPageForRoute,
+  academyUnitForId,
+  academyUnitForRoute,
+} from '../data/academy-manifest'
 import { projectManifests } from '../data/project-manifests'
 import {
   courseDefinition,
@@ -16,6 +39,11 @@ export type RoutePage =
   | 'courses'
   | 'course'
   | 'academy'
+  | 'academy-path'
+  | 'academy-course'
+  | 'academy-module'
+  | 'academy-unit'
+  | 'academy-preparation'
   | 'practice'
   | 'practice-session'
   | 'codebook'
@@ -30,6 +58,11 @@ export interface AppRoute {
   page: RoutePage
   language?: LanguageId
   courseId?: CourseId
+  academyPathId?: AcademyPathId
+  academyCourseId?: AcademyCourseId
+  academyModuleId?: AcademyModuleId
+  academyUnitId?: AcademyUnitId
+  academyPreparationPageId?: AcademyPreparationPageId
   missionId?: string
   exerciseId?: string
   projectId?: string
@@ -68,12 +101,26 @@ function languageFromSegment(value: string | undefined): LanguageId | undefined 
   return languageIds.find((language) => language === value)
 }
 
-function safeDecode(segment: string): string {
-  try {
-    return decodeURIComponent(segment)
-  } catch {
-    return segment
+function decodePathSegments(pathname: string): string[] | undefined {
+  if (pathname === '/') return []
+  const rawSegments = pathname.split('/').slice(1)
+  const decodedSegments: string[] = []
+
+  for (const segment of rawSegments) {
+    let decoded: string
+    try {
+      decoded = decodeURIComponent(segment)
+    } catch {
+      return undefined
+    }
+
+    if (decoded.includes('/') || decoded.includes('\\') || decoded.includes('\0')) {
+      return undefined
+    }
+    decodedSegments.push(decoded)
   }
+
+  return decodedSegments
 }
 
 export function academyPath(language: LanguageId): string {
@@ -86,6 +133,57 @@ export function homePath(): string {
 
 export function coursesPath(): string {
   return '/courses'
+}
+
+export function learningPathPath(pathId: AcademyPathId): string {
+  const path = academyPathForId(pathId)
+  if (!path) throw new Error(`Unknown academy path: ${pathId}`)
+  return `/paths/${encodeURIComponent(path.slug)}`
+}
+
+export function academyCoursePath(pathId: AcademyPathId, courseId: AcademyCourseId): string {
+  const course = academyCourseForId(courseId)
+  if (!course || !academyPathOwnsCourse(pathId, courseId)) {
+    throw new Error(`Academy path ${pathId} does not contain course ${courseId}`)
+  }
+  return `${learningPathPath(pathId)}/${encodeURIComponent(course.slug)}`
+}
+
+export function academyModulePath(
+  pathId: AcademyPathId,
+  courseId: AcademyCourseId,
+  moduleId: AcademyModuleId,
+): string {
+  const module = academyModuleForId(moduleId)
+  if (!module || !academyCourseOwnsModule(courseId, moduleId)) {
+    throw new Error(`Academy course ${courseId} does not contain module ${moduleId}`)
+  }
+  return `${academyCoursePath(pathId, courseId)}/${encodeURIComponent(module.slug)}`
+}
+
+export function academyUnitPath(
+  pathId: AcademyPathId,
+  courseId: AcademyCourseId,
+  moduleId: AcademyModuleId,
+  unitId: AcademyUnitId,
+): string {
+  const unit = academyUnitForId(unitId)
+  if (!unit || !academyModuleOwnsUnit(moduleId, unitId)) {
+    throw new Error(`Academy module ${moduleId} does not contain unit ${unitId}`)
+  }
+  return `${academyModulePath(pathId, courseId, moduleId)}/${encodeURIComponent(unit.slug)}`
+}
+
+export function academyPreparationPath(
+  pathId: AcademyPathId,
+  courseId: AcademyCourseId,
+  preparationPageId: AcademyPreparationPageId,
+): string {
+  const page = academyPreparationPageForId(preparationPageId)
+  if (!page || !academyCourseOwnsPreparationPage(courseId, preparationPageId)) {
+    throw new Error(`Academy course ${courseId} does not contain preparation page ${preparationPageId}`)
+  }
+  return `${academyCoursePath(pathId, courseId)}/preparation/${encodeURIComponent(page.slug)}`
 }
 
 function courseIdFor(value: CourseId | LanguageId): CourseId {
@@ -162,7 +260,8 @@ export function createAppRouteParser(
     )
     if (hasEmptyPathSegment) return { page: 'not-found', conceptIds: emptyConcepts }
 
-    const segments = pathname.split('/').filter(Boolean).map(safeDecode)
+    const segments = decodePathSegments(pathname)
+    if (!segments) return { page: 'not-found', conceptIds: emptyConcepts }
 
     if (segments.length === 0) return { page: 'landing', conceptIds: emptyConcepts }
     if (segments.length === 1 && segments[0] === 'home') return { page: 'home', conceptIds: emptyConcepts }
@@ -170,6 +269,80 @@ export function createAppRouteParser(
     if (segments.length === 1 && segments[0] === 'courses') return { page: 'courses', conceptIds: emptyConcepts }
     if (segments.length === 1 && segments[0] === 'profile') return { page: 'profile', conceptIds: emptyConcepts }
     if (segments.length === 1 && segments[0] === 'settings') return { page: 'settings', conceptIds: emptyConcepts }
+
+    if (segments[0] === 'paths') {
+      if (search) return { page: 'not-found', conceptIds: emptyConcepts }
+
+      if (segments.length === 2) {
+        const path = academyPathForSlug(segments[1])
+        return path
+          ? { page: 'academy-path', academyPathId: path.id, conceptIds: emptyConcepts }
+          : { page: 'not-found', conceptIds: emptyConcepts }
+      }
+
+      if (segments.length === 3) {
+        const result = academyCourseForRoute(segments[1], segments[2])
+        return result
+          ? {
+              page: 'academy-course',
+              academyPathId: result.pathId,
+              academyCourseId: result.id,
+              conceptIds: emptyConcepts,
+            }
+          : { page: 'not-found', conceptIds: emptyConcepts }
+      }
+
+      if (segments.length === 4) {
+        const result = academyModuleForRoute(segments[1], segments[2], segments[3])
+        return result
+          ? {
+              page: 'academy-module',
+              academyPathId: result.pathId,
+              academyCourseId: result.courseId,
+              academyModuleId: result.id,
+              conceptIds: emptyConcepts,
+            }
+          : { page: 'not-found', conceptIds: emptyConcepts }
+      }
+
+      if (segments.length === 5 && segments[3] === 'preparation') {
+        const result = academyPreparationPageForRoute(
+          segments[1],
+          segments[2],
+          segments[4],
+        )
+        return result
+          ? {
+              page: 'academy-preparation',
+              academyPathId: result.pathId,
+              academyCourseId: result.courseId,
+              academyPreparationPageId: result.id,
+              conceptIds: emptyConcepts,
+            }
+          : { page: 'not-found', conceptIds: emptyConcepts }
+      }
+
+      if (segments.length === 5) {
+        const result = academyUnitForRoute(
+          segments[1],
+          segments[2],
+          segments[3],
+          segments[4],
+        )
+        return result
+          ? {
+              page: 'academy-unit',
+              academyPathId: result.pathId,
+              academyCourseId: result.courseId,
+              academyModuleId: result.moduleId,
+              academyUnitId: result.id,
+              conceptIds: emptyConcepts,
+            }
+          : { page: 'not-found', conceptIds: emptyConcepts }
+      }
+
+      return { page: 'not-found', conceptIds: emptyConcepts }
+    }
 
     if (segments.length === 2 && segments[0] === 'courses') {
       const course = courseOwnership.courseDefinitionForSlug(segments[1])

@@ -1,13 +1,18 @@
 import { describe, expect, it } from 'vitest'
 import type { CourseId } from '../types'
 import {
+  academyCoursePath,
+  academyModulePath,
   academyPath,
+  academyPreparationPath,
+  academyUnitPath,
   codebookPath,
   createAppRouteParser,
   coursePath,
   coursesPath,
   homePath,
   lessonPath,
+  learningPathPath,
   missionPath,
   parseAppRoute,
   portfolioPath,
@@ -16,6 +21,171 @@ import {
   practiceSessionPath,
   projectPath,
 } from './routes'
+
+describe('open academy learning path routes', () => {
+  it('builds exact bookmarkable paths from manifest IDs', () => {
+    expect(learningPathPath('LM-100')).toBe('/paths/models-from-zero')
+    expect(learningPathPath('RVF-PATH')).toBe('/paths/reality-versus-fiction')
+    expect(academyCoursePath('LM-100', 'LM-101')).toBe(
+      '/paths/models-from-zero/what-a-model-is',
+    )
+    expect(academyModulePath('RVF-PATH', 'RVF-100', 'RVF-100-M1')).toBe(
+      '/paths/reality-versus-fiction/programming-on-screen-and-at-work/build-and-execution',
+    )
+    expect(academyUnitPath('LM-100', 'LM-101', 'LM-101-M2', 'LML-101')).toBe(
+      '/paths/models-from-zero/what-a-model-is/capability-and-limits/model-or-not',
+    )
+    expect(academyPreparationPath('RVF-PATH', 'RVF-100', 'RVF-100-P2')).toBe(
+      '/paths/reality-versus-fiction/programming-on-screen-and-at-work/preparation/build-and-execution-context',
+    )
+  })
+
+  it('parses both open path overviews and course outlines', () => {
+    expect(parseAppRoute('/paths/models-from-zero')).toEqual({
+      page: 'academy-path',
+      academyPathId: 'LM-100',
+      conceptIds: [],
+    })
+    expect(parseAppRoute('/paths/reality-versus-fiction')).toEqual({
+      page: 'academy-path',
+      academyPathId: 'RVF-PATH',
+      conceptIds: [],
+    })
+    expect(parseAppRoute('/paths/models-from-zero/what-a-model-is')).toEqual({
+      page: 'academy-course',
+      academyPathId: 'LM-100',
+      academyCourseId: 'LM-101',
+      conceptIds: [],
+    })
+    expect(parseAppRoute(
+      '/paths/reality-versus-fiction/programming-on-screen-and-at-work',
+    )).toEqual({
+      page: 'academy-course',
+      academyPathId: 'RVF-PATH',
+      academyCourseId: 'RVF-100',
+      conceptIds: [],
+    })
+  })
+
+  it('parses owned modules and direct units without an access gate', () => {
+    expect(parseAppRoute(
+      '/paths/models-from-zero/what-a-model-is/learned-behavior',
+    )).toEqual({
+      page: 'academy-module',
+      academyPathId: 'LM-100',
+      academyCourseId: 'LM-101',
+      academyModuleId: 'LM-101-M1',
+      conceptIds: [],
+    })
+    expect(parseAppRoute(
+      '/paths/reality-versus-fiction/programming-on-screen-and-at-work/build-and-execution',
+    )).toEqual({
+      page: 'academy-module',
+      academyPathId: 'RVF-PATH',
+      academyCourseId: 'RVF-100',
+      academyModuleId: 'RVF-100-M1',
+      conceptIds: [],
+    })
+    expect(parseAppRoute(
+      '/paths/models-from-zero/what-a-model-is/capability-and-limits/model-or-not',
+    )).toEqual({
+      page: 'academy-unit',
+      academyPathId: 'LM-100',
+      academyCourseId: 'LM-101',
+      academyModuleId: 'LM-101-M2',
+      academyUnitId: 'LML-101',
+      conceptIds: [],
+    })
+    expect(parseAppRoute(
+      '/paths/reality-versus-fiction/programming-on-screen-and-at-work/build-and-execution/code-works-first-time',
+    )).toEqual({
+      page: 'academy-unit',
+      academyPathId: 'RVF-PATH',
+      academyCourseId: 'RVF-100',
+      academyModuleId: 'RVF-100-M1',
+      academyUnitId: 'RVF-102',
+      conceptIds: [],
+    })
+  })
+
+  it('parses optional preparation as a direct page, not an unlock requirement', () => {
+    expect(parseAppRoute(
+      '/paths/models-from-zero/what-a-model-is/preparation/computer-words-refresher',
+    )).toEqual({
+      page: 'academy-preparation',
+      academyPathId: 'LM-100',
+      academyCourseId: 'LM-101',
+      academyPreparationPageId: 'LM-101-P1',
+      conceptIds: [],
+    })
+    expect(parseAppRoute(
+      '/paths/reality-versus-fiction/programming-on-screen-and-at-work/preparation/build-and-execution-context',
+    )).toEqual({
+      page: 'academy-preparation',
+      academyPathId: 'RVF-PATH',
+      academyCourseId: 'RVF-100',
+      academyPreparationPageId: 'RVF-100-P2',
+      conceptIds: [],
+    })
+  })
+
+  it('fails closed when a path, course, module, unit, or preparation page changes owner', () => {
+    const wrongOwnershipPaths = [
+      '/paths/models-from-zero/programming-on-screen-and-at-work',
+      '/paths/reality-versus-fiction/what-a-model-is',
+      '/paths/models-from-zero/what-a-model-is/build-and-execution',
+      '/paths/reality-versus-fiction/programming-on-screen-and-at-work/learned-behavior',
+      '/paths/models-from-zero/what-a-model-is/learned-behavior/model-or-not',
+      '/paths/models-from-zero/what-a-model-is/capability-and-limits/code-works-first-time',
+      '/paths/reality-versus-fiction/programming-on-screen-and-at-work/build-and-execution/model-and-rule',
+      '/paths/models-from-zero/what-a-model-is/preparation/software-work-refresher',
+      '/paths/reality-versus-fiction/programming-on-screen-and-at-work/preparation/model-context',
+    ]
+
+    for (const pathname of wrongOwnershipPaths) {
+      expect(parseAppRoute(pathname).page, pathname).toBe('not-found')
+    }
+  })
+
+  it('rejects noncanonical, query-bearing, malformed, and ambiguous path URLs', () => {
+    const unsafePaths = [
+      '/paths/models-from-zero/',
+      '/paths//models-from-zero',
+      '/paths/models-from-zero//what-a-model-is',
+      '/paths/models-from-zero/what-a-model-is/',
+      '/paths/models-from-zero/what-a-model-is/learned-behavior/model-and-rule/extra',
+      '/paths/models-from-%ZZ',
+      '/paths/models-from-zero/what-a-model-%ZZ',
+      '/paths/models-from-zero/what-a-model-is/learned%2Fbehavior',
+      '/paths/models-from-zero/what-a-model-is/learned%5Cbehavior',
+      '/paths/models-from-zero/what-a-model-is/learned-behavior/model%2For-rule',
+      '/paths/models-from-zero/what-a-model-is/learned-behavior/model-or-rule%00',
+      '/paths/models-from-zero/what-a-model-is/preparation/computer-words-refresher/extra',
+    ]
+
+    for (const pathname of unsafePaths) {
+      expect(parseAppRoute(pathname).page, pathname).toBe('not-found')
+    }
+
+    const canonicalPaths = [
+      '/paths/models-from-zero',
+      '/paths/models-from-zero/what-a-model-is',
+      '/paths/models-from-zero/what-a-model-is/learned-behavior',
+      '/paths/models-from-zero/what-a-model-is/learned-behavior/model-and-rule',
+      '/paths/models-from-zero/what-a-model-is/preparation/computer-words-refresher',
+    ]
+    for (const pathname of canonicalPaths) {
+      expect(parseAppRoute(pathname, '?preview=true').page, pathname).toBe('not-found')
+    }
+  })
+
+  it('does not build a helper URL across manifest ownership boundaries', () => {
+    expect(() => academyCoursePath('LM-100', 'RVF-100')).toThrow()
+    expect(() => academyModulePath('LM-100', 'LM-101', 'RVF-100-M1')).toThrow()
+    expect(() => academyUnitPath('LM-100', 'LM-101', 'LM-101-M1', 'LML-101')).toThrow()
+    expect(() => academyPreparationPath('LM-100', 'LM-101', 'RVF-100-P1')).toThrow()
+  })
+})
 
 describe('bookmarkable application routes', () => {
   it('builds stable clean URLs for every learner area', () => {

@@ -964,6 +964,21 @@ button:disabled,
   cursor: pointer;
 }
 
+.learning-area-chip {
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.35rem 0.65rem;
+  color: var(--teal-dark);
+  background: var(--surface-muted);
+  border: 1px solid var(--rule);
+  border-radius: 6px;
+  font-size: 0.78rem;
+  font-weight: 750;
+  white-space: nowrap;
+}
+
 .workshop-stat {
   min-height: 44px;
   display: inline-flex;
@@ -2462,6 +2477,20 @@ button:disabled,
 
   .workshop-topbar__tools {
     justify-self: end;
+  }
+
+  .learning-area-chip {
+    width: 44px;
+    min-width: 44px;
+    justify-content: center;
+    padding: 0;
+    overflow: hidden;
+    color: transparent;
+    font-size: 0;
+  }
+
+  .learning-area-chip svg {
+    color: var(--teal-dark);
   }
 
   .workshop-nav a {

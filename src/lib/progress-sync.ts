@@ -1,4 +1,5 @@
 import { projectManifests } from '../data/project-manifests'
+import { academyModuleUnitIds, academyUnitIds } from '../data/academy-manifest'
 import {
   foundationLessonIds,
   foundationMissionLessonIds,
@@ -42,6 +43,7 @@ const lessonIds = new Set([
   ...foundationLessonIds,
   ...pythonDataToolsLessons.map((lesson) => lesson.id),
   ...cppCollectionsRecordsLessons.map((lesson) => lesson.id),
+  ...academyUnitIds,
 ])
 const missionLessonIds = new Map([
   ...foundationMissionLessonIds,
@@ -51,6 +53,7 @@ const missionLessonIds = new Map([
   ...Object.entries(cppCollectionsRecordsManifest).map(([missionId, lessons]) => (
     [missionId, lessons.map((lesson) => lesson.id)] as const
   )),
+  ...Object.entries(academyModuleUnitIds),
 ])
 const projectCheckpointIds = new Set(projectManifests.flatMap((project) => (
   project.checkpoints.map((checkpoint) => checkpoint.id)

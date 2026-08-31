@@ -50,6 +50,14 @@ import {
   courseMissionLessonIds,
   foundationCourseId,
 } from './data/course-registry'
+import {
+  academyCourseForId,
+  academyCourses,
+  academyModuleForId,
+  academyPathForId,
+  academyPreparationPageForId,
+  academyUnitForId,
+} from './data/academy-manifest'
 import { foundationCourseContentRequestForLanguage } from './data/foundation-course-loaders'
 import {
   foundationTrackMetadata,
@@ -107,6 +115,7 @@ import {
   type RemoteProgressRecord,
 } from './lib/progress-sync'
 import {
+  academyCoursePath,
   codebookPath,
   coursePath,
   coursesPath,
@@ -160,6 +169,11 @@ const ContinuingCourseLessonPage = lazy(async () => {
 const CodebookRoute = lazy(async () => {
   const module = await import('./CodebookRoute')
   return { default: module.CodebookRoute }
+})
+
+const OpenAcademyRoute = lazy(async () => {
+  const module = await import('./AcademyRoute')
+  return { default: module.AcademyRoute }
 })
 
 function LessonPlayerFallback({ practice = false }: { practice?: boolean }) {
@@ -226,6 +240,14 @@ const languageContextPages: ReadonlySet<RoutePage> = new Set([
   'lesson',
   'project',
   'portfolio',
+])
+
+const openAcademyPages: ReadonlySet<RoutePage> = new Set([
+  'academy-path',
+  'academy-course',
+  'academy-module',
+  'academy-unit',
+  'academy-preparation',
 ])
 
 const languagePreferencePages: ReadonlySet<RoutePage> = new Set(
@@ -559,10 +581,11 @@ interface ShellProps {
   view: ViewId
   onLanguageChange: (language: LanguageId) => void
   onSignIn: () => void
+  learningAreaTitle?: string
   children: React.ReactNode
 }
 
-function AppShell({ authReady, authUser, progress, view, onLanguageChange, onSignIn, children }: ShellProps) {
+function AppShell({ authReady, authUser, progress, view, onLanguageChange, onSignIn, learningAreaTitle, children }: ShellProps) {
   const [mobileNavOpen, setMobileNavOpen] = useState(false)
   const mobileMenuRef = useRef<HTMLButtonElement>(null)
   const track = trackMetadata(progress.activeLanguage)
@@ -615,13 +638,15 @@ function AppShell({ authReady, authUser, progress, view, onLanguageChange, onSig
           })}
           </nav>
           <div className="workshop-topbar__tools">
-            <label className="track-switcher">
+            {learningAreaTitle ? (
+              <span className="learning-area-chip"><BookOpen aria-hidden="true" size={16} /> {learningAreaTitle}</span>
+            ) : <label className="track-switcher">
               <LanguageSymbol decorative language={track.id} size="small" />
               <select aria-label="Active language" value={progress.activeLanguage} onChange={(event) => onLanguageChange(event.target.value as LanguageId)}>
                 {foundationTrackMetadata.map((item) => <option key={item.id} value={item.id}>{item.shortName}</option>)}
               </select>
               <ChevronDown size={14} aria-hidden="true" />
-            </label>
+            </label>}
             <span aria-label={`${progress.streak} day study streak`} className="workshop-stat"><Flame size={16} aria-hidden="true" /><b>{progress.streak}</b></span>
             <span aria-label={`${progress.xp} points`} className="workshop-stat"><Zap size={16} aria-hidden="true" /><b>{progress.xp} points</b></span>
             {authUser ? (
@@ -702,13 +727,14 @@ function CourseCatalog({ progress }: { progress: LearnerProgress }) {
   const continuingCourseCopy = continuingCourses.length === 1
     ? `${continuingCourses[0].shortName} lists the earlier work you need before starting.`
     : 'Each next-step course lists the earlier work you need before starting.'
-  const [filter, setFilter] = useState<'all' | 'foundations' | 'continuing' | 'projects'>('all')
+  const [filter, setFilter] = useState<'all' | 'foundations' | 'continuing' | 'open-learning' | 'projects'>('all')
   const filteredCourses = filter === 'foundations'
     ? courses.filter((course) => course.kind === 'foundation')
     : filter === 'continuing'
       ? courses.filter((course) => course.kind === 'continuing')
       : courses
-  const showCourses = filter !== 'projects'
+  const showCourses = filter !== 'projects' && filter !== 'open-learning'
+  const showOpenLearning = filter === 'all' || filter === 'open-learning'
   const showProjects = filter === 'projects'
   return (
     <main className="workshop-page course-catalog" id="main-content" tabIndex={-1}>
@@ -720,10 +746,38 @@ function CourseCatalog({ progress }: { progress: LearnerProgress }) {
         <button aria-pressed={filter === 'all'} className={filter === 'all' ? 'is-active' : ''} onClick={() => setFilter('all')} type="button">All courses</button>
         <button aria-pressed={filter === 'foundations'} className={filter === 'foundations' ? 'is-active' : ''} onClick={() => setFilter('foundations')} type="button">Foundation courses</button>
         <button aria-pressed={filter === 'continuing'} className={filter === 'continuing' ? 'is-active' : ''} onClick={() => setFilter('continuing')} type="button">Later courses</button>
+        <button aria-pressed={filter === 'open-learning'} className={filter === 'open-learning' ? 'is-active' : ''} onClick={() => setFilter('open-learning')} type="button">Other subjects</button>
         <button aria-pressed={filter === 'projects'} className={filter === 'projects' ? 'is-active' : ''} onClick={() => setFilter('projects')} type="button">Projects</button>
       </nav>
       {showCourses && <section className="course-grid" aria-label="Courses">
         {filteredCourses.map((course) => <CourseCard course={course} key={course.id} />)}
+      </section>}
+      {showOpenLearning && <section className="academy-catalog-section" aria-labelledby="open-learning-title">
+        <div className="section-heading-open">
+          <div><p className="eyebrow">No earlier course required</p><h2 id="open-learning-title">Other subjects</h2></div>
+          <p>Read the material and use prepared exercises in your browser. Every published page is open.</p>
+        </div>
+        <div className="academy-card-grid">
+          {academyCourses.map((course) => {
+            const path = academyPathForId(course.pathId)
+            if (!path) return null
+            const unitIds = course.moduleIds.flatMap((moduleId) => academyModuleForId(moduleId)?.unitIds ?? [])
+            const complete = unitIds.filter((unitId) => progress.completedLessons.includes(unitId)).length
+            return (
+              <article className={`academy-card academy-catalog-card${course.pathId === 'RVF-PATH' ? ' academy-catalog-card--reality' : ''}`} key={course.id}>
+                <small>{path.title} · Course reference {course.id}</small>
+                <h2>{course.title}</h2>
+                <p>{course.summary}</p>
+                <dl>
+                  <div><dt>What you will learn</dt><dd>{course.outcome}</dd></div>
+                  <div><dt>Course size</dt><dd>{unitIds.length} units · {course.time}</dd></div>
+                </dl>
+                <div className="academy-card__meta"><span>Open to guests</span><span>{complete} of {unitIds.length} units complete</span></div>
+                <AppLink className="primary-action" to={academyCoursePath(path.id, course.id)}>Open course <ArrowRight aria-hidden="true" size={17} /></AppLink>
+              </article>
+            )
+          })}
+        </div>
       </section>}
       {showProjects && <section className="guided-project-list" aria-labelledby="guided-projects-title">
         <div className="section-heading-open">
@@ -1543,7 +1597,7 @@ function AppContent() {
 
   const view: ViewId = route.page === 'home'
     ? 'home'
-    : route.page === 'courses' || route.page === 'course' || route.page === 'academy' || route.page === 'project'
+    : route.page === 'courses' || route.page === 'course' || route.page === 'academy' || route.page === 'project' || openAcademyPages.has(route.page)
       ? 'courses'
       : route.page === 'practice' || route.page === 'practice-session' || (route.page === 'lesson' && route.practice)
     ? 'practice'
@@ -1652,12 +1706,25 @@ function AppContent() {
       ? projectManifestByRoute(route.language, route.projectId)
       : undefined
     const projectCheckpoint = routeProject?.checkpoints.find((item) => item.id === route.checkpointId)
+    const academyTitle = route.academyUnitId
+      ? academyUnitForId(route.academyUnitId)?.title
+      : route.academyPreparationPageId
+        ? academyPreparationPageForId(route.academyPreparationPageId)?.title
+        : route.academyModuleId
+          ? academyModuleForId(route.academyModuleId)?.title
+          : route.academyCourseId
+            ? academyCourseForId(route.academyCourseId)?.title
+            : route.academyPathId
+              ? academyPathForId(route.academyPathId)?.title
+              : undefined
     const pageTitle = route.page === 'home'
       ? 'Learning Home'
       : route.page === 'start'
         ? 'Beginner Intake'
         : route.page === 'courses'
           ? 'Courses'
+          : openAcademyPages.has(route.page)
+            ? academyTitle
           : route.page === 'course' || route.page === 'academy'
             ? routedCourse?.title ?? (summary ? `${summary.shortName} Foundations` : 'Course')
         : route.page === 'practice' || route.page === 'practice-session'
@@ -1678,7 +1745,7 @@ function AppContent() {
                     : exercise?.title ?? mission?.title
                   : 'Page not found'
     document.title = `${pageTitle ?? 'Learn'} | SeePoundCoffeePie`
-  }, [foundationTrack, practiceLoadFailed, route.checkpointId, route.exerciseId, route.language, route.missionId, route.page, route.projectId, routedCourse])
+  }, [foundationTrack, practiceLoadFailed, route.academyCourseId, route.academyModuleId, route.academyPathId, route.academyPreparationPageId, route.academyUnitId, route.checkpointId, route.exerciseId, route.language, route.missionId, route.page, route.projectId, routedCourse])
 
   useEffect(() => {
     const handleNavigation = () => {
@@ -2013,7 +2080,7 @@ function AppContent() {
     return <NotFoundPage progress={normalizedProgress} />
   }
 
-  const publicCoursePage = route.page === 'courses' || route.page === 'course'
+  const publicCoursePage = route.page === 'courses' || route.page === 'course' || openAcademyPages.has(route.page)
   if (route.page === 'start' || (!progress.onboardingComplete && !publicCoursePage)) {
     return (
       <>
@@ -2263,6 +2330,7 @@ function AppContent() {
           }
         }}
         onSignIn={signIn}
+        learningAreaTitle={openAcademyPages.has(route.page) ? 'Open learning' : undefined}
       >
         {route.page === 'home' && (foundationTrack === null
           ? <FoundationLoadFailure insideShell />
@@ -2270,6 +2338,20 @@ function AppContent() {
             ? <LearnerHome progress={normalizedProgress} track={foundationTrack} />
             : <main className="content-page" aria-busy="true" id="main-content" tabIndex={-1}><section className="route-message-card route-message-card--inside"><h1>Loading your course</h1></section></main>)}
         {route.page === 'courses' && <CourseCatalog progress={normalizedProgress} />}
+        {openAcademyPages.has(route.page) && route.academyPathId && (
+          <Suspense fallback={<main className="content-page" aria-busy="true" id="main-content" tabIndex={-1}><section className="route-message-card route-message-card--inside"><h1>Loading learning page</h1></section></main>}>
+            <OpenAcademyRoute
+              academyCourseId={route.academyCourseId}
+              academyModuleId={route.academyModuleId}
+              academyPathId={route.academyPathId}
+              academyPreparationPageId={route.academyPreparationPageId}
+              academyUnitId={route.academyUnitId}
+              onNavigate={navigateTo}
+              onProgress={updateProgress}
+              progress={normalizedProgress}
+            />
+          </Suspense>
+        )}
         {route.page === 'course' && route.courseId && routedCourse?.kind === 'continuing' && (
           <Suspense fallback={(
             <main className="content-page" aria-busy="true" id="main-content" tabIndex={-1}>

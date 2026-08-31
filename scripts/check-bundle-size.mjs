@@ -53,14 +53,11 @@ const budgets = {
     html: { raw: 5_000, gzip: 2_000 },
   },
   total: {
-    // Phase 5A adds one reviewed 30-lesson course, its route shell, and a
-    // separately loaded Codebook. The first-load limits above do not move.
-    // The four-language no-assumed-knowledge onramp adds reviewed lesson-guide
-    // copy for Python, C++, C#, and Java. Reassign the existing aggregate gzip
-    // allowance to that JavaScript instead of increasing the transfer budget.
-    // Each new lazy boundary also receives an exact asset cap below.
-    javascript: { raw: 765_000, gzip: 220_500 },
-    css: { raw: 87_000, gzip: 16_500 },
+    // The open-academy slice adds eight complete, source-backed units behind
+    // one lazy route. The first-load limits above do not move. Its JavaScript
+    // and CSS also receive exact lazy-asset caps below.
+    javascript: { raw: 855_000, gzip: 247_000 },
+    css: { raw: 96_000, gzip: 19_000 },
     html: { raw: 5_000, gzip: 1_100 },
     // Reviewed, inert teaching payloads may leave executable JavaScript only
     // when they remain separately visible in transfer accounting.
@@ -71,7 +68,7 @@ const budgets = {
 // This is the explicit sum of the reviewed total JavaScript, CSS, HTML, and
 // teaching-data limits above. Keep the category caps and aggregate cap aligned
 // so moving bytes between file types cannot make transferred bytes disappear.
-const aggregateTransferBudget = { raw: 911_000, gzip: 252_500 }
+const aggregateTransferBudget = { raw: 1_010_000, gzip: 281_500 }
 const summedCategoryBudget = Object.values(budgets.total).reduce(
   (sum, budget) => ({
     raw: sum.raw + budget.raw,
@@ -113,6 +110,12 @@ const reviewedAssetBudgets = [
     gzip: 12_000,
   },
   {
+    label: 'open academy route and teaching content',
+    pattern: /^AcademyRoute-.*\.js$/u,
+    raw: 73_000,
+    gzip: 20_000,
+  },
+  {
     label: 'practical c++ teaching data',
     pattern: /^cpp-collections-records-course-packed\.generated-[A-Za-z0-9_-]{6,}\.json$/u,
     raw: 54_000,
@@ -151,6 +154,17 @@ const reviewedAssetBudgets = [
     // languages. This narrow increase does not change its lazy placement.
     raw: 32_500,
     gzip: 6_500,
+  },
+  {
+    label: 'open academy route css',
+    extension: 'css',
+    markers: [
+      '.academy-unit-layout',
+      '.academy-preparation__choices',
+    ],
+    placement: 'lazy',
+    raw: 9_200,
+    gzip: 2_250,
   },
 ]
 
