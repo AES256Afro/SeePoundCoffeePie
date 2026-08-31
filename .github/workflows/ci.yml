@@ -43,6 +43,12 @@ jobs:
       - name: Verify text style
         run: npm run check:text-style
 
+      - name: Verify academy curriculum structure
+        run: npm run check:academy-curriculum
+
+      - name: Verify no-assumed-knowledge learner language
+        run: npm run check:learner-language
+
       - name: Verify social preview
         run: npm run check:social-preview
 
