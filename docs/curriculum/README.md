@@ -18,29 +18,44 @@ When a course uses an earlier idea, the learner chooses one of three actions:
 
 None of these choices changes access, progress eligibility, or the ability to complete the course. Credential requirements can require assessed evidence before a credential is issued, but they never hide the teaching material.
 
+## The universal clarity rule
+
+The [No assumed knowledge standard](NO_ASSUMED_KNOWLEDGE_STANDARD.md) applies to every school, path, course, module, unit, exercise, lab, and assessment. Before a required action, the teaching must define the needed terms, explain the purpose and context, identify the starting input, show the expected output, and provide a stop or recovery path.
+
+This standard is not a course, learner category, diagnosis field, accessibility badge, or medicalized learning path. It does not appear as a catalog choice and does not require a learner to disclose anything. Its focus, scaling, context, and resumption controls are ordinary platform features available to everyone.
+
+The [Reality versus Fiction curriculum](REALITY_VS_FICTION_CURRICULUM.md) is different. It is an optional cross-school learning path that uses common scenes and technology claims to teach evidence, missing context, real mechanisms, and safe verification. It is not a sixth technical school and never becomes required preparation for another course.
+
 ## Document map
 
 | Document | Purpose |
 | --- | --- |
 | [Academy expansion blueprint](ACADEMY_EXPANSION_BLUEPRINT.md) | Shared product model, open access, optional preparation, cross-platform access, visual teaching systems, and development order |
+| [No assumed knowledge standard](NO_ASSUMED_KNOWLEDGE_STANDARD.md) | Platform-wide beginner clarity, predictable units, literal language, examples, recovery, focus controls, accessibility, templates, and release gates |
 | [Linux curriculum](LINUX_CURRICULUM.md) | Beginner-to-advanced Linux, directory tree, desktop, gaming, Windows migration, servers, administration, recovery, and operations |
 | [Networking curriculum](NETWORKING_CURRICULUM.md) | First packet through Ethernet, Wi-Fi, IPv4, IPv6, services, switching, routing, automation, cloud networking, BGP, and architecture |
 | [Cybersecurity curriculum](CYBERSECURITY_CURRICULUM.md) | Personal safety through defensive engineering, security operations, incident response, forensics, governance, and recovery |
 | [Local Models and LLMs curriculum](LOCAL_MODELS_LLM_CURRICULUM.md) | Model foundations, local inference, data, evaluation, retrieval, fine-tuning, small-model training, serving, privacy, and reproducibility |
+| [Reality versus Fiction curriculum](REALITY_VS_FICTION_CURRICULUM.md) | Optional cross-school comparisons of familiar claims with evidence, missing steps, real mechanisms, safe observations, and professional takeaways |
 | [Lab, assessment, and credential standard](LAB_ASSESSMENT_CREDENTIAL_STANDARD.md) | Learner-controlled lab boundary, platform lanes, risk classes, evidence, assessment, transcript, and credential rules |
-| [Milestone roadmap](../../MILESTONES.md) | Dependency-ordered implementation plan from M000 through M350 |
+| [Reality Checks first-release packet](course-packets/REALITY_CHECKS_FIRST_RELEASE.md) | Authoring starting packet for claim, evidence, and real-system comparisons; not live or publication-ready |
+| [Models From Zero first-release packet](course-packets/MODELS_FROM_ZERO_FIRST_RELEASE.md) | Authoring blueprint for the canonical six-course beginner path, with deferred notes for later model work; not live or publication-ready |
+| [Milestone roadmap](../../MILESTONES.md) | Dependency-ordered implementation plan from M000 through M410 |
 
 ## Planned curriculum scale
 
-| School | Planned scope |
+| Area | Planned scope |
 | --- | --- |
 | Linux and Open Systems | 15 learning paths, 87 courses, about 420 to 500 modules, at least 191 labs and capstones |
 | Networking | 1 optional preparation bench, 15 large courses, 132 modules, 8 integrated capstones, and 8 reusable lab topologies |
 | Cybersecurity | 23 learning paths, 219 courses, 1,100 to 1,400 modules, 350 or more guided labs, and 23 path capstones |
-| Local Models and LLMs | 13 core paths, 60 to 65 courses, 280 to 340 modules, at least 70 guided labs, and 13 path capstones |
+| Local Models and LLMs | 13 core paths, 65 courses, 340 to 420 modules, 110 maintained labs, 13 path capstones, and 5 integrated capstones |
 | Optional Preparation and Refreshers | Short introductions and focused review paths shared across all schools |
+| Reality versus Fiction | 1 optional cross-school path, 5 courses, 39 core comparison units, and 1 optional source-based project |
 
 The academy target allows 450 to 600 unique courses because the detailed school inventories already exceed the earlier 250-course estimate. A course can appear in several suggested learning paths without being duplicated.
+
+The no-assumed-knowledge standard is not included in the curriculum totals because it is not learner content or a path. It is an authoring, interface, accessibility, and release requirement applied to all of the content above.
 
 ## Where practical work happens
 
@@ -60,12 +75,16 @@ Linux is the common reference environment because it is broadly available and wo
 
 1. Finish the current Practical C++ release gate without mixing it with academy architecture work.
 2. Build the generic academy registry, open routes, learning hierarchy, and scalable catalog.
-3. Add optional preparation choices, platform access lanes, lab manifests, recovery, transcripts, assessment boundaries, and credential records.
+3. Apply the no-assumed-knowledge contract to shared authoring templates and renderers while adding optional preparation, platform lanes, lab manifests, recovery, transcripts, assessment boundaries, and credential records.
 4. Publish a reviewed Linux foundation slice and the shared visual systems.
 5. Publish networking foundations and safe local simulations.
 6. Publish cybersecurity foundations and the isolated defensive lab environment.
 7. Publish local-model foundations, no-compute lessons, and learner-controlled local labs.
-8. Expand each school in reviewed waves, then add integrated paths, capstones, and broader certificate programs.
+8. Expand each school in reviewed waves, then add the core integrated paths, capstones, and broader certificate programs through M350.
+9. Complete the cross-school no-assumed-knowledge implementation and release evidence through M366.
+10. Publish the optional Reality versus Fiction path through M382, beginning with the Reality Checks authoring packet and completing its registry, review, implementation, staging, and production gates.
+11. Publish the local-versus-hosted model comparison path through M407, beginning with the Models From Zero packet.
+12. Finish the selected overview image, cross-cutting curriculum index, and expanded academy release through M410.
 
 The order above is a development sequence. It never becomes a learner access sequence.
 
@@ -75,12 +94,24 @@ After the four foundation slices, deeper school work can proceed in parallel whe
 
 `MILESTONES.md` is the only completion ledger. School-specific labels are work-package references and cannot be marked complete independently.
 
-| School plan | Canonical roadmap range |
+| Work area | Canonical roadmap range |
 | --- | --- |
+| Shared academy, labs, credentials, and optional preparation | M101 through M160 |
 | Linux `LNX-M001` through `LNX-M078` | M161 through M210 |
 | Networking Slices 1 through 6 | M211 through M250 |
 | Cybersecurity `CYB-M001` through `CYB-M070` | M251 through M295 |
 | Local Models Releases A through G | M296 through M330 |
-| Cross-school paths and capstones | M331 through M350 |
+| Core cross-school paths, capstones, and academy-scale release | M331 through M350 |
+| Universal no-assumed-knowledge implementation | M351 through M366 |
+| Reality versus Fiction path | M367 through M382 |
+| Local-versus-hosted model comparison | M383 through M407 |
+| Overview image, cross-cutting index, and expanded release | M408 through M410 |
+
+First-release packets reuse those canonical ranges rather than creating another ledger:
+
+| First-release packet | Canonical roadmap hooks |
+| --- | --- |
+| [Reality Checks](course-packets/REALITY_CHECKS_FIRST_RELEASE.md) | M118 and M367 through M382 |
+| [Models From Zero](course-packets/MODELS_FROM_ZERO_FIRST_RELEASE.md) | M296 through M306 and M383 through M407 |
 
 Each implementation issue links one local work package to one or more canonical milestones and records the owner, dependencies, deliverable, acceptance evidence, and rollback or migration note. This prevents two documents from reporting different completion states.

@@ -20,6 +20,10 @@ The primary learner:
 
 Nothing in the first sector assumes prior command-line, IDE, Git, or computer-science experience.
 
+The same rule applies to every later school. Linux, networking, cybersecurity, and model lessons may become advanced, but they must not hide their starting knowledge. Before asking for an action, the teaching must define required words and symbols, explain the purpose, restore prior context, identify the starting state, show the expected result and acceptable variation, and provide stop, undo, or recovery instructions. This is a platform standard for everyone. It is not a separate course, learner category, diagnosis field, or lower-outcome path. The complete authoring and release contract is the [No-assumed-knowledge standard](curriculum/NO_ASSUMED_KNOWLEDGE_STANDARD.md).
+
+An optional [Reality versus Fiction path](curriculum/REALITY_VS_FICTION_CURRICULUM.md) uses familiar technical claims as entry points without turning lessons into entertainment recaps. Each comparison separates evidence, inference, missing steps, real mechanisms, safe observation, and professional limits. Cybersecurity cases remain defensive and use prepared or isolated evidence. AI cases require learners to distinguish a model from the surrounding application and to compare local and hosted systems by their actual data flow and operating boundary.
+
 ## Core learning loop
 
 Every lesson uses the same seven-part rhythm:

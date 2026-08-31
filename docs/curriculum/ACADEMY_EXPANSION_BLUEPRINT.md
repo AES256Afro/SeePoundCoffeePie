@@ -4,9 +4,11 @@ Last reviewed: 2026-08-30
 
 ## Purpose
 
-SeePoundCoffeePie is expanding from four programming-language schools into a broad technical learning platform. The long-range catalog includes programming, Linux, networking, cybersecurity, and local models and LLMs.
+SeePoundCoffeePie is expanding from four programming-language schools into a broad technical learning platform. The long-range catalog includes programming, Linux, networking, cybersecurity, local models and LLMs, optional preparation, and optional cross-school learning paths such as Reality versus Fiction.
 
 This blueprint defines how those subjects fit together. It is a product and curriculum contract, not finished course content and not production-release evidence.
+
+The [No assumed knowledge standard](NO_ASSUMED_KNOWLEDGE_STANDARD.md) applies across that complete catalog. It is not a course, learner category, diagnosis field, accessibility badge, or medicalized path. It is the ordinary authoring, interface, accessibility, and release standard for every learner.
 
 ## Non-negotiable learner promises
 
@@ -20,10 +22,12 @@ This blueprint defines how those subjects fit together. It is a product and curr
 - The site teaches and records learning. Native operating-system work, network emulation, security labs, model inference, and model training run only in learner-controlled environments.
 - No voice, microphone, or recorded narration is required.
 - Use plain language, readable pages, useful diagrams, restrained color, and enough whitespace to understand the material.
-- Explain a term before relying on it.
+- Never assume that a learner already knows an earlier course, common setup, interface convention, technical term, symbol, or abbreviation.
+- Before a required action, define the terms, explain the purpose and context, identify the input, show the expected output, and provide recovery.
 - Explain why a system was designed a certain way, not only which command to type.
 - Show how to stop, recover, and undo changes before asking a beginner to change a machine.
 - Use history and case studies to restore context between demanding practical sections.
+- Reality-versus-fiction teaching remains optional cross-school context. It never becomes required preparation or a sixth technical school.
 
 ## The academy map
 
@@ -44,6 +48,9 @@ SeePoundCoffeePie Academy
 |
 +-- Local Models and LLMs
 |
++-- Cross-school Learning Paths
+|   +-- Reality versus Fiction
+|
 +-- Optional Preparation and Refreshers
     +-- Computer basics
     +-- Files and folders
@@ -58,7 +65,9 @@ SeePoundCoffeePie Academy
     +-- Git and reproducibility
 ```
 
-These are separate learning domains. Linux, networking, cybersecurity, and local-model material must not be disguised as Python courses just because Python may appear in some labs.
+These are separate learning domains. Linux, networking, cybersecurity, and local-model material must not be disguised as Python courses just because Python may appear in some labs. Reality versus Fiction links across those schools without copying their full technical instruction.
+
+The no-assumed-knowledge standard does not appear as a node in this map because it is not learner content. It changes how every node is written, displayed, reviewed, and released. The platform never asks a learner to select or disclose a cognitive, medical, or disability category to receive clear teaching.
 
 ## Learning hierarchy
 
@@ -72,7 +81,7 @@ School
                 +-- Worked example
                 +-- Knowledge exercise
                 +-- Optional local lab
-                +-- Reflection or diagnosis
+                +-- Reflection or troubleshooting analysis
                 +-- Summary
 ```
 
@@ -94,6 +103,33 @@ Definitions:
 The hierarchy takes inspiration from the way Microsoft Learn organizes units, modules, and learning paths, but SeePoundCoffeePie will use original content, visual design, terminology where needed, and assessment rules.
 
 Reference: [Microsoft Learn content and resource types](https://learn.microsoft.com/en-ie/training/support/learn-content-types)
+
+The universal clarity standard applies to every level of the hierarchy but adds no extra level. Reality versus Fiction uses the same hierarchy: one optional cross-school learning path contains five courses, each course contains modules, and each comparison is one bookmarkable unit.
+
+## Universal no-assumed-knowledge standard
+
+Every required action must provide or link the complete starting context without blocking the learner:
+
+1. **Term:** Define every needed word, abbreviation, symbol, and interface label.
+2. **Purpose:** Explain why the learner is doing the action.
+3. **Context:** State where the learner is, what already happened, and what remains unchanged.
+4. **Input:** Identify the exact files, values, commands, tools, accounts, or machine state used here.
+5. **Action:** Give one clear instruction at a time and label its environment.
+6. **Expected output:** Show what the learner should observe and what acceptable variation may look like.
+7. **Recovery:** Explain how to stop, undo, restore, or request more context before loss occurs.
+
+The complete [No assumed knowledge standard](NO_ASSUMED_KNOWLEDGE_STANDARD.md) defines predictable page anatomy, one clear action, optional depth, literal language, local glossary behavior, examples before abstraction, calm feedback, sensory restraint, focus views, scaling, keyboard and screen-reader access, saved progress, lab stages, assessment flexibility, required templates, prohibited patterns, a content review rubric, and measurable release gates.
+
+It applies to everyone without creating a separate mode of learning. It must not produce:
+
+- a catalog course;
+- a learner category or recommended identity;
+- a profile, transcript, analytics, or assessment diagnosis field;
+- a request for medical or disability proof;
+- a path that lowers the intended learning outcome;
+- an access gate for learners who skip optional context.
+
+If a lesson would become too long, keep the minimum context beside the task and provide an optional refresher and optional deeper explanation. `Start now` remains available, and the task still names its purpose, input, expected output, and recovery path.
 
 ## Open access and optional preparation
 
@@ -265,6 +301,26 @@ For learners who need the machine itself demystified:
 - versioned lab manifests;
 - experiment notes;
 - rebuilding a result from a clean folder.
+
+## Optional Reality versus Fiction path
+
+The [Reality versus Fiction curriculum](REALITY_VS_FICTION_CURRICULUM.md) is one optional cross-school learning path. It contains five courses and 39 core comparison units across programming, Linux, cybersecurity, networking, and local models. It is not a technical school, required orientation, or prerequisite for deeper study.
+
+Each comparison begins with a familiar scene pattern, common myth, marketing statement, or public technology claim. It then uses the same visible order:
+
+1. The claim or scene
+2. What is plausible
+3. What is exaggerated or missing
+4. The real underlying concept
+5. Safe exercise or observation
+6. Defensive or professional takeaway
+7. Short knowledge check
+
+The core comparison is L0 reading and planning. It uses prepared, synthetic, or redistribution-safe evidence, requires no installation, and keeps an optional L1 observation separate. Cybersecurity comparisons remain conceptual, authorized, isolated, and defensive. A learner may hide the fiction framing and read the complete technical explanation.
+
+The path teaches evidence and context rather than scoring entertainment for accuracy. It does not copy dialogue, screenshots, actors, character names, logos, music, episode plots, or recognizable compositions. A named public work or claim receives a dated source record and only the minimum paraphrase needed to teach.
+
+The [Reality Checks first-release packet](course-packets/REALITY_CHECKS_FIRST_RELEASE.md) is an authoring starting packet. It is not a complete course, live teaching, or publication-ready content.
 
 ## Cross-platform access lanes
 
@@ -580,6 +636,22 @@ Show:
 
 The page indicates which steps happen on the site and which happen only in the learner's environment.
 
+### Reality comparison board
+
+Show one claim without making visual confidence look like proof:
+
+- the claim or short scene pattern;
+- directly shown evidence;
+- a plausible part;
+- missing people, permissions, systems, time, failed attempts, and recovery;
+- the real mechanism;
+- uncertainty and unknowns;
+- one safe observation;
+- the next professional action;
+- source date and review state.
+
+Use separate text labels for `shown`, `source statement`, `reconstruction`, `inference`, `disputed`, and `unknown`. Color is not the only signal. A time-compression view shows the real sequence as a static ordered list before any optional visual treatment. The complete board remains readable in a single-column text order.
+
 ## Credential model
 
 ### Completion record
@@ -620,7 +692,7 @@ References:
 
 This is an architecture target, not a promise to publish incomplete material.
 
-- 5 major schools plus optional preparation
+- 5 major schools, optional preparation, and optional cross-school learning paths
 - 75 or more learning paths
 - 450 to 600 unique courses
 - 2,500 to 3,500 modules
@@ -632,26 +704,47 @@ This is an architecture target, not a promise to publish incomplete material.
 
 Courses may appear in more than one learning path. Reuse is preferable to duplicating nearly identical foundations.
 
+The no-assumed-knowledge standard does not add a school, path, course, module, unit, or credential to these totals. Reality versus Fiction contributes one optional cross-school path, five courses, 39 core comparison units, and one optional source-based project without duplicating the deeper school instruction it links.
+
 ## Development order versus learner choice
 
-The implementation sequence is:
+The roadmap now spans M000 through M410. Its academy implementation sequence is:
 
-1. Generic academy structure and open-access rules
-2. Optional preparation and cross-platform lab access
+1. Generic academy structure, open-access rules, and shared no-assumed-knowledge authoring behavior
+2. Optional preparation, cross-platform lab access, and assessment boundaries
 3. Linux foundations and administration
 4. Networking foundations through advanced routing
 5. Cybersecurity foundations through defensive operations
 6. Local models and LLMs
-7. Integrated capstones and credential programs
+7. Core integrated paths, capstones, credentials, and the M350 core academy release
+8. Cross-school no-assumed-knowledge controls and release evidence through M366
+9. The optional Reality versus Fiction path through M382
+10. The local-versus-hosted model comparison path through M407
+11. The selected overview image, cross-cutting curriculum index, and M410 expanded academy release
 
 This order controls product risk and reuses shared material. It does not determine what a learner is allowed to open.
 
 Linux is developed early because it provides a low-cost, widely available reference environment for networking, cybersecurity, server, container, and local-model labs. Windows and macOS learners remain first-class participants through WSL, virtual machines, native tools, and clearly documented differences.
 
+The no-assumed-knowledge standard should shape new authored material before M351 is declared complete. M351 through M366 make the shared controls, review evidence, and cross-school release gate explicit; their later roadmap numbers do not permit earlier courses to assume hidden knowledge.
+
+The first authoring packets are:
+
+- [Reality Checks](course-packets/REALITY_CHECKS_FIRST_RELEASE.md), linked to M118 and M367 through M382;
+- [Models From Zero](course-packets/MODELS_FROM_ZERO_FIRST_RELEASE.md), linked to M296 through M306 and M383 through M407.
+
+These packets are authored starting points, not public-release claims and not separate completion ledgers.
+
 ## Related curriculum plans
 
+- [Curriculum blueprint index](README.md)
+- [No assumed knowledge standard](NO_ASSUMED_KNOWLEDGE_STANDARD.md)
 - [Linux curriculum](LINUX_CURRICULUM.md)
 - [Networking curriculum](NETWORKING_CURRICULUM.md)
 - [Cybersecurity curriculum](CYBERSECURITY_CURRICULUM.md)
 - [Local models and LLM curriculum](LOCAL_MODELS_LLM_CURRICULUM.md)
+- [Reality versus Fiction curriculum](REALITY_VS_FICTION_CURRICULUM.md)
 - [Lab, assessment, and credential standard](LAB_ASSESSMENT_CREDENTIAL_STANDARD.md)
+- [Reality Checks first-release packet](course-packets/REALITY_CHECKS_FIRST_RELEASE.md)
+- [Models From Zero first-release packet](course-packets/MODELS_FROM_ZERO_FIRST_RELEASE.md)
+- [Milestone roadmap M000 through M410](../../MILESTONES.md)

@@ -280,7 +280,7 @@ const listToolExercises: Exercise[] = [
     eyebrow: 'Changing lists 2 of 5',
     title: 'Add one item with append',
     explanation:
-      'The list method append adds one value to the end of an existing list. Changing an existing value in place is called mutation, which simply means the stored collection now has different contents.',
+      'The list method append adds one value to the end of an existing list. Changing an existing value in place is called mutation, which means the stored collection now has different contents.',
     analogy:
       'A clipboard already holds two tasks. append writes one new task on the next open line instead of replacing the whole clipboard.',
     type: 'choice',

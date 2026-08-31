@@ -460,7 +460,7 @@ const javaExercises: FoundationExercise[] = [
     explanation:
       'The int type stores whole numbers in Java. The number does not use quotation marks because it is numeric data, not text.',
     analogy:
-      'A numeric inventory gauge stores the pod count. The label podCount makes its purpose obvious.',
+      'A numeric inventory gauge stores the pod count. The label podCount tells the reader that the value is a number of pods.',
     type: 'code',
     prompt: 'Declare an integer named podCount and set it to 12.',
     starterCode: 'public class Main {\n    public static void main(String[] args) {\n        _____ podCount = 12;\n        System.out.println(podCount);\n    }\n}',
@@ -2249,7 +2249,7 @@ const pythonVoidWyrmExercises: FoundationExercise[] = [
     eyebrow: 'Systems recall 1 of 5',
     title: 'Trace a complete program',
     explanation:
-      'This program combines a list, a loop, and a condition you already know. The loop visits both hazards, but the indented print runs only when the current value equals wyrm.',
+      'This program combines a list, a loop, and a condition introduced earlier. The loop visits both hazards, but the indented print runs only when the current value equals wyrm.',
     analogy:
       'A scanner sweeps every contact, while the alarm sounds only for the contact that matches the danger profile.',
     type: 'prediction',
