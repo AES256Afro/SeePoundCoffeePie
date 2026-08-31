@@ -55,13 +55,16 @@ const budgets = {
   total: {
     // Phase 5A adds one reviewed 30-lesson course, its route shell, and a
     // separately loaded Codebook. The first-load limits above do not move.
+    // The four-language no-assumed-knowledge onramp adds reviewed lesson-guide
+    // copy for Python, C++, C#, and Java. Reassign the existing aggregate gzip
+    // allowance to that JavaScript instead of increasing the transfer budget.
     // Each new lazy boundary also receives an exact asset cap below.
-    javascript: { raw: 765_000, gzip: 218_000 },
-    css: { raw: 87_000, gzip: 17_500 },
-    html: { raw: 5_000, gzip: 2_000 },
+    javascript: { raw: 765_000, gzip: 220_500 },
+    css: { raw: 87_000, gzip: 16_500 },
+    html: { raw: 5_000, gzip: 1_100 },
     // Reviewed, inert teaching payloads may leave executable JavaScript only
     // when they remain separately visible in transfer accounting.
-    teachingData: { raw: 54_000, gzip: 15_000 },
+    teachingData: { raw: 54_000, gzip: 14_400 },
   },
 }
 
@@ -118,7 +121,10 @@ const reviewedAssetBudgets = [
   {
     label: 'foundation teaching content',
     pattern: /^foundation-curriculum-packed\.generated-[A-Za-z0-9_-]{6,}\.js$/u,
-    raw: 120_000,
+    // The four first editable lessons now include explicit context, terms,
+    // steps, expected output, and recovery without assuming prior knowledge.
+    // Keep that reviewed teaching cost isolated behind this exact asset gate.
+    raw: 122_000,
     gzip: 30_000,
   },
   {
@@ -141,7 +147,9 @@ const reviewedAssetBudgets = [
       '.project-run-report__guidance',
     ],
     placement: 'lazy',
-    raw: 32_000,
+    // The shared guide layout supports the same beginner onramp in all four
+    // languages. This narrow increase does not change its lazy placement.
+    raw: 32_500,
     gzip: 6_500,
   },
 ]

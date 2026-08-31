@@ -81,7 +81,11 @@ export interface BrowserProgress {
 }
 
 type ProgressOverrides = Partial<BrowserProgress>
-type SeedProgress = (overrides?: ProgressOverrides) => Promise<void>
+type ThemeId = 'workshop' | 'hex' | 'terminal' | 'schematic'
+type SeedProgress = (
+  overrides?: ProgressOverrides,
+  options?: { theme?: ThemeId },
+) => Promise<void>
 
 interface BrowserFixtures {
   _closedLoopbackGuard: void
@@ -195,7 +199,7 @@ export const test = base.extend<BrowserFixtures>({
   }, { auto: true }],
 
   seedProgress: async ({ page }, use) => {
-    await use(async (overrides = {}) => {
+    await use(async (overrides = {}, options = {}) => {
       const progress: BrowserProgress = {
         ...baseProgress,
         ...overrides,
@@ -211,10 +215,10 @@ export const test = base.extend<BrowserFixtures>({
         },
       }
 
-      await page.addInitScript(({ completionJournalKey, progressKey, progressRecord, resetBarrierKey }) => {
+      await page.addInitScript(({ completionJournalKey, progressKey, progressRecord, resetBarrierKey, theme }) => {
         window.localStorage.clear()
         window.sessionStorage.clear()
-        window.localStorage.setItem('spcp-theme', 'workshop')
+        window.localStorage.setItem('spcp-theme', theme)
         window.localStorage.setItem(resetBarrierKey, JSON.stringify({ version: 1, active: true }))
         window.localStorage.setItem(progressKey, JSON.stringify(progressRecord))
         window.localStorage.setItem(
@@ -226,6 +230,7 @@ export const test = base.extend<BrowserFixtures>({
         progressKey: PROGRESS_KEY,
         progressRecord: progress,
         resetBarrierKey: RESET_BARRIER_KEY,
+        theme: options.theme ?? 'workshop',
       })
     })
   },

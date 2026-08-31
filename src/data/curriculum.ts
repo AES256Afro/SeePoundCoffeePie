@@ -22,11 +22,11 @@ const cppProgramFrame = [
 const javaProgramFrame = [
   {
     code: 'public class Main {',
-    plain: 'A class is a named program container. This simulator expects the name Main. public lets Java reach it, and { opens the container.',
+    plain: 'This supplied line gives the program the name Main and opens its outer group with {. You will learn each part later.',
   },
   {
     code: 'public static void main(String[] args)',
-    plain: 'This is Java’s starting doorway. public makes it reachable, static lets it start without first building an object, void says it returns no value, and String[] args can receive launch words. You do not need to memorize this line yet.',
+    plain: 'This supplied line marks where Java starts following your instructions. Leave it unchanged for now; each part will be taught in a later lesson.',
   },
   {
     code: '{ and }',
@@ -57,16 +57,68 @@ const pythonExercises: FoundationExercise[] = [
     eyebrow: 'Transmission 2 of 5',
     title: 'Print your first message',
     explanation:
-      'Python uses print to show text in the Output box. Text goes inside quotation marks so Python knows it is a message, not another instruction.',
+      'Python uses print to show text under Your output. Text goes inside quotation marks so Python knows it is a message, not another instruction.',
     analogy:
       'Think of print as a label maker. The words inside quotation marks are the label it produces.',
     type: 'code',
-    prompt: 'Replace the blank with print so the Output box shows Signal online.',
+    prompt: 'Replace the blank with print so Your output shows Signal online.',
     starterCode: '# Show a message\n_____("Signal online")',
     focus: 'Replace the one _____ blank with print. Leave the message and its punctuation in place.',
+    onramp: {
+      goal: 'Make a Python program display one line of text.',
+      context:
+        'You will edit this program in the Code editor, the box on this page where you can change instructions. A program is a set of instructions for a computer. When you select Check my code, the website checks the program for you. Your output is the area below the editor where the program’s text appears. You do not need to install Python or create a file on your computer.',
+      startingPoint:
+        'The code editor starts with two lines. Line 1 is a note for the learner and does not run as an instruction. Line 2 reads _____("Signal online"). Replace only the five underscores.',
+      terms: [
+        {
+          term: 'print',
+          meaning: 'A Python instruction that shows text under Your output.',
+          example: 'print("Signal online") displays the text Signal online.',
+        },
+        {
+          term: 'Quotation marks',
+          meaning: 'The two " characters that tell Python the characters between them are text.',
+          example: '"Signal online" is text because it is inside quotation marks.',
+        },
+        {
+          term: 'Parentheses',
+          meaning: 'The ( and ) characters that surround the text print should show.',
+          example: 'In print("Signal online"), the message is inside parentheses.',
+        },
+      ],
+      steps: [
+        '1. Select the Code editor.',
+        '2. Find _____ on line 2.',
+        '3. Replace only _____ with the lowercase word print.',
+        '4. Confirm that line 2 reads print("Signal online").',
+        '5. Select Check my code.',
+        '6. Compare the text under Your output with the expected text Signal online.',
+      ],
+      outputLocation: 'Look under Your output, directly below the Code editor.',
+      acceptableVariation:
+        'The words must read Signal online. It is okay if the output starts a new empty line after those words. The quotation marks do not appear under Your output.',
+      recovery: [
+        {
+          when: 'Check my code says Try again.',
+          whatStayedSafe: 'Your code stays in the editor, and you can try again.',
+          nextAction: 'Compare the editable line with step 4. Select I need a hint if you want to see the completed line.',
+        },
+        {
+          when: 'You changed or deleted more than the five underscores.',
+          whatStayedSafe: 'Your saved course progress is unchanged.',
+          nextAction: 'Select Restore supplied code, then replace only _____ with print.',
+        },
+        {
+          when: 'Check my code does not finish, or the page says it could not run your code.',
+          whatStayedSafe: 'The code in your Code editor stays in place, and no incorrect attempt is recorded.',
+          nextAction: 'Wait a moment, then select Check my code again.',
+        },
+      ],
+    },
     codeGuide: [
       { code: '# Show a message', plain: 'A line beginning with # is a comment for humans. Python ignores it when the program runs.' },
-      { code: 'print', plain: 'This is a built-in Python instruction that shows something in the Output box.' },
+      { code: 'print', plain: 'This is a built-in Python instruction that shows something under Your output.' },
       { code: '("Signal online")', plain: 'Parentheses hold what print should use. Quotation marks tell Python that Signal online is text.' },
     ],
     checks: [
@@ -183,9 +235,66 @@ const cppExercises: FoundationExercise[] = [
     prompt: 'Complete the instruction so the reactor reports Reactor online.',
     starterCode: '#include <iostream>\n\nint main() {\n    _____ << "Reactor online";\n    return 0;\n}',
     focus: 'Replace the one _____ blank with std::cout. The program frame around it is already supplied.',
+    onramp: {
+      goal: 'Make a C++ program display one line of text.',
+      context:
+        'You will edit this program in the Code editor, the box on this page where you can change instructions. A program is a set of instructions for a computer. When you select Check my code, the website checks the program for you. Your output is the area below the editor where the program’s text appears. You do not need to install C++ tools or create a file on your computer.',
+      startingPoint:
+        'The editable instruction is on line 4: _____ << "Reactor online";. Replace only the five underscores. The #include line, main line, braces, and return 0 line are supplied setup. Leave them in place; you do not need to understand or memorize them in this lesson.',
+      terms: [
+        {
+          term: 'std::cout',
+          meaning: 'The C++ name used here to send text to Your output.',
+          example: 'std::cout sends Reactor online to Your output.',
+        },
+        {
+          term: '<<',
+          meaning: 'Two < characters written side by side. Here they send the text on their right to std::cout.',
+          example: 'The complete instruction std::cout << "Reactor online"; sends the text to Your output.',
+        },
+        {
+          term: 'Quotation marks',
+          meaning: 'The two " characters that tell C++ the characters between them are text.',
+          example: '"Reactor online" is text because it is inside quotation marks.',
+        },
+        {
+          term: 'Semicolon',
+          meaning: 'The ; character that ends this C++ instruction.',
+          example: 'The semicolon is the last character in the completed instruction.',
+        },
+      ],
+      steps: [
+        '1. Select the Code editor.',
+        '2. Find _____ at the beginning of line 4.',
+        '3. Replace only _____ with std::cout.',
+        '4. Confirm that line 4 reads std::cout << "Reactor online";.',
+        '5. Select Check my code.',
+        '6. Compare the text under Your output with the expected text Reactor online.',
+      ],
+      outputLocation: 'Look under Your output, directly below the Code editor.',
+      acceptableVariation:
+        'The words must read Reactor online. It is okay if the output starts a new empty line after those words. The quotation marks and semicolon do not appear under Your output.',
+      recovery: [
+        {
+          when: 'Check my code says Try again.',
+          whatStayedSafe: 'Your code stays in the editor, and you can try again.',
+          nextAction: 'Compare the editable line with step 4. Select I need a hint if you want to see the completed line.',
+        },
+        {
+          when: 'You changed the supplied setup lines or deleted more than the five underscores.',
+          whatStayedSafe: 'Your saved course progress is unchanged.',
+          nextAction: 'Select Restore supplied code, then replace only _____ on line 4 with std::cout.',
+        },
+        {
+          when: 'Check my code does not finish, or the page says it could not run your code.',
+          whatStayedSafe: 'The code in your Code editor stays in place, and no incorrect attempt is recorded.',
+          nextAction: 'Wait a moment, then select Check my code again.',
+        },
+      ],
+    },
     codeGuide: [
       ...cppProgramFrame,
-      { code: 'std::cout <<', plain: 'std::cout is C++’s console output stream. The << symbols point the value on their right toward that stream.' },
+      { code: 'std::cout <<', plain: 'std::cout is the C++ name used here to send text to Your output. The << symbols send the text on their right.' },
       { code: '"Reactor online";', plain: 'Quotation marks identify text. The semicolon ; is a full stop that ends this C++ instruction.' },
     ],
     checks: [
@@ -300,6 +409,63 @@ const csharpExercises: FoundationExercise[] = [
     prompt: 'Complete the command so the console displays Shields online.',
     starterCode: '_____("Shields online");',
     focus: 'Replace the one _____ blank with Console.WriteLine. Keep the message, parentheses, and semicolon.',
+    onramp: {
+      goal: 'Make a C# program display one line of text.',
+      context:
+        'You will edit this program in the Code editor, the box on this page where you can change instructions. A program is a set of instructions for a computer. When you select Check my code, the website checks the program for you. Your output is the area below the editor where the program’s text appears. You do not need to install C# tools or create a file on your computer.',
+      startingPoint:
+        'The Code editor starts with one line: _____("Shields online");. Replace only the five underscores. Keep the message, parentheses, quotation marks, and semicolon in place.',
+      terms: [
+        {
+          term: 'Console.WriteLine',
+          meaning: 'A C# instruction that displays text and then starts a new output line. The . mark is called a dot and connects Console to WriteLine.',
+          example: 'The complete instruction Console.WriteLine("Shields online"); displays the text Shields online.',
+        },
+        {
+          term: 'Quotation marks',
+          meaning: 'The two " characters that tell C# the characters between them are text.',
+          example: '"Shields online" is text because it is inside quotation marks.',
+        },
+        {
+          term: 'Parentheses',
+          meaning: 'The ( and ) characters that surround the text Console.WriteLine should show.',
+          example: 'In Console.WriteLine("Shields online"), the text is inside parentheses.',
+        },
+        {
+          term: 'Semicolon',
+          meaning: 'The ; character that ends this C# instruction.',
+          example: 'The semicolon is the last character in the completed instruction.',
+        },
+      ],
+      steps: [
+        '1. Select the Code editor.',
+        '2. Find _____ at the beginning of the line.',
+        '3. Replace only _____ with Console.WriteLine.',
+        '4. Confirm that the line reads Console.WriteLine("Shields online");.',
+        '5. Select Check my code.',
+        '6. Compare the text under Your output with the expected text Shields online.',
+      ],
+      outputLocation: 'Look under Your output, directly below the Code editor.',
+      acceptableVariation:
+        'The words must read Shields online. It is okay if the output starts a new empty line after those words. The quotation marks and semicolon do not appear under Your output.',
+      recovery: [
+        {
+          when: 'Check my code says Try again.',
+          whatStayedSafe: 'Your code stays in the editor, and you can try again.',
+          nextAction: 'Compare the editable line with step 4. Select I need a hint if you want to see the completed line.',
+        },
+        {
+          when: 'You changed or deleted more than the five underscores.',
+          whatStayedSafe: 'Your saved course progress is unchanged.',
+          nextAction: 'Select Restore supplied code, then replace only _____ with Console.WriteLine.',
+        },
+        {
+          when: 'Check my code does not finish, or the page says it could not run your code.',
+          whatStayedSafe: 'The code in your Code editor stays in place, and no incorrect attempt is recorded.',
+          nextAction: 'Wait a moment, then select Check my code again.',
+        },
+      ],
+    },
     codeGuide: [
       { code: 'Console', plain: 'Console is a built-in C# tool representing the text window where a program can communicate.' },
       { code: '.', plain: 'The dot means “use something belonging to the item on the left.” Here, use a Console operation.' },
@@ -319,7 +485,7 @@ const csharpExercises: FoundationExercise[] = [
     explanation:
       'C# variables have a type. The string type stores text. It comes before your variable name so C# knows what belongs in that container.',
     analogy:
-      'The array registry needs two labels: the cargo type is string, and the locker name is shieldName.',
+      'A storage box needs two descriptions: string says it holds text, and shieldName is the label used to find that text again.',
     type: 'code',
     prompt: 'Create a string named shieldName and store Aegis in it.',
     starterCode: 'string shieldName = _____;\n\nConsole.WriteLine(shieldName);',
@@ -418,9 +584,66 @@ const javaExercises: FoundationExercise[] = [
     prompt: 'Complete the command so the console displays Coffee online.',
     starterCode: 'public class Main {\n    public static void main(String[] args) {\n        _____("Coffee online");\n    }\n}',
     focus: 'Replace the one _____ blank with System.out.println. The long setup lines are provided, not a test.',
+    onramp: {
+      goal: 'Make a Java program display one line of text.',
+      context:
+        'You will edit this program in the Code editor, the box on this page where you can change instructions. A program is a set of instructions for a computer. When you select Check my code, the website checks the program for you. Your output is the area below the editor where the program’s text appears. You do not need to install Java tools or create a file on your computer.',
+      startingPoint:
+        'The editable instruction is on line 3: _____("Coffee online");. Replace only the five underscores. The class line, main line, and braces are supplied setup. Leave them in place; you do not need to understand or memorize them in this lesson.',
+      terms: [
+        {
+          term: 'System.out.println',
+          meaning: 'The Java instruction used here to display text and then start a new output line. The two . marks are called dots and connect its three parts.',
+          example: 'The complete instruction System.out.println("Coffee online"); displays the text Coffee online.',
+        },
+        {
+          term: 'Quotation marks',
+          meaning: 'The two " characters that tell Java the characters between them are text.',
+          example: '"Coffee online" is text because it is inside quotation marks.',
+        },
+        {
+          term: 'Parentheses',
+          meaning: 'The ( and ) characters that surround the text System.out.println should show.',
+          example: 'In System.out.println("Coffee online"), the text is inside parentheses.',
+        },
+        {
+          term: 'Semicolon',
+          meaning: 'The ; character that ends this Java instruction.',
+          example: 'The semicolon is the last character in the completed instruction.',
+        },
+      ],
+      steps: [
+        '1. Select the Code editor.',
+        '2. Find _____ at the beginning of line 3.',
+        '3. Replace only _____ with System.out.println.',
+        '4. Confirm that line 3 reads System.out.println("Coffee online");.',
+        '5. Select Check my code.',
+        '6. Compare the text under Your output with the expected text Coffee online.',
+      ],
+      outputLocation: 'Look under Your output, directly below the Code editor.',
+      acceptableVariation:
+        'The words must read Coffee online. It is okay if the output starts a new empty line after those words. The quotation marks and semicolon do not appear under Your output.',
+      recovery: [
+        {
+          when: 'Check my code says Try again.',
+          whatStayedSafe: 'Your code stays in the editor, and you can try again.',
+          nextAction: 'Compare the editable line with step 4. Select I need a hint if you want to see the completed line.',
+        },
+        {
+          when: 'You changed the supplied setup lines or deleted more than the five underscores.',
+          whatStayedSafe: 'Your saved course progress is unchanged.',
+          nextAction: 'Select Restore supplied code, then replace only _____ on line 3 with System.out.println.',
+        },
+        {
+          when: 'Check my code does not finish, or the page says it could not run your code.',
+          whatStayedSafe: 'The code in your Code editor stays in place, and no incorrect attempt is recorded.',
+          nextAction: 'Wait a moment, then select Check my code again.',
+        },
+      ],
+    },
     codeGuide: [
       ...javaProgramFrame,
-      { code: 'System.out.println', plain: 'System is Java’s connection to the running computer, out is its standard output channel, and println sends one line through it.' },
+      { code: 'System.out.println', plain: 'System.out.println is the Java instruction used here to show one line of text under Your output.' },
       { code: '("Coffee online");', plain: 'Parentheses hold the message, quotes mark it as text, and the semicolon ends the Java instruction.' },
     ],
     checks: [

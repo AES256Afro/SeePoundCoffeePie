@@ -27,6 +27,29 @@ export interface CodeGuideItem {
   plain: string
 }
 
+export interface ExerciseTerm {
+  term: string
+  meaning: string
+  example: string
+}
+
+export interface ExerciseRecoveryStep {
+  when: string
+  whatStayedSafe: string
+  nextAction: string
+}
+
+export interface ExerciseOnramp {
+  goal: string
+  context: string
+  startingPoint: string
+  terms: ExerciseTerm[]
+  steps: string[]
+  outputLocation: string
+  acceptableVariation?: string
+  recovery: ExerciseRecoveryStep[]
+}
+
 export interface OrderItem {
   id: string
   code: string
@@ -45,6 +68,7 @@ export interface Exercise {
   starterCode?: string
   focus?: string
   codeGuide?: CodeGuideItem[]
+  onramp?: ExerciseOnramp
   choices?: Array<{ id: string; label: string; detail?: string }>
   correctChoice?: string
   orderItems?: OrderItem[]

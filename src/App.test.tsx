@@ -207,7 +207,7 @@ describe('beginner lesson interactions', () => {
     expect(editor.getAttribute('wrap')).toBe('off')
     expect(editor.getAttribute('autocapitalize')).toBe('off')
     expect(editor.getAttribute('autocorrect')).toBe('off')
-    expect(screen.getByLabelText('Code editor keyboard controls').textContent).toContain('Tab moves out of the editor normally')
+    expect(screen.getByLabelText('Code editor keyboard controls').textContent).toContain('Press Tab by itself to leave the editor')
   })
 
   it('keeps screen-reader focus on the editor while a code check is running', async () => {
@@ -313,13 +313,83 @@ describe('beginner lesson interactions', () => {
     await openFirstEditableStep()
 
     expect(screen.getByText('Task', { selector: 'small' })).toBeTruthy()
-    expect(screen.getByText('Change this', { selector: 'small' })).toBeTruthy()
-    expect(screen.getByRole('heading', { name: 'What the code means' })).toBeTruthy()
-    expect(screen.getByText('Output')).toBeTruthy()
+    expect(screen.getByRole('heading', { name: 'Lesson guide' })).toBeTruthy()
+    expect(screen.getByText('Starting point', { selector: 'dt' })).toBeTruthy()
+    expect(screen.getByText(/\d+ definitions with examples/iu)).toBeTruthy()
+    expect(screen.getByText('Your output', { selector: '.console-pane > div' })).toBeTruthy()
     expect(screen.queryByText(/SHIPBOARD VERSION/iu)).toBeNull()
     expect(screen.queryByText(/LIVE ISOLATED RUNNER/iu)).toBeNull()
     expect(screen.queryByText(/REAL CONSOLE OUTPUT/iu)).toBeNull()
     expect(screen.queryByText(/fresh sandbox destroyed/iu)).toBeNull()
+  })
+
+  it('opens the first editable lesson with visible context and restores only the editor', async () => {
+    vi.mocked(runExercise).mockClear()
+    window.history.replaceState({}, '', '/learn/python-foundations/py-first-spark/py-print')
+
+    render(<App />)
+
+    const heading = await screen.findByRole('heading', {
+      level: 1,
+      name: 'Print your first message',
+    })
+    await waitFor(() => expect(document.activeElement).toBe(heading))
+
+    const guide = screen.getByRole('region', { name: 'Lesson guide' })
+    for (const label of [
+      'Goal',
+      'Context',
+      'Starting point',
+      'Words on this page',
+      'Steps',
+      'Expected result',
+      'Recovery',
+    ]) {
+      expect(within(guide).getByText(label, { selector: 'dt' })).toBeTruthy()
+    }
+    expect(within(guide).getByLabelText('Expected output').textContent).toBe('Signal online')
+    fireEvent.click(within(guide).getByText(/\d+ definitions with examples/iu))
+    expect(within(guide).getByText('print', { selector: 'dt' })).toBeTruthy()
+    fireEvent.click(within(guide).getByText('Wrong answer, changed code, or failed check'))
+    expect(within(guide).getByText(/Select Restore supplied code, then replace only/iu)).toBeTruthy()
+
+    const editor = screen.getByRole('textbox', { name: 'Code editor' }) as HTMLTextAreaElement
+    const suppliedCode = editor.value
+    const learnerDraft = '# Learner draft\nprint("Draft message")'
+    const checkButton = screen.getByRole('button', { name: 'Check my code' })
+    expect(checkButton.textContent).toBe('Check my code')
+    expect(document.querySelectorAll('#main-content .exercise-actions > .primary-action')).toHaveLength(1)
+    expect(screen.getByText('Your output', { selector: '.console-pane > div' })).toBeTruthy()
+    expect(screen.getByText('Select Check my code to see what your program prints.')).toBeTruthy()
+
+    const progressBeforeRestore = Object.fromEntries([
+      progressKey,
+      progressV2Key,
+      progressV3Key,
+    ].map((key) => [key, window.localStorage.getItem(key)]))
+
+    fireEvent.change(editor, { target: { value: learnerDraft } })
+    fireEvent.click(screen.getByRole('button', { name: 'Restore supplied code' }))
+
+    expect(editor.value).toBe(suppliedCode)
+    expect(screen.getByText('Restore changes only this editor. It does not change your lesson progress.')).toBeTruthy()
+    expect(Object.fromEntries([
+      progressKey,
+      progressV2Key,
+      progressV3Key,
+    ].map((key) => [key, window.localStorage.getItem(key)]))).toEqual(progressBeforeRestore)
+
+    fireEvent.click(screen.getByRole('button', { name: 'Undo restore' }))
+
+    expect(editor.value).toBe(learnerDraft)
+    expect(screen.queryByRole('button', { name: 'Undo restore' })).toBeNull()
+    expect(Object.fromEntries([
+      progressKey,
+      progressV2Key,
+      progressV3Key,
+    ].map((key) => [key, window.localStorage.getItem(key)]))).toEqual(progressBeforeRestore)
+    expect(vi.mocked(runExercise)).not.toHaveBeenCalled()
+    expect(screen.queryByLabelText('Run results')).toBeNull()
   })
 
   it('ignores a runner response after routing to another exercise', async () => {

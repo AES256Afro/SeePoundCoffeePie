@@ -103,6 +103,8 @@ export function LessonPlayer({ initialExerciseId, mission, onExerciseChange, onP
   const [reviewQueue, setReviewQueue] = useState<string[]>([])
   const [reviewIndex, setReviewIndex] = useState(0)
   const [orderingAnnouncement, setOrderingAnnouncement] = useState('')
+  const [restoreSnapshot, setRestoreSnapshot] = useState<{ exerciseId: string; value: string } | null>(null)
+  const [restoreAnnouncement, setRestoreAnnouncement] = useState('')
   const lessonHeadingRef = useRef<HTMLHeadingElement>(null)
   const completionHeadingRef = useRef<HTMLHeadingElement>(null)
   const [missionAlreadyComplete] = useState(missionWasComplete)
@@ -130,6 +132,8 @@ export function LessonPlayer({ initialExerciseId, mission, onExerciseChange, onP
     setRunnerFailure(false)
     setHintOpen(false)
     setOrderingAnnouncement('')
+    setRestoreSnapshot(null)
+    setRestoreAnnouncement('')
   }
   if (renderedExerciseId !== exercise?.id) {
     setRenderedExerciseId(exercise?.id)
@@ -388,6 +392,22 @@ export function LessonPlayer({ initialExerciseId, mission, onExerciseChange, onP
     else void checkAnswer()
   }
 
+  const restoreSuppliedCode = () => {
+    if (!editableExercise || !exercise.onramp || exercise.starterCode === undefined || runnerBusy || feedback?.correct) return
+    setRestoreSnapshot((current) => current?.exerciseId === exercise.id
+      ? current
+      : { exerciseId: exercise.id, value: answer })
+    setAnswer(exercise.starterCode)
+    setRestoreAnnouncement('Supplied code restored. Only this editor changed. Your lesson progress did not change.')
+  }
+
+  const undoRestore = () => {
+    if (restoreSnapshot?.exerciseId !== exercise.id || runnerBusy || feedback?.correct) return
+    setAnswer(restoreSnapshot.value)
+    setRestoreSnapshot(null)
+    setRestoreAnnouncement('Your code from before the restore is back. Your lesson progress did not change.')
+  }
+
   if (finished) {
     const reviewedConcepts = [...new Set(sessionExercises.map((item) => plainConceptLabel(item.conceptId)))]
     return (
@@ -443,12 +463,87 @@ export function LessonPlayer({ initialExerciseId, mission, onExerciseChange, onP
         )}
         <section aria-labelledby="lesson" className="lesson-briefing" tabIndex={0}>
           <h1 id="lesson" ref={lessonHeadingRef} tabIndex={-1}>{exercise.title}</h1>
-          <p className="lesson-explanation">{exercise.explanation}</p>
-          <div className="analogy-card">
-            <small>Another way to think about it</small>
-            <p>{exercise.analogy}</p>
-          </div>
-          {editableExercise && (
+          {!exercise.onramp && <p className="lesson-explanation">{exercise.explanation}</p>}
+          {exercise.onramp && (
+            <section aria-label="Lesson guide" className="lesson-guide">
+              <h2>Lesson guide</h2>
+              <dl className="lesson-guide__sections">
+                <div>
+                  <dt>Goal</dt>
+                  <dd>{exercise.onramp.goal}</dd>
+                </div>
+                <div>
+                  <dt>Context</dt>
+                  <dd>{exercise.onramp.context}</dd>
+                </div>
+                <div className="lesson-guide__wide">
+                  <dt>Starting point</dt>
+                  <dd>{exercise.onramp.startingPoint}</dd>
+                </div>
+                <div className="lesson-guide__wide">
+                  <dt>Words on this page</dt>
+                  <dd>
+                    <details className="lesson-guide__disclosure">
+                      <summary>{exercise.onramp.terms.length} definitions with examples</summary>
+                      <dl className="lesson-guide__terms">
+                        {exercise.onramp.terms.map((item) => (
+                          <div key={`${exercise.id}-${item.term}`}>
+                            <dt>{item.term}</dt>
+                            <dd>
+                              <p>{item.meaning}</p>
+                              <p><b>Example:</b> {item.example}</p>
+                            </dd>
+                          </div>
+                        ))}
+                      </dl>
+                    </details>
+                  </dd>
+                </div>
+                <div className="lesson-guide__wide">
+                  <dt>Steps</dt>
+                  <dd>
+                    <ol className="lesson-guide__steps">
+                      {exercise.onramp.steps.map((item, index) => (
+                        <li key={`${exercise.id}-step-${index}`}>{item.replace(/^\d+\.\s*/u, '')}</li>
+                      ))}
+                    </ol>
+                  </dd>
+                </div>
+                <div>
+                  <dt>Expected result</dt>
+                  <dd>
+                    <p>{exercise.onramp.outputLocation}</p>
+                    {exercise.output && <pre aria-label="Expected output"><code>{exercise.output}</code></pre>}
+                    {exercise.onramp.acceptableVariation && <p>{exercise.onramp.acceptableVariation}</p>}
+                  </dd>
+                </div>
+                <div>
+                  <dt>Recovery</dt>
+                  <dd>
+                    <details className="lesson-guide__disclosure">
+                      <summary>Wrong answer, changed code, or failed check</summary>
+                      <ul className="lesson-guide__recovery">
+                        {exercise.onramp.recovery.map((item, index) => (
+                          <li key={`${exercise.id}-recovery-${index}`}>
+                            <p><b>If:</b> {item.when}</p>
+                            <p><b>What stays safe:</b> {item.whatStayedSafe}</p>
+                            <p><b>Next:</b> {item.nextAction}</p>
+                          </li>
+                        ))}
+                      </ul>
+                    </details>
+                  </dd>
+                </div>
+              </dl>
+            </section>
+          )}
+          {!exercise.onramp && (
+            <div className="analogy-card">
+              <small>A familiar comparison</small>
+              <p>{exercise.analogy}</p>
+            </div>
+          )}
+          {editableExercise && !exercise.onramp && (
             <section className="code-onramp" aria-label="Code walkthrough">
               <div className="code-focus">
                 <div>
@@ -566,12 +661,12 @@ export function LessonPlayer({ initialExerciseId, mission, onExerciseChange, onP
                   {runnerStatus === 'running' ? 'Your program is running.' : 'Getting your code ready.'}
                 </p>}
                 <div className="console-pane">
-                  <div><TerminalSquare size={14} /> Output</div>
+                  <div><TerminalSquare size={14} /> Your output</div>
                   <pre>{runnerBusy
                     ? runnerStatus === 'running' ? 'Your program is running...' : 'Getting your code ready...'
                     : runnerResult
                       ? runnerResult.stdout || runnerResult.stderr || '(The program finished without printing any text.)'
-                      : 'Run your code to see what it prints.'}</pre>
+                      : 'Select Check my code to see what your program prints.'}</pre>
                 </div>
                 {runnerResult && (
                   <section className="runner-report" aria-label="Run results">
@@ -598,7 +693,7 @@ export function LessonPlayer({ initialExerciseId, mission, onExerciseChange, onP
                 )}
                 <div className="editor-shortcuts" aria-label="Code editor keyboard controls">
                   <span>Keyboard</span>
-                  <p><kbd>Ctrl</kbd> or <kbd>⌘</kbd> + <kbd>Enter</kbd> runs the check. <kbd>Tab</kbd> moves out of the editor normally.</p>
+                  <p>Hold <kbd>Ctrl</kbd> and press <kbd>Enter</kbd> to select Check my code. On a Mac, hold <kbd>⌘</kbd> and press <kbd>Enter</kbd>. Press <kbd>Tab</kbd> by itself to leave the editor.</p>
                 </div>
               </div>
             </div>
@@ -606,6 +701,19 @@ export function LessonPlayer({ initialExerciseId, mission, onExerciseChange, onP
 
           <button className="hint-toggle" aria-controls="lesson-hint" aria-expanded={hintOpen} onClick={() => setHintOpen((open) => !open)}><CircleHelp size={17} /> {hintOpen ? 'Hide hint' : 'I need a hint'}</button>
           {hintOpen && <div className="hint-box" id="lesson-hint"><Sparkles size={16} /><span><b>Hint</b>{exercise.hint}</span></div>}
+
+          {editableExercise && exercise.onramp && exercise.starterCode !== undefined && (
+            <div className="editor-restore">
+              <div>
+                <button disabled={runnerBusy || feedback?.correct} onClick={restoreSuppliedCode} type="button">Restore supplied code</button>
+                {restoreSnapshot?.exerciseId === exercise.id && (
+                  <button disabled={runnerBusy || feedback?.correct} onClick={undoRestore} type="button">Undo restore</button>
+                )}
+              </div>
+              <p>Restore changes only this editor. It does not change your lesson progress.</p>
+              <p aria-live="polite" className="sr-only" role="status">{restoreAnnouncement}</p>
+            </div>
+          )}
 
           {feedback && (
             <div aria-live="polite" className={`feedback-box ${runnerFailure ? 'is-neutral' : feedback.correct ? 'is-correct' : 'is-wrong'}`} role="status">
@@ -643,7 +751,7 @@ export function LessonPlayer({ initialExerciseId, mission, onExerciseChange, onP
               {feedback?.correct && <ArrowRight size={18} />}
             </button>
           </div>
-          {editableExercise && <details className="run-safety-note"><summary>How code runs safely</summary><p>Your code runs in a clean workspace that is deleted after each check.</p></details>}
+          {editableExercise && <details className="run-safety-note"><summary>How code runs safely</summary><p>The website runs a temporary copy of your code. It deletes that copy after each check.</p></details>}
         </section>
       </main>
     </div>

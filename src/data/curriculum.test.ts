@@ -3,6 +3,72 @@ import { findExercise, tracks } from './curriculum'
 import { durableCurriculumV1 } from './durable-curriculum-v1'
 
 describe('beginner curriculum scaffolding', () => {
+  it('gives the four first editable lessons a complete beginner onramp', () => {
+    const onrampLessonIds = ['py-print', 'cpp-output', 'cs-output', 'java-output'] as const
+    const requiredTerms: Record<(typeof onrampLessonIds)[number], string[]> = {
+      'py-print': ['print', 'Quotation marks', 'Parentheses'],
+      'cpp-output': ['std::cout', '<<', 'Quotation marks', 'Semicolon'],
+      'cs-output': ['Console.WriteLine', 'Quotation marks', 'Parentheses', 'Semicolon'],
+      'java-output': ['System.out.println', 'Quotation marks', 'Parentheses', 'Semicolon'],
+    }
+    const exercisesWithOnramps = tracks.flatMap((track) => (
+      track.missions.flatMap((mission) => mission.exercises.filter((exercise) => exercise.onramp))
+    ))
+
+    expect(exercisesWithOnramps.map((exercise) => exercise.id).sort()).toEqual(
+      [...onrampLessonIds].sort(),
+    )
+
+    for (const exerciseId of onrampLessonIds) {
+      const exercise = findExercise(exerciseId)
+      const onramp = exercise?.onramp
+
+      expect(exercise, `${exerciseId} must remain published`).toBeDefined()
+      expect(exercise?.starterCode?.length, `${exerciseId} needs supplied code`).toBeGreaterThan(20)
+      expect(exercise?.focus?.length, `${exerciseId} needs a bounded edit`).toBeGreaterThan(30)
+      expect(exercise?.output?.trim(), `${exerciseId} needs an expected output`).not.toBe('')
+      expect(onramp, `${exerciseId} needs a beginner onramp`).toBeDefined()
+      if (!onramp) continue
+
+      expect(onramp.goal.length, `${exerciseId} needs a substantive goal`).toBeGreaterThan(20)
+      expect(onramp.context.length, `${exerciseId} needs substantive context`).toBeGreaterThan(100)
+      expect(onramp.context, `${exerciseId} must define the Code editor before naming it in the steps`).toMatch(/Code editor, the box/iu)
+      expect(onramp.context, `${exerciseId} must define Your output before naming it in the steps`).toMatch(/Your output is the area/iu)
+      expect(onramp.startingPoint.length, `${exerciseId} needs an exact starting point`).toBeGreaterThan(75)
+      expect(onramp.terms.length, `${exerciseId} needs a small term set`).toBeGreaterThan(0)
+      expect(onramp.terms.length, `${exerciseId} must not become a glossary dump`).toBeLessThanOrEqual(5)
+      expect(onramp.terms.map((term) => term.term), `${exerciseId} must define each new symbol before use`).toEqual(requiredTerms[exerciseId])
+      for (const term of onramp.terms) {
+        expect(term.term.trim(), `${exerciseId} has an unnamed term`).not.toBe('')
+        expect(term.meaning.length, `${exerciseId} must define ${term.term}`).toBeGreaterThan(30)
+        expect(term.example.length, `${exerciseId} must show ${term.term} in context`).toBeGreaterThan(20)
+      }
+
+      const steps = onramp.steps.join(' ')
+      expect(steps, `${exerciseId} steps must name the editor`).toMatch(/code editor/iu)
+      expect(steps, `${exerciseId} steps must name the exact primary action`).toContain('Check my code')
+      expect(steps, `${exerciseId} steps must name the result location`).toMatch(/output/iu)
+      expect(onramp.outputLocation, `${exerciseId} must locate the output`).toMatch(/output/iu)
+      expect(onramp.acceptableVariation?.length, `${exerciseId} needs acceptable variation`).toBeGreaterThan(60)
+
+      const restoreRecovery = onramp.recovery.find((recovery) => (
+        recovery.nextAction.includes('Restore supplied code')
+      ))
+      expect(restoreRecovery, `${exerciseId} needs a supplied-code recovery`).toBeDefined()
+      expect(restoreRecovery?.whatStayedSafe, `${exerciseId} must explain what restore preserves`).toMatch(/progress/iu)
+
+      const ordinaryRetry = onramp.recovery.find((recovery) => /says Try again/iu.test(recovery.when))
+      expect(ordinaryRetry, `${exerciseId} needs an ordinary wrong-answer recovery`).toBeDefined()
+      expect(ordinaryRetry?.nextAction, `${exerciseId} must point back to the lesson steps`).toContain('step 4')
+      expect(ordinaryRetry?.nextAction, `${exerciseId} must offer the visible hint control`).toContain('I need a hint')
+
+      const serviceRecovery = onramp.recovery.find((recovery) => /could not run your code/iu.test(recovery.when))
+      expect(serviceRecovery, `${exerciseId} needs a check-failure recovery`).toBeDefined()
+      expect(serviceRecovery?.whatStayedSafe, `${exerciseId} must explain what a service failure preserves`).toMatch(/code editor/iu)
+      expect(serviceRecovery?.nextAction, `${exerciseId} must give a safe retry`).toContain('Check my code')
+    }
+  })
+
   it('gives every editable exercise one clear focus and a plain-language code guide', () => {
     const codeExercises = tracks.flatMap((track) => (
       track.missions.flatMap((mission) => mission.exercises.filter((exercise) => exercise.type === 'code'))
@@ -188,7 +254,8 @@ describe('beginner curriculum scaffolding', () => {
 
     expect(guide).toContain('public class Main')
     expect(guide).toContain('public static void main(String[] args)')
-    expect(guide).toContain('You do not need to memorize this line yet')
+    expect(guide).toContain('Leave it unchanged for now')
+    expect(guide).toContain('each part will be taught in a later lesson')
     expect(guide).toContain('Braces')
     expect(guide).toContain('semicolon')
     expect(guide).toContain('System.out.println')

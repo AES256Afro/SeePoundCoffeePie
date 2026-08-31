@@ -8,9 +8,9 @@ const practicalCppPrerequisites = {
   completedProjects: ['first-compiled-program'],
 }
 
-async function expectNoAccessibilityViolations(page: Page): Promise<void> {
+async function expectNoAccessibilityViolations(page: Page, selector = '#main-content'): Promise<void> {
   const results = await new AxeBuilder({ page })
-    .include('#main-content')
+    .include(selector)
     .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
     .analyze()
   const summary = results.violations.map((violation) => ({
@@ -20,7 +20,7 @@ async function expectNoAccessibilityViolations(page: Page): Promise<void> {
     targets: violation.nodes.flatMap((node) => node.target),
   }))
 
-  expect(summary, 'WCAG A/AA violations inside #main-content').toEqual([])
+  expect(summary, `WCAG A/AA violations inside ${selector}`).toEqual([])
 }
 
 test('Courses passes the scoped WCAG A and AA gate', async ({ page, seedProgress }) => {
@@ -37,6 +37,30 @@ test('a lesson passes the scoped WCAG A and AA gate', async ({ page, seedProgres
   await expect(page.getByRole('heading', { level: 1, name: 'Meet the console' })).toBeVisible()
 
   await expectNoAccessibilityViolations(page)
+})
+
+test('the first editable lesson guide passes the scoped WCAG A and AA gate', async ({ page, seedProgress }) => {
+  await seedProgress()
+  await page.goto('/learn/python-foundations/py-first-spark/py-print')
+  await expect(page.getByRole('heading', { level: 1, name: 'Print your first message' })).toBeVisible()
+  const guide = page.getByRole('region', { name: 'Lesson guide' })
+  await expect(guide).toBeVisible()
+  await guide.getByText(/\d+ definitions with examples/iu).click()
+  await guide.getByText('Wrong answer, changed code, or failed check').click()
+
+  await expectNoAccessibilityViolations(page)
+})
+
+test('the first editable lesson guide remains readable in the Terminal theme', async ({ page, seedProgress }) => {
+  await seedProgress({}, { theme: 'terminal' })
+  await page.goto('/learn/python-foundations/py-first-spark/py-print')
+  await expect(page.locator('html')).toHaveAttribute('data-theme', 'terminal')
+  const guide = page.getByRole('region', { name: 'Lesson guide' })
+  await expect(guide).toBeVisible()
+  await guide.getByText(/\d+ definitions with examples/iu).click()
+  await guide.getByText('Wrong answer, changed code, or failed check').click()
+
+  await expectNoAccessibilityViolations(page, '.lesson-guide')
 })
 
 test('a Practical C++ lesson passes the scoped WCAG A and AA gate', async ({ page, seedProgress }) => {
