@@ -51,7 +51,7 @@ const returnValueExercises: Exercise[] = [
     eyebrow: 'Result path 3 of 5',
     title: 'Use a returned result',
     explanation:
-      'A function call is an expression when it produces a returned value. Python finishes the call first, then stores its result in the variable on the left of the equals sign.',
+      'An expression is code that produces a value, such as 4 * 2. Here double(4) returns 8, and units stores that answer. return ends the function call; it does not display anything. The separate print call displays the stored answer.',
     analogy:
       'The doubling station finishes its calculation before the warehouse writes the answer on the box labeled units.',
     type: 'prediction',
@@ -132,7 +132,7 @@ const textCleanupExercises: Exercise[] = [
     eyebrow: 'Project recall 1 of 5',
     title: 'Recall an f-string report',
     explanation:
-      'An f-string begins with the letter f before its opening quotation mark. Braces inside the string retrieve values and place them into the finished text.',
+      'An f-string inserts values into text. The f before the opening quote enables this, and {count} inserts the value of count. This is another way to build a message: print("Count:", count) and print(f"Count: {count}") both display Count: 4 when count is 4.',
     analogy:
       'A report template keeps the fixed words in place and opens labeled windows where the current item and count should appear.',
     type: 'prediction',
@@ -155,7 +155,7 @@ const textCleanupExercises: Exercise[] = [
     eyebrow: 'Text workshop 2 of 5',
     title: 'Trim extra spaces',
     explanation:
-      'A method is an operation attached to a value. The string method strip returns text without whitespace at its beginning or end, while leaving spaces inside the text alone.',
+      'A method is an operation attached to a value. name.strip() calls one on name: the dot selects strip and () runs it. Whitespace means spaces, tabs, or line breaks. strip returns text without outer whitespace; it keeps spaces between words and leaves the original string unchanged.',
     analogy:
       'A label trimmer cuts empty margin from the two outer edges but does not remove the spaces between words printed in the middle.',
     type: 'choice',
@@ -163,7 +163,7 @@ const textCleanupExercises: Exercise[] = [
     choices: [
       { id: 'a', label: 'The text without surrounding whitespace', detail: 'Whitespace at the beginning and end is removed.' },
       { id: 'b', label: 'The text with every internal space removed', detail: 'strip leaves spaces between words intact.' },
-      { id: 'c', label: 'A number showing the text length', detail: 'The built-in len operation reports length. strip returns cleaned text.' },
+      { id: 'c', label: 'A number showing the text length', detail: 'A different built-in operation reports length, and a later module introduces it. strip returns cleaned text.' },
     ],
     correctChoice: 'a',
     hint: 'Think about trimming only the empty margin around the outside of a label.',
@@ -176,7 +176,7 @@ const textCleanupExercises: Exercise[] = [
     eyebrow: 'Cleanup path 3 of 5',
     title: 'Normalize the same name',
     explanation:
-      'Methods can be chained when one returned value becomes the starting value for the next method. Python strips the outer spaces first, then lower changes the remaining letters to lowercase.',
+      'Read name.strip().lower() from left to right. strip returns "Markers"; lower takes that result and returns "markers". Calling another method on a returned value is called chaining. The assignment saves the finished text in clean_name; name still contains its original spaces and capital letter.',
     analogy:
       'A label passes through two stations in order. The first trims its edges, and the second applies one consistent lettering style.',
     type: 'prediction',
@@ -280,7 +280,7 @@ const listToolExercises: Exercise[] = [
     eyebrow: 'Changing lists 2 of 5',
     title: 'Add one item with append',
     explanation:
-      'The list method append adds one value to the end of an existing list. Changing an existing value in place is called mutation, which means the stored collection now has different contents.',
+      'tasks.append("report") changes the existing list by adding one item at the end. Changing a value in place is called mutation. Unlike strip, append does not return an updated copy. It returns None, meaning no result value to use here, so do not write tasks = tasks.append("report").',
     analogy:
       'A clipboard already holds two tasks. append writes one new task on the next open line instead of replacing the whole clipboard.',
     type: 'choice',
@@ -406,7 +406,7 @@ const dictionaryExercises: Exercise[] = [
     eyebrow: 'Named data 2 of 5',
     title: 'Meet a dictionary',
     explanation:
-      'A dictionary stores key-value pairs. Each key is a meaningful lookup label, and its paired value is the information stored under that label.',
+      'A dictionary connects lookup labels, called keys, to values. In {"markers": 4}, "markers" is the key, : separates it from its value, and 4 is the quantity. Commas separate entries. Unlike a list position such as 0, this key describes what you want to find.',
     analogy:
       'A supply ledger uses an item name as the row label and writes the current quantity beside it. You look up markers by name, not by row number.',
     type: 'choice',
@@ -450,7 +450,7 @@ const dictionaryExercises: Exercise[] = [
     eyebrow: 'Missing row repair 4 of 5',
     title: 'Repair a missing-key lookup',
     explanation:
-      'A bracket lookup stops with KeyError when its key is absent. The dictionary method get can return a stated default instead, which is useful when a missing quantity should begin at zero.',
+      'inventory["markers"] raises KeyError, a missing-key error, when "markers" is absent. inventory.get("markers", 0) returns the stored quantity if present, or 0 otherwise. Reading with get does not add a missing key. A later assignment is what stores it.',
     analogy:
       'The ledger has no markers row yet. Instead of treating that as a broken ledger, the clerk follows the stated rule that an unlisted item begins with zero units.',
     type: 'bugfix',
@@ -533,7 +533,7 @@ const summaryExercises: Exercise[] = [
     eyebrow: 'Running totals 2 of 5',
     title: 'Grow one running total',
     explanation:
-      'An accumulator is a variable that keeps a result as a loop visits more values. The instruction total += amount means the same as total = total + amount.',
+      'An accumulator keeps a running result. With whole numbers, total += amount means total = total + amount. Starting at 0 and visiting 4 then 12 gives 0 → 4 → 16. Put the starting value before the loop so it is not reset on every pass.',
     analogy:
       'A cashier starts a receipt total at zero and adds each item amount to the number already written at the bottom.',
     type: 'choice',
@@ -562,12 +562,11 @@ const summaryExercises: Exercise[] = [
     orderItems: [
       { id: 'add', code: '    total += amount' },
       { id: 'report', code: 'print(total)' },
-      { id: 'inventory', code: 'inventory = {"markers": 5, "paper": 12}' },
+      { id: 'setup', code: 'inventory = {"markers": 5, "paper": 12}\ntotal = 0' },
       { id: 'loop', code: 'for amount in inventory.values():' },
-      { id: 'start', code: 'total = 0' },
     ],
-    correctOrder: ['inventory', 'start', 'loop', 'add', 'report'],
-    incorrectMessage: 'Create the dictionary, start total once, open the values loop, add inside it, then report after the loop.',
+    correctOrder: ['setup', 'loop', 'add', 'report'],
+    incorrectMessage: 'Create the dictionary and the starting total, open the values loop, add inside it, then report after the loop.',
     output: '17',
     hint: 'The total must exist before the loop, and print(total) belongs after every amount has been added.',
     recap: 'Use dictionary.values() to visit stored values, update the accumulator inside the loop, and report after the loop.',
@@ -594,7 +593,7 @@ const summaryExercises: Exercise[] = [
     ],
     checks: [
       { pattern: 'total\\s*=\\s*0[\\s\\S]*for\\s+amount\\s+in\\s+inventory\\.values\\s*\\(\\s*\\)\\s*:', message: 'Place total = 0 before the loop over inventory.values().' },
-      { pattern: 'for\\s+amount[\\s\\S]*\\n\\s+total\\s*\\+=\\s*amount', message: 'Keep total += amount indented inside the loop body.' },
+      { pattern: 'for\\s+amount\\s+in\\s+inventory\\.values\\s*\\(\\s*\\)\\s*:\\s*\\n\\s+total\\s*\\+=\\s*amount', message: 'Keep total += amount as the loop body, and remove the leftover total = 0 line from inside the loop.' },
     ],
     output: '17',
     hint: 'Cut total = 0 from the loop body and place it on its own line immediately before for amount in inventory.values():',
@@ -607,7 +606,7 @@ const summaryExercises: Exercise[] = [
     eyebrow: 'Useful filters 5 of 5',
     title: 'Collect low-stock names',
     explanation:
-      'Filtering means keeping only values that match a condition. This function visits every dictionary key and appends a name when its stored quantity is below the supplied limit.',
+      'Filtering collects values that match a condition. A loop over inventory visits its keys, not its quantities; inventory[name] reads the quantity for each key. This function adds matching names to a new list without removing anything from inventory. Below the limit means <, not <=.',
     analogy:
       'A stock clerk reads every ledger row but copies only the rows below the restock line onto a separate action list.',
     type: 'code',
@@ -683,20 +682,19 @@ const supplyTrackerExercises: Exercise[] = [
     eyebrow: 'Dependency order 3 of 5',
     title: 'Put the tracker together',
     explanation:
-      'Python must run a function definition before later code calls that function. After the reusable jobs exist, the program can create its data, perform updates, calculate summaries, and report the results.',
+      'Python must run a function definition before later code calls that function. Grouping every definition at the top, then creating data, performing updates, and reporting last keeps a program readable, and this exercise uses that recommended order.',
     analogy:
       'Install the workshop stations first, open the ledger second, process deliveries third, and print the end-of-day report last.',
     type: 'ordering',
     prompt: 'Arrange the program sections in a dependable top-to-bottom order.',
     orderItems: [
       { id: 'report', code: 'print(total_stock(inventory))' },
-      { id: 'normalize', code: 'def normalize_name(name): ...' },
       { id: 'data', code: 'inventory = {}' },
       { id: 'update', code: 'add_stock(inventory, "markers", 3)' },
-      { id: 'helpers', code: 'def add_stock(...): ...\ndef total_stock(...): ...\ndef low_stock(...): ...' },
+      { id: 'definitions', code: 'def normalize_name(name): ...\ndef add_stock(...): ...\ndef total_stock(...): ...\ndef low_stock(...): ...' },
     ],
-    correctOrder: ['normalize', 'helpers', 'data', 'update', 'report'],
-    incorrectMessage: 'Define normalization and the helper functions first, create inventory, update it, then report from the finished data.',
+    correctOrder: ['definitions', 'data', 'update', 'report'],
+    incorrectMessage: 'Group the function definitions first, create inventory, update it, then report from the finished data.',
     output: '3',
     hint: 'Definitions come before calls. The report needs data that has already been created and updated.',
     recap: 'Define reusable jobs before calling them, then create data, transform it, and report only after the required results exist.',
@@ -713,7 +711,7 @@ const supplyTrackerExercises: Exercise[] = [
       'The clerk files deliveries under a standardized row label but searches for the old count using the handwriting from the box. The search and filing labels must match.',
     type: 'bugfix',
     prompt: 'Repair the get call so lookup and assignment use the same normalized key.',
-    starterCode: 'def normalize_name(name):\n    return name.strip().lower()\n\ndef add_stock(inventory, name, amount):\n    clean_name = normalize_name(name)\n    current = inventory.get(name, 0)\n    inventory[clean_name] = current + amount\n    return inventory[clean_name]\n\ninventory = {}\nadd_stock(inventory, " Markers ", 2)\nadd_stock(inventory, "markers", 3)\nprint(inventory["markers"])',
+    starterCode: 'def normalize_name(name):\n    return name.strip().lower()\n\ndef add_stock(inventory, name, amount):\n    clean_name = normalize_name(name)\n    current = inventory.get(name, 0)\n    inventory[clean_name] = current + amount\n    return inventory[clean_name]\n\ninventory = {}\nadd_stock(inventory, "markers", 2)\nadd_stock(inventory, " Markers ", 3)\nprint(inventory["markers"])',
     focus: 'Change inventory.get(name, 0) to inventory.get(clean_name, 0). Leave the normalized assignment and supplied calls unchanged.',
     codeGuide: [
       { code: 'clean_name = normalize_name(name)', plain: 'This creates the one consistent key form that the function should use for all dictionary operations.' },

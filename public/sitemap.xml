@@ -93,4 +93,39 @@
   <url>
     <loc>https://seepoundcoffeepie.com/paths/reality-versus-fiction/programming-on-screen-and-at-work/preparation/build-and-execution-context</loc>
   </url>
+  <url><loc>https://seepoundcoffeepie.com/paths/models-from-zero/choose-and-run-a-local-llm</loc></url>
+  <url><loc>https://seepoundcoffeepie.com/paths/models-from-zero/choose-and-run-a-local-llm/llm-102-practice</loc></url>
+  <url><loc>https://seepoundcoffeepie.com/paths/models-from-zero/choose-and-run-a-local-llm/llm-102-practice/read-a-model-card</loc></url>
+  <url><loc>https://seepoundcoffeepie.com/paths/models-from-zero/choose-and-run-a-local-llm/llm-102-practice/memory-and-quantization</loc></url>
+  <url><loc>https://seepoundcoffeepie.com/paths/models-from-zero/choose-and-run-a-local-llm/llm-102-practice/plan-your-first-local-run</loc></url>
+  <url><loc>https://seepoundcoffeepie.com/paths/models-from-zero/choose-and-run-a-local-llm/preparation/llm-102-refresher</loc></url>
+  <url><loc>https://seepoundcoffeepie.com/paths/models-from-zero/choose-and-run-a-local-llm/preparation/llm-102-context</loc></url>
+  <url><loc>https://seepoundcoffeepie.com/paths/models-from-zero/use-and-test-local-llms</loc></url>
+  <url><loc>https://seepoundcoffeepie.com/paths/models-from-zero/use-and-test-local-llms/llm-103-practice</loc></url>
+  <url><loc>https://seepoundcoffeepie.com/paths/models-from-zero/use-and-test-local-llms/llm-103-practice/repeatable-prompts</loc></url>
+  <url><loc>https://seepoundcoffeepie.com/paths/models-from-zero/use-and-test-local-llms/llm-103-practice/tools-with-boundaries</loc></url>
+  <url><loc>https://seepoundcoffeepie.com/paths/models-from-zero/use-and-test-local-llms/llm-103-practice/test-before-you-trust</loc></url>
+  <url><loc>https://seepoundcoffeepie.com/paths/models-from-zero/use-and-test-local-llms/preparation/llm-103-refresher</loc></url>
+  <url><loc>https://seepoundcoffeepie.com/paths/models-from-zero/use-and-test-local-llms/preparation/llm-103-context</loc></url>
+  <url><loc>https://seepoundcoffeepie.com/paths/models-from-zero/give-an-llm-your-documents</loc></url>
+  <url><loc>https://seepoundcoffeepie.com/paths/models-from-zero/give-an-llm-your-documents/llm-104-practice</loc></url>
+  <url><loc>https://seepoundcoffeepie.com/paths/models-from-zero/give-an-llm-your-documents/llm-104-practice/context-retrieval-or-training</loc></url>
+  <url><loc>https://seepoundcoffeepie.com/paths/models-from-zero/give-an-llm-your-documents/llm-104-practice/build-a-document-search</loc></url>
+  <url><loc>https://seepoundcoffeepie.com/paths/models-from-zero/give-an-llm-your-documents/llm-104-practice/test-document-answers</loc></url>
+  <url><loc>https://seepoundcoffeepie.com/paths/models-from-zero/give-an-llm-your-documents/preparation/llm-104-refresher</loc></url>
+  <url><loc>https://seepoundcoffeepie.com/paths/models-from-zero/give-an-llm-your-documents/preparation/llm-104-context</loc></url>
+  <url><loc>https://seepoundcoffeepie.com/paths/models-from-zero/train-open-weight-models</loc></url>
+  <url><loc>https://seepoundcoffeepie.com/paths/models-from-zero/train-open-weight-models/llm-105-practice</loc></url>
+  <url><loc>https://seepoundcoffeepie.com/paths/models-from-zero/train-open-weight-models/llm-105-practice/training-methods</loc></url>
+  <url><loc>https://seepoundcoffeepie.com/paths/models-from-zero/train-open-weight-models/llm-105-practice/prepare-training-data</loc></url>
+  <url><loc>https://seepoundcoffeepie.com/paths/models-from-zero/train-open-weight-models/llm-105-practice/lora-qlora-and-full-tuning</loc></url>
+  <url><loc>https://seepoundcoffeepie.com/paths/models-from-zero/train-open-weight-models/preparation/llm-105-refresher</loc></url>
+  <url><loc>https://seepoundcoffeepie.com/paths/models-from-zero/train-open-weight-models/preparation/llm-105-context</loc></url>
+  <url><loc>https://seepoundcoffeepie.com/paths/models-from-zero/build-a-language-model</loc></url>
+  <url><loc>https://seepoundcoffeepie.com/paths/models-from-zero/build-a-language-model/llm-106-practice</loc></url>
+  <url><loc>https://seepoundcoffeepie.com/paths/models-from-zero/build-a-language-model/llm-106-practice/inside-the-training-loop</loc></url>
+  <url><loc>https://seepoundcoffeepie.com/paths/models-from-zero/build-a-language-model/llm-106-practice/train-a-tiny-language-model</loc></url>
+  <url><loc>https://seepoundcoffeepie.com/paths/models-from-zero/build-a-language-model/llm-106-practice/package-and-improve-your-model</loc></url>
+  <url><loc>https://seepoundcoffeepie.com/paths/models-from-zero/build-a-language-model/preparation/llm-106-refresher</loc></url>
+  <url><loc>https://seepoundcoffeepie.com/paths/models-from-zero/build-a-language-model/preparation/llm-106-context</loc></url>
 </urlset>

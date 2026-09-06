@@ -1,5 +1,7 @@
 # Models From Zero first-release learning-path authoring blueprint
 
+Historical packet: the [active local LLM rebuild](../LOCAL_LLM_REBUILD.md) supersedes this generic first release for implementation. Preserve its old route addresses as bookmarks, not its old classification exercises as parallel courses.
+
 Last reviewed: 2026-08-30
 
 Status: authoring blueprint; not live and not publication-ready

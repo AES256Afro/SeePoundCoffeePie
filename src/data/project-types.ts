@@ -40,6 +40,11 @@ export interface GuidedProjectCheckpoint {
   requirements?: string[]
   expectedFirstRun?: ExpectedFirstRun
   assessmentSummary?: ProjectAssessmentSummary
+  planningHelp?: {
+    steps: string[]
+    inputScope: string
+    experiments: string[]
+  }
 }
 
 export interface ProjectOverviewStep {

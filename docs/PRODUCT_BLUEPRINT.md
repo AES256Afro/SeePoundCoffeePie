@@ -159,7 +159,7 @@ The second Python course stays beginner-first while moving from isolated syntax 
 5. **Totals and Filters:** use accumulators and conditions to summarize stored data.
 6. **Supply Tracker:** assemble normalization, dictionary updates, totals, and low-stock filtering in one console tool.
 
-The course unlock is conjunctive. The learner must complete both Python Foundations and `Your First Interactive Program`. Completing only one prerequisite leaves the course locked while keeping its outcome and module previews visible. The course introduces no files, packages, APIs, classes, exceptions, comprehensions, lambdas, generators, decorators, type hints, or database work. Those ideas would add setup or abstraction before the learner has consolidated returned values and changing collections.
+The course unlock is conjunctive. The learner must complete both Python Foundations and `Your First Interactive Program`. Completing only one prerequisite leaves the course locked while keeping its outcome and module previews visible. This unlock is a legacy application constraint, not the academy model: roadmap milestones M102 and M103 replace it with open routes and optional recommended preparation before the expanded academy is published, and new schools must not copy it. The course introduces no files, packages, APIs, classes, exceptions, comprehensions, lambdas, generators, decorators, type hints, or database work. Those ideas would add setup or abstraction before the learner has consolidated returned values and changing collections.
 
 ## Content rules
 
@@ -199,7 +199,7 @@ Every authored lesson must:
 ### Phase 3: Accounts and durable learning data (complete)
 
 - Optional GitHub authentication now offers an explicit guest-to-account migration choice without making an account necessary for learning.
-- One versioned private Cadet Record stores progress, aggregate answer counts, review schedules, settings, and achievements in D1 without retaining source code, GitHub tokens, email, raw IP addresses, or social data.
+- One versioned private Learner Record (called the Cadet Record in early drafts) stores progress, aggregate answer counts, review schedules, settings, and achievements in D1 without retaining source code, GitHub tokens, email, raw IP addresses, or social data.
 - Revisioned automatic saves, offline-safe browser storage, conservative merging, and visible conflict choices synchronize progress across signed-in desktop and mobile browsers.
 - The validated JSON backup and restore flow works with account synchronization, while settings provide separate server-data deletion and learning-progress reset controls.
 - The [Phase 3 release record](PHASE_3_RELEASE.md) defines the data contract, retention, privacy boundary, child-safety gate, deployment order, verification, and recovery requirements.
@@ -302,7 +302,7 @@ Future cooperative-learning work is deferred until it receives its own release p
 - The Supply Tracker's five visible expression checks and exact output are reinforced by a server-owned AST profile. The profile verifies the taught four-function frame, normalized dictionary update, accumulator, filter, fixed harness, and statement order without exposing analysis facts to the browser.
 - Browser persistence uses V2 local keys so an already-open older tab cannot become authoritative over new Phase 5A identifiers. The synchronized record and backup remain version 1, and no D1 table migration is required.
 - The compatibility floor and controlled staging and production procedure are specified in [the Phase 5A release record](PHASE_5A_RELEASE.md).
-- Source commit `a5ce1327beb0275ab1625c1962887375419b52d2` was deployed to production on 2026-08-26. The release evidence, deployed Worker versions, runner state, container readiness, automated gates, and manual browser verification are recorded in [the Phase 5A release record](PHASE_5A_RELEASE.md).
+- Source commit `a5ce1327beb0275ab1625c1962887375419b52d2` was deployed to production on 2026-08-26. The release evidence, deployed Worker versions, runner state, container readiness, automated gates, and manual browser verification are recorded in [the Phase 5A release record](PHASE_5A_RELEASE.md). The milestone roadmap refers to this same live five-course baseline as the Phase 5B compatibility release, because the compatibility floor was published as the first step of the Phase 5B procedure. Both names describe one deployment.
 
 ### Phase 5B: Practical C++: Collections and Records (source publication candidate)
 
@@ -313,6 +313,12 @@ Future cooperative-learning work is deferred until it receives its own release p
 - The final Workshop Stock Report uses fixed in-memory records and now has a separate pinned Clang-based collections analyzer with a server-owned profile, protected facts, authentic solutions, and adversarial tests. The existing Observation Desk analyzer remains narrow and unchanged.
 - No partial course or `coming soon` card may reach production. The guarded release must upload the built site, Worker, published registry, and reviewed C++ image as the one initial mutation in each environment. The complete curriculum, compatibility floor, protected assessment, release gates, staged implementation slices, and manual learner checks are specified in [the Phase 5B plan](PHASE_5B_PLAN.md).
 - This source selection is not evidence that staging or production has been updated. The latest recorded live baseline remains the five-course 2026-08-26 compatibility release until M009 and M010 are complete.
+
+### Open academy expansion (planned, first slice in source)
+
+- The product is expanding beyond the six programming courses into an open academy with Linux, networking, cybersecurity, and local-model schools, optional preparation paths, and a Reality versus Fiction path. The complete scope, open-access rules, learner-controlled lab boundary, and school inventories are indexed in the [academy curriculum expansion](curriculum/README.md), and the dependency-ordered plan is milestones M101 through M410 in the [milestone roadmap](../MILESTONES.md).
+- The first representative slice is in source: two open reading paths, the complete `What a model is` course, and the opening module of `Programming on screen and at work`. Every published academy page is directly open, uses optional preparation instead of prerequisites, and stays inside the L0 browser-only prepared-evidence boundary.
+- The academy model removes locked cards and access gates from published learning surfaces. The legacy continuing-course unlocks described above remain only until milestones M102 and M103 retire them.
 
 ## Release gates
 
@@ -325,7 +331,7 @@ A lesson is ready only when:
 - keyboard-only completion works;
 - the mobile layout remains usable at 390 CSS pixels wide;
 - replaying a completed module or completed project cannot add XP or shards, and adaptive Practice awards no rewards;
-- every continuing-course prerequisite is enforced conjunctively on catalog, outline, and direct lesson routes;
+- while the legacy continuing-course unlock model remains in place, its conjunctive prerequisites are enforced consistently on catalog, outline, and direct lesson routes; after roadmap milestones M102 and M103 replace that model, this gate instead requires that recommended preparation never blocks a published route;
 - every mission, lesson, course, project, checkpoint, and runner assignment identifier has one validated owner;
 - Practice aggregates only completed modules for one runtime language, even when those modules belong to multiple courses;
 - Codebook examples introduced outside a foundation course unlock by an explicit mission identifier;

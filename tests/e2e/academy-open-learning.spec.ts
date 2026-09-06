@@ -1,4 +1,5 @@
 import AxeBuilder from '@axe-core/playwright'
+import { localLlmCourses, localLlmLessons } from '../../src/data/local-llm-manifest'
 
 import { expect, test, type Page } from './fixtures'
 
@@ -11,6 +12,34 @@ const modelUnitPath = `${modelModulePath}/model-and-rule`
 const modelSecondUnitPath = `${modelModulePath}/inputs-and-outputs`
 const modelRefresherPath = `${modelCoursePath}/preparation/computer-words-refresher`
 const modelContextPath = `${modelCoursePath}/preparation/model-context`
+
+test('all 21 LLM lessons form one open forward path without repeating a lesson', async ({ page, seedProgress }) => {
+  await seedProgress({ onboardingComplete: false })
+  const requests = watchExecutionRequests(page)
+  await page.goto(modelUnitPath)
+  const visited = new Set<string>()
+  for (const [index, lesson] of localLlmLessons.entries()) {
+    await expect(page.getByRole('heading', { level: 1, name: lesson[4] })).toBeVisible()
+    expect(visited.has(page.url())).toBe(false)
+    visited.add(page.url())
+    const next = localLlmLessons[index + 1]
+    if (!next) {
+      await page.getByRole('link', { name: 'Return to learning path' }).click()
+      await expect(page).toHaveURL(modelPath)
+    } else if (next[1] === lesson[1]) {
+      await page.getByRole('link', { name: `Next unit: ${next[4]}` }).click()
+    } else {
+      const course = localLlmCourses.find(([id]) => id === next[1])!
+      await page.getByRole('link', { name: `Next course: ${course[2]}` }).click()
+      await expect(page.getByRole('heading', { level: 1, name: course[2] })).toBeVisible()
+      await page.getByRole('link', { name: /^Start now/ }).click()
+    }
+  }
+  expect(visited.size).toBe(21)
+  expect(requests).toEqual([])
+  await expect(page.getByRole('link', { name: 'Download the six-lab workbook' })).toHaveAttribute('href', '/learning-labs/local-llms.md')
+  await page.screenshot({ path: '/tmp/spcp-local-llm-path.png', fullPage: true })
+})
 
 function watchExecutionRequests(page: Page): string[] {
   const requests: string[] = []
@@ -54,15 +83,15 @@ test('a guest can open every academy route level directly without onboarding', a
   const executionRequests = watchExecutionRequests(page)
 
   await page.goto(modelCoursePath)
-  await expect(page.getByRole('heading', { level: 1, name: 'What a model is' })).toBeVisible()
+  await expect(page.getByRole('heading', { level: 1, name: 'Local LLMs: what they do' })).toBeVisible()
   await expect(page).toHaveURL(modelCoursePath)
 
   await page.goto(modelModulePath)
-  await expect(page.getByRole('heading', { level: 1, name: 'Learned behavior' })).toBeVisible()
+  await expect(page.getByRole('heading', { level: 1, name: 'How a language model works' })).toBeVisible()
   await expect(page).toHaveURL(modelModulePath)
 
   await page.goto(modelUnitPath)
-  await expect(page.getByRole('heading', { level: 1, name: 'A model and an ordinary rule' })).toBeVisible()
+  await expect(page.getByRole('heading', { level: 1, name: 'What a local LLM actually does' })).toBeVisible()
   await expect(page).toHaveURL(modelUnitPath)
 
   await page.goto(modelRefresherPath)
@@ -81,21 +110,21 @@ test('academy links preserve canonical bookmark, refresh, and Back navigation', 
 
   await page.getByRole('link', { name: /^View module/iu }).first().click()
   await expect(page).toHaveURL(modelModulePath)
-  await page.getByRole('link', { name: /A model and an ordinary rule/iu }).click()
+  await page.getByRole('link', { name: /What a local LLM actually does/iu }).click()
   await expect(page).toHaveURL(modelUnitPath)
 
   await page.reload()
   await expect(page).toHaveURL(modelUnitPath)
-  await expect(page.getByRole('heading', { level: 1, name: 'A model and an ordinary rule' })).toBeVisible()
+  await expect(page.getByRole('heading', { level: 1, name: 'What a local LLM actually does' })).toBeVisible()
 
   await page.getByRole('navigation', { name: 'Breadcrumb' })
-    .getByRole('link', { exact: true, name: 'What a model is' })
+    .getByRole('link', { exact: true, name: 'Local LLMs: what they do' })
     .click()
   await expect(page).toHaveURL(modelCoursePath)
 
   await page.goBack()
   await expect(page).toHaveURL(modelUnitPath)
-  await expect(page.getByRole('heading', { level: 1, name: 'A model and an ordinary rule' })).toBeVisible()
+  await expect(page.getByRole('heading', { level: 1, name: 'What a local LLM actually does' })).toBeVisible()
 })
 
 test('next opens a visibly different unit at its heading with fresh interaction state', async ({
@@ -105,13 +134,13 @@ test('next opens a visibly different unit at its heading with fresh interaction 
   await seedProgress({ onboardingComplete: false })
   await page.goto(modelUnitPath)
 
-  await page.getByRole('radio', { name: 'It must use a learned model.' }).click()
-  await page.getByRole('link', { name: 'Next unit: Inputs and outputs' }).click()
+  await page.getByRole('radio', { name: "Verify tomorrow's opening time without a source." }).click()
+  await page.getByRole('link', { name: 'Next unit: Tokens and the context window' }).click()
 
   await expect(page).toHaveURL(modelSecondUnitPath)
-  const heading = page.getByRole('heading', { level: 1, name: 'Inputs and outputs' })
+  const heading = page.getByRole('heading', { level: 1, name: 'Tokens and the context window' })
   await expect(heading).toBeFocused()
-  await expect(page.getByText('Unit 2 of 6 · Unit reference LM-101-U2')).toBeVisible()
+  await expect(page.getByText('Unit 2 of 6 · Unit reference LLM-101-U2')).toBeVisible()
   await expect(page.getByRole('radio').first()).toHaveAttribute('aria-checked', 'false')
   await expect.poll(() => page.evaluate(() => window.scrollY)).toBe(0)
 })
@@ -140,7 +169,7 @@ test('optional preparation offers three equal choices and does not gate or recor
 
   await page.getByRole('link', { name: 'Open the first unit' }).click()
   await expect(page).toHaveURL(modelUnitPath)
-  await expect(page.getByRole('heading', { level: 1, name: 'A model and an ordinary rule' })).toBeVisible()
+  await expect(page.getByRole('heading', { level: 1, name: 'What a local LLM actually does' })).toBeVisible()
 })
 
 test('the knowledge check supports keyboard retry, records only a correct answer, and shows dated evidence', async ({
@@ -151,47 +180,44 @@ test('the knowledge check supports keyboard retry, records only a correct answer
   const executionRequests = watchExecutionRequests(page)
   await page.goto(modelUnitPath)
 
-  const wrongChoice = page.getByRole('radio', { name: 'It must use a learned model.' })
+  const wrongChoice = page.getByRole('radio', { name: "Verify tomorrow's opening time without a source." })
   await wrongChoice.focus()
   await page.keyboard.press('Space')
   await expect(wrongChoice).toHaveAttribute('aria-checked', 'true')
-  await page.keyboard.press('Tab')
-  await expect(page.getByRole('radio', { name: 'It must use one ordinary rule.' })).toBeFocused()
-  await page.keyboard.press('Tab')
-  await expect(page.getByRole('radio', { name: 'There is not enough information.' })).toBeFocused()
   await page.keyboard.press('Tab')
   await expect(page.getByRole('button', { name: 'Check answer' })).toBeFocused()
   await page.keyboard.press('Enter')
 
   const wrongFeedback = page.getByRole('status').filter({ hasText: 'Not yet' })
   await expect(wrongFeedback).toContainText(
-    'The result alone does not reveal the mechanism. Recommendations can use rules, records, models, or a mixture.',
+    'No source about tomorrow was supplied. A convincing answer would not verify it.',
   )
   await expect(wrongFeedback).toContainText(
-    'Choose again. Look only at what the description proves, not what similar websites might use.',
+    'Compare each factual statement with the input. Familiar-sounding information still needs a source.',
   )
-  expect((await savedProgress(page)).completedLessons).not.toContain('LM-101-U1')
+  expect((await savedProgress(page)).completedLessons).not.toContain('LLM-101-U1')
 
   const retry = page.getByRole('button', { name: 'Try again' })
   await retry.focus()
   await page.keyboard.press('Enter')
-  const correctChoice = page.getByRole('radio', { name: 'There is not enough information.' })
+  const correctChoice = page.getByRole('radio', { name: 'Rewrite the supplied closing-time note.' })
   await correctChoice.focus()
   await page.keyboard.press('Space')
+  await page.keyboard.press('Tab')
   await page.keyboard.press('Tab')
   await page.keyboard.press('Enter')
 
   await expect(page.getByRole('status').filter({ hasText: 'Correct' })).toContainText(
-    'Ask for evidence about the mechanism before naming it.',
+    'The note contains the information needed for that rewrite.',
   )
   await expect(page.getByText('Unit complete')).toBeVisible()
-  expect((await savedProgress(page)).completedLessons).toContain('LM-101-U1')
+  expect((await savedProgress(page)).completedLessons).toContain('LLM-101-U1')
 
   const evidence = page.locator('#unit-sources')
   await evidence.getByText(/Sources and evidence limits/iu).click()
-  await expect(evidence.getByText(/Observed 2026-08-31 · Review by 2027-02-28/iu)).toBeVisible()
+  await expect(evidence.getByText(/Observed 2026-09-06 · Review by 2027-02-28/iu).first()).toBeVisible()
   await expect(evidence.getByRole('link', {
-    name: 'Artificial Intelligence Risk Management Framework resource page',
+    name: 'Causal language modeling',
   })).toBeVisible()
   await expect(page.getByRole('heading', { name: 'Prepared evidence' })).toBeVisible()
   expect(executionRequests, 'the prepared check must not contact a runner or model endpoint').toEqual([])
@@ -204,7 +230,7 @@ test('an academy unit fits a 320px viewport and passes the scoped WCAG A and AA 
   await seedProgress({ onboardingComplete: false })
   await page.setViewportSize({ height: 760, width: 320 })
   await page.goto(modelUnitPath)
-  await expect(page.getByRole('heading', { level: 1, name: 'A model and an ordinary rule' })).toBeVisible()
+  await expect(page.getByRole('heading', { level: 1, name: 'What a local LLM actually does' })).toBeVisible()
 
   const pageWidths = await page.evaluate(() => ({
     clientWidth: document.documentElement.clientWidth,

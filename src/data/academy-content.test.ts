@@ -1,5 +1,6 @@
+import { localLlmSources } from './local-llm-sources'
 import { describe, expect, it } from 'vitest'
-import { academyUnitIds, type AcademyUnitId } from './academy-manifest'
+import { academyUnitForId, academyUnitIds, type AcademyUnitId } from './academy-manifest'
 import {
   academyAnatomyLabels,
   academyContentForUnit,
@@ -24,17 +25,26 @@ function mutableSources(): AcademySourceRecord[] {
 }
 
 describe('academy learner-facing content', () => {
-  it('covers the exact eight manifest units in manifest order', () => {
+  it('gives all 21 local LLM lessons distinct examples, practices, and checks', () => {
+    const lessons = academyUnitContent.filter((unit) => unit.unitId.startsWith('LLM-'))
+    expect(lessons).toHaveLength(21)
+    for (const values of [lessons.map((unit) => unit.example.input), lessons.map((unit) => unit.practice.expectedResult), lessons.map((unit) => unit.knowledgeCheck.prompt)]) {
+      expect(new Set(values).size).toBe(21)
+    }
+    const text = JSON.stringify(lessons)
+    for (const topic of ['quantization', 'LoRA', 'QLoRA', 'pretraining', 'retrieval', 'held-out', 'open weights']) expect(text.toLowerCase()).toContain(topic.toLowerCase())
+  })
+  it('covers the 21 local LLM and two reality units in manifest order', () => {
     expect(academyUnitContent.map((unit) => unit.unitId)).toEqual(academyUnitIds)
     expect(academyUnitContent.slice(0, 6).map((unit) => unit.unitId)).toEqual([
-      'LM-101-U1',
-      'LM-101-U2',
-      'LM-101-U3',
-      'LM-101-U4',
-      'LM-101-U5',
-      'LML-101',
+      'LLM-101-U1',
+      'LLM-101-U2',
+      'LLM-101-U3',
+      'LLM-101-U4',
+      'LLM-101-U5',
+      'LLM-101-U6',
     ])
-    expect(academyUnitContent.slice(6).map((unit) => unit.unitId)).toEqual([
+    expect(academyUnitContent.slice(21).map((unit) => unit.unitId)).toEqual([
       'RVF-101',
       'RVF-102',
     ])
@@ -63,16 +73,11 @@ describe('academy learner-facing content', () => {
     }
   })
 
-  it('publishes complete Model or Not prepared evidence and direct recovery', () => {
-    const lab = academyContentForUnit('LML-101')
-    expect(lab.anatomyKind).toBe('prepared-lab')
-    expect(lab.practice.id).toBe('lml-101-model-or-not')
-    expect(lab.practice.preparedEvidence).toHaveLength(6)
-    expect(lab.practice.steps).toHaveLength(7)
-    expect(lab.practice.expectedResult).toContain('1 ordinary rule')
-    expect(lab.practice.expectedResult).toContain('3 not enough information')
-    expect(lab.practice.recovery).toContain('Restarting the page is unnecessary')
-    expect(lab.notClaimed).toContain('The lab ran or evaluated any software or model.')
+  it('replaces generic classification with local versus hosted decisions', () => {
+    const lesson = academyContentForUnit('LLM-101-U6')
+    expect(lesson.practice.preparedEvidence).toHaveLength(2)
+    expect(lesson.example.input).toContain('open-weight')
+    expect(lesson.preparedResult).toContain('none of those guarantees')
   })
 
   it('keeps every activity L0, browser-only, prepared, and free of page-side operations', () => {
@@ -161,6 +166,21 @@ describe('academy learner-facing content', () => {
     }
   })
 
+  it('keeps the manifest time and the content time estimate identical for every unit', () => {
+    for (const unit of academyUnitContent) {
+      expect(academyUnitForId(unit.unitId)?.time, unit.unitId).toBe(unit.scope.estimatedTime)
+    }
+  })
+
+  it('requires at least two official sources on every unit and dates the review window at 180 days', () => {
+    for (const unit of academyUnitContent) {
+      expect(unit.sourceIds.length, unit.unitId).toBeGreaterThanOrEqual(2)
+    }
+    const observed = new Date(`${academyContentObservedAt}T00:00:00Z`).getTime()
+    const reviewDue = new Date(`${academyContentReviewDueAt}T00:00:00Z`).getTime()
+    expect((reviewDue - observed) / 86_400_000).toBeLessThanOrEqual(180)
+  })
+
   it('keeps original claim records separate from official reality evidence', () => {
     for (const unitId of ['RVF-101', 'RVF-102'] as const) {
       const unit = academyContentForUnit(unitId)
@@ -175,16 +195,19 @@ describe('academy learner-facing content', () => {
 
   it('uses reviewed, scoped, official source records with visible limits and rights notes', () => {
     expect(academySourceRecords.map((source) => source.id)).toEqual([
+      ...localLlmSources.map((source) => source.id),
       'source-nist-ai-rmf-airc',
+      'source-nist-csrc-machine-learning',
       'source-nist-sp-800-218',
       'source-python-errors-exceptions',
     ])
     for (const source of academySourceRecords) {
       expect(source.observedAt).toBe(academyContentObservedAt)
       expect(source.reviewDueAt).toBe(academyContentReviewDueAt)
-      expect(source.observedAt).toBe('2026-08-31')
+      expect(source.observedAt).toBe('2026-09-06')
       expect(source.reviewDueAt).toBe('2027-02-28')
-      expect(source.url).toMatch(/^https:\/\/(?:airc\.nist\.gov|csrc\.nist\.gov|docs\.python\.org)\//)
+      expect(source.evidenceLabel).toBe('documented')
+      expect(source.url).toMatch(/^https:\/\/(?:airc\.nist\.gov|csrc\.nist\.gov|docs\.python\.org|huggingface\.co|github\.com|sbert\.net|docs\.ollama\.com)\//)
       expect(source.supports.trim().length).toBeGreaterThan(20)
       expect(source.scope.trim().length).toBeGreaterThan(20)
       expect(source.limits.trim().length).toBeGreaterThan(20)
@@ -193,12 +216,11 @@ describe('academy learner-facing content', () => {
     }
   })
 
-  it('contains no learner diagnosis, learner category, em dash, external runtime task, or advanced-model spillover', () => {
+  it('contains no learner diagnosis, learner category, em dash, external runtime task', () => {
     const text = JSON.stringify({ academyUnitContent, academySourceRecords })
     expect(text).not.toContain(String.fromCodePoint(0x2014))
     expect(text).not.toMatch(/\b(?:adhd|audhd|autism|autistic|diagnosis|diagnosed|neurodivergent|learner category|medicalized path)\b/i)
     expect(text).not.toMatch(/\b(?:open|launch) (?:a |the )?(?:terminal|shell)|\b(?:install|download) (?:the |a )?(?:runtime|model|package)|\brun (?:this|the following) command|\benter (?:an |your )?(?:api key|password|credential)/i)
-    expect(text).not.toMatch(/\b(?:quantization|quantized|fine-tuning|model families|local model|hosted model)\b/i)
   })
 
   it('fails closed when coverage, anatomy, access, boundaries, feedback, or evidence are weakened', () => {
@@ -210,13 +232,13 @@ describe('academy learner-facing content', () => {
     const badAnatomy = mutableContent()
     badAnatomy[0].anatomyOrder = [...academyAnatomyLabels].reverse()
     expect(academyContentValidationErrors(badAnatomy, academySourceRecords)).toContain(
-      'Academy unit LM-101-U1 has an invalid anatomy order.',
+      'Academy unit LLM-101-U1 has an invalid anatomy order.',
     )
 
     const hidden = mutableContent()
     hidden[0].access = 'closed' as 'open'
     expect(academyContentValidationErrors(hidden, academySourceRecords)).toContain(
-      'Academy unit LM-101-U1 must remain open.',
+      'Academy unit LLM-101-U1 must remain open.',
     )
 
     const segmented = mutableContent()
@@ -228,13 +250,13 @@ describe('academy learner-facing content', () => {
     const activePage = mutableContent()
     ;(activePage[0].boundary.pageOperations as unknown as { model: boolean }).model = true
     expect(academyContentValidationErrors(activePage, academySourceRecords)).toContain(
-      'Academy unit LM-101-U1 must remain L0 browser-only prepared study.',
+      'Academy unit LLM-101-U1 must remain L0 browser-only prepared study.',
     )
 
     const noFeedback = mutableContent()
     noFeedback[0].knowledgeCheck.choices[0].feedback = ''
     expect(academyContentValidationErrors(noFeedback, academySourceRecords)).toContain(
-      'Academy unit LM-101-U1 lacks immediate answer-specific feedback and retry.',
+      'Academy unit LLM-101-U1 lacks immediate answer-specific feedback and retry.',
     )
 
     const missingSource = mutableSources().slice(1)
@@ -242,7 +264,7 @@ describe('academy learner-facing content', () => {
       'Academy content must retain the exact reviewed source register.',
     )
     expect(academyContentValidationErrors(academyUnitContent, missingSource)).toContain(
-      'Academy unit LM-101-U1 has a missing source record.',
+      'Academy unit LLM-101-U1 has a missing source record.',
     )
   })
 
@@ -256,13 +278,13 @@ describe('academy learner-facing content', () => {
     const dated = mutableSources()
     dated[0].reviewDueAt = '2027-01-01' as typeof academyContentReviewDueAt
     expect(academyContentValidationErrors(academyUnitContent, dated)).toContain(
-      'Academy source source-nist-ai-rmf-airc has an invalid review date.',
+      'Academy source llm-causal has an invalid review date.',
     )
 
     const unapproved = mutableSources()
     unapproved[0].url = 'https://example.com/summary'
     expect(academyContentValidationErrors(academyUnitContent, unapproved)).toContain(
-      'Academy source source-nist-ai-rmf-airc is not an approved official source.',
+      'Academy source llm-causal is not an approved official source.',
     )
   })
 

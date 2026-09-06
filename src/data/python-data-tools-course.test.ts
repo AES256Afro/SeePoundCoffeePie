@@ -181,7 +181,9 @@ describe('Practical Python: Data Tools course', () => {
 
       if (exercise.type === 'ordering') {
         const itemIds = exercise.orderItems?.map((item) => item.id) ?? []
-        expect(itemIds.length, `${exercise.id} needs meaningful ordering pieces`).toBeGreaterThanOrEqual(5)
+        // Four pieces is the reviewed floor: the 2026-09-01 audit merged cards whose
+        // relative order Python does not force, so a single valid arrangement remains.
+        expect(itemIds.length, `${exercise.id} needs meaningful ordering pieces`).toBeGreaterThanOrEqual(4)
         expect(new Set(itemIds)).toEqual(new Set(exercise.correctOrder))
         expect(itemIds, `${exercise.id} should not begin already solved`).not.toEqual(exercise.correctOrder)
       }

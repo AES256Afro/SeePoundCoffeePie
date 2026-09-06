@@ -486,6 +486,17 @@ export const javaPicnicProject: JavaPicnicProject = {
       title: 'Plan the Community Picnic',
       objective: 'Build a complete Main.java program and prove that changing organizer input changes its table choice and final summary.',
       scaffolding: 'independent',
+      planningHelp: {
+        steps: [
+          'Keep main and printPicnic as separate methods inside Main. main reads and decides; calling printPicnic passes the name and guest count to the summary.',
+          'Separate the fixed supplies and table rule from the changing answers. Plan questions, table choice, supply list, and summary in that order.',
+        ],
+        inputScope: 'Supply an organizer name on line 1 and a small positive whole-number guest count on line 2. This version assumes both lines exist. Integer.parseInt cannot convert an empty line or words such as eight; a real booking tool would check and ask again.',
+        experiments: [
+          'Use Taylor Reed with 7 guests, then 8 guests. Predict Small first and Large second. The >= comparison includes 8, not just numbers above it.',
+          'Change only the organizer name. The summary should change without changing the table choice or supply order.',
+        ],
+      },
       newTerms: [
         { term: 'test case', meaning: 'One set of program input and expected behavior used to check whether a solution works.' },
         { term: 'hidden check', meaning: 'An official test whose exact values stay private so the program must solve the general task.' },

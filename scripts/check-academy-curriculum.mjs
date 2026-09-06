@@ -9,13 +9,30 @@ const planningArtifacts = [
   'MILESTONES.md',
   'docs/curriculum/README.md',
   'docs/curriculum/ACADEMY_EXPANSION_BLUEPRINT.md',
+  'docs/curriculum/LINUX_CURRICULUM.md',
+  'docs/curriculum/NETWORKING_CURRICULUM.md',
+  'docs/curriculum/CYBERSECURITY_CURRICULUM.md',
   'docs/curriculum/LOCAL_MODELS_LLM_CURRICULUM.md',
+  'docs/curriculum/LOCAL_VS_HOSTED_COMPARISON_PATH.md',
+  'docs/curriculum/LAB_ASSESSMENT_CREDENTIAL_STANDARD.md',
   'docs/curriculum/NO_ASSUMED_KNOWLEDGE_STANDARD.md',
   'docs/curriculum/REALITY_VS_FICTION_CURRICULUM.md',
   'docs/curriculum/course-packets/README.md',
   'docs/curriculum/course-packets/MODELS_FROM_ZERO_FIRST_RELEASE.md',
   'docs/curriculum/course-packets/REALITY_CHECKS_FIRST_RELEASE.md',
 ]
+
+const linuxPath = 'docs/curriculum/LINUX_CURRICULUM.md'
+
+// The Linux blueprint declares its own scale. These assertions keep the
+// declared totals equal to the sum of their parts after the 2026-09-01 sweep.
+const expectedLinuxInventory = {
+  paths: 15,
+  courses: 89,
+  minimumLabs: 176,
+  capstones: 15,
+  totalMinimum: 191,
+}
 
 const localModelsPath = 'docs/curriculum/LOCAL_MODELS_LLM_CURRICULUM.md'
 const realityCurriculumPath = 'docs/curriculum/REALITY_VS_FICTION_CURRICULUM.md'
@@ -1225,6 +1242,53 @@ for (const [id, matchingDeclarations] of declarationsById) {
   })
 }
 
+function parseLinuxInventory(content, collectedIssues) {
+  const lines = content.split(/\r?\n/u)
+  const courseIds = new Set()
+  lines.forEach((line) => {
+    const match = line.match(/^\|\s*(LNX-\d{3,4})\b/u)
+    if (match) courseIds.add(match[1])
+  })
+
+  const requiredStatements = [
+    `- ${expectedLinuxInventory.paths} learning paths;`,
+    `- ${expectedLinuxInventory.courses} substantial courses;`,
+    `- at least ${expectedLinuxInventory.minimumLabs} guided local labs, per the lab inventory;`,
+    `- ${expectedLinuxInventory.capstones} path capstones;`,
+    `Total minimum: ${expectedLinuxInventory.totalMinimum} labs and capstones`,
+  ]
+  for (const statement of requiredStatements) {
+    if (!content.includes(statement)) {
+      collectedIssues.push({
+        artifactPath: linuxPath,
+        line: 1,
+        message: 'Linux curriculum scale is missing the declared statement "' + statement + '"',
+      })
+    }
+  }
+
+  if (courseIds.size !== expectedLinuxInventory.courses) {
+    collectedIssues.push({
+      artifactPath: linuxPath,
+      line: 1,
+      message: 'Linux curriculum course tables declare ' + courseIds.size
+        + ' unique course IDs but the scale section claims '
+        + expectedLinuxInventory.courses,
+    })
+  }
+
+  return {
+    paths: expectedLinuxInventory.paths,
+    courses: courseIds.size,
+    minimumLabs: expectedLinuxInventory.minimumLabs,
+    capstones: expectedLinuxInventory.capstones,
+  }
+}
+
+const linuxInventory = contents.has(linuxPath)
+  ? parseLinuxInventory(contents.get(linuxPath), issues)
+  : null
+
 const localModels = contents.has(localModelsPath)
   ? parseLocalModelsInventory(contents.get(localModelsPath), issues)
   : null
@@ -1262,6 +1326,12 @@ if (issues.length > 0) {
     '- planning artifacts: ' + planningArtifacts.length
       + '; relative Markdown links: ' + relativeLinkCount
       + '; balanced fence pairs: ' + fencePairCount,
+  )
+  console.log(
+    '- Linux: ' + linuxInventory.paths + ' paths, '
+      + linuxInventory.courses + ' courses, at least '
+      + linuxInventory.minimumLabs + ' labs, '
+      + linuxInventory.capstones + ' path capstones.',
   )
   console.log(
     '- Local Models: ' + localModels.paths + ' paths, '

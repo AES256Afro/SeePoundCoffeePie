@@ -1,5 +1,6 @@
 # Linux Curriculum Blueprint
 
+Last reviewed: 2026-09-01
 Status: proposed curriculum architecture
 Audience: absolute beginners through working systems administrators
 Learning mode: reading, authored exercises, and learner-run local labs
@@ -191,7 +192,7 @@ A learner must be able to begin without replacing their operating system.
 | Lane | Learner environment | Best for | Important limits |
 |---|---|---|---|
 | A: Read and reason | Any browser-capable device | History, concepts, diagrams, command reading, prepared traces, migration planning | No live Linux behavior |
-| B: Windows with WSL | Supported Windows system with WSL | Shell, packages, files, development tools, many services | Boot, kernel modules, hardware, disk layout, and some network behavior differ from a conventional Linux machine |
+| B: Windows with WSL | Supported Windows system with WSL | Shell, packages, files, development tools, many services | Boot, kernel modules, hardware, disk layout, and some network behavior differ from a conventional Linux machine; WSL mounts the host filesystem under `/mnt/c` and other drive letters under `/mnt`, so a destructive command inside WSL can destroy host files |
 | C: Disposable virtual machine | Windows, macOS, or Linux host | Recommended default for administration, storage, services, recovery, and security labs | Needs enough memory and disk; hardware acceleration support varies |
 | D: Mac terminal plus Linux virtual machine | macOS | Unix concepts in Terminal, with Linux behavior taught inside a VM | macOS is Unix-like but is not Linux; package, service, filesystem, and kernel behavior differs |
 | E: Native Linux installation | Compatible spare computer or deliberate migration | Desktop use, hardware, gaming, performance, and daily operation | Highest host impact; only after backup, compatibility, and recovery planning |
@@ -241,6 +242,8 @@ All beginner and intermediate administration labs use one of these boundaries:
 - a purpose-built container when the lesson concerns container user space;
 - a private lab subnet containing only learner-owned virtual machines.
 
+WSL is a weaker boundary than a virtual machine. WSL mounts the host filesystem under `/mnt/c`, and other host drive letters under `/mnt`, so a destructive command inside WSL can destroy host files. Destructive lab steps must never target paths under `/mnt`. Every WSL lab states this rule before its first step that removes, overwrites, or reformats anything.
+
 ### Required lab labels
 
 Every lab declares:
@@ -254,6 +257,7 @@ Every lab declares:
 - estimated time;
 - required network access;
 - privileges required;
+- the shared L0 through L4 risk class: L0 reading and planning, L1 read-only inspection, L2 disposable user-space change, L3 controlled system change, L4 isolated security simulation, defined normatively by the [Lab, assessment, and credential standard](LAB_ASSESSMENT_CREDENTIAL_STANDARD.md);
 - files, accounts, services, interfaces, packages, and ports changed;
 - whether a reboot is expected;
 - checkpoint and rollback instructions;
@@ -273,6 +277,7 @@ Storage, boot, account, firewall, and recovery labs must:
 - explain expected output and stop conditions;
 - avoid unresolved shell variables and broad wildcards in destructive examples;
 - never target the learner's host disk;
+- never target paths under `/mnt` from WSL, because those paths are the host's drives;
 - never use a learner's home directory as a recursive deletion target;
 - provide snapshot restore or rebuild instructions;
 - include a deliberate abort exercise.
@@ -542,9 +547,9 @@ The exercise then asks:
 - What would a least-privileged service account need to write?
 - What changes under a container or image-based deployment?
 
-### Windows comparison course
+### Windows comparison course (LNX-407)
 
-The comparison must avoid false one-to-one mappings. It covers:
+This material is a full course, LNX-407, and belongs to Path LNX-400, where its row appears in the course table. The comparison must avoid false one-to-one mappings. It covers:
 
 - one rooted namespace versus drive-letter-centered navigation;
 - mount points versus assigning a new letter;
@@ -565,14 +570,14 @@ The comparison must avoid false one-to-one mappings. It covers:
 The intended complete Linux school is deliberately large:
 
 - 15 learning paths;
-- 87 substantial courses;
-- about 420 to 500 modules;
+- 89 substantial courses;
+- about 620 to 700 modules, counted from the course tables;
 - about 1,200 to 1,500 reading and exercise units;
-- at least 150 guided local labs;
+- at least 176 guided local labs, per the lab inventory;
 - 15 path capstones;
 - 12 applied-skill assessments;
-- 3 broad certificate programs after assessment infrastructure is mature;
-- about 450 to 650 hours for a learner who completes every route and extension.
+- 4 broad certificate programs after assessment infrastructure is mature;
+- about 830 to 1,160 hours for a learner who completes every route and extension, the rounded sum of the fifteen path estimates.
 
 No learner is expected to complete the entire catalog before using Linux. The catalog supports different goals:
 
@@ -597,8 +602,8 @@ Estimated full path time: 18 to 24 hours.
 |---|---|---|
 | LNX-001: What you are about to change | Host versus guest, files versus disks, administrator access, network exposure, backup versus snapshot | Label a diagram of the learner's host, guest, storage, and network boundaries |
 | LNX-002: Choose an access route | Reading-only, WSL, virtual machine, Mac plus VM, native Linux, remote server | Complete a goal, hardware, risk, and accessibility decision worksheet |
-| LNX-003: Windows Subsystem for Linux | Distribution installation, filesystems, Windows and Linux paths, processes, systemd, networking, backup and removal | Install or inspect a WSL distribution, create a file, export it, and remove a disposable test distribution |
-| LNX-004: Your first Linux virtual machine | Hypervisor concepts, ISO verification, virtual hardware, NAT, guest tools, snapshots | Verify an image checksum, create an Ubuntu LTS VM, update it, snapshot it, and restore it |
+| LNX-003: Windows Subsystem for Linux | Distribution installation, filesystems, Windows and Linux paths, processes, systemd, networking, backup and removal | Install or inspect a WSL distribution, create a file, export it, and remove a disposable test distribution. This course runs before the shell is taught, so every command step is an embedded micro-lesson: it labels prompt anatomy ("this text is the prompt, you type only this part"), shows the exact expected output, and explains each typed token before the learner runs it |
+| LNX-004: Your first Linux virtual machine | Hypervisor concepts, ISO verification, virtual hardware, NAT, guest tools, snapshots | Verify an image checksum, create an Ubuntu LTS VM, update it, snapshot it, and restore it. Checksum verification offers a click-through graphical route first, using a file manager or graphical hash tool where the host provides one; where none exists, the two shell commands are supplied and explained inline, with the prompt labeled and the exact expected output shown |
 | LNX-005: Mac, Linux, and Unix-like boundaries | Terminal, shell, POSIX heritage, package and service differences, virtualization on Intel and Apple Silicon | Compare the same read-only commands on macOS and a Linux guest and record where behavior differs |
 
 Capstone: build a disposable Linux learning environment, produce a one-page environment map, prove snapshot recovery, and document how to delete the lab cleanly.
@@ -673,16 +678,17 @@ Purpose: teach the command line as a precise interface, not a rite of passage.
 
 Recommended preparation: LNX-001 and an access lane.
 Start-now promise: a command-reading route uses prepared output before any live command.
-Estimated full path time: 45 to 60 hours.
+Estimated full path time: 50 to 68 hours.
 
 | Course | Modules | Guided work |
 |---|---|---|
-| LNX-301: Terminal, shell, command, and process | Terminal emulator, prompt, shell, command parsing, arguments, options, exit status | Annotate prompts and commands, then run `pwd`, `whoami`, and `printf` in a disposable environment |
+| LNX-301: Terminal, shell, command, and process | Terminal emulator, prompt, shell, command parsing, arguments, options, exit status, command history, tab completion, safe interruption with Ctrl+C and what it does not stop | Annotate prompts and commands, then run `pwd`, `whoami`, and `printf` in a disposable environment, recall one command from history, and interrupt a harmless long-running command |
 | LNX-302: Paths and navigation | Absolute and relative paths, `.`, `..`, home, working directory, quoting, case sensitivity | Navigate a prepared tree and predict the destination before each command |
-| LNX-303: Inspect files safely | `ls`, `stat`, `file`, `wc`, `head`, `tail`, `less`, encodings, binary versus text | Identify unknown sample files using read-only tools |
-| LNX-304: Create, copy, move, and remove | `mkdir`, `touch`, `cp`, `mv`, `rm`, recursion, overwrite behavior, trash differences | Build and reorganize a disposable tree, then restore it from an archive |
+| LNX-303: Inspect files safely | `ls`, `stat`, `file`, `wc`, `head`, `tail`, `less`, encodings, binary versus text, inodes and directory entries, hard links and symbolic links with `ln`, what deletion really removes and open-file behavior | Identify unknown sample files using read-only tools, then trace one file through a hard link and a symbolic link and predict what survives each deletion |
+| LNX-304: Create, copy, move, and remove | `mkdir`, `touch`, `cp`, `mv`, `rm`, recursion, overwrite behavior, trash differences, edit a file safely with nano first and vi survival | Build and reorganize a disposable tree, then restore it from an archive. The editing module has the learner open, change, save, and exit a file in nano and in vi, and undo a deliberate mistake, before any later course edits a file under `/etc` |
 | LNX-305: Streams, pipes, and redirection | standard input, output, error, `|`, `>`, `>>`, file descriptors, `tee`, exit status | Build a report pipeline and demonstrate the difference between overwrite and append |
 | LNX-306: Search and transform text | `grep`, `find`, `sort`, `uniq`, `cut`, `tr`, regular-expression basics, safe `xargs` use | Search a prepared log set and produce a deduplicated summary without altering sources |
+| LNX-307: Documentation and help | manual pages and their sections, `--help`, info pages, `/usr/share/doc`, distribution documentation, project documentation, release notes, trustworthy search habits | Answer five prepared questions using only local and official documentation, and record which source answered each |
 
 Required hand-holding details:
 
@@ -707,7 +713,7 @@ Purpose: make the Linux directory tree understandable, predictable, and useful i
 
 Recommended preparation: LNX-302 and LNX-303.
 Start-now promise: the visual atlas and prepared service examples work without a live shell.
-Estimated full path time: 55 to 75 hours.
+Estimated full path time: 62 to 84 hours.
 
 | Course | Modules | Guided work |
 |---|---|---|
@@ -717,6 +723,7 @@ Estimated full path time: 55 to 75 hours.
 | LNX-404: The `/var` hierarchy | `/var/lib`, `/var/log`, `/var/cache`, `/var/spool`, `/var/tmp`, growth and backup implications | Diagnose a simulated full `/var` and choose what may be cleaned, rotated, backed up, or left alone |
 | LNX-405: Users, services, and mounted content | `/home`, `/srv`, `/opt`, `/media`, `/mnt`, application data conventions | Design a file layout for a small web service and a shared media workstation |
 | LNX-406: Virtual files and modern variations | `/proc`, `/sys`, cgroups, `tmpfs`, containers, immutable systems, distribution-specific paths | Read prepared `/proc` and `/sys` evidence and explain why it is not ordinary disk data |
+| LNX-407: Windows and Linux comparison | one rooted namespace versus drive letters, mount points versus new letters, case sensitivity, path separators, executable permission versus extensions, repositories versus installers, shared libraries, service managers, profiles and dotfiles, configuration stores, device nodes and virtual filesystems, logs and journals versus Event Log, access-control model limits | Map ten Windows administrative tasks to their Linux equivalents and mark exactly where each analogy stops being accurate; the full topic list appears in the Windows comparison course section above |
 
 Filesystem exercises include:
 
@@ -752,7 +759,7 @@ Estimated full path time: 60 to 80 hours.
 | LNX-502: File and directory permissions | owner, group, other, read, write, execute, directory traversal, symbolic and numeric modes | Predict effective access before changing a disposable tree |
 | LNX-503: Ownership and shared work | `chown`, `chgrp`, default ownership, setgid directories, umask, collaborative directories | Build a shared project folder, test access as two lab users, and repair a deliberate mistake |
 | LNX-504: Administrator access and sudo | privilege boundaries, `sudo`, policy, authentication, environment, command scope, audit records | Read a proposed administrator command, name its scope, run a bounded change, and verify it |
-| LNX-505: Extended access and mandatory controls | ACLs, capabilities, setuid and setgid, SELinux, AppArmor, namespaces, limits of simple mode bits | Compare traditional permissions with an ACL and one mandatory-control denial trace |
+| LNX-505: Extended access and mandatory controls | ACLs, capabilities, setuid and setgid, the sticky bit on shared directories, SELinux, AppArmor, namespaces, limits of simple mode bits | Compare traditional permissions with an ACL and one mandatory-control denial trace, and verify the sticky bit on `/tmp` |
 | LNX-506: Secure host baseline | updates, trusted repositories, least privilege, firewall, remote access, services, logs, backups, time, secure boot concepts | Apply and verify a baseline in a disposable server VM, then roll back one control and observe the difference |
 
 Security truths the course repeats:
@@ -784,7 +791,7 @@ Estimated full path time: 55 to 75 hours.
 
 | Course | Modules | Guided work |
 |---|---|---|
-| LNX-601: Packages and repositories | package metadata, repositories, signatures, dependencies, upgrades, removal, configuration retention | Inspect package metadata, verify the configured source, install a harmless package, and remove it |
+| LNX-601: Packages and repositories | package metadata, repositories, signatures, dependencies, upgrades, removal, configuration retention, package holds and version pinning | Inspect package metadata, verify the configured source, install a harmless package, hold it, release the hold, and remove it |
 | LNX-602: Package families and application formats | Debian packages, RPM packages, source builds, Flatpak, Snap, AppImage, containers, trust and update ownership | Compare installation and update boundaries for one sample application |
 | LNX-603: Processes and signals | process ID, parent, user, state, foreground, background, environment, signals, jobs | Start a harmless process, inspect it, stop it gracefully, and explain the evidence |
 | LNX-604: Services and systemd | units, dependencies, enable versus start, status, service accounts, overrides, timers, targets | Install a tiny local service, start it, inspect it, add a bounded override, then remove it cleanly |
@@ -811,7 +818,7 @@ Estimated full path time: 70 to 95 hours.
 | Course | Modules | Guided work |
 |---|---|---|
 | LNX-701: Devices, partitions, and filesystems | block devices, names, stable identifiers, partition tables, partitions, filesystems, labels, UUIDs | Attach a disposable disk, identify it by size and stable ID, partition it, format it, and verify the target |
-| LNX-702: Mounting and filesystem use | mount points, temporary mounts, persistent mount configuration, options, permissions, free space, inodes | Mount a disposable filesystem, make persistence explicit, simulate a bad entry, and recover without host impact |
+| LNX-702: Mounting and filesystem use | mount points, temporary mounts, persistent mount configuration, options, permissions, free space, inodes, disk quotas for users and groups | Mount a disposable filesystem, make persistence explicit, simulate a bad entry, and recover without host impact |
 | LNX-703: Encryption, volume management, and RAID concepts | threat model, LUKS concepts, logical volumes, snapshots, software RAID, redundancy versus backup | Build a disposable layered storage diagram and complete one guided encrypted-volume lab in a VM |
 | LNX-704: Boot from firmware to login | UEFI, boot manager, loader, kernel, initramfs, root filesystem, PID 1, targets, display manager | Annotate a prepared boot log and repair a deliberately broken non-host VM boot entry |
 | LNX-705: Backups and restores | source of truth, versioning, snapshots, archives, sync, off-system copy, encryption, retention, restore testing | Back up a sample service, delete its VM copy, restore it, and prove content and permissions |
@@ -1034,9 +1041,9 @@ Estimated full path time: 90 to 125 hours.
 |---|---|---|
 | LNX-1101: Plan a server | workload, users, data, availability, threat model, resource estimate, distribution and support, physical versus VM versus cloud | Write a one-page service definition and decide what failure the design must survive |
 | LNX-1102: Install a private server | minimal install, accounts, hostname, time, updates, console, network, guest tools, snapshot | Build a NAT-only Ubuntu or Debian server VM and record a baseline |
-| LNX-1103: Remote administration with SSH | keys, host identity, known hosts, agents, configuration, jump hosts, file transfer, lockout prevention | Create learner-owned keys, verify host identity, connect over a private lab network, and rotate the key |
+| LNX-1103: Remote administration with SSH | keys, host identity, known hosts, agents, configuration, jump hosts, port forwarding concepts, file transfer, lockout prevention | Create learner-owned keys, verify host identity, connect over a private lab network, forward one local port to a private service, and rotate the key |
 | LNX-1104: Publish a web service safely | bind address, reverse proxy concept, TLS concept, DNS dependency, firewall, service account, content permissions | Publish a static site to the private lab network and verify that no public listener exists |
-| LNX-1105: File, database, and application services | service selection, data ownership, client authentication, backups, upgrades, compatibility | Run a private file or application service using synthetic data and complete a restore |
+| LNX-1105: File, database, and application services | service selection, SMB and NFS file-sharing protocols, data ownership, client authentication, backups, upgrades, compatibility | Run a private SMB or NFS file share or an application service using synthetic data and complete a restore |
 | LNX-1106: Operations and maintenance | patching, configuration change, maintenance window, monitoring, capacity, logs, backup, restore, incident notes | Upgrade a cloned VM, compare state, deliberately roll back, then write a change record |
 | LNX-1107: Reliability and recovery | dependency mapping, health checks, restart policy, degraded service, redundancy, recovery objectives, rebuild | Recover a failed service using documentation rather than command history |
 
@@ -1219,55 +1226,31 @@ Avoid feedback such as `Incorrect`, `Try again`, or `You should already know thi
 
 ## Guided lab inventory
 
-The full curriculum should contain at least 150 maintained labs. The table defines the minimum shape of the inventory, not an upper limit.
+This inventory table is the source of truth for lab totals: at least 176 maintained labs plus the 15 path capstones, 191 items in all. The table defines the minimum shape of the inventory, not an upper limit. Each family declares the range of shared L0 through L4 risk classes its labs may use, as defined in the [Lab, assessment, and credential standard](LAB_ASSESSMENT_CREDENTIAL_STANDARD.md); no lab in a family may exceed the family's stamped range.
 
-| Lab family | Minimum count | Representative labs |
-|---|---:|---|
-| Access and recovery | 10 | Choose a lane; verify an ISO; install WSL; export a WSL distribution; create a VM; snapshot; restore; clone; delete; record environment facts |
-| Desktop and applications | 10 | Desktop tour; hidden files; removable image; software center; package removal; browser profile; document compatibility; accessibility; printer trace; session recovery |
-| Shell and text | 16 | Prompt anatomy; paths; quoting; file inspection; copy and move; safe removal; output; error; pipelines; search; sort; deduplicate; archive; checksum; manual pages; command journal |
-| Filesystem hierarchy | 14 | Root atlas; `/etc`; `/usr`; `/usr/local`; `/var/lib`; `/var/log`; `/var/cache`; `/run`; `/tmp`; `/proc`; `/sys`; service anatomy; full `/var`; backup map |
-| Accounts and permissions | 14 | User identity; groups; file modes; directory modes; umask; shared directory; ownership; sudo scope; ACL; capability trace; service user; failed access; least privilege; baseline |
-| Packages, processes, and services | 15 | Repository source; package metadata; install; remove; process tree; jobs; signals; environment; systemd service; override; timer; journal; rotation; dependency; clean removal |
-| Storage, boot, and recovery | 15 | Identify disk; partition; filesystem; label and UUID; mount; persistent mount; bad mount recovery; encrypted volume; volume snapshot; boot log; broken boot; backup; restore; full disk; rescue |
-| Host networking | 14 | Interface; address; route; DNS; socket; loopback service; two-VM service; firewall allow; firewall deny; console recovery; namespace; bridge; packet evidence; MTU case |
-| Gaming and hardware | 8 | Graphics stack; driver evidence; compatibility inventory; save-data inventory; controller; audio; performance trace; SteamOS rollback plan |
-| Windows migration | 10 | Goal worksheet; application inventory; file-format test; hardware evidence; backup proof; recovery media checklist; VM pilot; live-session checklist; friction log; rollback decision |
-| Server administration | 18 | Plan; install; baseline; SSH key; host identity; key rotation; web service; reverse proxy concept; file service; database backup; application restore; update clone; maintenance; capacity; monitoring; incident; rebuild; decommission |
-| Automation and containers | 12 | Read-only script; validated input; dry run; temporary files; cleanup; idempotence; configuration drift; rootless container; limits; local composition; volume restore; VM template |
-| Troubleshooting | 12 | CPU; memory; I/O; space; inode; service; permission; DNS; route; firewall; TLS concept; multi-symptom incident |
-| Internals and fleet work | 8 | System-call trace; memory map; cgroup limit; module evidence; device event; filesystem comparison; patch rings; platform design review |
-| Integrated capstones | 15 | One capstone for each learning path |
+| Lab family | Minimum count | Risk classes | Representative labs |
+|---|---:|---|---|
+| Access and recovery | 10 | L0 to L3 | Choose a lane; verify an ISO; install WSL; export a WSL distribution; create a VM; snapshot; restore; clone; delete; record environment facts |
+| Desktop and applications | 10 | L1 to L3 | Desktop tour; hidden files; removable image; software center; package removal; browser profile; document compatibility; accessibility; printer trace; session recovery |
+| Shell and text | 16 | L0 to L2 | Prompt anatomy; paths; quoting; file inspection; copy and move; safe removal; output; error; pipelines; search; sort; deduplicate; archive; checksum; manual pages; command journal |
+| Filesystem hierarchy | 14 | L0 to L3 | Root atlas; `/etc`; `/usr`; `/usr/local`; `/var/lib`; `/var/log`; `/var/cache`; `/run`; `/tmp`; `/proc`; `/sys`; service anatomy; full `/var`; backup map |
+| Accounts and permissions | 14 | L1 to L3 | User identity; groups; file modes; directory modes; umask; shared directory; ownership; sudo scope; ACL; capability trace; service user; failed access; least privilege; baseline |
+| Packages, processes, and services | 15 | L1 to L3 | Repository source; package metadata; install; remove; process tree; jobs; signals; environment; systemd service; override; timer; journal; rotation; dependency; clean removal |
+| Storage, boot, and recovery | 15 | L1 to L3 | Identify disk; partition; filesystem; label and UUID; mount; persistent mount; bad mount recovery; encrypted volume; volume snapshot; boot log; broken boot; backup; restore; full disk; rescue |
+| Host networking | 14 | L1 to L3 | Interface; address; route; DNS; socket; loopback service; two-VM service; firewall allow; firewall deny; console recovery; namespace; bridge; packet evidence; MTU case |
+| Gaming and hardware | 8 | L0 to L2 | Graphics stack; driver evidence; compatibility inventory; save-data inventory; controller; audio; performance trace; SteamOS rollback plan |
+| Windows migration | 10 | L0 to L3 | Goal worksheet; application inventory; file-format test; hardware evidence; backup proof; recovery media checklist; VM pilot; live-session checklist; friction log; rollback decision |
+| Server administration | 18 | L0 to L3 | Plan; install; baseline; SSH key; host identity; key rotation; web service; reverse proxy concept; file service; database backup; application restore; update clone; maintenance; capacity; monitoring; incident; rebuild; decommission |
+| Automation and containers | 12 | L1 to L3 | Read-only script; validated input; dry run; temporary files; cleanup; idempotence; configuration drift; rootless container; limits; local composition; volume restore; VM template |
+| Troubleshooting | 12 | L0 to L3 | CPU; memory; I/O; space; inode; service; permission; DNS; route; firewall; TLS concept; multi-symptom incident |
+| Internals and fleet work | 8 | L0 to L3 | System-call trace; memory map; cgroup limit; module evidence; device event; filesystem comparison; patch rings; platform design review |
+| Integrated capstones | 15 | L2 to L4 | One capstone for each learning path; the security-baseline and recovery capstones reach L4 because they deliberately weaken and restore a control on an isolated lab network |
 
-Total minimum: 191 labs and capstones if all listed inventory targets are met.
+Total minimum: 191 labs and capstones if all listed inventory targets are met, 176 labs plus 15 capstones.
 
 ### Lab package standard
 
-Each downloadable lab package contains:
-
-```text
-linux-lab-id/
-├── README.md
-├── LAB.md
-├── lab-manifest.json
-├── requirements/
-│   ├── windows-wsl.md
-│   ├── windows-vm.md
-│   ├── macos-vm.md
-│   └── linux-host.md
-├── starter/
-├── fixtures/
-├── scripts/
-├── checks/
-├── expected/
-├── recovery/
-├── cleanup/
-├── evidence-template/
-├── SOURCES.md
-├── SECURITY.md
-├── LICENSES.md
-└── checksums.txt
-```
+Each downloadable lab package follows the [download package contract](LAB_ASSESSMENT_CREDENTIAL_STANDARD.md#download-package-contract) in the Lab, assessment, and credential standard, which is the only normative statement of the package layout and its publication checks. Linux packages use the contract's optional `fixtures/`, `scripts/`, and `recovery/` entries and the optional `SOURCES.md` file because Linux labs ship synthetic practice data, dry-run helper scripts, rehearsed restoration steps, and primary-source records. Their `requirements/` files are split by access lane: `windows-wsl.md`, `windows-vm.md`, `macos-vm.md`, and `linux-host.md`.
 
 Scripts must support a review or dry-run mode when they make changes. A lab package never contains a secret, copyrighted commercial software, unlicensed dataset, intentionally harmful payload, or live third-party target.
 
@@ -1319,7 +1302,10 @@ All teaching content and course outlines remain open. Credential issuance can re
 
 ### Proposed completion records
 
+One record per learning path, fifteen in all:
+
 - Linux Orientation
+- Linux History and Adoption
 - Linux Desktop Foundations
 - Shell and Files
 - Linux Filesystem Atlas
@@ -1420,17 +1406,27 @@ All teaching content and course outlines remain open. Credential issuance can re
 
 ### Proposed broad certificates
 
-#### Linux Desktop Practitioner
+The four certificate names below adopt the credential names piloted by canonical roadmap milestone M210: Linux Foundations, Linux Desktop and Migration, Linux Server Operator, and Linux Administrator. Both documents name the same four credentials.
+
+#### Linux Foundations
 
 Evidence includes:
 
 - LNX-000 through LNX-400 completion;
-- Linux desktop and shell assessments;
-- filesystem applied skill;
-- one migration or gaming capstone;
+- Linux shell and filesystem assessments;
+- the environment-recovery and filesystem applied skills;
 - accessibility and backup checks.
 
-#### Linux System Administrator
+#### Linux Desktop and Migration
+
+Evidence includes:
+
+- desktop, gaming, and migration assessments;
+- the migration-planning applied skill;
+- one migration or gaming capstone that may conclude against migrating and still earn full credit;
+- accessibility and recovery checks.
+
+#### Linux Server Operator
 
 Evidence includes:
 
@@ -1438,7 +1434,7 @@ Evidence includes:
 - service operation, backup and restore, host baseline, and troubleshooting applied skills;
 - a private-server capstone reviewed under a published rubric.
 
-#### Linux Systems Engineer
+#### Linux Administrator
 
 Evidence includes:
 
@@ -1586,6 +1582,55 @@ Linux is the common lab operating system, but it is not a gate in front of other
 ## Milestone sequence
 
 The sequence orders implementation work. It never locks a released course behind an earlier path.
+
+### Crosswalk to canonical roadmap milestones
+
+The roadmap in [MILESTONES.md](../../MILESTONES.md) tracks the Linux school as canonical milestones M161 through M210 in Phase 19. The internal milestones LNX-M001 through LNX-M078 order the implementation work inside this blueprint. The table maps every internal milestone or milestone group to its canonical milestones. Internal scope with no canonical milestone is labeled as deferred and needs a roadmap milestone before authoring begins.
+
+| Internal milestones | Canonical roadmap milestones |
+|---|---|
+| LNX-M001 to LNX-M010, architecture and safety definitions | M161, Linux school map |
+| LNX-M011 to LNX-M015, navigation and teaching surfaces | M161, Linux school map |
+| LNX-M016 to LNX-M019, visual systems | M179, Linux root directory map; M187, Linux versus Windows filesystem concepts |
+| LNX-M020, accessibility gate | M210, Linux credentials and release gate |
+| LNX-M021, safety and access-route courses | M161, Linux school map; M170, live media and native-install planning |
+| LNX-M022, WSL route | M167, Linux through WSL setup |
+| LNX-M023, virtual-machine route | M168, Linux VM on Windows setup; M169, Linux VM on macOS setup |
+| LNX-M024, macOS bridge | M169, Linux VM on macOS setup |
+| LNX-M025 to LNX-M028, access capstone and platform reviews | M167 through M170, the platform setup milestones |
+| LNX-M029, history course set | M162, Unix and Linux history; M163, kernel, user space, and distribution |
+| LNX-M030, adoption decision course | M164, why organizations use Linux |
+| LNX-M031, distribution selection course | M165, distribution families and communities; M166, choose a distribution workshop |
+| LNX-M032, desktop course set | M175, Linux desktop foundations |
+| LNX-M033, shell foundations | M177, terminal and shell foundations; M178, documentation and help; M190, text tools and pipelines |
+| LNX-M034, command-anatomy component | M177, terminal and shell foundations |
+| LNX-M035, desktop and shell capstones | M175, Linux desktop foundations; M177, terminal and shell foundations |
+| LNX-M036 to LNX-M039, filesystem courses | M179 through M186, the filesystem map milestones; M187, Linux versus Windows filesystem concepts; M189, filesystems, inodes, and links |
+| LNX-M040, accounts and permissions | M188, ownership and permissions; M197, users, groups, sudo, and service identities |
+| LNX-M041, administrator and host-security courses | M197, users, groups, sudo, and service identities; M200, Linux firewalling |
+| LNX-M042, filesystem and security capstones | M188, ownership and permissions; M197, users, groups, sudo, and service identities |
+| LNX-M043, package and process courses | M191, processes, jobs, and signals; M193, packages and repositories |
+| LNX-M044, service and log courses | M192, services and systemd; M196, logs and the journal |
+| LNX-M045, storage-stack courses | M194, disks, partitions, and filesystems; M195, mounts and persistent mount configuration |
+| LNX-M046, boot and rescue courses | M209, boot, kernel, and recovery |
+| LNX-M047, backup and restore courses | M207, backup and restore operations |
+| LNX-M048, services and recovery capstones | M192, services and systemd; M207, backup and restore operations; M209, boot, kernel, and recovery |
+| LNX-M049 and LNX-M050, host networking and school bridges | M199, Linux networking; M200, Linux firewalling |
+| LNX-M051, gaming courses | M176, gaming on Linux |
+| LNX-M052, migration inventory | M171, Windows migration inventory |
+| LNX-M053, migration pilots | M172, compatibility and replacement plan; M173, migration backup and rollback; M174, staged Windows-to-Linux migration |
+| LNX-M054, migration and gaming capstones | M174, staged Windows-to-Linux migration; M176, gaming on Linux |
+| LNX-M055, server planning and installation | M201, build a Linux server |
+| LNX-M056, SSH and private service operation | M198, SSH and remote administration; M202, web-service lab; M203, database-service lab; M204, file-sharing lab |
+| LNX-M057, maintenance and reliability | M201, build a Linux server; M208, performance and observability |
+| LNX-M058, shell automation | M206, shell scripting and automation |
+| LNX-M059, containers and configuration management | M205, containers on Linux; the configuration-management scope in LNX-1203 and LNX-1206 has no canonical milestone yet, deferred scope |
+| LNX-M060, automation capstone | M206, shell scripting and automation |
+| LNX-M061 to LNX-M064, troubleshooting and observability | M196, logs and the journal; M208, performance and observability |
+| LNX-M065, kernel and user-space courses | M209, boot, kernel, and recovery; the eBPF and tracing scope in LNX-1403 has no canonical milestone yet, deferred scope |
+| LNX-M066, fleet and platform courses | no canonical milestone yet, deferred scope: the fleet, compliance, and high-availability content of LNX-1405 and LNX-1406 |
+| LNX-M067, troubleshooting and fleet capstones | M208, performance and observability; the fleet-design capstone has no canonical milestone yet, deferred scope |
+| LNX-M068 to LNX-M078, credentials and durable operation | M210, Linux credentials and release gate |
 
 ### Phase LNX-A: Architecture and safety
 
@@ -1899,15 +1944,15 @@ Require private service operation, recovery, reproducibility, and cleanup.
 
 Train reviewers, calibrate rubrics, measure disagreement, and expose review level on credentials.
 
-#### LNX-M074: Launch Linux Desktop Practitioner
+#### LNX-M074: Launch Linux Foundations and Linux Desktop and Migration
 
-Launch only after assessment reliability, privacy, accessibility, and verification tests pass.
+Launch both entry certificates only after assessment reliability, privacy, accessibility, and verification tests pass.
 
-#### LNX-M075: Launch Linux System Administrator
+#### LNX-M075: Launch Linux Server Operator
 
 Launch only after private-server, security, storage, networking, and incident assessments are stable.
 
-#### LNX-M076: Launch Linux Systems Engineer
+#### LNX-M076: Launch Linux Administrator
 
 Launch only after advanced automation, fleet, and independent-review requirements are stable.
 
@@ -1943,6 +1988,7 @@ Measure where learners stop, what they misunderstand, lab failure causes, access
 ### Lab safety
 
 - Every lab declares host, guest, user, privilege, target, network, storage, changes, stop conditions, rollback, cleanup, and evidence.
+- Every lab and capstone declares its shared L0 through L4 risk class, the declared class matches the lab's actual privileges and targets, and every lab stays within the class range stamped on its family in the lab inventory.
 - All destructive storage and boot labs use disposable virtual devices or machines.
 - All security and networking labs are private and isolated.
 - No lab instructs a learner to attack, scan, intercept, or disrupt a third party.
@@ -1997,8 +2043,8 @@ The first release should be large enough to help a real beginner but small enoug
 1. LNX-001 through LNX-005;
 2. LNX-101 through LNX-105;
 3. LNX-201 through LNX-205;
-4. LNX-301 through LNX-306;
-5. LNX-401 through LNX-406;
+4. LNX-301 through LNX-307;
+5. LNX-401 through LNX-407;
 6. filesystem atlas, service map, boot timeline, and Windows comparison visuals;
 7. at least 45 guided labs;
 8. five path capstones;

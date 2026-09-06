@@ -1,6 +1,8 @@
 # Lab, assessment, and credential standard
 
-Last reviewed: 2026-08-30
+Last reviewed: 2026-09-01
+
+This document is the normative shared lab contract. It is the only authoritative statement of the access lanes, risk classes, lab-page structure, lab manifest, download package layout, assessment rules, evidence rules, and credential rules. Other documents may summarize this contract with a link; when a summary and this standard disagree, this standard wins.
 
 ## Purpose
 
@@ -49,6 +51,8 @@ The site must not:
 - silently send material to a third-party provider;
 - treat a browser checkbox as proof of competence.
 
+One reviewed exception exists and is not a violation of this boundary: the programming academy's isolated grading runner executes learner-submitted exercise code in ephemeral, network-blocked server-side sandboxes under its own separate contract, the [runner security contract](../RUNNER_SECURITY_CONTRACT.md). That runner grades authored programming exercises on the server. It never runs on the learner's computer, and nothing in this lab standard's schools may reuse it for operating-system, networking, security, or model work.
+
 ## Supported access lanes
 
 Every lab manifest identifies one or more lanes:
@@ -66,6 +70,8 @@ Every lab manifest identifies one or more lanes:
 - `learner-selected-external-compute`
 
 The manifest explains meaningful differences. It does not claim that macOS is Linux or that WSL behaves identically to a separate Linux host.
+
+A virtual-machine lane can start from a Windows, macOS, or Linux host and requires no host change beyond installing the chosen virtual-machine product. It takes a snapshot before the lab, uses NAT or isolated networking by default, and keeps a full reset path.
 
 ## Lab risk classes
 
@@ -169,6 +175,8 @@ Tool-specific labs add exact versions, sources, revisions, licenses, download si
 
 ## Download package contract
 
+Every published lab pack is versioned and immutable. A correction ships as a new lab version; a published archive never changes in place.
+
 ```text
 lab-name/
 +-- README.md
@@ -189,6 +197,8 @@ lab-name/
 +-- checksums.txt
 ```
 
+The named files are required in every pack. A directory the lab does not use may be omitted. The `requirements/` directory carries one file per supported platform; a school may split it by access lane instead, for example `windows-wsl.md` and `windows-vm.md`, when the manifest's lanes need the distinction. A school may also add clearly named optional entries when a lab family needs them: `fixtures/` for synthetic practice data, `scripts/` for helper scripts, `recovery/` for rehearsed restoration steps, and `SOURCES.md` for primary-source records. Optional entries extend this layout; they never replace, rename, or repurpose the required entries above.
+
 Required publication checks:
 
 - Archive build is reproducible.
@@ -196,7 +206,8 @@ Required publication checks:
 - `checksums.txt` records the included-file hashes under a defined canonical order and does not list itself.
 - Every included file is expected.
 - No secret, access token, private key, personal path, or environment dump is present.
-- Every dependency and redistributed sample has a source and license.
+- Every dependency and redistributed sample has a documented source, a license, and redistribution rights.
+- No script performs a hidden upload, and every network dependency is disclosed in the manifest.
 - Scripts default to dry run when a host-level change is possible.
 - Scripts reject unsupported platforms rather than guessing.
 - Cleanup targets are explicit and bounded.
@@ -229,6 +240,7 @@ If a check fails, the lab explains whether the learner can use another lane, tak
 ### Windows native
 
 - Explain whether a command runs in PowerShell, Command Prompt, Windows Terminal, or a graphical Windows tool.
+- Never present a Linux command as a Windows command.
 - Use L1 inspection and carefully bounded L2 user-space changes by default.
 - Identify administrator requirements before a step begins.
 - State which files, services, firewall rules, adapters, routes, scheduled tasks, or registry values may change.
@@ -269,10 +281,11 @@ If a check fails, the lab explains whether the learner can use another lane, tak
 
 ### Remote servers
 
+- A remote lane is optional and never the only route for foundational labs.
 - Require authentication and firewall guidance before service exposure.
-- Explain ongoing cost and deletion.
+- Explain ongoing cost, identity, deletion, and recovery expectations before the first exercise.
 - Avoid using the public Internet as an experimental security target.
-- Record provider, region, operating-system image, and teardown result without retaining account secrets.
+- Record provider, region, operating-system image, and teardown result without retaining account secrets, and verify that deleted resources no longer accrue cost.
 
 ## Cybersecurity authorization record
 

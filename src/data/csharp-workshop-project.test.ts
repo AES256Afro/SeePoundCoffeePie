@@ -162,7 +162,7 @@ describe('Phase 4C C# community workshop project curriculum', () => {
       else: 7,
       foreach: 8,
       iteration: 8,
-      method: 9,
+      'local function': 9,
       parameter: 9,
       argument: 9,
       'dependency order': 10,

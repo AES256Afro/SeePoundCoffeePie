@@ -1,6 +1,8 @@
+import { makeLocalLlmContent } from './local-llm-lessons'
+import { localLlmSources } from './local-llm-sources'
 import { academyUnitIds, type AcademyUnitId } from './academy-manifest'
 
-export const academyContentObservedAt = '2026-08-31'
+export const academyContentObservedAt = '2026-09-06'
 export const academyContentReviewDueAt = '2027-02-28'
 
 export const academyAnatomyLabels = [
@@ -33,9 +35,12 @@ export const realitySectionLabels = [
 export type AcademyAnatomyLabel = (typeof academyAnatomyLabels)[number]
 export type RealitySectionLabel = (typeof realitySectionLabels)[number]
 
+export type AcademyEvidenceLabel = 'documented' | 'supported-inference' | 'illustrative' | 'disputed' | 'outdated'
+
 export interface AcademySourceRecord {
   id: string
   evidenceKind: 'reality-source'
+  evidenceLabel: AcademyEvidenceLabel
   publisher: string
   title: string
   url: string
@@ -175,9 +180,11 @@ const sharedPreparation = {
 } as const
 
 export const academySourceRecords: readonly AcademySourceRecord[] = Object.freeze([
+  ...localLlmSources,
   {
     id: 'source-nist-ai-rmf-airc',
     evidenceKind: 'reality-source',
+    evidenceLabel: 'documented',
     publisher: 'National Institute of Standards and Technology',
     title: 'Artificial Intelligence Risk Management Framework resource page',
     url: 'https://airc.nist.gov/airmf-resources/airmf/',
@@ -190,8 +197,24 @@ export const academySourceRecords: readonly AcademySourceRecord[] = Object.freez
     rightsNotes: 'Short original paraphrase of an official United States government source. No National Institute of Standards and Technology image or long quotation is reproduced.',
   },
   {
+    id: 'source-nist-csrc-machine-learning',
+    evidenceKind: 'reality-source',
+    evidenceLabel: 'documented',
+    publisher: 'National Institute of Standards and Technology',
+    title: 'Computer Security Resource Center glossary: machine learning',
+    url: 'https://csrc.nist.gov/glossary/term/machine_learning',
+    version: 'Glossary entry citing NIST Special Publication 800-55 volume 1',
+    observedAt: academyContentObservedAt,
+    reviewDueAt: academyContentReviewDueAt,
+    supports: 'Machine learning develops and uses computer systems that adapt and learn from data, which is the adjusted-from-examples behavior this course calls a model.',
+    scope: 'A short official definition of machine learning used to anchor the course definition of learned numerical behavior.',
+    limits: 'The glossary entry does not define parameters, describe any particular architecture, or evaluate a named product, and learning from data does not mean human understanding.',
+    rightsNotes: 'Short original paraphrase of an official United States government glossary entry. No long quotation is reproduced.',
+  },
+  {
     id: 'source-nist-sp-800-218',
     evidenceKind: 'reality-source',
+    evidenceLabel: 'documented',
     publisher: 'National Institute of Standards and Technology',
     title: 'Secure Software Development Framework version 1.1',
     url: 'https://csrc.nist.gov/pubs/sp/800/218/final',
@@ -206,6 +229,7 @@ export const academySourceRecords: readonly AcademySourceRecord[] = Object.freez
   {
     id: 'source-python-errors-exceptions',
     evidenceKind: 'reality-source',
+    evidenceLabel: 'documented',
     publisher: 'Python Software Foundation',
     title: 'Python tutorial: Errors and Exceptions',
     url: 'https://docs.python.org/3/tutorial/errors.html',
@@ -219,7 +243,6 @@ export const academySourceRecords: readonly AcademySourceRecord[] = Object.freez
   },
 ])
 
-const lmSourceIds = ['source-nist-ai-rmf-airc'] as const
 const softwareSourceIds = ['source-nist-sp-800-218', 'source-python-errors-exceptions'] as const
 
 const sharedScope = (requiredActions: number, activityType: AcademyUnitContent['scope']['activityType']) => ({
@@ -230,393 +253,10 @@ const sharedScope = (requiredActions: number, activityType: AcademyUnitContent['
   changes: 'No files, accounts, devices, networks, or services change.',
 } as const)
 
-const lm101Unit1: AcademyUnitContent = {
-  unitId: 'LM-101-U1',
-  anatomyKind: 'concept',
-  anatomyOrder: academyAnatomyLabels,
-  location: 'Models from zero > What a model is > Learned behavior > Unit 1 of 6',
-  goal: 'Tell the difference between an ordinary written rule and a learned model.',
-  purpose: 'This distinction helps you identify which part of a system was written directly and which part was adjusted from examples.',
-  scope: sharedScope(2, 'reading-and-check'),
-  access: openAccess,
-  boundary: browserBoundary,
-  preparation: sharedPreparation,
-  words: [
-    { term: 'Input', definition: 'Information given to a system.', example: 'A room temperature of 16 degrees Celsius can be an input.' },
-    { term: 'Output', definition: 'Information returned by a system.', example: 'The words cold room can be an output.' },
-    { term: 'Rule', definition: 'An instruction written directly by a programmer.', example: 'Return cold room when the temperature is below 18.' },
-    { term: 'Example', definition: 'One observed input and result that shows a pattern.', example: 'A plant photograph paired with its verified species name is one example.' },
-    { term: 'Model', definition: 'Numerical behavior adjusted from examples so it can transform an input into an output.', example: 'A plant photograph model can return possible species and scores.' },
-    { term: 'Artificial intelligence (AI)', definition: 'A broad label for computer systems designed to perform tasks associated with reasoning, recognition, prediction, or language.', example: 'The label AI does not explain whether a particular feature uses rules, a model, stored records, or several parts together.' },
-  ],
-  example: {
-    input: 'Prepared rule: when temperature is below 18 degrees Celsius, return cold room. Otherwise, return comfortable room.',
-    question: 'For an input of 16 degrees Celsius, which part determines the output?',
-  },
-  prediction: 'Choose before reading the result: the written boundary of 18, a learned model, or not enough information.',
-  preparedResult: 'The written boundary determines the result. A programmer supplied the exact rule, so this example does not require a learned model.',
-  explanationSteps: [
-    'The input is 16 degrees Celsius.',
-    'The program compares 16 with the written boundary of 18.',
-    'Because 16 is below 18, the program returns cold room.',
-    'A learned model differs because adjustment from examples supplies part of the numerical behavior instead of a person writing every decision boundary.',
-    'A system can combine ordinary rules and one or more models. The label AI does not tell you which parts it contains.',
-  ],
-  practice: {
-    id: 'lm101-u1-practice',
-    title: 'Classify a prepared system description',
-    prompt: 'A file-renaming tool always replaces each space with an underscore. Classify the described behavior.',
-    preparedEvidence: ['The replacement is stated exactly.', 'The description does not mention examples or adjusted numerical behavior.'],
-    steps: ['Choose ordinary rule, learned model, or not enough information.', 'Compare your choice with the expected result.'],
-    expectedResult: 'Ordinary rule. The programmer can state the exact replacement directly.',
-    acceptableVariation: 'An answer that says no model is needed is also correct when it points to the exact written replacement.',
-    recovery: 'If you chose learned model, find the exact transformation in the description. When the complete transformation is already written, classify this case as an ordinary rule.',
-  },
-  knowledgeCheck: {
-    prompt: 'A website recommends a book, but the description does not explain how. What can you conclude?',
-    choices: [
-      { id: 'a', label: 'It must use a learned model.', correct: false, feedback: 'The result alone does not reveal the mechanism. Recommendations can use rules, records, models, or a mixture.' },
-      { id: 'b', label: 'It must use one ordinary rule.', correct: false, feedback: 'The description does not show an exact rule. More than one design could produce the result.' },
-      { id: 'c', label: 'There is not enough information.', correct: true, feedback: 'Correct. Ask for evidence about the mechanism before naming it.' },
-    ],
-    retry: 'Choose again. Look only at what the description proves, not what similar websites might use.',
-  },
-  recap: ['A rule is written directly.', 'A model is numerical behavior adjusted from examples.', 'A complete application may use both.'],
-  notClaimed: ['Every complicated program uses a model.', 'Every model is a large language model.', 'Learned behavior is automatically correct or intelligent.'],
-  stopResume: {
-    savedFact: 'A model is learned numerical behavior that changes an input into an output.',
-    returnQuestion: 'Was the important decision written directly, adjusted from examples, or not described?',
-    nextChoice: 'Continue to Inputs and outputs, or stop here and return to this saved fact.',
-  },
-  sourceIds: lmSourceIds,
-}
-
-const lm101Unit2: AcademyUnitContent = {
-  unitId: 'LM-101-U2',
-  anatomyKind: 'concept',
-  anatomyOrder: academyAnatomyLabels,
-  location: 'Models from zero > What a model is > Learned behavior > Unit 2 of 6',
-  goal: 'Identify the input and output in a prepared model example.',
-  purpose: 'Clear input and output labels prevent a description from treating every part of an application as the model.',
-  scope: sharedScope(2, 'reading-and-check'),
-  access: openAccess,
-  boundary: browserBoundary,
-  preparation: sharedPreparation,
-  words: [
-    { term: 'Model', definition: 'Numerical behavior adjusted from examples so it can transform an input into an output.', example: 'A support-message model can return possible labels and scores.' },
-    { term: 'Input', definition: 'Information supplied for one use of a system.', example: 'The text of a short support message can be an input.' },
-    { term: 'Output', definition: 'Information the system returns for that input.', example: 'A label such as billing question can be an output.' },
-    { term: 'Transform', definition: 'To receive one form of information and produce another form.', example: 'The model transforms message text into label scores.' },
-    { term: 'Score', definition: 'A number that helps compare possible outputs.', example: 'Billing question may receive a higher score than account closure.' },
-  ],
-  example: {
-    input: 'Prepared support message: I was charged twice for the same order. Prepared outputs: billing question, score 0.91; account closure, score 0.03.',
-    question: 'Which text is the input, and which information is the output?',
-  },
-  prediction: 'Name the input and output before reading the prepared result.',
-  preparedResult: 'The customer message is the input. The two labels and their scores are the output. The upload box and results panel would belong to the application around the model.',
-  explanationSteps: [
-    'The system begins with the message supplied for this example.',
-    'The model transforms that message into numbers associated with possible labels.',
-    'The returned labels and scores are outputs, not proof that the first label is correct.',
-    'Application code can select a label, format the numbers, and show them to a person.',
-    'Naming the boundary lets you ask what the model actually received and what it actually returned.',
-  ],
-  practice: {
-    id: 'lm101-u2-practice',
-    title: 'Trace one prepared input and output',
-    prompt: 'A photograph sorter receives photo-27.jpg and returns oak 0.76 and maple 0.18. Identify the input and output.',
-    preparedEvidence: ['The filename represents the supplied photograph.', 'The species labels and numbers are returned after the transformation.'],
-    steps: ['Write or choose the input.', 'Write or choose the output.', 'Check that you did not include an interface part in either answer.'],
-    expectedResult: 'Input: the photograph represented by photo-27.jpg. Output: oak 0.76 and maple 0.18.',
-    acceptableVariation: 'Calling the returned numbers scores or estimates is acceptable. Do not call either score a verified fact.',
-    recovery: 'If you included the upload button, remove it. The button helps the application collect the input but is not the input itself.',
-  },
-  knowledgeCheck: {
-    prompt: 'A model returns spam 0.62 and not spam 0.38. What does the output contain?',
-    choices: [
-      { id: 'a', label: 'Two labels and two scores.', correct: true, feedback: 'Correct. The output reports alternatives and numbers used to compare them.' },
-      { id: 'b', label: 'A guaranteed fact that the message is spam.', correct: false, feedback: 'A score is not a guarantee. The result still needs interpretation and an appropriate decision rule.' },
-      { id: 'c', label: 'The complete email application.', correct: false, feedback: 'The output is information returned by one component, not the whole application.' },
-    ],
-    retry: 'Choose again. Separate returned information from certainty and from the surrounding application.',
-  },
-  recap: ['An input crosses into a model.', 'An output crosses back out.', 'Interface controls can prepare or display information without being the model.'],
-  notClaimed: ['An output is guaranteed to be correct.', 'Every output must be text.', 'A model receives every piece of information that the application stores.'],
-  stopResume: {
-    savedFact: 'Input goes into the model boundary. Output comes back from that boundary.',
-    returnQuestion: 'What exact information crossed into and out of the model?',
-    nextChoice: 'Continue to Adjusted numbers, or stop here and return to this trace.',
-  },
-  sourceIds: lmSourceIds,
-}
-
-const lm101Unit3: AcademyUnitContent = {
-  unitId: 'LM-101-U3',
-  anatomyKind: 'concept',
-  anatomyOrder: academyAnatomyLabels,
-  location: 'Models from zero > What a model is > Learned behavior > Unit 3 of 6',
-  goal: 'Explain that a parameter is an adjusted number inside a model.',
-  purpose: 'This removes the mystery from the word parameter without pretending that one number explains a complete model.',
-  scope: sharedScope(2, 'reading-and-check'),
-  access: openAccess,
-  boundary: browserBoundary,
-  preparation: sharedPreparation,
-  words: [
-    { term: 'Model', definition: 'Numerical behavior adjusted from examples so it can transform an input into an output.', example: 'A deliberately small model can combine feature values with parameters.' },
-    { term: 'Parameter', definition: 'A number inside a model whose value was adjusted while the model was prepared.', example: 'A small prepared example can use a parameter of 0.7 to give one input feature more influence.' },
-    { term: 'Feature', definition: 'A measurable part of an input used by a model.', example: 'Message length can be one feature in a small text classifier.' },
-    { term: 'Influence', definition: 'How much one part contributes to a result in the prepared example.', example: 'A larger parameter can give one feature more influence, depending on the calculation.' },
-  ],
-  example: {
-    input: 'Prepared calculation: feature A is 2, its parameter is 0.7, feature B is 1, and its parameter is 0.2. Prepared result: 2 times 0.7 plus 1 times 0.2 equals 1.6.',
-    question: 'Which numbers are parameters in this deliberately small example?',
-  },
-  prediction: 'Choose before reading the result: 2 and 1, 0.7 and 0.2, or 1.6 only.',
-  preparedResult: 'The parameters are 0.7 and 0.2. The values 2 and 1 describe this input. The value 1.6 is the calculated result.',
-  explanationSteps: [
-    'The two feature values come from the prepared input.',
-    'Each feature value is combined with its associated parameter.',
-    'The products are added to produce the prepared result.',
-    'Real models can contain many parameters and more complicated calculations.',
-    'A parameter is still a number. The large count and complex arrangement do not turn it into a stored sentence or a person-like memory.',
-  ],
-  practice: {
-    id: 'lm101-u3-practice',
-    title: 'Label prepared numbers by role',
-    prompt: 'Prepared calculation: input feature 3 times parameter 0.4 produces contribution 1.2. Label each number.',
-    preparedEvidence: ['The feature describes this input.', 'The parameter belongs to the prepared model example.', 'The contribution is the result of the multiplication.'],
-    steps: ['Label 3.', 'Label 0.4.', 'Label 1.2.'],
-    expectedResult: '3 is the feature value, 0.4 is the parameter, and 1.2 is the contribution.',
-    acceptableVariation: 'Input value is acceptable for feature value, and calculated result is acceptable for contribution.',
-    recovery: 'If you labeled 3 as the parameter, look for the number that the prompt explicitly says belongs to the prepared model example.',
-  },
-  knowledgeCheck: {
-    prompt: 'Which statement best describes a parameter?',
-    choices: [
-      { id: 'a', label: 'An adjusted number inside a model.', correct: true, feedback: 'Correct. A parameter is numerical, even when a model contains many of them.' },
-      { id: 'b', label: 'A complete record copied from a database.', correct: false, feedback: 'A database record and a model parameter serve different roles. A parameter is a number used in model behavior.' },
-      { id: 'c', label: 'A guarantee that the output is correct.', correct: false, feedback: 'Parameters help produce an output, but their presence does not guarantee correctness.' },
-    ],
-    retry: 'Choose again. Look for the answer that describes what the item is, not what someone hopes the model will do.',
-  },
-  recap: ['A parameter is an adjusted number.', 'Input values and parameters have different roles.', 'A calculated result is not itself proof of correctness.'],
-  notClaimed: ['One prepared arithmetic example describes every model calculation.', 'A parameter stores a dependable database record.', 'More parameters always produce a better result.'],
-  stopResume: {
-    savedFact: 'A parameter is a number inside a model, not a hidden sentence or a person-like memory.',
-    returnQuestion: 'Which numbers describe the input, and which numbers belong to the model?',
-    nextChoice: 'Continue to Model, application, and database, or stop here.',
-  },
-  sourceIds: lmSourceIds,
-}
-
-const lm101Unit4: AcademyUnitContent = {
-  unitId: 'LM-101-U4',
-  anatomyKind: 'concept',
-  anatomyOrder: academyAnatomyLabels,
-  location: 'Models from zero > What a model is > Capability and limits > Unit 4 of 6',
-  goal: 'Separate a model from the application, database, and search around it.',
-  purpose: 'This helps you ask which component produced, stored, retrieved, or displayed each piece of information.',
-  scope: sharedScope(2, 'reading-and-check'),
-  access: openAccess,
-  boundary: browserBoundary,
-  preparation: sharedPreparation,
-  words: [
-    { term: 'Application', definition: 'Software that combines an interface and ordinary instructions to perform a task.', example: 'A support tool can collect a question, request a model output, and show a result.' },
-    { term: 'Database', definition: 'A system that stores organized records so software can retrieve or change them.', example: 'A customer record can store an order number and delivery status.' },
-    { term: 'Search', definition: 'A process that finds candidate records or documents that match a request.', example: 'A search can find a return-policy document before an answer is written.' },
-    { term: 'Model', definition: 'Numerical behavior adjusted from examples that transforms an input into an output.', example: 'A model can produce wording from the question and prepared document text.' },
-  ],
-  example: {
-    input: 'Prepared system trace: an application receives order 417; a database returns shipped Tuesday; the application gives that record to a model; the model returns a draft sentence; the application shows the sentence.',
-    question: 'Which component stored the shipment record, and which component produced the draft wording?',
-  },
-  prediction: 'Name the database role and model role before reading the prepared result.',
-  preparedResult: 'The database stored and returned the shipment record. The model produced the draft wording. The application moved information between the parts and displayed the result.',
-  explanationSteps: [
-    'The application receives the person’s request and decides what work to request.',
-    'The database retrieves a specific stored record.',
-    'The model receives prepared input that includes the question and record.',
-    'The model returns draft wording rather than changing the stored order record.',
-    'The application displays the draft and can apply ordinary checks or require review.',
-    'A fluent sentence does not prove that a record exists. Evidence must remain tied to the retrieved record.',
-  ],
-  practice: {
-    id: 'lm101-u4-practice',
-    title: 'Assign each prepared action to a component',
-    prompt: 'Classify three actions: stores a return date, finds the matching policy, writes a short draft explanation.',
-    preparedEvidence: ['A stored date is an organized record.', 'Finding a matching policy is retrieval.', 'Draft wording is generated output in this example.'],
-    steps: ['Assign database to one action.', 'Assign search to one action.', 'Assign model to one action.'],
-    expectedResult: 'Database stores the return date. Search finds the policy. Model writes the draft explanation.',
-    acceptableVariation: 'You may say the application asks each component to do its work. Keep the three component roles separate.',
-    recovery: 'If you assigned storage to the model, return to the database definition. A model result is not a dependable record lookup by default.',
-  },
-  knowledgeCheck: {
-    prompt: 'A fluent answer names an order date. What proves that the date exists in the customer record?',
-    choices: [
-      { id: 'a', label: 'The answer sounds confident.', correct: false, feedback: 'Confident wording is a presentation quality, not record evidence.' },
-      { id: 'b', label: 'A traceable database record returned for the correct order.', correct: true, feedback: 'Correct. The stored record supplies evidence when the identity and retrieval are also correct.' },
-      { id: 'c', label: 'The application contains a model.', correct: false, feedback: 'A model can produce wording without proving that a particular record exists.' },
-    ],
-    retry: 'Choose again. Look for evidence tied to the stored customer record.',
-  },
-  recap: ['Applications coordinate parts.', 'Databases store records.', 'Search retrieves candidates.', 'Models transform prepared inputs into outputs.'],
-  notClaimed: ['Every application contains all four parts.', 'A model output is a reliable database record.', 'Search and a model are interchangeable.'],
-  stopResume: {
-    savedFact: 'Ask which component stored, retrieved, transformed, and displayed the information.',
-    returnQuestion: 'Which component can supply traceable record evidence?',
-    nextChoice: 'Continue to Capability and failure, or stop here.',
-  },
-  sourceIds: lmSourceIds,
-}
-
-const lm101Unit5: AcademyUnitContent = {
-  unitId: 'LM-101-U5',
-  anatomyKind: 'concept',
-  anatomyOrder: academyAnatomyLabels,
-  location: 'Models from zero > What a model is > Capability and limits > Unit 5 of 6',
-  goal: 'Classify why a prepared model output could be wrong before choosing a response.',
-  purpose: 'A useful repair begins with the actual failure boundary, not the automatic assumption that one larger component will solve every problem.',
-  scope: sharedScope(2, 'reading-and-check'),
-  access: openAccess,
-  boundary: browserBoundary,
-  preparation: sharedPreparation,
-  words: [
-    { term: 'Model', definition: 'Numerical behavior adjusted from examples so it can transform an input into an output.', example: 'A model can return draft wording for an application to review.' },
-    { term: 'Application', definition: 'Software that combines an interface and ordinary instructions to perform a task.', example: 'An application can collect a request, prepare input, and display an output.' },
-    { term: 'Capability', definition: 'A task a system can perform under stated conditions.', example: 'Sorting clear product photographs into five known groups can be one tested capability.' },
-    { term: 'Failure', definition: 'A result that does not meet the stated need or condition.', example: 'Returning the wrong product group for a dark photograph is a failure.' },
-    { term: 'Ambiguous', definition: 'Having more than one reasonable meaning.', example: 'The request make it lighter could refer to color, weight, or file size.' },
-    { term: 'Missing information', definition: 'A needed fact that was not supplied to the system.', example: 'A delivery answer cannot use a destination date that the input does not contain.' },
-  ],
-  example: {
-    input: 'Prepared request: Make the page lighter. Prepared output: the application reduces image file size. The person wanted a brighter background color.',
-    question: 'Which failure description best fits: ambiguous request, missing record, or display problem?',
-  },
-  prediction: 'Choose one failure description before reading the result.',
-  preparedResult: 'Ambiguous request fits best. The word lighter had more than one reasonable meaning, and the request did not select one.',
-  explanationSteps: [
-    'Begin with the stated need and the actual result.',
-    'Check whether the input has one clear meaning and contains the needed information.',
-    'Check whether the correct records or other prepared evidence reached the component that needed them.',
-    'Check whether the application changed, filtered, or displayed the output incorrectly.',
-    'State what is known and unknown before selecting a repair.',
-    'A different component may help in one case, but size alone is not a universal explanation.',
-  ],
-  practice: {
-    id: 'lm101-u5-practice',
-    title: 'Classify a prepared failure',
-    prompt: 'A delivery-answer system has the correct order number but receives no destination or carrier update. It returns a confident arrival date.',
-    preparedEvidence: ['The order identity is present.', 'The facts needed to support an arrival date are absent.', 'The wording sounds confident, but no record supports the date.'],
-    steps: ['Choose ambiguous request, missing information, or display problem.', 'Name one safe response.'],
-    expectedResult: 'Missing information. A safe response states that the date cannot be supported and requests or retrieves the missing delivery facts.',
-    acceptableVariation: 'Insufficient evidence is acceptable wording for missing information.',
-    recovery: 'If you chose display problem, ask whether changing the screen would supply the missing delivery facts. It would not.',
-  },
-  knowledgeCheck: {
-    prompt: 'What should happen before selecting a repair for a wrong output?',
-    choices: [
-      { id: 'a', label: 'Classify the likely failure boundary and state the evidence.', correct: true, feedback: 'Correct. The repair should address the observed cause and uncertainty.' },
-      { id: 'b', label: 'Assume every wrong output needs a larger model.', correct: false, feedback: 'Size does not supply missing facts, clarify an ambiguous request, or repair application logic by itself.' },
-      { id: 'c', label: 'Hide the result and record no evidence.', correct: false, feedback: 'That prevents review and does not explain or correct the failure.' },
-    ],
-    retry: 'Choose again. Select the action that preserves evidence and narrows the cause.',
-  },
-  recap: ['Capabilities need stated conditions.', 'Failures can begin in the input, evidence, model behavior, tools, application, or expected answer.', 'Classify before repairing.'],
-  notClaimed: ['One cause explains every wrong output.', 'Fluent wording is evidence of correctness.', 'A larger model always fixes a failure.'],
-  stopResume: {
-    savedFact: 'A wrong output is a symptom. Find the boundary and missing evidence before choosing a repair.',
-    returnQuestion: 'Was the request clear, were needed facts present, and did the application preserve the result correctly?',
-    nextChoice: 'Continue to the Model or Not prepared lab, or stop here.',
-  },
-  sourceIds: lmSourceIds,
-}
-
-const lm101Lab: AcademyUnitContent = {
-  unitId: 'LML-101',
-  anatomyKind: 'prepared-lab',
-  anatomyOrder: academyAnatomyLabels,
-  location: 'Models from zero > What a model is > Capability and limits > Prepared lab 6 of 6',
-  goal: 'Classify six prepared system descriptions and explain what the evidence supports.',
-  purpose: 'This lab combines rule, model, application, database, search, input, output, and uncertainty without requiring any software operation.',
-  scope: {
-    estimatedTime: 'About 12 to 18 minutes',
-    requiredActions: 7,
-    activityType: 'prepared-classification-lab',
-    environment: 'browser-only prepared evidence',
-    changes: 'No files, accounts, devices, networks, or services change.',
-  },
-  access: openAccess,
-  boundary: browserBoundary,
-  preparation: sharedPreparation,
-  words: [
-    { term: 'Rule', definition: 'An instruction written directly by a programmer.', example: 'Always replace spaces with underscores is a rule.' },
-    { term: 'Model', definition: 'Numerical behavior adjusted from examples so it can transform an input into an output.', example: 'A photo sorter adjusted from labeled examples can be a model.' },
-    { term: 'Application', definition: 'Software that coordinates an interface, ordinary instructions, and any other parts needed for a task.', example: 'An application can pass prepared text to a model and display the result.' },
-    { term: 'Database', definition: 'A system that stores organized records for later retrieval or change.', example: 'A database can return a customer record by order number.' },
-    { term: 'Search', definition: 'A process that finds candidate records or documents that match a request.', example: 'Search can return three policy documents containing a phrase.' },
-    { term: 'Classification', definition: 'Placing an item into a defined group using stated evidence.', example: 'A thermostat description can be classified as ordinary rule.' },
-    { term: 'Evidence', definition: 'Information that supports a conclusion.', example: 'The sentence always replaces spaces with underscores supports an ordinary-rule classification.' },
-    { term: 'Uncertainty', definition: 'A clear statement that the available evidence does not settle the answer.', example: 'Not enough information is the correct result when the mechanism is not described.' },
-    { term: 'Concept map', definition: 'A small text or visual map showing how named parts connect.', example: 'Person to application to model to application to output is a concept map.' },
-  ],
-  example: {
-    input: 'Worked item: a thermostat turns on below a temperature selected by the user.',
-    question: 'Classify the mechanism and name the evidence.',
-  },
-  prediction: 'Choose ordinary rule, learned model, or not enough information.',
-  preparedResult: 'Ordinary rule. The user supplies the exact boundary and the program follows it.',
-  explanationSteps: [
-    'Read only the supplied description.',
-    'Underline an exact written transformation when one appears.',
-    'Look for a statement that numerical behavior was adjusted from examples.',
-    'Choose not enough information when neither mechanism is supported.',
-    'Separate storage, search, interface, and display work from model work.',
-    'Keep uncertainty instead of guessing from a product label.',
-  ],
-  practice: {
-    id: 'lml-101-model-or-not',
-    title: 'Model or Not',
-    prompt: 'Classify all six prepared descriptions, then complete the small concept map.',
-    preparedEvidence: [
-      'A calculator returns 4 for 2 plus 2 by following arithmetic instructions.',
-      'A photo sorter uses numerical behavior adjusted from labeled photographs.',
-      'A store recommends a book, but the description gives no mechanism.',
-      'A database returns the customer record with order number 417.',
-      'A search finds three policy documents containing the requested phrase.',
-      'An application gives prepared document text to a model and displays the returned draft.',
-    ],
-    steps: [
-      'Classify item 1 as ordinary rule, learned model, or not enough information.',
-      'Classify item 2 using the same three choices.',
-      'Classify item 3 using the same three choices.',
-      'Label item 4 as database retrieval rather than a model conclusion.',
-      'Label item 5 as search rather than generated wording.',
-      'For item 6, place application before and after model in the concept map.',
-      'Compare all six responses with the prepared result.',
-    ],
-    expectedResult: '1 ordinary rule; 2 learned model; 3 not enough information; 4 database retrieval; 5 search; 6 person or request to application to model to application to displayed draft.',
-    acceptableVariation: 'The concept map may put prepared document retrieval before the model. It must keep the application, model, and displayed output as separate parts.',
-    recovery: 'If a classification differs, return to the exact sentence that describes the mechanism. If the sentence does not settle the mechanism, use not enough information. Restarting the page is unnecessary.',
-  },
-  knowledgeCheck: {
-    prompt: 'Which lab response shows the strongest use of evidence?',
-    choices: [
-      { id: 'a', label: 'It sounds advanced, so it must use a model.', correct: false, feedback: 'A product’s appearance does not identify its mechanism.' },
-      { id: 'b', label: 'The description states an exact replacement, so ordinary rule is supported.', correct: true, feedback: 'Correct. The conclusion points to evidence in the prepared description.' },
-      { id: 'c', label: 'I have seen similar products, so the answer is certain.', correct: false, feedback: 'Similarity can suggest a question, but it does not replace evidence about this system.' },
-    ],
-    retry: 'Choose again. Pick the response that connects a conclusion to a supplied fact.',
-  },
-  recap: ['Use descriptions as evidence.', 'Keep system components separate.', 'Not enough information is a valid and useful conclusion.'],
-  notClaimed: ['Completing this prepared lab proves professional competence.', 'A product name reveals its internal design.', 'The lab ran or evaluated any software or model.'],
-  stopResume: {
-    savedFact: 'Classify the mechanism only when the description supports it.',
-    returnQuestion: 'What exact sentence supports each classification?',
-    nextChoice: 'Review any unit in What a model is, or return to the open course outline.',
-  },
-  sourceIds: lmSourceIds,
-}
+const comparisonScope = {
+  ...sharedScope(2, 'reading-and-check'),
+  estimatedTime: 'About 10 to 15 minutes',
+} as const
 
 function beforeWeCompare(outcome: string, systemBoundary: string, learnerAction: string) {
   return {
@@ -636,14 +276,14 @@ const rvf101: AcademyUnitContent = {
   location: 'Reality versus fiction > Programming on screen and at work > Build and execution > Comparison 1 of 2',
   goal: 'Separate a fast prototype from a dependable released application.',
   purpose: 'The comparison gives you plain names for the work that happens around typing code.',
-  scope: sharedScope(2, 'reading-and-check'),
+  scope: comparisonScope,
   access: openAccess,
   boundary: browserBoundary,
   preparation: sharedPreparation,
   beforeWeCompare: beforeWeCompare(
     'Explain which parts of a complete application can happen quickly and which claims still need evidence.',
     'The example covers a small browser application from a written need through a controlled release. It does not operate a real service.',
-    'Sort prepared work records into prototype evidence and release evidence.',
+    'Put five prepared work-step cards in a sensible build order and name what each step proves.',
   ),
   words: [
     { term: 'Prototype', definition: 'An early version used to explore whether an idea can work.', example: 'A form that saves one sample record on one computer can be a prototype.' },
@@ -668,19 +308,23 @@ const rvf101: AcademyUnitContent = {
   ],
   practice: {
     id: 'rvf-101-l0',
-    title: 'Prepared L0 release-evidence sort',
-    prompt: 'Sort each prepared record into prototype evidence, release evidence, or evidence needed in both stages.',
+    title: 'Prepared L0 build-order cards',
+    prompt: 'Put the five prepared work-step cards in a sensible build order, then name what each step proves.',
     preparedEvidence: [
-      'The form displayed once on the developer’s computer.',
-      'The written requirement says customer addresses need authorized access.',
-      'A test shows an unauthorized account cannot read an address in the reviewed build.',
-      'The staging release has a named rollback version and a health check.',
-      'A keyboard review found that every form field has a usable label.',
+      'Card A: A test and a human review examine the changed behavior against the written need.',
+      'Card B: A written need names who is served and what must be true.',
+      'Card C: A small first slice of the application displays on one computer.',
+      'Card D: A controlled release places a named version where people can use it, with a rollback plan.',
+      'Card E: The developer observes the running slice and records what worked and what failed.',
     ],
-    steps: ['Sort all five records.', 'Compare the result with the expected result.'],
-    expectedResult: 'Local display is prototype evidence. The written requirement is needed in both stages. The access test, rollback evidence, health check, and keyboard review support release readiness but still do not prove every production condition.',
-    acceptableVariation: 'You may place the keyboard review in both when you explain that accessibility should begin before release. Do not treat one review as proof of every requirement.',
-    recovery: 'If every item went into one group, ask what each record directly observed. Move records that describe only one environment or one requirement into the narrower group.',
+    steps: [
+      'Put the five cards in a sensible build order.',
+      'For each card, name what that step proves and what it cannot prove yet.',
+      'Compare your order and reasons with the expected result.',
+    ],
+    expectedResult: 'B, C, E, A, D. The written need comes first because every later step is judged against it. A small slice makes the idea observable, observation supplies evidence typing cannot, a test and review examine the changed behavior, and a controlled release comes last because it depends on the earlier evidence and needs a rollback plan.',
+    acceptableVariation: 'Observation, testing, and review can interleave in real work. An order that keeps the written need first and the controlled release last, with a stated reason, is acceptable.',
+    recovery: 'If the release card came first, ask what evidence would exist on release day. Each earlier card supplies evidence the release decision needs. Reorder so every card can point at the evidence it depends on.',
   },
   knowledgeCheck: {
     prompt: 'A demo works on the developer’s computer. Which claim is supported?',
@@ -711,7 +355,7 @@ const rvf101: AcademyUnitContent = {
     { label: 'What is plausible', paragraphs: ['An experienced developer can build a narrow prototype quickly. Existing libraries and a small, known need can shorten the first working slice.'] },
     { label: 'What is exaggerated or missing', paragraphs: ['The scene omits requirements, data boundaries, execution, tests, review, accessibility, deployment identity, configuration, monitoring, backup, rollback, ownership, and maintenance.'] },
     { label: 'The real underlying concept', paragraphs: ['Useful software grows through evidence: written need, small design, first slice, observed behavior, tests and review, controlled release, monitoring, and repair. Each stage answers a different question.'] },
-    { label: 'Safe exercise or observation', paragraphs: ['Use the prepared L0 work records on this page. Sort what each record proves. Nothing is executed and no external service is contacted.'] },
+    { label: 'Safe exercise or observation', paragraphs: ['Use the prepared L0 work-step cards on this page. Put them in a sensible build order and name what each step proves. Nothing is executed and no external service is contacted.'] },
     { label: 'Defensive or professional takeaway', paragraphs: ['Ask what result is actually ready and what evidence supports that statement. Keep prototype, tested build, staging release, and production service separate.'] },
     { label: 'Short knowledge check', paragraphs: ['Choose the narrow statement supported by one local demo. Every choice gives a specific explanation and another attempt remains available.'] },
   ],
@@ -724,14 +368,14 @@ const rvf102: AcademyUnitContent = {
   location: 'Reality versus fiction > Programming on screen and at work > Build and execution > Comparison 2 of 2',
   goal: 'Distinguish typing, parsing, execution, output, and requirement checks.',
   purpose: 'The comparison shows why code color or the absence of an error message is not the same as a correct result.',
-  scope: sharedScope(2, 'reading-and-check'),
+  scope: comparisonScope,
   access: openAccess,
   boundary: browserBoundary,
   preparation: sharedPreparation,
   beforeWeCompare: beforeWeCompare(
-    'Explain what an editor view, parser result, program output, and test result each prove.',
+    'Explain what an editor view, parser result, exception report, program output, and test result each prove.',
     'The example uses prepared Python-like text and prepared messages. It does not execute Python or any other program.',
-    'Match four prepared artifacts with the limited claim each one supports.',
+    'Match five prepared artifacts with the limited claim each one supports.',
   ),
   words: [
     { term: 'Editor', definition: 'A tool used to read and change text, including source code.', example: 'An editor can color words without executing them.' },
@@ -758,17 +402,18 @@ const rvf102: AcademyUnitContent = {
   practice: {
     id: 'rvf-102-l0',
     title: 'Prepared L0 evidence ladder',
-    prompt: 'Match four artifacts with what each artifact supports.',
+    prompt: 'Match five artifacts with what each artifact supports. One shows a syntax error, one shows a runtime exception, and one shows a logic error that produced no message at all.',
     preparedEvidence: [
       'Editor screenshot: words appear in several colors.',
       'Parser message: SyntaxError, problem detected near line 2.',
+      'Exception report: ZeroDivisionError while line 4 divided by an amount of zero. Execution stopped there.',
       'Execution output: Total: 12.',
       'Test result: expected 13, received 12, failed.',
     ],
-    steps: ['Match editor display, syntax report, observed output, and requirement comparison.', 'Compare the matches with the expected result.'],
-    expectedResult: 'The screenshot proves display only. The syntax report proves the parser detected invalid structure near a location. The output proves one execution returned 12. The failed test proves that result did not match the stated expectation of 13.',
-    acceptableVariation: 'You may say the parser location is a starting point rather than the exact repair. Keep each claim no broader than its artifact.',
-    recovery: 'If one artifact seems to prove everything, cover the other three and ask what can be observed from that one artifact alone. Then narrow the claim.',
+    steps: ['Match editor display, syntax report, exception report, observed output, and requirement comparison.', 'Name which artifact shows a syntax error, which shows a runtime exception, and which reveals a logic error.', 'Compare the matches with the expected result.'],
+    expectedResult: 'The screenshot proves display only. The syntax report proves the parser detected invalid structure near a location before anything executed. The exception report proves execution began and then stopped at a reported operation: a runtime error in otherwise valid syntax. The output proves one execution finished and returned 12. The failed test reveals the logic error: the program ran without any message, yet the result did not match the stated expectation of 13.',
+    acceptableVariation: 'You may say the parser location is a starting point rather than the exact repair, and you may call the exception a runtime error. Keep each claim no broader than its artifact.',
+    recovery: 'If one artifact seems to prove everything, cover the other four and ask what can be observed from that one artifact alone. Then narrow the claim. If the exception and the syntax report seem the same, check which one required execution to begin.',
   },
   knowledgeCheck: {
     prompt: 'A program finishes without an error message. What does that prove?',
@@ -776,6 +421,7 @@ const rvf102: AcademyUnitContent = {
       { id: 'a', label: 'That execution finished without a reported unhandled error in that run.', correct: true, feedback: 'Correct. This is useful evidence about one run, but it is not proof of every requirement.' },
       { id: 'b', label: 'That every requirement is met.', correct: false, feedback: 'A program can finish and still calculate the wrong result or miss a required case.' },
       { id: 'c', label: 'That the editor colors are correct.', correct: false, feedback: 'Execution and editor display are different concerns.' },
+      { id: 'd', label: 'Nothing at all, because a clean run is meaningless.', correct: false, feedback: 'Too strong in the other direction. One finished run is real, narrow evidence about that run. Careful claims are small, not empty.' },
     ],
     retry: 'Choose again. Select the narrow statement that describes only the observed run.',
   },
@@ -806,12 +452,7 @@ const rvf102: AcademyUnitContent = {
 }
 
 export const academyUnitContent: readonly AcademyUnitContent[] = Object.freeze([
-  lm101Unit1,
-  lm101Unit2,
-  lm101Unit3,
-  lm101Unit4,
-  lm101Unit5,
-  lm101Lab,
+  ...makeLocalLlmContent({ anatomyOrder: academyAnatomyLabels, boundary: browserBoundary, preparation: sharedPreparation }),
   rvf101,
   rvf102,
 ])
@@ -856,10 +497,13 @@ export function academyContentValidationErrors(
   const expectedIds = [...academyUnitIds]
   const sourceIds = sources.map((source) => source.id)
   const expectedSourceIds = [
+    ...localLlmSources.map((source) => source.id),
     'source-nist-ai-rmf-airc',
+    'source-nist-csrc-machine-learning',
     'source-nist-sp-800-218',
     'source-python-errors-exceptions',
   ]
+  const allowedEvidenceLabels = new Set(['documented', 'supported-inference', 'illustrative', 'disputed', 'outdated'])
 
   const forbiddenRecordKeys = new Set([
     'prerequisite',
@@ -885,7 +529,10 @@ export function academyContentValidationErrors(
     if (source.observedAt !== academyContentObservedAt || source.reviewDueAt !== academyContentReviewDueAt) {
       errors.push(`Academy source ${source.id} has an invalid review date.`)
     }
-    if (!/^https:\/\/(?:airc\.nist\.gov|csrc\.nist\.gov|docs\.python\.org)\//u.test(source.url)) {
+    if (!allowedEvidenceLabels.has(source.evidenceLabel)) {
+      errors.push(`Academy source ${source.id} has an invalid evidence label.`)
+    }
+    if (!/^https:\/\/(?:airc\.nist\.gov|csrc\.nist\.gov|docs\.python\.org|huggingface\.co|github\.com|docs\.ollama\.com|sbert\.net)\//u.test(source.url)) {
       errors.push(`Academy source ${source.id} is not an approved official source.`)
     }
     for (const field of ['version', 'supports', 'scope', 'limits', 'rightsNotes'] as const) {
@@ -939,6 +586,9 @@ export function academyContentValidationErrors(
     if (unit.sourceIds.length === 0 || unit.sourceIds.some((sourceId) => !sourceIds.includes(sourceId))) {
       errors.push(`Academy unit ${unit.unitId} has a missing source record.`)
     }
+    if (unit.sourceIds.length < 2) {
+      errors.push(`Academy unit ${unit.unitId} needs at least two official source records.`)
+    }
 
     if (unit.anatomyKind === 'reality-comparison') {
       if (
@@ -989,7 +639,6 @@ export function academyContentValidationErrors(
     { label: 'em dash', pattern: /\u2014/u },
     { label: 'diagnosis or learner-category language', pattern: /\b(?:ADHD|AuDHD|autis(?:m|tic)|diagnos(?:is|ed)|neurodivergent|learner category|medicalized path)\b/iu },
     { label: 'external runtime instruction', pattern: /\b(?:open|launch) (?:a |the )?(?:terminal|shell)|\b(?:install|download) (?:the |a )?(?:runtime|model|package)|\brun (?:this|the following) command|\benter (?:an |your )?(?:API key|password|credential)/iu },
-    { label: 'out-of-scope advanced model topic', pattern: /\b(?:quantization|quantized|fine-tuning|model families|local model|hosted model)\b/iu },
   ]
   for (const forbidden of forbiddenPatterns) {
     if (forbidden.pattern.test(serialized)) errors.push(`Academy content contains forbidden ${forbidden.label}.`)

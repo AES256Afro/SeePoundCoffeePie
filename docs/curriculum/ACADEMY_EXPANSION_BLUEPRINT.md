@@ -1,6 +1,6 @@
 # SeePoundCoffeePie academy expansion blueprint
 
-Last reviewed: 2026-08-30
+Last reviewed: 2026-09-01
 
 ## Purpose
 
@@ -326,60 +326,7 @@ The [Reality Checks first-release packet](course-packets/REALITY_CHECKS_FIRST_RE
 
 Linux is the common reference environment because it is widely available on servers, clouds, virtual machines, inexpensive hardware, Windows through WSL, and macOS through a virtual machine. Linux is a recommendation and shared reference, not a requirement to replace a learner's current operating system.
 
-Every applicable lab must declare supported access lanes.
-
-### Lane A: Reading only
-
-- Any current desktop, laptop, or tablet
-- Prepared command traces and screenshots
-- Interactive diagrams and knowledge exercises
-- No installation required
-
-### Lane B: Windows native
-
-- Windows remains the operating system being inspected or changed
-- PowerShell, Command Prompt, Windows Terminal, and graphical tools are labeled precisely
-- L1 inspection and carefully bounded L2 local changes
-- No Linux command is presented as a Windows command
-- WSL and virtual-machine alternatives remain separate because their filesystems, networking, services, and kernels differ
-
-### Lane C: Windows with WSL
-
-- Windows remains installed
-- Linux command-line environment through WSL
-- Clear distinction between Windows and Linux filesystems
-- Explicit guidance for paths, permissions, networking, and cleanup
-
-Microsoft documents WSL as a way to run Linux applications and command-line tools directly on Windows without a traditional virtual-machine or dual-boot setup.
-
-Reference: [Install WSL](https://learn.microsoft.com/en-us/windows/wsl/install)
-
-### Lane D: Disposable Linux virtual machine
-
-- Windows, macOS, or Linux host
-- Snapshot before the lab
-- NAT or isolated networking by default
-- No required host changes beyond installing the chosen virtual-machine product
-- Full reset path
-
-### Lane E: macOS native tools
-
-- Teach shared Unix concepts and macOS differences honestly
-- Do not pretend macOS is Linux
-- Use a Linux VM when a lesson depends on Linux-specific kernel, filesystem, package, service, or networking behavior
-
-### Lane F: Existing Linux machine
-
-- Prefer non-destructive inspection first
-- Use a dedicated user, container, or virtual machine for risky exercises
-- Never assume the learner can reinstall the host
-
-### Lane G: Learner-controlled remote server
-
-- Optional, never the only route for foundations
-- Explicit cost, identity, network, deletion, and recovery warnings
-- Firewall and authentication before public exposure
-- Teardown instructions and cost verification
+Every applicable lab declares its supported access lanes from the canonical lane list in the [Lab, assessment, and credential standard](LAB_ASSESSMENT_CREDENTIAL_STANDARD.md#supported-access-lanes). That standard is the only normative statement of the lanes, from reading-only study through Windows-native, WSL, virtual-machine, macOS, Linux, remote-server, institution-managed, and learner-selected external environments, and its platform rules govern how each lane is taught. When this blueprint and the standard disagree, the standard wins.
 
 ## Why Linux is the common reference environment
 
@@ -415,50 +362,9 @@ References:
 
 ## Shared lab contract
 
-All schools use the same lab shape:
+All schools use the same lab shape: the 21-part lab-page structure defined in the [Lab, assessment, and credential standard](LAB_ASSESSMENT_CREDENTIAL_STANDARD.md#required-lab-page-structure). It runs from the goal statement through preparation, lanes, requirements, authorization, recovery, preflight, procedure, troubleshooting, stop conditions, verification, cleanup, evidence, reflection, and optional extension.
 
-1. Goal
-2. Why the lab matters
-3. New terms
-4. Optional preparation links
-5. Supported access lanes
-6. Time, memory, storage, and download estimates
-7. Authorization and scope
-8. Safety and privacy preflight
-9. Snapshot, backup, or recovery point
-10. Step-by-step activity
-11. Expected checkpoints
-12. What may differ on another machine
-13. Troubleshooting by visible symptom
-14. Stop and recover
-15. Clean up
-16. Evidence to retain
-17. Reflection questions
-18. Optional extension
-
-Every downloadable lab pack is versioned and immutable:
-
-```text
-lab-name/
-+-- README.md
-+-- LAB.md
-+-- lab-manifest.json
-+-- requirements/
-|   +-- linux.md
-|   +-- macos.md
-|   +-- windows.md
-+-- starter/
-+-- configs/
-+-- checks/
-+-- expected/
-+-- cleanup/
-+-- evidence-template/
-+-- LICENSES.md
-+-- SECURITY.md
-+-- checksums.txt
-```
-
-The package must not contain secrets, hidden uploads, proprietary material without redistribution rights, destructive cleanup, undisclosed network dependencies, or certificate answers.
+Every downloadable lab pack is versioned and immutable and follows the standard's [download package contract](LAB_ASSESSMENT_CREDENTIAL_STANDARD.md#download-package-contract), which defines the package layout and the publication checks, including the bans on secrets, hidden uploads, unlicensed material, destructive cleanup, undisclosed network dependencies, and certificate answers. The standard is the only normative statement of the lab-page structure and the package layout; when this blueprint and the standard disagree, the standard wins.
 
 ## Cybersecurity lab boundary
 
@@ -500,7 +406,9 @@ SeePoundCoffeePie must not:
 - accept model weights or full checkpoints;
 - accept private prompt histories;
 - silently use an external model provider;
-- use an LLM to grade a credential submission.
+- let an LLM make the final grading decision on a credential submission.
+
+The grading rule matches the [Lab, assessment, and credential standard](LAB_ASSESSMENT_CREDENTIAL_STANDARD.md#server-owned-assessment-requirements): no LLM makes the final grading decision; a human reviewer or a deterministic server-owned check does.
 
 Actual model work happens on the learner's computer, home server, workstation, institution-managed environment, or an external environment the learner explicitly chooses.
 
@@ -690,7 +598,7 @@ References:
 
 ## Long-range scale target
 
-This is an architecture target, not a promise to publish incomplete material.
+This is an architecture target, not a promise to publish incomplete material. Every number here is deliberately larger than the sum of the current school inventories: the documented school documents today declare roughly 399 courses, about 2,100 to 2,600 modules, and about 640 labs. The difference between those sums and the targets below is unallocated headroom for optional preparation paths, refreshers, and future school waves that have no detailed inventory yet. When a school inventory grows, this section does not need to move; when a target stops being believable, shrink it rather than defending it.
 
 - 5 major schools, optional preparation, and optional cross-school learning paths
 - 75 or more learning paths

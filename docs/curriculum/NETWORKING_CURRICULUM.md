@@ -6,7 +6,7 @@
 - **Curriculum family:** Networking
 - **Audience:** Absolute beginners through practicing network engineers
 - **Access model:** Every published course, module, unit, lab, refresher, and capstone is visible and available from the first visit
-- **Recorded:** 2026-08-30
+- **Last reviewed:** 2026-09-01
 - **Status:** Curriculum blueprint, not a claim of implemented or deployed units
 
 This document sometimes uses `lesson` as the plain-language interface label for an academy `unit`. A unit is the stable, bookmarkable teaching page under one module. It is not another layer in the curriculum hierarchy.

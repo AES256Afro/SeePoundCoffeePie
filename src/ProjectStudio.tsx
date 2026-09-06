@@ -610,6 +610,19 @@ function CheckpointWorkspace({ checkpoint, onNavigate, onProgress, progress, pro
               <ol>{checkpoint.requirements.map((requirement) => <li key={requirement}>{requirement}</li>)}</ol>
             </section>
           )}
+
+          {checkpoint.planningHelp && (
+            <details className="project-requirements" key={`${checkpoint.id}-plan`}>
+              <summary>Plan and test your program</summary>
+              <h2>Before you write code</h2>
+              <ol>{checkpoint.planningHelp.steps.map((step) => <li key={step}>{step}</li>)}</ol>
+              <h2>Inputs this version supports</h2>
+              <p>{checkpoint.planningHelp.inputScope}</p>
+              <h2>Try a different input</h2>
+              <p>Predict the result first, then compare it with Run. These are optional practice ideas, not extra steps to unlock.</p>
+              <ol>{checkpoint.planningHelp.experiments.map((experiment) => <li key={experiment}>{experiment}</li>)}</ol>
+            </details>
+          )}
         </section>
 
         <section className="project-task" aria-labelledby="project-task-title">
@@ -622,6 +635,15 @@ function CheckpointWorkspace({ checkpoint, onNavigate, onProgress, progress, pro
             <CheckCircle2 size={19} />
             <div><small>Do this</small><p>{exercise.focus ?? exercise.prompt}</p></div>
           </div>
+
+          {editable && exercise.output && (
+            <details className="project-hint" key={`${checkpoint.id}-expected`}>
+              <summary>Expected output after your changes</summary>
+              <p>Use the supplied Run input, if there is one. Match the words, spaces, and line breaks below.</p>
+              <div className="project-guided-answer"><pre aria-label="Expected program output"><code>{exercise.output}</code></pre></div>
+              {checkpoint.expectedFirstRun && <p><b>The starter is deliberately unfinished.</b> {checkpoint.expectedFirstRun.explanation}</p>}
+            </details>
+          )}
 
           {(exercise.type === 'choice' || exercise.type === 'prediction') ? (
             <div className="project-guided-answer">
