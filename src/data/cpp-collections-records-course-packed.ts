@@ -4,7 +4,9 @@ import type { Exercise, Mission } from '../types'
 
 const MAX_PACKED_COURSE_BYTES = 54_000
 const EXPECTED_DICTIONARY_WORDS = 122
-const EXPECTED_STRING_SLOTS = 707
+// 2026-09-01 audit fixes: the module 6 ordering exercise merged its helper and
+// summary cards into fully forced sections, changing the packed slot count.
+const EXPECTED_STRING_SLOTS = 698
 const MAX_DICTIONARY_WORD_CHARACTERS = 32
 const MAX_DICTIONARY_CHARACTERS = 2_048
 const MAX_PACKED_STRING_CHARACTERS = 40_000

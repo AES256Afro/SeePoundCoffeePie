@@ -7,11 +7,11 @@ type FoundationExercise = Omit<Exercise, 'id' | 'conceptId' | 'xp'>
 const cppProgramFrame = [
   {
     code: '#include <iostream>',
-    plain: 'This asks C++ to bring in its console-output toolbox. It is provided scaffolding, so you can recognize it without memorizing it.',
+    plain: 'A header describes tools the code can use. Including iostream makes console tools such as std::cout known to the compiler. It does not print anything.',
   },
   {
     code: 'int main() {',
-    plain: 'main is the starting doorway of this program. The opening brace { begins its group of instructions. You will study return values later.',
+    plain: 'main is where this program starts. int says it returns a whole-number finish code. Empty () means no inputs are listed here. The brace { begins its instructions.',
   },
   {
     code: 'return 0; and }',
@@ -22,15 +22,15 @@ const cppProgramFrame = [
 const javaProgramFrame = [
   {
     code: 'public class Main {',
-    plain: 'This supplied line gives the program the name Main and opens its outer group with {. You will learn each part later.',
+    plain: 'class groups related code. This public class is named Main, so its file is Main.java. public permits access from outside; { opens the group.',
   },
   {
     code: 'public static void main(String[] args)',
-    plain: 'This supplied line marks where Java starts following your instructions. Leave it unchanged for now; each part will be taught in a later lesson.',
+    plain: 'main is the entry method used here. public makes it accessible; static lets Java call it without creating an object; void means it returns no answer. String[] args receives a list of command-line text inputs. Our lesson uses none. Leave it unchanged for now.',
   },
   {
     code: '{ and }',
-    plain: 'Braces mark where a group begins and ends, like opening and closing the walls of a room. The simulator supplies these braces for you.',
+    plain: 'Braces mark where a group begins and ends. One pair surrounds the class and another surrounds main. Indentation helps you see which instructions belong together.',
   },
 ]
 
@@ -132,7 +132,7 @@ const pythonExercises: FoundationExercise[] = [
     eyebrow: 'Cargo label 3 of 5',
     title: 'Store text in a variable',
     explanation:
-      'A variable is a labeled container in the computer’s memory. You choose the label, then store a value after an equals sign.',
+      'A Python variable is a name that refers to a value. In ship_name = "Wayfarer", the = sign makes ship_name refer to that text. You can use the name again instead of repeating the text.',
     analogy:
       'A cargo locker labeled ship_name can hold the text Wayfarer. The label helps you find that value again.',
     type: 'code',
@@ -384,7 +384,7 @@ const csharpExercises: FoundationExercise[] = [
     eyebrow: 'Shield school 1 of 5',
     title: 'Meet the .NET runtime',
     explanation:
-      'C# runs with .NET, a platform that supplies the runtime and useful building blocks. You write C# instructions, and .NET helps execute them on the computer.',
+      'C# is the language you write. .NET supplies software that runs the compiled instructions, called a runtime, and reusable code, called libraries. This site provides that setup for these lessons.',
     analogy:
       '.NET is the ship infrastructure beneath your console. It carries your command to the right system.',
     type: 'choice',
@@ -402,7 +402,7 @@ const csharpExercises: FoundationExercise[] = [
     eyebrow: 'Status line 2 of 5',
     title: 'Print your first message',
     explanation:
-      'C# displays a line of text with Console.WriteLine. Parentheses hold the message, quotation marks identify text, and a semicolon ends the instruction.',
+      'C# displays text with Console.WriteLine. These lessons use top-level statements: you can write instructions without writing a Main method around them. The project makes System, which contains Console, available for you.',
     analogy:
       'Console.WriteLine opens the tactical display, posts one complete status line, and then moves to the next row.',
     type: 'code',
@@ -467,7 +467,7 @@ const csharpExercises: FoundationExercise[] = [
       ],
     },
     codeGuide: [
-      { code: 'Console', plain: 'Console is a built-in C# tool representing the text window where a program can communicate.' },
+      { code: 'Console', plain: 'Console belongs to System, a named group of .NET code made available by this project. The top-level setup lets you write instructions without adding a Main method.' },
       { code: '.', plain: 'The dot means “use something belonging to the item on the left.” Here, use a Console operation.' },
       { code: 'WriteLine', plain: 'This operation writes a value and then moves the console to a new line.' },
       { code: '("Shields online");', plain: 'Parentheses hold the message, quotes mark it as text, and the semicolon ends the instruction.' },
@@ -531,7 +531,7 @@ const csharpExercises: FoundationExercise[] = [
     eyebrow: 'Tactical check 5 of 5',
     title: 'Print values from variables',
     explanation:
-      'C# can place variables directly inside text with string interpolation. Start the text with $, then wrap each variable name in braces.',
+      'String interpolation means inserting values into text. In C#, $ before the opening quote enables it, and {strength} inserts the stored number. Without $, those braces and the name would appear as ordinary text.',
     analogy:
       'The $ marks a smart report template. Each pair of braces is a live gauge inserted into the sentence.',
     type: 'code',
@@ -545,8 +545,8 @@ const csharpExercises: FoundationExercise[] = [
       { code: '{shieldName}', plain: 'Braces inside this text template mark a place where C# should insert a stored value. These braces are different from braces that group code.' },
     ],
     checks: [
-      { pattern: '\\{\\s*shieldName\\s*\\}', message: 'Put shieldName inside the first pair of braces.' },
-      { pattern: '\\{\\s*strength\\s*\\}', message: 'Put strength inside the second pair of braces.' },
+      { pattern: 'Shield: \\{\\s*shieldName\\s*\\}', message: 'Put shieldName inside the first pair of braces.' },
+      { pattern: 'Strength: \\{\\s*strength\\s*\\}', message: 'Put strength inside the second pair of braces.' },
     ],
     output: 'Shield: Aegis | Strength: 100',
     hint: 'The first blank is shieldName. The second is strength.',
@@ -559,7 +559,7 @@ const javaExercises: FoundationExercise[] = [
     eyebrow: 'Galley systems 1 of 5',
     title: 'Meet the Java runtime',
     explanation:
-      'Java source code is compiled into a portable form that the Java Virtual Machine, or JVM, can run. This helps the same program work on many kinds of computer.',
+      'Source code is the text a programmer writes. A compiler translates Java source into instructions called bytecode. The Java Virtual Machine (JVM) runs that bytecode. A compatible JVM lets it run on different kinds of computer.',
     analogy:
       'You write one galley recipe. The JVM is a universal kitchen station that knows how to prepare it aboard different ships.',
     type: 'choice',
@@ -705,7 +705,7 @@ const javaExercises: FoundationExercise[] = [
     eyebrow: 'Morning watch 5 of 5',
     title: 'Print values from variables',
     explanation:
-      'Java joins text and variables with the + operator. This is called concatenation when the pieces form one text message.',
+      'When one side is text, Java uses + to join pieces into text. This is called concatenation. "Pods: " + 12 produces Pods: 12, while 2 + 3 adds numbers and produces 5.',
     analogy:
       'Each + couples another car onto the report train: a label, a stored value, another label, and another value.',
     type: 'code',
@@ -772,7 +772,7 @@ const pythonSignalProtocolExercises: FoundationExercise[] = [
     eyebrow: 'Route planner 3 of 5',
     title: 'Put the branches in order',
     explanation:
-      'Python uses if to open the route taken when a condition is True. else opens the other route. Indented lines belong to the route directly above them.',
+      'if chooses the instructions to run when a condition is True; else chooses the other group. A colon : ends each heading, and the indented lines belong to that heading. Assume signal_strength is 72. The > symbol asks whether the left number is bigger than the right one.',
     analogy:
       'The comm officer checks one sensor reading, then sends the signal through either the strong-signal hatch or the keep-scanning hatch.',
     type: 'ordering',
@@ -881,7 +881,7 @@ const cppHullLogicExercises: FoundationExercise[] = [
     eyebrow: 'Repair routes 3 of 5',
     title: 'Put the branches in order',
     explanation:
-      'C++ places a condition inside parentheses after if. Braces group the instructions for the true route and the else route.',
+      'C++ places a condition inside parentheses after if. Braces group the instructions for the true route and the else route. Assume hullIntegrity already holds 35. The < symbol asks whether the left number is smaller than the right one.',
     analogy:
       'Damage control reads the gauge, opens one sealed procedure, or moves to the alternate procedure.',
     type: 'ordering',
@@ -903,7 +903,7 @@ const cppHullLogicExercises: FoundationExercise[] = [
     eyebrow: 'Diagnostic 4 of 5',
     title: 'Fix the condition',
     explanation:
-      'In C++, one equals sign assigns a value. Two equals signs compare values. An if condition needs the comparison == when it asks whether values match.',
+      'In C++, one equals sign assigns a value. Two equals signs compare values. An if condition needs the comparison == when it asks whether values match. C++ will even accept the faulty = version and treat the assigned 40 as true, which is exactly why this mistake is dangerous to leave in.',
     analogy:
       'Damage control must inspect the gauge, not overwrite the gauge while asking the question.',
     type: 'bugfix',
@@ -992,7 +992,7 @@ const csharpCommandLogicExercises: FoundationExercise[] = [
     eyebrow: 'Tactical routes 3 of 5',
     title: 'Put the branches in order',
     explanation:
-      'C# places a condition in parentheses after if. Braces group the true route, and else opens the route used when the answer is false.',
+      'C# places a condition in parentheses after if. Braces group the true route, and else opens the route used when the answer is false. Assume shieldPower already holds 84. The >= symbol asks whether the left number is at least as big as the right one.',
     analogy:
       'One shield reading sends the crew either to hold formation or divert power.',
     type: 'ordering',
@@ -1014,7 +1014,7 @@ const csharpCommandLogicExercises: FoundationExercise[] = [
     eyebrow: 'Diagnostic 4 of 5',
     title: 'Fix the condition',
     explanation:
-      'One equals sign assigns a value in C#. Two equals signs compare two values and produce true or false. The if condition needs ==.',
+      'One equals sign assigns a value in C#. Two equals signs compare two values and produce true or false. The if condition needs ==. In C#, the compiler refuses the faulty = version because the condition is not a true-or-false value, which is how this mistake is usually caught.',
     analogy:
       'The tactical officer must compare the alert level, not replace it while checking it.',
     type: 'bugfix',
@@ -1102,7 +1102,7 @@ const javaRoutingOrdersExercises: FoundationExercise[] = [
     eyebrow: 'Supply routes 3 of 5',
     title: 'Put the branches in order',
     explanation:
-      'Java puts a condition inside parentheses after if. Braces group the instructions for the true route, and else opens the alternate route.',
+      'Java puts a condition inside parentheses after if. Braces group the instructions for the true route, and else opens the alternate route. Assume podCount already holds 4. The < symbol asks whether the left number is smaller than the right one.',
     analogy:
       'The lift reads inventory once, then travels either to the reserve deck or the ready rack.',
     type: 'ordering',
@@ -1124,7 +1124,7 @@ const javaRoutingOrdersExercises: FoundationExercise[] = [
     eyebrow: 'Diagnostic 4 of 5',
     title: 'Fix the condition',
     explanation:
-      'In Java, one equals sign assigns a value. Two equals signs compare primitive values such as integers. The if condition needs the comparison ==.',
+      'In Java, one equals sign assigns a value. Two equals signs compare primitive values such as integers. The if condition needs the comparison ==. In Java, the compiler refuses the faulty = version because the condition is not a boolean, which is how this mistake is usually caught.',
     analogy:
       'The routing computer must inspect the deck number, not overwrite it while deciding where to stop.',
     type: 'bugfix',
@@ -1343,7 +1343,7 @@ const cppCargoArrayExercises: FoundationExercise[] = [
     eyebrow: 'Rack repair 4 of 5',
     title: 'Fix the last position',
     explanation:
-      'A three-item C++ array has valid indexes 0, 1, and 2. Index 3 is outside the array and must not be read.',
+      'A three-item C++ array has valid indexes 0, 1, and 2. Reading index 3 is undefined behavior: C++ promises no reliable result. It might appear to work, show unrelated data, or crash. Do not depend on an error message to detect it.',
     analogy:
       'The parts rack has three bays, but its zero-based address plate makes the final real bay number 2.',
     type: 'bugfix',
@@ -1454,7 +1454,7 @@ const csharpCrewRosterExercises: FoundationExercise[] = [
     eyebrow: 'Roster repair 4 of 5',
     title: 'Fix the last position',
     explanation:
-      'A three-item C# array has valid indexes 0, 1, and 2. Index 3 is one position beyond the roster.',
+      'A three-item C# array has valid indexes 0, 1, and 2. Index 3 is outside it. C# stops that access with IndexOutOfRangeException, an error reporting an invalid position. The item count is 3; the last index is 2.',
     analogy:
       'There are three bridge stations, but their zero-based plates make the final real station number 2.',
     type: 'bugfix',
@@ -1491,8 +1491,8 @@ const csharpCrewRosterExercises: FoundationExercise[] = [
       { code: '$"First: {crew[0]}"', plain: 'The $ creates an interpolated string, and the braces insert the selected array item.' },
     ],
     checks: [
-      { pattern: '\\{\\s*crew\\s*\\[\\s*0\\s*\\]\\s*\\}', message: 'Put crew[0] inside the first interpolated braces.' },
-      { pattern: '\\{\\s*crew\\s*\\[\\s*2\\s*\\]\\s*\\}', message: 'Put crew[2] inside the second interpolated braces.' },
+      { pattern: 'First: \\{\\s*crew\\s*\\[\\s*0\\s*\\]\\s*\\}', message: 'Put crew[0] inside the first interpolated braces.' },
+      { pattern: 'Last: \\{\\s*crew\\s*\\[\\s*2\\s*\\]\\s*\\}', message: 'Put crew[2] inside the second interpolated braces.' },
     ],
     output: 'First: Mira\nLast: Pip',
     hint: 'The two blanks are crew[0] and crew[2], in that order.',
@@ -1563,7 +1563,7 @@ const javaCrewArrayExercises: FoundationExercise[] = [
     eyebrow: 'Roster repair 4 of 5',
     title: 'Fix the last position',
     explanation:
-      'A three-item Java array has valid indexes 0, 1, and 2. Index 3 is one position beyond the roster.',
+      'A three-item Java array has valid indexes 0, 1, and 2. Index 3 is outside it. Java stops that access with ArrayIndexOutOfBoundsException, an error reporting an invalid position. The item count is 3; the last index is 2.',
     analogy:
       'There are three service stations, but their zero-based plates make the final real station number 2.',
     type: 'bugfix',
@@ -1654,7 +1654,7 @@ const pythonLoopingOrbitExercises: FoundationExercise[] = [
     eyebrow: 'Scanner pass 3 of 5',
     title: 'Trace two loop passes',
     explanation:
-      'On each pass, item temporarily holds the next list value. The indented print instruction runs once for crystal and once for map.',
+      'Read for item in cargo as "take each value from cargo and call it item." The colon ends the heading; indentation marks the repeated instructions, called the body. Here item is crystal on the first pass and map on the second. An empty list would run the body zero times.',
     analogy:
       'One inspection badge is handed to each artifact in turn. The scanner reads whichever artifact currently wears it.',
     type: 'prediction',
@@ -1760,7 +1760,7 @@ const cppEngineLoopExercises: FoundationExercise[] = [
     eyebrow: 'Inspection pass 3 of 5',
     title: 'Trace two loop passes',
     explanation:
-      'On each pass, part temporarily holds the next array value. The brace-group output runs once for crystal and once for rune.',
+      'In for (std::string part : parts), the colon means "from this collection." part receives a text value copied from parts on each pass. Braces contain the repeated instructions. The two passes display crystal then rune; "\\n" starts a new output line.',
     analogy:
       'A single inspection tag moves from the first component to the second. The display reads the component currently carrying it.',
     type: 'prediction',
@@ -1868,7 +1868,7 @@ const csharpPatrolLoopExercises: FoundationExercise[] = [
     eyebrow: 'Roll call 3 of 5',
     title: 'Trace two loop passes',
     explanation:
-      'On each pass, name temporarily holds the next array value. The brace-group output runs once for Mira and once for Pip.',
+      'Read foreach (string name in crew) as "take each text value from crew and call it name." The braces contain the repeated instructions, called the body. name is Mira on the first pass and Pip on the second. An empty array would run the body zero times.',
     analogy:
       'One speaking token moves from the first officer to the second. The bridge hears whoever currently holds it.',
     type: 'prediction',
@@ -1975,7 +1975,7 @@ const javaRepeatBrewExercises: FoundationExercise[] = [
     eyebrow: 'Service pass 3 of 5',
     title: 'Trace two loop passes',
     explanation:
-      'On each pass, droid temporarily holds the next array value. The brace-group output runs once for MOP-1 and once for HEX-3.',
+      'In for (String droid : droids), the colon means "from this array." droid receives the next text value each pass. Braces contain the repeated instructions, called the body. The two passes display MOP-1 then HEX-3. An empty array would run the body zero times.',
     analogy:
       'One service badge moves from the first droid to the second. The console reads whichever droid currently carries it.',
     type: 'prediction',
@@ -2013,7 +2013,7 @@ const javaRepeatBrewExercises: FoundationExercise[] = [
     recap: 'Create the array, open the for loop, run its body, then close the loop brace.',
   },
   {
-    eyebrow: 'Guild report 5 of 5',
+    eyebrow: 'Brew report 5 of 5',
     title: 'Process every item',
     explanation:
       'The enhanced for loop needs the array it should visit. Once droids fills the blank, droid receives each string and the same report runs three times.',
@@ -2083,7 +2083,7 @@ const pythonFunctionFoundryExercises: FoundationExercise[] = [
     eyebrow: 'Control test 3 of 5',
     title: 'Trace a function call',
     explanation:
-      'The parameter item is a temporary input name inside announce. Calling announce with crystal places that text into item for this run.',
+      'def defines a function but does not run its body. item is its parameter, a name for an input. In announce("crystal"), "crystal" is the argument, the actual input value. The call runs the indented print with item referring to "crystal".',
     analogy:
       'The function is a message console with one input slot. This call slides crystal into that slot before the console speaks.',
     type: 'prediction',
@@ -2189,12 +2189,12 @@ const cppCommandFunctionExercises: FoundationExercise[] = [
     eyebrow: 'Module test 3 of 5',
     title: 'Trace a function call',
     explanation:
-      'The parameter part is a temporary input name inside announce. Calling announce with crystal places that text into part for this run.',
+      'void means announce returns no value. std::string part declares its text input, called a parameter. The argument "crystal" supplies that input when main calls announce. The helper is defined outside main; its body runs only when called.',
     analogy:
       'The function module has one labeled input port. The call connects crystal to that port before the module reports.',
     type: 'prediction',
     prompt: 'What will this function call display?',
-    displayCode: 'void announce(std::string part) {\n    std::cout << "Ready: " << part;\n}\n\nannounce("crystal");',
+    displayCode: '#include <iostream>\n#include <string>\n\nvoid announce(std::string part) {\n    std::cout << "Ready: " << part;\n}\n\nint main() {\n    announce("crystal");\n    return 0;\n}',
     choices: [
       { id: 'a', label: 'Ready: crystal', detail: 'The argument crystal becomes the parameter part.' },
       { id: 'b', label: 'Ready: part', detail: 'part retrieves the input value.' },
@@ -2209,7 +2209,7 @@ const cppCommandFunctionExercises: FoundationExercise[] = [
     eyebrow: 'Module plan 4 of 5',
     title: 'Put the function in order',
     explanation:
-      'The function definition must be available before the supplied main program calls it. Its output instruction sits inside braces, followed by the closing brace and later call.',
+      'The function definition must be available before the supplied main program calls it. Its output instruction sits inside braces, followed by the closing brace and later call. The call line runs inside the main frame that the simulator supplies.',
     analogy:
       'Build the module, install its inner circuit, close its casing, then activate it from the engine room.',
     type: 'ordering',
@@ -2276,51 +2276,51 @@ const csharpCommandMethodExercises: FoundationExercise[] = [
   },
   {
     eyebrow: 'Command school 2 of 5',
-    title: 'Meet a method',
+    title: 'Meet a function',
     explanation:
-      'A method gives a reusable name to a group of instructions. Define the command once, then call its name whenever the program needs that command.',
+      'A function names reusable instructions. These top-level examples use local functions. A function declared in a class is called a method, such as Console.WriteLine. Call either kind to perform its job.',
     analogy:
       'The command deck installs one dependable control. The captain can activate its name many times instead of rebuilding the order.',
     type: 'choice',
-    prompt: 'Why place a repeated command inside a method?',
+    prompt: 'Why place a repeated command inside a function?',
     choices: [
       { id: 'a', label: 'To name and reuse the command', detail: 'One definition can be called whenever it is needed.' },
-      { id: 'b', label: 'To make C# ignore the command forever', detail: 'Calling the method runs its instructions.' },
-      { id: 'c', label: 'To make every method run automatically', detail: 'A definition waits until the program calls it.' },
+      { id: 'b', label: 'To make C# ignore the command forever', detail: 'Calling the function runs its instructions.' },
+      { id: 'c', label: 'To make every function run automatically', detail: 'A definition waits until the program calls it.' },
     ],
     correctChoice: 'a',
     hint: 'Look for the answer about defining once and using again.',
-    recap: 'A C# method packages a command under one reusable name.',
+    recap: 'A C# function packages a command under one reusable name.',
   },
   {
     eyebrow: 'Control test 3 of 5',
-    title: 'Trace a method call',
+    title: 'Trace a function call',
     explanation:
-      'The parameter name is a temporary input inside Announce. Calling Announce with Mira places that text into name for this run.',
+      'void means this function returns no value. string name declares a text input called a parameter. The argument "Mira" supplies its value in Announce("Mira"). Here Announce is a local function in a top-level program; a method is a function declared in a type such as a class.',
     analogy:
-      'The method is a command console with one labeled input slot. This call slides Mira into that slot before it speaks.',
+      'The function is a command console with one labeled input slot. This call slides Mira into that slot before it speaks.',
     type: 'prediction',
-    prompt: 'What will this method call display?',
+    prompt: 'What will this function call display?',
     displayCode: 'void Announce(string name)\n{\n    Console.WriteLine($"Ready: {name}");\n}\n\nAnnounce("Mira");',
     choices: [
       { id: 'a', label: 'Ready: Mira', detail: 'The argument Mira becomes the parameter name.' },
       { id: 'b', label: 'Ready: name', detail: 'name retrieves the input value.' },
-      { id: 'c', label: 'Nothing', detail: 'The final instruction calls the method.' },
+      { id: 'c', label: 'Nothing', detail: 'The final instruction calls the function.' },
     ],
     correctChoice: 'a',
     output: 'Ready: Mira',
     hint: 'Move the argument "Mira" into the parameter named name.',
-    recap: 'A C# call supplies an argument, and the method receives it through a typed parameter.',
+    recap: 'A C# call supplies an argument, and the function receives it through a typed parameter.',
   },
   {
     eyebrow: 'Command plan 4 of 5',
-    title: 'Put the method in order',
+    title: 'Put the function in order',
     explanation:
-      'The local method definition must be available before the later call. Its output instruction sits inside braces, followed by the closing brace and call.',
+      'In this program the function is written before the call, so a reader meets the tool before its first use. C# would also accept the function after the call; this exercise uses the readable order. Its output instruction sits inside braces, followed by the closing brace and call.',
     analogy:
       'Install the command control, place its operation inside, close the panel, then activate it from the bridge.',
     type: 'ordering',
-    prompt: 'Arrange the reusable method pieces before their call.',
+    prompt: 'Arrange the reusable function pieces before their call.',
     orderItems: [
       { id: 'call', code: 'Announce("Mira");' },
       { id: 'end', code: '}' },
@@ -2330,14 +2330,14 @@ const csharpCommandMethodExercises: FoundationExercise[] = [
     correctOrder: ['define', 'body', 'end', 'call'],
     incorrectMessage: 'Open the Announce definition, place its output inside, close the brace, then call Announce afterward.',
     output: 'Ready: Mira',
-    hint: 'The void Announce line comes first. The call ending in a semicolon comes last.',
-    recap: 'C# reads the local method definition before the later call uses it.',
+    hint: 'The void Announce line comes first. The call Announce("Mira"); comes last.',
+    recap: 'Write the function first so the later call is easy to read; C# will find it either way.',
   },
   {
     eyebrow: 'Command report 5 of 5',
-    title: 'Call the method for every item',
+    title: 'Call the function for every item',
     explanation:
-      'The loop already gives name one roster value per pass. Passing name into Report lets one reusable method format every officer in the array.',
+      'The loop already gives name one roster value per pass. Passing name into Report lets one reusable function format every officer in the array.',
     analogy:
       'Roll call feeds each officer into the same command console. One dependable control handles every arrival.',
     type: 'code',
@@ -2345,18 +2345,18 @@ const csharpCommandMethodExercises: FoundationExercise[] = [
     starterCode: 'void Report(string currentName)\n{\n    Console.WriteLine($"Checked: {currentName}");\n}\n\nstring[] crew = { "Mira", "Tov", "Pip" };\n\nforeach (string name in crew)\n{\n    Report(_____);\n}',
     focus: 'Replace the one _____ blank with name, the loop variable holding the current roster value.',
     codeGuide: [
-      { code: 'void Report(string currentName)', plain: 'void says this method returns no value. currentName is its typed temporary input parameter.' },
-      { code: 'Console.WriteLine($"Checked: {currentName}");', plain: 'This brace-group method body uses the value received through the parameter.' },
+      { code: 'void Report(string currentName)', plain: 'void says this function returns no value. currentName is its typed temporary input parameter.' },
+      { code: 'Console.WriteLine($"Checked: {currentName}");', plain: 'This brace-group function body uses the value received through the parameter.' },
       { code: 'foreach (string name in crew)', plain: 'The familiar loop gives name one roster value during each pass.' },
       { code: 'Report(name);', plain: 'This call sends the current loop value into Report, where it becomes currentName.' },
     ],
     checks: [
-      { pattern: 'Report\\s*\\(\\s*name\\s*\\)\\s*;', message: 'Pass name into Report so the method receives the current loop value.' },
+      { pattern: 'Report\\s*\\(\\s*name\\s*\\)\\s*;', message: 'Pass name into Report so the function receives the current loop value.' },
       { pattern: 'void\\s+Report\\s*\\(\\s*string\\s+currentName\\s*\\)', message: 'Keep the Report definition and its typed currentName parameter in place.' },
     ],
     output: 'Checked: Mira\nChecked: Tov\nChecked: Pip',
     hint: 'The call inside the loop should be Report(name);',
-    recap: 'A C# loop can call one reusable method with a different current value each time.',
+    recap: 'A C# loop can call one reusable function with a different current value each time.',
   },
 ]
 
@@ -2403,12 +2403,12 @@ const javaDroidRoutineExercises: FoundationExercise[] = [
     eyebrow: 'Routine test 3 of 5',
     title: 'Trace a method call',
     explanation:
-      'The parameter droid is a temporary input inside announce. Calling announce with MOP-1 places that text into droid for this run.',
+      'String droid declares a text input, called a parameter. "MOP-1" is the argument supplied by the call. static lets main call announce without creating an object, and void means no value is returned. Both methods belong to Main; announce is not defined inside main.',
     analogy:
       'The method module has one labeled input port. The call connects MOP-1 to that port before the module reports.',
     type: 'prediction',
     prompt: 'What will this method call display?',
-    displayCode: 'static void announce(String droid) {\n    System.out.println("Ready: " + droid);\n}\n\nannounce("MOP-1");',
+    displayCode: 'public class Main {\n    static void announce(String droid) {\n        System.out.println("Ready: " + droid);\n    }\n\n    public static void main(String[] args) {\n        announce("MOP-1");\n    }\n}',
     choices: [
       { id: 'a', label: 'Ready: MOP-1', detail: 'The argument MOP-1 becomes the parameter droid.' },
       { id: 'b', label: 'Ready: droid', detail: 'droid retrieves the input value.' },
@@ -2423,7 +2423,7 @@ const javaDroidRoutineExercises: FoundationExercise[] = [
     eyebrow: 'Blueprint plan 4 of 5',
     title: 'Put the method in order',
     explanation:
-      'The static method definition belongs in the supplied class before main calls it. Its output sits inside braces, followed by the closing brace and later call.',
+      'The method lives in the class beside main. In this lesson it is written above main so you read the tool before its use; Java accepts either position. Its output sits inside braces, followed by the closing brace and later call.',
     analogy:
       'Install the behavior module, place its operation inside, close the casing, then activate it from the launch routine.',
     type: 'ordering',
@@ -2437,8 +2437,8 @@ const javaDroidRoutineExercises: FoundationExercise[] = [
     correctOrder: ['define', 'body', 'end', 'call'],
     incorrectMessage: 'Open the announce definition, place its output inside, close the brace, then call announce afterward.',
     output: 'Ready: MOP-1',
-    hint: 'The static void announce line comes first. The call ending in a semicolon comes last.',
-    recap: 'Java keeps the method definition in its class before main later calls it.',
+    hint: 'The static void announce line comes first. The call announce("MOP-1"); comes last.',
+    recap: 'A Java method lives in the class, and main calls it by name.',
   },
   {
     eyebrow: 'Blueprint report 5 of 5',
@@ -2510,7 +2510,7 @@ const pythonVoidWyrmExercises: FoundationExercise[] = [
     eyebrow: 'Flight plan 3 of 5',
     title: 'Put the program in order',
     explanation:
-      'Python first defines the reusable report, then creates the list, then loops through it. The indented call belongs inside the loop so every current value reaches the function.',
+      'Python programs usually define the reusable report first, then create the list, then loop through it. Python only requires the definition to run before the call does. The indented call belongs inside the loop so every current value reaches the function. The list could also be created before the definition; this exercise uses the conventional order with the definition first.',
     analogy:
       'Install the alarm, load the sensor contacts, begin the sweep, then send each contact through the installed alarm.',
     type: 'ordering',
@@ -2532,7 +2532,7 @@ const pythonVoidWyrmExercises: FoundationExercise[] = [
     eyebrow: 'Damage control 4 of 5',
     title: 'Fix the comparison',
     explanation:
-      'The equals sign stores a value, while two equals signs compare values. An if question needs the comparison operator == so Python can produce true or false.',
+      'The equals sign stores a value, while two equals signs compare values. An if question needs the comparison operator == so Python can produce True or False.',
     analogy:
       'The scanner must ask whether the contact matches wyrm. A cargo transfer order cannot answer that question.',
     type: 'bugfix',
@@ -2541,7 +2541,7 @@ const pythonVoidWyrmExercises: FoundationExercise[] = [
     focus: 'Change the single = in the if line to ==. Do not change the function or its call.',
     codeGuide: [
       { code: '=', plain: 'One equals sign stores a value. It is not the comparison question needed by this if statement.' },
-      { code: '==', plain: 'Two equals signs ask whether the values match and produce either true or false.' },
+      { code: '==', plain: 'Two equals signs ask whether the values match and produce either True or False.' },
       { code: 'if hazard == "wyrm":', plain: 'The colon opens the indented route that runs only when the comparison is true.' },
     ],
     checks: [
@@ -2585,7 +2585,7 @@ const cppTitanForgeExercises: FoundationExercise[] = [
     eyebrow: 'Systems recall 1 of 5',
     title: 'Trace a complete program',
     explanation:
-      'This C++ program combines an array, a loop, and a condition. The loop visits both parts, but std::cout runs only when the current part equals cracked seal.',
+      'This C++ program combines an array, a loop, and a condition. The loop visits both parts, but std::cout runs only when the current part equals cracked seal. When the braces list the values, C++ counts them for you, so the size between the brackets may be left out.',
     analogy:
       'An inspection arm checks every component, while the repair alarm speaks only for the component matching the fault record.',
     type: 'prediction',
@@ -2623,7 +2623,7 @@ const cppTitanForgeExercises: FoundationExercise[] = [
     eyebrow: 'Forge plan 3 of 5',
     title: 'Put the program in order',
     explanation:
-      'C++ defines the reusable inspect function before main calls it. Inside main, create the array before the loop and place the function call inside the loop braces.',
+      'C++ defines the reusable inspect function before main calls it. Inside main, create the array before the loop and place the function call inside the loop braces. The parts array could also be created before the function definition; this exercise uses the conventional order with the function first.',
     analogy:
       'Install the diagnostic module, load the parts rack, begin inspection, then feed each current part into the module.',
     type: 'ordering',
@@ -2633,7 +2633,7 @@ const cppTitanForgeExercises: FoundationExercise[] = [
       { id: 'array', code: 'std::string parts[] = { "plate", "seal" };' },
       { id: 'end', code: '}' },
       { id: 'loop', code: 'for (std::string part : parts) {' },
-      { id: 'define', code: 'void inspect(std::string part) { /* report part */ }' },
+      { id: 'define', code: 'void inspect(std::string part) { std::cout << part << "\\n"; }' },
     ],
     correctOrder: ['define', 'array', 'loop', 'call', 'end'],
     incorrectMessage: 'Define inspect first, create the array, open the loop, call inspect inside it, then close the loop brace.',
@@ -2656,6 +2656,7 @@ const cppTitanForgeExercises: FoundationExercise[] = [
       { code: '=', plain: 'One equals sign assigns or stores a value. It is not the comparison needed by this if statement.' },
       { code: '==', plain: 'Two equals signs compare values and produce the true or false answer that if needs.' },
       { code: 'if (part == "cracked seal")', plain: 'Parentheses hold the question, while braces surround the route taken when it is true.' },
+      { code: 'inspect("cracked seal");', plain: 'The simulator runs this call inside the usual main frame, which this lesson leaves out so the repair stays in focus.' },
     ],
     checks: [
       { pattern: 'if\\s*\\(\\s*part\\s*==\\s*"cracked seal"\\s*\\)', message: 'Use == inside the if parentheses so C++ compares the two text values.' },
@@ -2678,6 +2679,7 @@ const cppTitanForgeExercises: FoundationExercise[] = [
     focus: 'Replace only the two _____ blanks: first with parts, then with part.',
     codeGuide: [
       ...cppProgramFrame,
+      { code: 'std::string parts[] = { "stable plate", "cracked seal", "charged core" };', plain: 'When the braces list the values, C++ counts them for you, so the size between the brackets may be left out.' },
       { code: 'void inspect(std::string currentPart)', plain: 'void says this function returns no value. currentPart is its typed temporary input parameter.' },
       { code: 'for (std::string part : parts)', plain: 'The range-based loop retrieves one text value at a time from the complete array.' },
       { code: 'inspect(part);', plain: 'This call sends the current loop value into the reusable inspection function.' },
@@ -2736,7 +2738,7 @@ const csharpCaptainsTrialExercises: FoundationExercise[] = [
     eyebrow: 'Command plan 3 of 5',
     title: 'Put the program in order',
     explanation:
-      'C# defines the reusable Report method before the later loop calls it. Create the array before foreach, and place the method call inside the loop braces.',
+      'In this program the reusable Report method is written before the loop that calls it, so a reader meets the tool before its first use. C# would also accept the method after the call; this exercise uses the readable order. Create the array before foreach, and place the method call inside the loop braces.',
     analogy:
       'Install the report control, load the crew manifest, begin roll call, then feed each current officer into the control.',
     type: 'ordering',
@@ -2752,13 +2754,13 @@ const csharpCaptainsTrialExercises: FoundationExercise[] = [
     incorrectMessage: 'Define Report first, create the array, open foreach, call Report inside it, then close the loop brace.',
     output: 'Mira\nPip',
     hint: 'Build the method before the array and loop use it.',
-    recap: 'C# method definitions come before calls, and braces group the instructions that a loop repeats.',
+    recap: 'Writing a C# method before its calls keeps the program easy to read, and braces group the instructions that a loop repeats.',
   },
   {
     eyebrow: 'Command repair 4 of 5',
     title: 'Fix the comparison',
     explanation:
-      'One equals sign stores a value, while two equals signs compare values. An if question needs == so C# can decide whether the current name matches Pip.',
+      'One equals sign stores a value, while two equals signs compare values. An if question needs == so C# can decide whether the current name matches Pip. In C#, the compiler refuses the faulty = version because the condition is not a true-or-false value, which is how this mistake is usually caught.',
     analogy:
       'The bridge must ask whether this officer is the scout. Reassigning the badge cannot answer that question.',
     type: 'bugfix',
@@ -2849,7 +2851,7 @@ const javaNebulaTrialExercises: FoundationExercise[] = [
     eyebrow: 'Expedition plan 3 of 5',
     title: 'Put the program in order',
     explanation:
-      'Java keeps the reusable inspect method in the class before main calls it. Inside main, create the array before the loop and place the method call inside the loop braces.',
+      'The reusable inspect method lives in the class beside main. In this lesson it is written first so you read the tool before its use; Java accepts either position. Inside main, create the array before the loop and place the method call inside the loop braces.',
     analogy:
       'Install the diagnostic behavior, load the battery readings, begin the service cycle, then feed each reading into the module.',
     type: 'ordering',
@@ -2859,7 +2861,7 @@ const javaNebulaTrialExercises: FoundationExercise[] = [
       { id: 'array', code: 'int[] levels = { 80, 25 };' },
       { id: 'end', code: '}' },
       { id: 'loop', code: 'for (int level : levels) {' },
-      { id: 'define', code: 'static void inspect(int level) { /* report level */ }' },
+      { id: 'define', code: 'static void inspect(int level) { System.out.println(level); }' },
     ],
     correctOrder: ['define', 'array', 'loop', 'call', 'end'],
     incorrectMessage: 'Define inspect first, create the array, open the loop, call inspect inside it, then close the loop brace.',
@@ -2871,7 +2873,7 @@ const javaNebulaTrialExercises: FoundationExercise[] = [
     eyebrow: 'Service repair 4 of 5',
     title: 'Fix the comparison',
     explanation:
-      'One equals sign stores a value, while two equals signs compare values. An if question needs == so Java can decide whether the current level equals 25.',
+      'One equals sign stores a value, while two equals signs compare values. An if question needs == so Java can decide whether the current level equals 25. In Java, the compiler refuses the faulty = version because the condition is not a boolean, which is how this mistake is usually caught.',
     analogy:
       'The diagnostic must ask whether this reading matches the fault record. Replacing the reading cannot answer that question.',
     type: 'bugfix',
@@ -2990,10 +2992,10 @@ export const tracks: LanguageTrack[] = [
     role: 'Explorer path',
     missions: [
       mission('py-first-spark', 'python', 1, 'Code and variables', 'Read and change simple code', 'Show text and numbers, then store values under clear names.', 'signal', 'available', pythonExercises),
-      mission('py-signal-protocol', 'python', 2, 'Conditions', 'Make a decision', 'Use true and false values with if statements to choose what happens.', 'satellite', 'locked', pythonSignalProtocolExercises),
+      mission('py-signal-protocol', 'python', 2, 'Conditions', 'Make a decision', 'Use True and False values with if statements to choose what happens.', 'satellite', 'locked', pythonSignalProtocolExercises),
       mission('py-cargo-logic', 'python', 3, 'Lists', 'Store several values', 'Keep several values in one ordered list and read them by position.', 'package', 'locked', pythonCargoLogicExercises),
       mission('py-looping-orbit', 'python', 4, 'Loops', 'Repeat an instruction', 'Visit every list item without copying the same instruction.', 'terminal', 'locked', pythonLoopingOrbitExercises),
-      mission('py-function-foundry', 'python', 5, 'Functions', 'Reuse working code', 'Give a group of instructions a name, pass in values, and return an answer.', 'shield', 'locked', pythonFunctionFoundryExercises),
+      mission('py-function-foundry', 'python', 5, 'Functions', 'Reuse working code', 'Give a group of instructions a name and pass in the values it needs.', 'shield', 'locked', pythonFunctionFoundryExercises),
       mission('py-void-wyrm', 'python', 6, pythonTrack.capstoneTitle, 'Use the ideas together', pythonTrack.capstoneDescription, 'crown', 'locked', pythonVoidWyrmExercises),
     ],
   },
@@ -3003,10 +3005,10 @@ export const tracks: LanguageTrack[] = [
     role: 'Engineer path',
     missions: [
       mission('cpp-reactor', 'cpp', 1, 'Code and variables', 'Read and compile simple code', 'See how C++ code becomes a program, show output, and store text and numbers.', 'signal', 'available', cppExercises),
-      mission('cpp-hull-logic', 'cpp', 2, 'Conditions', 'Make a decision', 'Use true and false values with if statements to choose what happens.', 'shield', 'locked', cppHullLogicExercises),
+      mission('cpp-hull-logic', 'cpp', 2, 'Conditions', 'Make a decision', 'Use True and False values with if statements to choose what happens.', 'shield', 'locked', cppHullLogicExercises),
       mission('cpp-cargo-array', 'cpp', 3, 'Arrays', 'Store several values', 'Keep several values in one ordered array and read them by position.', 'package', 'locked', cppCargoArrayExercises),
       mission('cpp-engine-loop', 'cpp', 4, 'Loops', 'Repeat an instruction', 'Visit every array item without copying the same instruction.', 'terminal', 'locked', cppEngineLoopExercises),
-      mission('cpp-command-function', 'cpp', 5, 'Functions', 'Reuse working code', 'Give a group of instructions a name, pass in values, and return an answer.', 'satellite', 'locked', cppCommandFunctionExercises),
+      mission('cpp-command-function', 'cpp', 5, 'Functions', 'Reuse working code', 'Give a group of instructions a name and pass in the values it needs.', 'satellite', 'locked', cppCommandFunctionExercises),
       mission('cpp-titan-forge', 'cpp', 6, cppTrack.capstoneTitle, 'Use the ideas together', cppTrack.capstoneDescription, 'crown', 'locked', cppTitanForgeExercises),
     ],
   },
@@ -3016,7 +3018,7 @@ export const tracks: LanguageTrack[] = [
     role: 'Captain path',
     missions: [
       mission('cs-shield', 'csharp', 1, 'Code and variables', 'Read and run simple code', 'Run a simple C# program, show output, and store text and numbers.', 'signal', 'available', csharpExercises),
-      mission('cs-command-logic', 'csharp', 2, 'Conditions', 'Make a decision', 'Use true and false values with if statements to choose what happens.', 'shield', 'locked', csharpCommandLogicExercises),
+      mission('cs-command-logic', 'csharp', 2, 'Conditions', 'Make a decision', 'Use True and False values with if statements to choose what happens.', 'shield', 'locked', csharpCommandLogicExercises),
       mission('cs-crew-roster', 'csharp', 3, 'Arrays', 'Store several values', 'Keep several values in one ordered array and read them by position.', 'package', 'locked', csharpCrewRosterExercises),
       mission('cs-patrol-loop', 'csharp', 4, 'Loops', 'Repeat an instruction', 'Visit every array item without copying the same instruction.', 'satellite', 'locked', csharpPatrolLoopExercises),
       mission('cs-command-method', 'csharp', 5, 'Methods', 'Reuse working code', 'Give a group of instructions a name and pass in the values it needs.', 'terminal', 'locked', csharpCommandMethodExercises),
@@ -3029,7 +3031,7 @@ export const tracks: LanguageTrack[] = [
     role: 'Builder path',
     missions: [
       mission('java-coffee-protocol', 'java', 1, 'Code and variables', 'Read and run simple code', 'Run a simple Java program, show output, and store text and numbers.', 'signal', 'available', javaExercises),
-      mission('java-routing-orders', 'java', 2, 'Conditions', 'Make a decision', 'Use true and false values with if statements to choose what happens.', 'satellite', 'locked', javaRoutingOrdersExercises),
+      mission('java-routing-orders', 'java', 2, 'Conditions', 'Make a decision', 'Use True and False values with if statements to choose what happens.', 'satellite', 'locked', javaRoutingOrdersExercises),
       mission('java-crew-array', 'java', 3, 'Arrays', 'Store several values', 'Keep several values in one ordered array and read them by position.', 'package', 'locked', javaCrewArrayExercises),
       mission('java-repeat-brew', 'java', 4, 'Loops', 'Repeat an instruction', 'Visit every array item without copying the same instruction.', 'terminal', 'locked', javaRepeatBrewExercises),
       mission('java-droid-routine', 'java', 5, 'Methods', 'Reuse working code', 'Give a group of instructions a name and pass in the values it needs.', 'shield', 'locked', javaDroidRoutineExercises),

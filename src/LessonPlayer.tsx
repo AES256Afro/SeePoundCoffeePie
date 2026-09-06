@@ -484,7 +484,7 @@ export function LessonPlayer({ initialExerciseId, mission, onExerciseChange, onP
                   <dt>Words on this page</dt>
                   <dd>
                     <details className="lesson-guide__disclosure">
-                      <summary>{exercise.onramp.terms.length} definitions with examples</summary>
+                      <summary>Words and code explained</summary>
                       <dl className="lesson-guide__terms">
                         {exercise.onramp.terms.map((item) => (
                           <div key={`${exercise.id}-${item.term}`}>
@@ -496,6 +496,17 @@ export function LessonPlayer({ initialExerciseId, mission, onExerciseChange, onP
                           </div>
                         ))}
                       </dl>
+                      {exercise.codeGuide && (
+                        <div className="code-guide__items">
+                          <h3>What the code means</h3>
+                          {exercise.codeGuide.map((item) => (
+                            <article key={`${exercise.id}-${item.code}`}>
+                              <code>{item.code}</code>
+                              <p>{item.plain}</p>
+                            </article>
+                          ))}
+                        </div>
+                      )}
                     </details>
                   </dd>
                 </div>
@@ -538,10 +549,10 @@ export function LessonPlayer({ initialExerciseId, mission, onExerciseChange, onP
             </section>
           )}
           {!exercise.onramp && (
-            <div className="analogy-card">
-              <small>A familiar comparison</small>
+            <details className="analogy-card lesson-guide__disclosure" key={`${exercise.id}-comparison`}>
+              <summary>A familiar comparison</summary>
               <p>{exercise.analogy}</p>
-            </div>
+            </details>
           )}
           {editableExercise && !exercise.onramp && (
             <section className="code-onramp" aria-label="Code walkthrough">
@@ -552,22 +563,20 @@ export function LessonPlayer({ initialExerciseId, mission, onExerciseChange, onP
                   <p>Only this part needs editing. The rest is already written for you.</p>
                 </div>
               </div>
-              {exercise.codeGuide && exercise.codeGuide.length > 0 && (
-                <div className="code-guide">
-                  <div className="code-guide__head">
-                    <h2>What the code means</h2>
-                  </div>
-                  <div className="code-guide__items">
-                    {exercise.codeGuide.map((item) => (
-                      <article key={`${exercise.id}-${item.code}`}>
-                        <code>{item.code}</code>
-                        <p>{item.plain}</p>
-                      </article>
-                    ))}
-                  </div>
-                </div>
-              )}
             </section>
+          )}
+          {!exercise.onramp && exercise.codeGuide && exercise.codeGuide.length > 0 && (
+            <details className="code-guide lesson-guide__disclosure" key={`${exercise.id}-walkthrough`}>
+              <summary className="code-guide__head">What the code means</summary>
+              <div className="code-guide__items">
+                {exercise.codeGuide.map((item) => (
+                  <article key={`${exercise.id}-${item.code}`}>
+                    <code>{item.code}</code>
+                    <p>{item.plain}</p>
+                  </article>
+                ))}
+              </div>
+            </details>
           )}
         </section>
 
@@ -578,7 +587,7 @@ export function LessonPlayer({ initialExerciseId, mission, onExerciseChange, onP
 
           {choiceExercise ? (
             <div>
-              {exercise.type === 'prediction' && exercise.displayCode && (
+              {exercise.displayCode && (
                 <div className="prediction-code" aria-label="Code to predict">
                   <div><Code2 size={15} /> Code to read</div>
                   <pre><code>{exercise.displayCode}</code></pre>

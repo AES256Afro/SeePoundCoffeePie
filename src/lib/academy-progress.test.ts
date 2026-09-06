@@ -22,8 +22,16 @@ const academyConcept = {
 describe('academy progress integration', () => {
   afterEach(() => vi.unstubAllGlobals())
 
+  it('retains retired generic-course credit without completing rewritten LLM units', () => {
+    const parsed = parseLearnerProgress({ ...initialProgress('python'), completedLessons: ['LM-101-U1'], completedMissions: ['LM-101-M1'], conceptProgress: { 'model-versus-rule': academyConcept } })
+    expect(parsed).not.toBeNull()
+    expect(parsed?.completedLessons).toEqual(['LM-101-U1'])
+    expect(parsed?.completedLessons).not.toContain('LLM-101-U1')
+    expect(parsed?.completedMissions).not.toContain('LLM-101-M1')
+  })
+
   it('strictly preserves academy unit, module, and concept IDs', () => {
-    const moduleId = 'LM-101-M1'
+    const moduleId = 'LLM-101-M1'
     const progress = {
       ...initialProgress('python'),
       completedMissions: [moduleId],
@@ -64,16 +72,16 @@ describe('academy progress integration', () => {
   it('merges academy unit progress from two devices without inventing module completion', () => {
     const local = {
       ...initialProgress('python'),
-      completedLessons: ['LM-101-U1'],
+      completedLessons: ['LLM-101-U1'],
     }
     const remote = {
       ...initialProgress('python'),
-      completedLessons: ['LM-101-U2'],
+      completedLessons: ['LLM-101-U2'],
     }
 
     const merged = mergeLearnerProgress(local, remote)
 
-    expect(merged.completedLessons).toEqual(['LM-101-U1', 'LM-101-U2'])
+    expect(merged.completedLessons).toEqual(['LLM-101-U1', 'LLM-101-U2'])
     expect(merged.completedMissions).toEqual([])
   })
 
@@ -102,7 +110,7 @@ describe('academy progress integration', () => {
       updatedAt: '2026-08-31T12:00:00.000Z',
       progress: {
         ...initialProgress('python'),
-        completedLessons: ['LM-101-U1', 'LM-999-U1'],
+        completedLessons: ['LLM-101-U1', 'LM-999-U1'],
       },
     }
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue(Response.json({ record: invalidRecord })))

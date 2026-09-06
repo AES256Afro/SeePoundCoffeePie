@@ -450,6 +450,17 @@ export const pythonInteractiveProject: PythonInteractiveProject = {
       title: 'Build the Coffee Counter',
       objective: 'Write a multi-line interactive program and prove that it works with changing input.',
       scaffolding: 'independent',
+      planningHelp: {
+        steps: [
+          'Separate the fixed price, 3, from the changing name and cup count. Only the count needs conversion from text to a number.',
+          'Write the jobs in order: greet, read two answers, convert, multiply, report. Use those notes as your code checklist.',
+        ],
+        inputScope: 'Supply a name on line 1 and a non-negative whole-number count on line 2. This version assumes valid input. Empty count text or words such as three cause int() to fail; handling those cases is a later improvement.',
+        experiments: [
+          'Use Taylor Reed and 0 on separate input lines. The name should keep its space, and the total should be $0.',
+          'Keep that name and change only the count to 5. Predict $15. A report still showing $6 has probably copied the example instead of using total.',
+        ],
+      },
       newTerms: [
         { term: 'test case', meaning: 'One set of input and expected output used to check whether a program behaves correctly.' },
         { term: 'hidden check', meaning: 'An official test whose exact input is withheld so the program must solve the general task.' },

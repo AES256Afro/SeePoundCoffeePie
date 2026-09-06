@@ -32,7 +32,7 @@ describe('open academy learning path routes', () => {
     expect(academyModulePath('RVF-PATH', 'RVF-100', 'RVF-100-M1')).toBe(
       '/paths/reality-versus-fiction/programming-on-screen-and-at-work/build-and-execution',
     )
-    expect(academyUnitPath('LM-100', 'LM-101', 'LM-101-M2', 'LML-101')).toBe(
+    expect(academyUnitPath('LM-100', 'LM-101', 'LLM-101-M2', 'LLM-101-U6')).toBe(
       '/paths/models-from-zero/what-a-model-is/capability-and-limits/model-or-not',
     )
     expect(academyPreparationPath('RVF-PATH', 'RVF-100', 'RVF-100-P2')).toBe(
@@ -74,7 +74,7 @@ describe('open academy learning path routes', () => {
       page: 'academy-module',
       academyPathId: 'LM-100',
       academyCourseId: 'LM-101',
-      academyModuleId: 'LM-101-M1',
+      academyModuleId: 'LLM-101-M1',
       conceptIds: [],
     })
     expect(parseAppRoute(
@@ -92,8 +92,8 @@ describe('open academy learning path routes', () => {
       page: 'academy-unit',
       academyPathId: 'LM-100',
       academyCourseId: 'LM-101',
-      academyModuleId: 'LM-101-M2',
-      academyUnitId: 'LML-101',
+      academyModuleId: 'LLM-101-M2',
+      academyUnitId: 'LLM-101-U6',
       conceptIds: [],
     })
     expect(parseAppRoute(
@@ -182,7 +182,7 @@ describe('open academy learning path routes', () => {
   it('does not build a helper URL across manifest ownership boundaries', () => {
     expect(() => academyCoursePath('LM-100', 'RVF-100')).toThrow()
     expect(() => academyModulePath('LM-100', 'LM-101', 'RVF-100-M1')).toThrow()
-    expect(() => academyUnitPath('LM-100', 'LM-101', 'LM-101-M1', 'LML-101')).toThrow()
+    expect(() => academyUnitPath('LM-100', 'LM-101', 'LLM-101-M1', 'LLM-101-U6')).toThrow()
     expect(() => academyPreparationPath('LM-100', 'LM-101', 'RVF-100-P1')).toThrow()
   })
 })

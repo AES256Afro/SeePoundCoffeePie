@@ -1,5 +1,9 @@
 # Local Models and Language Models Curriculum Blueprint
 
+Implementation update, 6 September 2026: [Local LLM curriculum: active implementation](LOCAL_LLM_REBUILD.md) now defines the six-course, 21-lesson learner sequence. The older inventory below is a research backlog, not a second catalog. Expand it only when a new course adds a distinct practical outcome.
+
+Last reviewed: 2026-09-01
+
 ## Status
 
 This document defines the intended Local Models and Language Models school for SeePoundCoffeePie. It is a curriculum, lab, assessment, and product blueprint. It does not claim that every described course, lab, project, assessment, or credential is already published.
@@ -133,11 +137,11 @@ The complete school is intentionally substantial:
 | Modules | 340 to 420 |
 | Short learning units | 950 to 1,250 |
 | Core guided labs | 65, one per course |
-| Additional guided and challenge labs | 35 or more |
+| Additional guided and challenge labs | 45 |
 | Path portfolio projects | 13 |
 | Integrated capstones | 5 |
 | Applied skill credentials | 3 |
-| Complete guided study | About 320 to 480 hours |
+| Complete guided study | About 392 to 633 hours, the sum of the 13 path estimates |
 
 Time ranges are planning aids, not deadlines. A learner may complete only the route relevant to a local writing assistant, a private retrieval system, a model evaluation role, a small fine-tuning experiment, or research preparation.
 
@@ -277,8 +281,11 @@ Model type, input modality, output modality, training stage, architecture, file 
 | Speech recognition model | Convert audio to text or labels | Audio to text | Accent, noise, consent, and sensitive speech matter |
 | Speech synthesis model | Generate speech-like audio | Text and optional voice conditioning to audio | Voice rights, impersonation, and disclosure matter |
 | Multimodal model | Accept or produce more than one modality | Some combination of text, image, audio, or video | Supported modality does not mean equal quality across all inputs |
+| Mixture-of-experts model | Route each token through a small set of specialized internal blocks called experts, so only part of the parameters is active per token | Same input and output kinds as an equivalent dense model of its family | Memory fit follows the total parameter count while speed mostly follows the active count |
 | Classifier | Assign labels or scores | Item to class or probability | A confidence score is not a guarantee |
 | Adapter | Store a smaller learned change applied to a compatible base model | Base plus adapter to modified behavior | Requires the exact compatible base, tokenizer, and license |
+
+Some current models in several of the families above are mixture-of-experts designs. Such a model activates only part of its parameters for each token, so it carries two headline numbers: a total parameter count, which is what must fit in memory, and an active parameter count, which mostly sets generation speed. Release names such as 30B-A3B express both figures: about 30 billion parameters in total with about 3 billion active per token. Neither number alone describes the model.
 
 ## Training, fine-tuning, and inference
 
@@ -351,6 +358,25 @@ These are arithmetic examples, not fit promises. Actual requirements can be high
 
 Every active lab uses a preflight measurement on the exact machine, artifact, runtime, context length, and concurrency. A broad label such as low, medium, or high hardware is not evidence of fit.
 
+### Mixture-of-experts sizing
+
+For a mixture-of-experts model, the memory estimate uses the total parameter count, because every expert must be loaded even though only a few are active for each token. Speed expectations follow the active parameter count. Worked example: a 30B-A3B model stored at about 4 bits per weight needs roughly 30 x 4 / 8, about 15 GB, of raw weight memory, while its generation speed behaves closer to a 3-billion-parameter dense model than to a 30-billion-parameter one. Estimating memory from the active count is the common mistake; it understates the requirement by the ratio of total to active parameters.
+
+### Context cache in the estimate
+
+Generation also needs working memory beyond the weights. The runtime keeps an attention cache, commonly called the key-value cache, and it grows with context length:
+
+~~~text
+cache bytes = layers x key-value heads x head size x context length x bytes per value x 2
+~~~
+
+The final 2 counts the separate key and value entries. Worked example: a model with 32 layers, 8 key-value heads, a head size of 128, 16-bit cache values, and 8,192 tokens of context needs about 32 x 8 x 128 x 8,192 x 2 x 2 bytes, which is about 1.1 GB on top of the weights. Two notes keep the estimate honest:
+
+- Grouped-query attention shrinks the key-value head count below the attention head count, which is why a model with 32 attention heads can use only 8 key-value heads in this formula.
+- Some runtimes can store the cache at reduced precision, such as 8-bit values, which roughly halves the figure at a possible quality cost.
+
+The preflight measurement remains the final answer, because batch size and concurrent requests each multiply this cache.
+
 ## Number formats and quantization primer
 
 Quantization stores or computes some values with fewer bits or a narrower numeric representation. It can reduce file size and memory use and may improve speed on compatible hardware. It can also reduce quality, change numerical behavior, or make a model incompatible with a runtime.
@@ -360,25 +386,34 @@ Quantization stores or computes some values with fewer bits or a narrower numeri
 | FP32 | 4 bytes | 32-bit floating point with broad precision and range | Common reference or training format; large for local inference |
 | FP16 | 2 bytes | 16-bit floating point with less range and precision than FP32 | Common accelerator format; some operations need care |
 | BF16 | 2 bytes | 16-bit floating point with a wide exponent range and fewer precision bits | Often useful for training on supported hardware |
+| FP8 | 1 byte | 8-bit floating point, available in more than one variant that trades range against precision | Used for training and inference on recent accelerators; hardware and library support must be checked |
 | INT8 | 1 byte in the ideal simple case | 8-bit integer representation plus quantization information | Often a quality and memory compromise, but implementation matters |
 | INT4 | 0.5 byte in the ideal simple case | 4-bit integer representation plus grouping and scale information | Much smaller; quality and backend support must be measured |
 
 The simple byte figures describe the core value width. Real files include scales, group data, metadata, and tensors that may use different formats.
 
+Current model releases also use 4-bit floating microscaling formats, such as MXFP4 and NVFP4, which store small groups of 4-bit floating values with a shared scale. They trade range and precision differently from 4-bit integer schemes, and support depends on the exact hardware and runtime.
+
 ### Common GGUF-style names
 
 GGUF is a container format used by llama.cpp and compatible tools. GGUF is not itself one quantization level.
+
+An importance matrix is a calibration record of which weights matter most for outputs, used to choose where to spend bits. Quant names with an IQ prefix, such as IQ4_XS and IQ2_XXS, are importance-matrix-based recipes that are common at low bit counts.
 
 | Example label | Beginner reading | Important limit |
 | --- | --- | --- |
 | F16 or BF16 | Most weight tensors use a 16-bit floating format | Exact tensor types are recorded in the file |
 | Q8_0 | A common 8-bit block quantization | Not byte-for-byte identical to generic INT8 |
 | Q6_K | A K-family quant near six bits per weight on average | Actual bits per weight and speed depend on tensor mix and backend |
-| Q5_K_M | A mixed K-family quant around five bits | M indicates a mixed choice for selected tensors, not medium quality |
+| Q5_K_M | A mixed K-family quant around five bits | S, M, and L are small, medium, and large size tiers of the tensor-mix recipe; M is not a certified quality tier |
+| Q4_K_S | The small size tier of the four-bit mixed K-family recipe | A smaller file than Q4_K_M from the same family, with a possible quality cost that must be measured |
 | Q4_K_M | A widely encountered mixed K-family quant around four bits | It is a filename convention, not a universal best choice |
 | Q4_0 | An older or simpler four-bit block scheme | Can differ materially from Q4_K_M |
 | Q3_K_M | A smaller mixed K-family quant around three bits | More compression can increase quality loss |
 | Q2_K | A very small K-family quant around two bits | Fit can improve while task quality becomes unacceptable |
+| IQ4_XS or IQ2_XXS | Importance-matrix-based recipes common at low bit counts | The IQ prefix names a recipe, not a certified quality level |
+
+K-quant effective bits per weight run above the nominal number on every row, not only Q6_K. A four-bit K quant, for example, stores closer to five bits per weight once mixed tensors, scales, and group metadata are counted. File-size and memory estimates made from the nominal bit count therefore run low, and the sizing worksheet treats the nominal figure as a floor that the preflight measurement corrects.
 
 The course teaches learners to inspect the exact model card, quantization method, converter version, runtime version, tensor inventory, and evaluation results. It does not rank a quant by label alone.
 
@@ -450,7 +485,7 @@ The school uses the academy-wide risk classes:
 | L3 | Install drivers, change a service, train, quantize, or expose a local API | Snapshot or backup, before state, recovery route, resource and port limits |
 | L4 | Multi-system, distributed, adversarial, or organization-managed experiment | Isolated authorized environment, budget, administrator approval, reset, and independent review |
 
-Every L2 through L4 lab has an L0 or L1 prepared alternative. No learner needs expensive hardware to understand the concept or complete ordinary course reading.
+Every L1 through L4 lab names a prepared L0 no-compute route. An L1 read-only alternative may be offered in addition, but it uses the learner's own machine, so it never replaces the L0 route. No learner needs expensive hardware, or any particular hardware at all, to understand the concept or complete ordinary course reading.
 
 ### Every lab page includes
 
@@ -562,8 +597,8 @@ Choose a fictional task, compare at least three model families and three hosting
 | Course | Module sequence | Core guided lab and evidence |
 | --- | --- | --- |
 | LM-201: Files, programs, processes, and terminals | File and folder; archive and checksum; program and process; terminal and shell; command anatomy; paths; exit status; safe stop | **LML-201 Read Before Run:** annotate a command and prepared process trace, then perform only harmless inspection in a chosen lane, L0 or L1, E1 |
-| LM-202: CPU, GPU, NPU, and accelerators | General and parallel compute; cores and threads; discrete and integrated graphics; NPU limits; drivers; compute backends; architecture compatibility | **LML-202 Compute Inventory:** produce a redacted hardware and backend inventory and label observations versus assumptions, L1, E1 |
-| LM-203: RAM, VRAM, unified memory, disk, and fit | Working versus durable memory; raw-weight arithmetic; runtime overhead; context cache; batch and concurrency; training multipliers; disk headroom | **LML-203 Fit Worksheet:** estimate three artifacts, compare to a prepared or local inventory, then record a safe no-go threshold, L0 or L1, E1 |
+| LM-202: CPU, GPU, NPU, and accelerators | General and parallel compute; cores and threads; discrete and integrated graphics; NPU limits; drivers; compute backends; architecture compatibility | **LML-202 Compute Inventory:** produce a redacted hardware and backend inventory or annotate the prepared equivalent, and label observations versus assumptions, L0 or L1, E1 |
+| LM-203: RAM, VRAM, unified memory, disk, and fit | Working versus durable memory; raw-weight arithmetic; total versus active parameters in mixture-of-experts models; runtime overhead; context cache; batch and concurrency; training multipliers; disk headroom | **LML-203 Fit Worksheet:** estimate three artifacts, compare to a prepared or local inventory, then record a safe no-go threshold, L0 or L1, E1 |
 | LM-204: Python, environments, and dependencies | Interpreter; package; environment; version pin; lock file; driver and library layers; reproducibility; uninstall | **LML-204 Disposable Environment:** create, inspect, export, and remove a version-pinned user-space environment, L2, E2 |
 | LM-205: Experiment folders, baselines, and recovery | Source register; configuration; input fixture; output; logs; hashes; manifest; baseline; one change; rollback; cleanup | **LML-205 Recovery Drill:** build an experiment skeleton, create a known-good checkpoint, make a harmless change, and restore it, L2, E2 |
 
@@ -603,7 +638,7 @@ Create a redacted system inventory, three model-fit estimates, a chosen lane, a 
 | --- | --- | --- |
 | LM-301: Repositories, publishers, and model cards | Repository and revision; publisher and uploader; model card; intended use; architecture; license; files; community conversion; trust boundary | **LML-301 Repository Review:** audit two prepared repositories and explain which facts are verified, claimed, missing, or stale, L0, E1 |
 | LM-302: Weights, tokenizers, templates, and formats | Weight shards; safetensors; framework checkpoints; GGUF; configuration; tokenizer; vocabulary; special tokens; chat template; adapters; compatibility | **LML-302 Artifact Map:** assemble a complete artifact set from a prepared file inventory and diagnose three missing or mismatched parts, L0, E1 |
-| LM-303: Download, verify, inventory, and remove | Exact revision; file selection; download clients; partial downloads; checksum; digest limitations; safe loading; cache location; disk headroom; removal | **LML-303 Verified Download:** download one small version-pinned teaching artifact or use a fixture, create a digest manifest, and remove it, L1 or L2, E2 |
+| LM-303: Download, verify, inventory, and remove | Exact revision; file selection; download clients; partial downloads; checksum; digest limitations; safe loading; cache location; disk headroom; removal | **LML-303 Verified Download:** download one small version-pinned teaching artifact or use a fixture, create a digest manifest, and remove it, L0, L1, or L2, E2 |
 | LM-304: llama.cpp-style command-line inference | Binary and backend; model path; prompt and chat template; context; threads; GPU layers; sampling; streaming; logs; exit and cleanup | **LML-304 Visible Inference:** run or inspect a small local command-line session with synthetic prompts and record configuration, timing, memory, output, and stop behavior, L2, E2 |
 | LM-305: Ollama-style managed local workflow | Local service; model manifest or recipe; local versus configured cloud route; pull and import; tags; run; API; inventory; storage; stop; delete; network observation | **LML-305 Managed Runtime:** use a pinned local workflow or prepared trace to load, query, inventory, stop, and remove an example model, L2, E2 |
 | LM-306: LM Studio-style desktop workflow and runtime comparison | Graphical catalog and side loading; load settings; chat template; local server; logs; model storage; offline check; compare desktop, managed, command-line, and Python routes | **LML-306 Three Interfaces:** complete one live or prepared task through three interface styles and compare transparency, accessibility, control, and cleanup, L0 or L2, E2 |
@@ -679,7 +714,7 @@ Choose one version-pinned teaching artifact and one synthetic prompt set. Compar
 | --- | --- | --- |
 | LM-401: What a dataset is | Example, field, feature, label, instruction, response, preference pair, document, split, schema, missing value, duplicate, distribution | **LML-401 Dataset Anatomy:** label a synthetic text dataset and explain what one row can and cannot represent, L0, E1 |
 | LM-402: Purpose, rights, consent, and provenance | Intended task; collection source; permission; consent; copyright; license; terms; personal and sensitive data; lineage; withdrawal; retention | **LML-402 Rights Gate:** accept, reject, or quarantine prepared sources and document the reason without making legal claims, L0, E1 |
-| LM-403: Inspect, clean, filter, and deduplicate | Profiling; encoding; normalization; missing data; exact and near duplicate; contamination; harmful content; personally identifying information; quality samples | **LML-403 Reversible Cleaning:** run or inspect a staged cleaning pipeline on synthetic data and compare every removal count, L1 or L2, E2 |
+| LM-403: Inspect, clean, filter, and deduplicate | Profiling; encoding; normalization; missing data; exact and near duplicate; contamination; harmful content; personally identifying information; quality samples | **LML-403 Reversible Cleaning:** run or inspect a staged cleaning pipeline on synthetic data and compare every removal count, L0, L1, or L2, E2 |
 | LM-404: Split, tokenize, pack, and batch | Train, validation, and test roles; grouping and leakage; tokenization; truncation; padding; sequence packing; batches; seeds; shuffled order | **LML-404 Leak-Free Split:** build a grouped split, tokenize it, and prove that related examples did not cross the chosen boundary, L2, E2 |
 | LM-405: Version and document a data pipeline | Raw, interim, and processed zones; immutable source; scripts; configuration; environment; checksums; statistics; data card; change log; deletion | **LML-405 Data Build:** rebuild a tiny processed dataset from source fixtures and produce matching manifests and a data card, L2, E2 |
 
@@ -829,7 +864,7 @@ Evaluate a fixed set of prepared outputs or learner-run local configurations for
 | Course | Module sequence | Core guided lab and evidence |
 | --- | --- | --- |
 | LM-601: Why retrieval exists | Knowledge freshness; source of truth; database, search, and model roles; retrieve then generate; citations; when not to use generation | **LML-601 Pipeline Trace:** follow one question through source, chunk, vector, candidates, reranking, prompt, answer, and citation, L0, E1 |
-| LM-602: Documents, chunks, embeddings, and indexes | Ingestion; parsing; metadata; chunk boundaries; overlap; embedding model; vector index; lexical search; hybrid search; updates and deletion | **LML-602 Build an Index:** create or inspect a small local index from synthetic documents and prove one update and one deletion, L1 or L2, E2 |
+| LM-602: Documents, chunks, embeddings, and indexes | Ingestion; parsing; metadata; chunk boundaries; overlap; embedding model; vector index; lexical search; hybrid search; updates and deletion | **LML-602 Build an Index:** create or inspect a small local index from synthetic documents and prove one update and one deletion, L0, L1, or L2, E2 |
 | LM-603: Retrieve, rerank, prompt, and cite | Query transformation; filters; top-k; reranker; context budget; ordering; lost-in-the-middle behavior; answer contract; citations; abstention | **LML-603 Grounded Answer:** compare retrieval-only, vector-plus-reranker, and generated responses with source links, L2, E2 |
 | LM-604: Evaluate and secure retrieval systems | Retrieval recall; ranking; faithfulness; answer relevance; citation correctness; prompt injection in documents; access control; private indexes; stale data | **LML-604 RAG Failure Lab:** diagnose misses, bad chunks, poisoning, access leakage, unsupported synthesis, and stale results in an isolated fixture, L0 or L2, E2 |
 
@@ -880,13 +915,13 @@ Use a synthetic or clearly licensed small document set. Build a local retrieval 
 
 **Outcome:** Decide whether behavior should be changed through prompts, retrieval, software, or training, then run a bounded adapter experiment and compare it against an unchanged baseline.
 
-**Recommended preparation:** LM-200, LM-400, and LM-500 are strongly recommended because adaptation without resource, data, and evaluation plans is not interpretable.
+**Recommended preparation:** LM-200, LM-400, and LM-500 are strongly recommended because adaptation without resource, data, and evaluation plans is not interpretable. The training-concepts courses LM-803 and LM-804 are a recommended refresher before the live training lab LML-704; LM-701 also opens with the same ideas in plain language, so this path remains self-contained.
 
 **Start-now promise:** Prepared configuration, memory, loss, checkpoint, adapter, and evaluation traces support every concept.
 
 | Course | Module sequence | Core guided lab and evidence |
 | --- | --- | --- |
-| LM-701: Should this task be fine-tuned? | Stable behavior versus fresh facts; prompt baseline; retrieval; tools; rules; model selection; full tuning; adapter tuning; decision matrix | **LML-701 Adaptation Gate:** select prompt, retrieval, software, adapter, full tune, or no model for ten cases and defend the boundary, L0, E1 |
+| LM-701: Should this task be fine-tuned? | What training changes: loss, gradient, optimizer, and checkpoint in plain language; stable behavior versus fresh facts; prompt baseline; retrieval; tools; rules; model selection; full tuning; adapter tuning; decision matrix | **LML-701 Adaptation Gate:** select prompt, retrieval, software, adapter, full tune, or no model for ten cases and defend the boundary, L0, E1 |
 | LM-702: LoRA from first principles | Frozen base; matrices and tensors; low-rank update; rank; alpha or scaling; dropout; target modules; trainable-parameter count; adapter artifact | **LML-702 Adapter Anatomy:** calculate shapes and trainable parameters for a tiny prepared layer and inspect an adapter manifest, L0, E1 |
 | LM-703: QLoRA and memory-efficient tuning | Quantized base loading; higher-precision compute; adapter gradients; optimizer; paging concepts; memory tradeoffs; supported backends; common failures | **LML-703 Memory Plan:** compare full tuning, LoRA, and QLoRA estimates for a teaching model and establish stop thresholds, L0 or L1, E1 |
 | LM-704: Run a bounded adapter experiment | Environment; exact base; data; collator; batch and accumulation; learning rate; seed; schedule; checkpoints; logs; stop and resume | **LML-704 Tiny LoRA Run:** train or inspect a tiny adapter on synthetic data with resource ceilings, checkpoints, and full cleanup, L3, E2 |
@@ -1094,11 +1129,11 @@ Create a small synthetic comparison set for one bounded behavior, publish the ru
 
 | Course | Module sequence | Core guided lab and evidence |
 | --- | --- | --- |
-| LM-1001: Bits, floating point, and integer representations | Bit and byte; sign, range, and precision; FP32; FP16; BF16; INT8; INT4; rounding; overflow; scale and zero point | **LML-1001 Number Lab:** encode and round a tiny set of values using prepared examples and explain lost information, L0, E1 |
-| LM-1002: Quantization methods and GGUF names | Per-tensor, per-channel, block and group concepts; post-training quantization; calibration; weight-only and activation quantization; GGUF; Q8_0, Q6_K, Q5_K_M, Q4_K_M, Q4_0, Q3_K_M, Q2_K | **LML-1002 Read the File:** inspect prepared metadata and explain why three similarly named files differ, L0, E1 |
+| LM-1001: Bits, floating point, and integer representations | Bit and byte; sign, range, and precision; FP32; FP16; BF16; FP8; INT8; INT4; microscaling float formats such as MXFP4 and NVFP4; rounding; overflow; scale and zero point | **LML-1001 Number Lab:** encode and round a tiny set of values using prepared examples and explain lost information, L0, E1 |
+| LM-1002: Quantization methods and GGUF names | Per-tensor, per-channel, block and group concepts; post-training quantization; calibration and the importance matrix; weight-only and activation quantization; GGUF; Q8_0, Q6_K, Q5_K_M, Q4_K_S, Q4_K_M, Q4_0, Q3_K_M, Q2_K; IQ-series names such as IQ4_XS and IQ2_XXS | **LML-1002 Read the File:** inspect prepared metadata and explain why three similarly named files differ, L0, E1 |
 | LM-1003: Convert and quantize reproducibly | Source weights; converter; output type; calibration where required; hashes; logs; validation; numerical comparison; artifact card; cleanup | **LML-1003 Quant Build:** convert or inspect a tiny supported artifact, produce a versioned manifest, and verify that it loads, L2 or L3, E2 |
-| LM-1004: Context cache, throughput, latency, and offload | Prompt processing; time to first token; tokens per second; context cache; context length; batch; concurrency; CPU threads; GPU offload; memory bandwidth; thermal behavior | **LML-1004 Performance Trace:** vary one setting at a time and record timing, memory, temperature context, and quality, L1 or L2, E2 |
-| LM-1005: Choose a quant and hardware fit | Raw size; measured working memory; quality by task; backend support; energy and noise context; disk; startup; portability; decision threshold | **LML-1005 Quant Decision:** compare at least three precisions or provided traces and issue a conditional fit recommendation, L0 or L2, E2 |
+| LM-1004: Context cache, throughput, latency, and offload | Prompt processing; time to first token; tokens per second; context cache; context length; batch; concurrency; CPU threads; GPU offload; memory bandwidth; thermal behavior | **LML-1004 Performance Trace:** vary one setting at a time and record timing, memory, temperature context, and quality, or analyze the prepared trace set, L0, L1, or L2, E2 |
+| LM-1005: Choose a quant and hardware fit | Raw size; total versus active parameters for mixture-of-experts builds; measured working memory; quality by task; backend support; energy and noise context; disk; startup; portability; decision threshold | **LML-1005 Quant Decision:** compare at least three precisions or provided traces and issue a conditional fit recommendation, L0 or L2, E2 |
 
 ### Quant evaluation matrix
 
@@ -1133,7 +1168,7 @@ LM-1004 has a checkpoint after each single-variable trial and a required cooldow
 
 The path checkpoint requires:
 
-- an explanation of FP32, FP16, BF16, INT8, and INT4;
+- an explanation of FP32, FP16, BF16, FP8, INT8, and INT4;
 - correct interpretation and limits of common GGUF names;
 - a reproducible conversion or artifact record;
 - measured fit and performance;
@@ -1157,7 +1192,7 @@ Compare three representations of the same versioned model, or use supplied trace
 | LM-1101: From process to local API | Process; standard input and output; request and response; endpoint; JSON; streaming; client and server; timeout; cancellation; error | **LML-1101 API Trace:** annotate a prepared local request from client through model process to response and failure handling, L0, E1 |
 | LM-1102: Bind addresses, access, and secrets | Loopback; private and public address; port; firewall; origin; authentication; token storage; least privilege; transport encryption context | **LML-1102 Loopback Service:** run or inspect a loopback-only synthetic service, verify its listener, reject an unauthenticated nonlocal route, and stop it, L2 or L3, E2 |
 | LM-1103: Service lifecycle, templates, and logs | Model load and unload; chat template; default generation settings; configuration; service user; startup; health; structured logs; prompt privacy; retention | **LML-1103 Operate a Service:** install or inspect a private service definition, start it, verify health, rotate a safe setting, review logs, and remove it, L3, E2 |
-| LM-1104: Capacity, queues, and observability | Time to first token; throughput; concurrent requests; batch; queue; context memory; cancellation; rate limit; metrics; alert; capacity test | **LML-1104 Capacity Envelope:** measure or analyze one-user and multi-request behavior, then set limits before instability, L1 or L3, E2 |
+| LM-1104: Capacity, queues, and observability | Time to first token; throughput; concurrent requests; batch; queue; context memory; cancellation; rate limit; metrics; alert; capacity test | **LML-1104 Capacity Envelope:** measure or analyze one-user and multi-request behavior, then set limits before instability, L0, L1, or L3, E2 |
 | LM-1105: Upgrade, back up, roll back, and retire | Version and artifact pin; canary; compatibility; configuration and adapter backup; data retention; rollback; cache rebuild; decommission; verification | **LML-1105 Upgrade Drill:** update a cloned or prepared local service, detect a regression, restore the previous version, and verify cleanup, L3, E2 |
 
 ### Local service exposure ladder
@@ -1338,7 +1373,7 @@ Review a fictional or learner-created local system. Produce a threat model, lice
 | --- | --- | --- |
 | LM-1301: Distributed training and scaling concepts | Device and worker; data parallel; model and tensor parallel; pipeline; sharding; collective communication; gradient accumulation; checkpointing; failures; efficiency; cost and energy context | **LML-1301 Distributed Trace:** step through a prepared four-worker training timeline, diagnose a failed worker and communication bottleneck, and choose a recovery, L0, E1 |
 | LM-1302: Reproduce a research claim | Research question; paper reading; claim and evidence; repository; environment; data and license; seed; baseline; ablation; statistics; negative result; artifact preservation | **LML-1302 Reproduction Packet:** reproduce a tiny published or supplied claim, or audit a prepared attempt, and report matches, differences, and uncertainty, L0 or L2, E2 |
-| LM-1303: Specialization studio | Code; vision-language; image generation; speech recognition; speech synthesis; multimodal; multilingual; domain adaptation; embedding and reranking; local agents and tool use | **LML-1303 Specialization Project:** complete one bounded project with modality-specific privacy, quality, license, accessibility, and safety tests, L0 through L4, E2 or E3 |
+| LM-1303: Specialization studio | Shared specialization foundations: the safety, data-rights, evaluation, and reproducibility requirements every branch reuses; survey of the ten planned specialization branches; scoping one bounded project; branch-specific risk review | **LML-1303 Specialization Project:** complete one bounded survey-level project with modality-specific privacy, quality, license, accessibility, and safety tests, L0 or L2, E2 or E3 |
 
 ### Distributed training boundaries
 
@@ -1355,6 +1390,8 @@ The course explains:
 It does not ask a beginner to rent a cluster. Any external-compute lane has an estimated maximum spend, expiration, inventory command, access-control plan, and deletion verification. L0 analysis is always available.
 
 ### Specialization branches
+
+The first release of LM-1303 teaches the shared foundations and a survey of the branches below. Following the canonical staging in M328, each branch becomes a full specialization wave only after the shared safety, data, evaluation, and reproducibility foundations exist. This table is a staging map for those future waves, not a list of ten current sub-courses.
 
 | Branch | Additional concepts | Required caution |
 | --- | --- | --- |
@@ -1398,7 +1435,7 @@ Choose one specialization and one narrow claim. Establish a baseline, use synthe
 
 ## Core guided lab inventory
 
-Each of the 65 courses above has one named core lab. The complete catalog adds at least 35 extension labs for a minimum of 100 maintained guided labs.
+Each of the 65 courses above has one named core lab. The complete catalog adds 45 extension labs for a total of 110 maintained guided labs when the full extension target is met.
 
 | Lab family | Core labs | Extension target | Representative extensions |
 | --- | ---: | ---: | --- |
@@ -1418,6 +1455,8 @@ Each of the 65 courses above has one named core lab. The complete catalog adds a
 | **Total** | **65** | **45** | **110 maintained labs when the full extension target is met** |
 
 ### Lab package structure
+
+This layout is the school-specific rendering of the normative [download package contract](LAB_ASSESSMENT_CREDENTIAL_STANDARD.md) in the lab, assessment, and credential standard. When the two disagree, the standard wins.
 
 ~~~text
 local-model-lab-id/
@@ -1969,38 +2008,45 @@ Local Models uses concepts from other schools without making them locks.
 
 ## Alignment to canonical milestones M296 through M330
 
-| Canonical milestone | Curriculum coverage |
+Convention: each row cites one canonical milestone ID together with its exact ledger title from MILESTONES.md, so a renamed or renumbered milestone shows up as detectable drift between this table and the ledger.
+
+| Canonical milestone and exact ledger title | Curriculum coverage |
 | --- | --- |
-| M296, school boundary | Non-negotiable open access, product and computation boundary, prepared-example label |
-| M297, foundations | LM-100 and first-hour route |
-| M298, model lifecycle | LM-103 plus lifecycle visual and paths LM-400 through LM-1200 |
-| M299, responsible use | LM-106, LM-500, LM-1200, and reality callouts |
-| M300, local lab foundation | LM-200 and shared lab contract |
-| M301, hardware fit | LM-202, LM-203, sizing worksheet, and LM-1005 |
-| M302, repositories and licenses | LM-301 through LM-303 and LM-1202 through LM-1204 |
-| M303, local runtimes | LM-304 through LM-306 |
-| M304, offline inference | LM-303 through LM-306 and four-part offline proof |
-| M305, prompts, templates, context, and sampling | LM-104, LM-302, LM-304 through LM-306 |
-| M306, measurement | LM-505, LM-1004, and benchmark contract |
-| M307, data | LM-400 |
-| M308, evaluation | LM-500 |
-| M309, retrieval | LM-600 |
-| M310, fine-tuning decision | LM-701 |
-| M311, training concepts | LM-800 |
-| M312, LoRA and QLoRA | LM-702 through LM-706 |
-| M313, controlled experiments | LM-205, LM-505, LM-705, LM-806, and shared experiment records |
-| M314, small training | LM-805 and LM-806 |
-| M315, preference work | LM-900 |
-| M316, quantization and performance | LM-1000 |
-| M317, local serving | LM-1100 |
-| M318, security and privacy | LM-1200 plus boundaries across every path |
-| M319, distributed and reproducible research | LM-1301 and LM-1302 |
-| M320, specializations | LM-1303 |
-| M321 through M323, skill credentials | Local Model Operator, Data and Evaluation Practitioner, Local Model Engineer |
-| M324 through M327, evidence and integrity | Shared E0 through E4 levels, minimal manifest, rubrics, privacy, and verification |
-| M328, Linux integration | Explicit Linux bridge map and shared learner lanes |
-| M329, cross-school integration | Networking, Cybersecurity, Programming, Math, Data, and academy contracts |
-| M330, release gate | Definition of done, release waves, technical review, accessibility, and safety gates |
+| M296, local-model school boundary | Non-negotiable open access, product and computation boundary, and the prepared-example label |
+| M297, LLM foundations path | LM-100 and the first-hour route |
+| M298, tokens and model lifecycle | LM-103, LM-104, and the model lifecycle visual |
+| M299, responsible-use foundations | LM-106, LM-1205, the honest-limits sections, and the reality-versus-fiction callout library |
+| M300, local-lab foundations | LM-200, especially LM-201, LM-204, and LM-205, plus the lab safety contract |
+| M301, hardware and model-fit planning | LM-202, LM-203, the sizing worksheet, and LM-1005 |
+| M302, model repositories, revisions, and licenses | LM-301 through LM-303 and the download, trust, and verification baseline |
+| M303, local runtime path | LM-304 through LM-306 and the runtime roles table |
+| M304, first offline inference | LM-303, LM-304, and the four-part offline proof exercise |
+| M305, prompts, templates, context, and sampling | LM-104, LM-302, and LM-304 through LM-306 |
+| M306, local inference measurement and diagnosis | LM-306 runtime comparison, the tool-specific lab contract, and LM-1004 |
+| M307, data purpose, rights, and provenance | LM-401, LM-402, and the data provenance minimum |
+| M308, model-data formats | LM-401, LM-404, and the chat-template coverage in LM-302 |
+| M309, cleaning and private-information removal | LM-403 |
+| M310, splits, leakage, and dataset cards | LM-404 and LM-405 |
+| M311, evaluation foundations | LM-501 and LM-502 |
+| M312, metrics and human evaluation | LM-503 |
+| M313, safety and regression evaluation | LM-504, LM-705, and LM-904 |
+| M314, local retrieval path | LM-601 through LM-603 |
+| M315, retrieval security | LM-604 and the retrieval system boundaries |
+| M316, decide whether to fine-tune | LM-701 and LML-701 |
+| M317, training concepts without mystery | LM-803, LM-804, the training-concepts table, and the plain-language training module that opens LM-701 |
+| M318, LoRA and QLoRA path | LM-700, especially LM-702 and LM-703 |
+| M319, controlled fine-tuning experiments | LM-704, LM-705, and the safe experiment contract |
+| M320, fine-tuning capstone | Capstone 3, Adapter Experiment, and portfolio project 7 |
+| M321, tokenizers and small-model training | LM-800, especially LM-802 through LM-805 |
+| M322, scaling and ablation labs | LM-806 and portfolio project 8 |
+| M323, preference-tuning path | LM-900 |
+| M324, quantization and performance path | LM-1000 |
+| M325, package and serve locally | LM-706 and LM-1100 |
+| M326, local-model security and privacy | LM-1200 and the boundary sections in every path |
+| M327, distributed training and reproducible research | LM-1301 and LM-1302 |
+| M328, local-model specializations | LM-1303 shared foundations and survey, with the ten branches staged as future waves |
+| M329, local-model credential sequence | The completion records and applied skill credentials 1 through 3 |
+| M330, local-model release gate | Release waves, definition of done for one course, and school acceptance criteria |
 
 ## Release waves
 
@@ -2035,7 +2081,7 @@ A course is ready only when:
 - exercises include specific feedback and another attempt;
 - natural breaks and resumable checkpoints are present;
 - each active lab follows the shared risk, preflight, recovery, stop, cleanup, and evidence contracts;
-- every L2 through L4 lab has a prepared L0 or L1 route;
+- every L1 through L4 lab has a prepared L0 no-compute route;
 - no lab needs a real secret, private dataset, public target, or paid service;
 - no command silently installs, phones home, exposes a listener, or runs unreviewed remote code;
 - exact platform, artifact, environment, and resource claims were tested;
@@ -2062,7 +2108,7 @@ A course is ready only when:
 - Base, instruct, reasoning, chat, code, embedding, reranker, vision, image-generation, audio, multimodal, classifier, and adapter roles are covered.
 - Local, public-cloud, and organization-managed deployment tradeoffs cover privacy, cost, latency, control, quality, maintenance, offline use, and failure.
 - Open source, open weights, source-available, open-model project, and proprietary terms remain distinct.
-- FP32, FP16, BF16, INT8, INT4, GGUF, Q8_0, Q6_K, Q5_K_M, Q4_K_M, Q4_0, Q3_K_M, and Q2_K are explained without universal quality promises.
+- FP32, FP16, BF16, FP8, INT8, INT4, microscaling formats such as MXFP4 and NVFP4, GGUF, Q8_0, Q6_K, Q5_K_M, Q4_K_S, Q4_K_M, Q4_0, Q3_K_M, Q2_K, and IQ-series names such as IQ4_XS are explained without universal quality promises.
 - Hardware sizing separates raw weights from runtime, context, batching, concurrency, training state, and headroom.
 - Formats, tokenizers, templates, adapters, runtimes, downloading, verification, safe loading, and cleanup are taught.
 - llama.cpp-style, Ollama-style, LM Studio-style, Python, and optional MLX workflows are versioned examples.

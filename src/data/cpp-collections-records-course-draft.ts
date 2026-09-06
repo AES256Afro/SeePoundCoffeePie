@@ -77,13 +77,13 @@ const returnValueExercises: Exercise[] = [
     eyebrow: 'Result path 3 of 5',
     title: 'Use a returned result',
     explanation:
-      'A call to a non-void function is an expression because it produces a value. C++ finishes the call first, then stores its returned result in the variable on the left of the equals sign.',
+      'An expression produces a value, such as 4 * 2. The first int in double_units promises a whole-number result. return ends the call and sends that result back; it does not print it. main stores the answer in total_units, then std::cout displays it.',
     analogy:
       'The doubling tool finishes its calculation before the stock clerk writes the result on the card labeled total_units.',
     type: 'prediction',
-    prompt: 'What number reaches the console?',
+    prompt: 'What number reaches the console after main calls double_units?',
     displayCode:
-      'int double_units(int units) {\n    return units * 2;\n}\n\nint total_units = double_units(4);\nstd::cout << total_units;',
+      '#include <iostream>\n\nint double_units(int units) {\n    return units * 2;\n}\n\nint main() {\n    int total_units = double_units(4);\n    std::cout << total_units;\n    return 0;\n}',
     choices: [
       {
         id: 'a',
@@ -164,7 +164,7 @@ const returnValueExercises: Exercise[] = [
     eyebrow: 'Reusable calculation 5 of 5',
     title: 'Build a reusable part total',
     explanation:
-      'A useful calculation function receives the typed values it needs and returns one matching answer. Different calls can reuse the same function with different prices and quantities.',
+      'A useful calculation function receives the typed values it needs and returns one matching answer. This one is named subtotal because it returns one order line of price times quantity. Different calls can reuse the same function with different prices and quantities.',
     analogy:
       'One checkout rule can calculate many workshop orders. The clerk changes the numbers placed in the two input slots instead of rebuilding the rule.',
     type: 'code',
@@ -226,7 +226,7 @@ const vectorExercises: Exercise[] = [
     analogy:
       'A two-slot shelf has room for exactly two labeled bins. The inspection walk visits the first bin and then the second.',
     type: 'prediction',
-    prompt: 'What two lines will this familiar array loop display?',
+    prompt: 'What two lines will this familiar array loop display? The shown lines run inside the usual main frame, which this lesson leaves out to keep the focus small.',
     displayCode:
       'std::string parts[2] = {"bolts", "seals"};\n\nfor (std::string part : parts) {\n    std::cout << part << "\\n";\n}',
     choices: [
@@ -262,7 +262,7 @@ const vectorExercises: Exercise[] = [
     analogy:
       'A fixed shelf has a set number of spaces. A workshop cart can accept another matching bin when one arrives. Its labeled controls belong to the cart and perform jobs such as adding a bin or counting the bins.',
     type: 'choice',
-    prompt: 'Why would this program use a vector instead of a fixed array?',
+    prompt: 'Why use a vector here? The include belongs at the top of the file; the two statements below it belong inside main.',
     displayCode:
       '#include <vector>\n\nstd::vector<std::string> parts = {"bolts"};\nparts.push_back("seals");',
     choices: [
@@ -297,7 +297,7 @@ const vectorExercises: Exercise[] = [
     analogy:
       'The cart begins with two bins. The push-back control adds one more at the end, and the count display then reports all three bins.',
     type: 'prediction',
-    prompt: 'What number reaches the console after the vector grows?',
+    prompt: 'What number reaches the console after the vector grows? The shown lines run inside the usual main frame, which this lesson leaves out to keep the focus small.',
     displayCode:
       'std::vector<std::string> parts = {"bolts", "seals"};\nparts.push_back("cables");\nstd::cout << parts.size();',
     choices: [
@@ -442,7 +442,7 @@ const structExercises: Exercise[] = [
     analogy:
       'A workshop form has a text box for a part name and a numbered box for its quantity. Each label tells the clerk what kind of value belongs in that space.',
     type: 'prediction',
-    prompt: 'What line will the two typed variables produce when they are displayed together?',
+    prompt: 'What line will the two typed variables produce when they are displayed together? The shown lines run inside the usual main frame, which this lesson leaves out to keep the focus small.',
     displayCode:
       'std::string part_name = "bolts";\nint quantity = 4;\n\nstd::cout << part_name << ": " << quantity;',
     choices: [
@@ -474,7 +474,7 @@ const structExercises: Exercise[] = [
     eyebrow: 'Record workshop 2 of 5',
     title: 'Meet a record shape',
     explanation:
-      'A record keeps related values together. In C++, struct defines a reusable user-defined type for that record shape. Each named variable inside the struct is a field. Part part{"bolts", 4}; uses aggregate initialization: the braces provide one starting value for each field in the order those fields were defined.',
+      'A record keeps related values together. struct Part defines a new type, a shape other values can use. name and quantity are its fields. Part part{"bolts", 4}; supplies their starting values inside braces in field order. This is called aggregate initialization. The ; after the struct closes its definition.',
     analogy:
       'Instead of carrying a loose name card and quantity card, the workshop uses one Part form with two labeled fields. Every completed Part form follows the same shape.',
     type: 'choice',
@@ -513,7 +513,7 @@ const structExercises: Exercise[] = [
     analogy:
       'The dot acts like pointing to one labeled box on a completed Part form. Pointing to the name box retrieves bolts, and pointing to the quantity box retrieves 4.',
     type: 'prediction',
-    prompt: 'What line reaches the console when both fields are read with the dot operator?',
+    prompt: 'What line reaches the console when both fields are read with the dot operator? The shown lines run inside the usual main frame, which this lesson leaves out to keep the focus small.',
     displayCode:
       'struct Part {\n    std::string name;\n    int quantity;\n};\n\nPart part{"bolts", 4};\nstd::cout << part.name << ": " << part.quantity;',
     choices: [
@@ -658,7 +658,7 @@ const recordUpdateExercises: Exercise[] = [
     analogy:
       'The clerk copies each inventory form onto a reading card, reports its two fields, then moves to the next form in the tray.',
     type: 'prediction',
-    prompt: 'What two lines will this read-only loop display from the supplied vector?',
+    prompt: 'What two lines will this read-only loop display from the supplied vector? The shown lines run inside the usual main frame, which this lesson leaves out to keep the focus small.',
     displayCode:
       'std::vector<Part> parts = {{"bolts", 4}, {"seals", 2}};\n\nfor (Part part : parts) {\n    std::cout << part.name << ": " << part.quantity << "\\n";\n}',
     choices: [
@@ -694,7 +694,7 @@ const recordUpdateExercises: Exercise[] = [
     analogy:
       'Writing on a photocopy leaves the inventory form unchanged. A reference is permission to write on the original form through another temporary name.',
     type: 'choice',
-    prompt: 'Why does this code place an ampersand after Part in both declarations?',
+    prompt: 'Why use & in both declarations? The add_one helper is defined outside main. The loop runs inside main with the Part type and parts vector already supplied.',
     displayCode:
       'void add_one(Part& part) {\n    part.quantity = part.quantity + 1;\n}\n\nfor (Part& part : parts) {\n    add_one(part);\n}',
     choices: [
@@ -725,11 +725,11 @@ const recordUpdateExercises: Exercise[] = [
     eyebrow: 'Reference trace 3 of 5',
     title: 'Follow an original record update',
     explanation:
-      'The range-based loop variable is declared as Part& current, so current refers to the original vector element during that pass. Assigning a new quantity through current therefore changes the quantity stored inside parts.',
+      'The range-based loop variable is declared as Part& current, so current refers to the original vector element during that pass. Assigning a new quantity through current therefore changes the quantity stored inside parts. A vector supports the same square-bracket position access as an array, so parts[0] reads its first stored record.',
     analogy:
       'The clerk writes two more units directly on the original bolts form. Reading that same form afterward reveals the updated quantity.',
     type: 'prediction',
-    prompt: 'What line reaches the console after the reference loop updates the stored record?',
+    prompt: 'What line reaches the console after the reference loop updates the stored record? The shown lines run inside the usual main frame, which this lesson leaves out to keep the focus small.',
     displayCode:
       'std::vector<Part> parts = {{"bolts", 4}};\n\nfor (Part& current : parts) {\n    current.quantity = current.quantity + 2;\n}\n\nstd::cout << parts[0].name << ": " << parts[0].quantity;',
     choices: [
@@ -886,7 +886,7 @@ const recordSummaryExercises: Exercise[] = [
     analogy:
       'A workshop counter reads the quantity on one parts card, doubles it, and hands the finished number to the clerk who requested the count.',
     type: 'prediction',
-    prompt: 'What whole number reaches the console after the returned calculation is stored?',
+    prompt: 'What whole number reaches the console? Part and doubled_units are defined above main. The last three statements run inside main.',
     displayCode:
       'struct Part {\n    std::string name;\n    int quantity;\n};\n\nint doubled_units(Part part) {\n    return part.quantity * 2;\n}\n\nPart seals = {"seals", 3};\nint units = doubled_units(seals);\nstd::cout << units;',
     choices: [
@@ -953,7 +953,7 @@ const recordSummaryExercises: Exercise[] = [
     eyebrow: 'Summary plan 3 of 5',
     title: 'Put the total in order',
     explanation:
-      'Aggregation means combining several values into one summary. This function receives a small fixed vector by value, which makes a copy for simple read-only practice. It initializes one accumulator, visits every copied Part, adds each quantity, and returns the finished total.',
+      'Aggregation means combining several values into one summary. This function receives a small fixed vector by value, which makes a copy for simple read-only practice. It initializes one accumulator, visits every copied Part, adds each quantity, and returns the finished total. For the fixed records bolts 4, seals 3, and cables 7 used in this module, the finished function returns 14.',
     analogy:
       'Set up the counting job, write one starting zero, visit every inventory card, close the counting walk, and only then hand over the final number.',
     type: 'ordering',
@@ -981,7 +981,7 @@ const recordSummaryExercises: Exercise[] = [
     eyebrow: 'Summary repair 4 of 5',
     title: 'Keep the total between passes',
     explanation:
-      'The accumulator is currently declared inside the loop, so every pass creates a fresh total at zero and the name disappears when that pass ends. Move the complete declaration before the loop so one total can remember all three quantities and still be returned afterward.',
+      'The accumulator is currently declared inside the loop, so every pass creates a fresh total at zero and the name disappears when that pass ends. That scope problem is also why this starter does not compile: the final return total; names a variable that no longer exists outside the loop. Move the complete declaration before the loop so one total can remember all three quantities and still be returned afterward.',
     analogy:
       'The clerk keeps starting a new count sheet for each parts card and throws it away after one row. One sheet must be opened before the inspection begins.',
     type: 'bugfix',
@@ -1106,7 +1106,7 @@ const workshopReportExercises: Exercise[] = [
     analogy:
       'Two deliveries reach the same bolts card. The clerk writes both amounts onto the original card, so the second update begins with the first updated number.',
     type: 'prediction',
-    prompt: 'What line reaches the console after both familiar restock calls finish?',
+    prompt: 'What line reaches the console? The Part type is already supplied. Define restock above main; the vector, calls, and output shown below the helper belong inside main.',
     displayCode:
       'void restock(std::vector<Part>& parts, std::string name, int amount) {\n    for (Part& part : parts) {\n        if (part.name == name) {\n            part.quantity = part.quantity + amount;\n        }\n    }\n}\n\nstd::vector<Part> parts = {{"bolts", 4}};\nrestock(parts, "bolts", 2);\nrestock(parts, "bolts", 1);\nstd::cout << parts[0].name << ": " << parts[0].quantity;',
     choices: [
@@ -1171,35 +1171,29 @@ const workshopReportExercises: Exercise[] = [
     eyebrow: 'Dependency order 3 of 5',
     title: 'Put the report flow in order',
     explanation:
-      'Dependency order means a type or helper must be defined before later code uses it. After the familiar definitions exist, main can create fixed data, update it, calculate a total, collect low-stock names, and display results in that data-flow order.',
+      'Dependency order makes names available before use. Here Part comes before helpers, and helpers before main. These helpers do not call each other, so their relative order is free. C++ also permits a prior function declaration, describing its name and types, with its body written later. Here we keep each definition together.',
     analogy:
       'Build and label the workshop stations first, place the stock cards second, process deliveries third, then count, review, and print the report.',
     type: 'ordering',
     prompt: 'Arrange these familiar sections into a dependable top-to-bottom Workshop Stock Report flow.',
     orderItems: [
-      { id: 'filter-call', code: 'std::vector<std::string> names = low_stock(parts, 3);' },
-      { id: 'update-helper', code: 'void restock(std::vector<Part>& parts, ...) { ... }' },
       { id: 'report', code: 'std::cout << total;\nfor (std::string name : names) { ... }' },
       { id: 'record', code: 'struct Part { std::string name; int quantity; };' },
-      { id: 'data', code: 'std::vector<Part> parts = {{"bolts", 4}, ...};' },
-      { id: 'filter-helper', code: 'std::vector<std::string> low_stock(std::vector<Part> parts, ...) { ... }' },
-      { id: 'update-call', code: 'restock(parts, "bolts", 3);' },
-      { id: 'total-helper', code: 'int total_units(std::vector<Part> parts) { ... }' },
-      { id: 'total-call', code: 'int total = total_units(parts);' },
+      { id: 'data', code: 'std::vector<Part> parts = {{"bolts", 4}, {"seals", 2}, {"cables", 7}};' },
+      { id: 'helpers', code: 'void restock(std::vector<Part>& parts, ...) { ... }\nint total_units(std::vector<Part> parts) { ... }\nstd::vector<std::string> low_stock(std::vector<Part> parts, ...) { ... }' },
+      { id: 'update-call', code: 'restock(parts, "bolts", 3);\nrestock(parts, "cables", 1);' },
+      { id: 'summaries', code: 'int total = total_units(parts);\nstd::vector<std::string> names = low_stock(parts, 3);' },
     ],
     correctOrder: [
       'record',
-      'update-helper',
-      'total-helper',
-      'filter-helper',
+      'helpers',
       'data',
       'update-call',
-      'total-call',
-      'filter-call',
+      'summaries',
       'report',
     ],
     incorrectMessage:
-      'Define Part and all helpers first. Then create fixed data, update it, calculate the total, collect filtered names, and display the report.',
+      'Define Part, then the helper group. Inside main, create the fixed data, apply both restock updates, calculate the total and low-stock names, and display the report last.',
     output: '17\nseals',
     hint: 'Definitions come before uses. Inside main, each later result depends on the data created or changed by the stage before it.',
     recap: 'Dependency order places definitions before calls, then lets data flow through creation, update, calculation, filtering, and display.',

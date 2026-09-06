@@ -162,7 +162,7 @@ export const csharpWorkshopProject: CsharpWorkshopProject = {
         eyebrow: 'Checkpoint 4 of 12',
         title: 'Turn typed digits into a number',
         explanation:
-          'Console.ReadLine returns text even when the person types digits. int.Parse takes that digit text and returns a real integer. The ?? "0" fallback provides parseable digit text if no input line exists, so visitCount always receives an int.',
+          'Console.ReadLine returns text even when the person types digits. int.Parse converts suitable digit text to an integer. The ?? "0" fallback handles a missing line only. An empty line or a word such as three still causes a FormatException: an error saying the text is not in the required form.',
         analogy:
           'A paper form can contain the characters 4 and still be paper text. Parsing is the clerk who reads those characters and records the actual count in the workshop ledger.',
         type: 'code',
@@ -353,10 +353,10 @@ export const csharpWorkshopProject: CsharpWorkshopProject = {
       id: 'project-csharp-method',
       order: 9,
       title: 'Package the badge printer',
-      objective: 'Define a reusable void method with typed parameters, then call it with the stored visitor values.',
+      objective: 'Define a reusable local function with typed parameters, then call it with the stored visitor values.',
       scaffolding: 'supported',
       newTerms: [
-        { term: 'method', meaning: 'A named group of instructions that can be called whenever a program needs that job performed.' },
+        { term: 'local function', meaning: 'A named group of instructions inside the surrounding program. PrintBadge is a local function in this top-level C# file; Console.WriteLine is a method provided by the Console type.' },
         { term: 'void', meaning: 'A return type stating that this method performs its job without returning a value to the caller.' },
         { term: 'parameter', meaning: 'A typed name in a method definition that receives one value supplied by a later call.' },
         { term: 'argument', meaning: 'The actual value or variable supplied to a parameter when the method is called.' },
@@ -368,11 +368,11 @@ export const csharpWorkshopProject: CsharpWorkshopProject = {
         eyebrow: 'Checkpoint 9 of 12',
         title: 'Package the badge printer',
         explanation:
-          'PrintBadge names a reusable job. Its string name and int visits parameters receive values when the method is called. void says the method performs output without handing a result back. The later call passes guestName and visitCount as arguments.',
+          'PrintBadge is a local function in this top-level program. Its string name and int visits parameters receive values from a call. void means it returns no value. Defining the function does not print anything: PrintBadge(guestName, visitCount) runs its body with those arguments.',
         analogy:
           'A badge printer has two labeled slots: one for a name and one for a visit count. Any visitor record can be placed into those slots, and the same printing instructions create the correct badge.',
         type: 'code',
-        prompt: 'Replace the comment with the complete PrintBadge method, then keep the supplied call that uses the two visitor variables.',
+        prompt: 'Replace the comment with the complete PrintBadge local function, then keep the supplied call that uses the two visitor variables.',
         starterCode: 'using System;\n\n// Define PrintBadge here.\n\nstring guestName = "Alex Kim";\nint visitCount = 4;\nPrintBadge(guestName, visitCount);',
         focus: 'Define void PrintBadge(string name, int visits) with the exact interpolated badge output inside its braces. There is no _____ blank.',
         codeGuide: [
@@ -388,7 +388,7 @@ export const csharpWorkshopProject: CsharpWorkshopProject = {
         ],
         output: 'Badge: Alex Kim | Visits: 4',
         hint: 'Use the header void PrintBadge(string name, int visits), then place the badge WriteLine between its braces.',
-        recap: 'A method packages one job under a reusable name. Typed parameters receive the arguments supplied in the later method call.',
+        recap: 'A local function packages one job under a reusable name. Typed parameters receive the arguments supplied when you call it.',
         xp: 20,
       },
     },
@@ -407,13 +407,13 @@ export const csharpWorkshopProject: CsharpWorkshopProject = {
         eyebrow: 'Checkpoint 10 of 12',
         title: 'Put the desk workflow in order',
         explanation:
-          'A complete program is still a sequence of small jobs. The badge method must be defined before the final call in this project shape. The areas must exist before foreach visits them, and the answers must be stored before the decision or final badge uses them.',
+          'The areas must exist before foreach visits them, and input must be stored before the decision or badge uses it. We place the PrintBadge definition first to make this project easy to read. C# also allows a local function to be defined below its call; that placement is not a language requirement.',
         analogy:
           'A front desk prepares the badge printer and room directory before opening. It then records the visitor, chooses access, points out the rooms, and prints the completed badge.',
         type: 'ordering',
         prompt: 'Arrange the six larger jobs in the order used by the final Community Workshop Check-In program.',
         orderItems: [
-          { id: 'print-badge-method', code: 'Define the reusable PrintBadge method' },
+          { id: 'print-badge-method', code: 'Define the reusable PrintBadge local function' },
           { id: 'areas-array', code: 'Create the ordered areas array' },
           { id: 'read-answers', code: 'Ask for and store the two visitor answers' },
           { id: 'access-decision', code: 'Choose Member or Guest with if and else' },
@@ -431,7 +431,7 @@ export const csharpWorkshopProject: CsharpWorkshopProject = {
         incorrectMessage: 'Prepare the reusable method and array first. Then collect the answers before the decision, loop, and final badge call use them.',
         output: 'Method, areas, answers, access, area list, badge',
         hint: 'Start with reusable preparation, collect the two changing answers in the middle, and finish with the output that needs both answers.',
-        recap: 'Dependency order keeps definitions and stored values above the instructions that use them: prepare, read, decide, repeat, then print the badge.',
+        recap: 'Store values before instructions use them. This project follows prepare, read, decide, repeat, then print; placing the local function first is our layout choice.',
         xp: 20,
       },
     },
@@ -482,6 +482,17 @@ export const csharpWorkshopProject: CsharpWorkshopProject = {
       title: 'Open the Community Workshop',
       objective: 'Build a complete top-level C# program and prove that changing visitor input changes its access decision and badge.',
       scaffolding: 'independent',
+      planningHelp: {
+        steps: [
+          'Separate the fixed area list and access rule from the changing name and visit count. PrintBadge receives those two changing values.',
+          'Plan the output order: questions, one access decision, all three areas, then the badge. Defining PrintBadge does not print a badge until you call it.',
+        ],
+        inputScope: 'Supply a name on line 1 and a small non-negative whole-number visit count on line 2. The ?? fallback handles a missing line, not invalid text. An empty line or three still makes int.Parse fail. This version does not yet ask again after invalid input.',
+        experiments: [
+          'Use Taylor Reed with 2 visits, then 3 visits. Predict Guest first and Member second. The >= symbol includes the boundary value 3.',
+          'Keep 3 visits and change only the name. The badge should change, while access and the three-area list stay the same.',
+        ],
+      },
       newTerms: [
         { term: 'test case', meaning: 'One set of program input and expected behavior used to check whether a solution works.' },
         { term: 'hidden check', meaning: 'An official test whose exact values are withheld so the program must solve the general task.' },
@@ -503,7 +514,7 @@ export const csharpWorkshopProject: CsharpWorkshopProject = {
         eyebrow: 'Checkpoint 12 of 12',
         title: 'Open the Community Workshop',
         explanation:
-          'This final source combines the System namespace, top-level instructions, safe line input, integer parsing, an array, a two-route decision, a foreach loop, interpolation, and one reusable method. Each visitor answer travels through several visible program decisions.',
+          'This final source reads two answers, converts the count, chooses access, lists the areas, and calls the PrintBadge local function. It assumes the count is valid digit text. Each stored answer contributes to the final badge.',
         analogy:
           'You are opening the complete front desk. The signs, room directory, membership rule, guided room list, and badge printer work as one dependable process for every arriving visitor.',
         type: 'code',
@@ -512,9 +523,9 @@ export const csharpWorkshopProject: CsharpWorkshopProject = {
         focus: 'Write every missing C# statement as complete code. There are no _____ blanks, and the official visitor name and count will change.',
         codeGuide: [
           { code: 'using System;', plain: 'Keep this supplied directive so the remaining source can use the short Console type name.' },
-          { code: 'void Method(string text, int number) { ... }', plain: 'Use this familiar method shape with the required PrintBadge, name, and visits identifiers.' },
+          { code: 'void PrintBadge(string name, int visits) { ... }', plain: 'Define this local function with typed parameters. Its body prints a badge only when called.' },
           { code: 'string[] collection = { "First", "Second" };', plain: 'Use the project array name and exact three area strings in their required written order.' },
-          { code: 'Console.ReadLine() ?? fallback', plain: 'Read both console answers safely, then wrap the numeric answer in int.Parse before storing it.' },
+          { code: 'Console.ReadLine() ?? fallback', plain: 'Use the fallback only when no line exists. int.Parse still needs valid number text; ?? does not fix an empty line or a word.' },
           { code: 'if (...) { ... } else { ... }', plain: 'Compare the stored visit count with three and print exactly one access line.' },
           { code: 'foreach (...) { ... }', plain: 'Visit the stored areas in order and interpolate the current area into one repeated output line.' },
           { code: 'Run before Check', plain: 'Experiment with the visible input first, then use the official check for additional server-owned behavior and source requirements.' },

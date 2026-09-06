@@ -45,7 +45,7 @@ test('the first editable lesson guide passes the scoped WCAG A and AA gate', asy
   await expect(page.getByRole('heading', { level: 1, name: 'Print your first message' })).toBeVisible()
   const guide = page.getByRole('region', { name: 'Lesson guide' })
   await expect(guide).toBeVisible()
-  await guide.getByText(/\d+ definitions with examples/iu).click()
+  await guide.getByText('Words and code explained').click()
   await guide.getByText('Wrong answer, changed code, or failed check').click()
 
   await expectNoAccessibilityViolations(page)
@@ -57,7 +57,7 @@ test('the first editable lesson guide remains readable in the Terminal theme', a
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'terminal')
   const guide = page.getByRole('region', { name: 'Lesson guide' })
   await expect(guide).toBeVisible()
-  await guide.getByText(/\d+ definitions with examples/iu).click()
+  await guide.getByText('Words and code explained').click()
   await guide.getByText('Wrong answer, changed code, or failed check').click()
 
   await expectNoAccessibilityViolations(page, '.lesson-guide')

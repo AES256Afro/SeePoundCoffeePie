@@ -1,6 +1,6 @@
 # Reality versus fiction curriculum
 
-Last reviewed: 2026-08-30
+Last reviewed: 2026-09-01
 
 ## Status
 
@@ -48,7 +48,7 @@ A learner should leave this path able to:
 - Do not present one operating system, language, security product, network design, or model as universally best.
 - Do not call an inference a fact.
 - Do not use sales language, artificial urgency, or fear to keep a learner on the page.
-- Do not use an LLM to grade a credential or claim that an LLM verified a fact merely because it produced a fluent answer.
+- Do not let an LLM make the final grading decision on a credential; a human reviewer or a deterministic server-owned check decides, as the [Lab, assessment, and credential standard](LAB_ASSESSMENT_CREDENTIAL_STANDARD.md) requires. Do not claim that an LLM verified a fact merely because it produced a fluent answer.
 
 ## One comparison, one bookmarkable unit
 

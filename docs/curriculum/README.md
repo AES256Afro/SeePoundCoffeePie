@@ -1,6 +1,6 @@
 # Academy curriculum expansion
 
-Last reviewed: 2026-08-30
+Last reviewed: 2026-09-01
 
 This folder contains the long-range curriculum and implementation plans for expanding SeePoundCoffeePie beyond its current programming courses.
 
@@ -30,26 +30,28 @@ The [Reality versus Fiction curriculum](REALITY_VS_FICTION_CURRICULUM.md) is dif
 
 | Document | Purpose |
 | --- | --- |
+| [Core programming course review](CORE_COURSE_REVIEW_2026-09-06.md) | September 6 teaching, example-display, and navigation improvements across the six published programming courses |
 | [Academy expansion blueprint](ACADEMY_EXPANSION_BLUEPRINT.md) | Shared product model, open access, optional preparation, cross-platform access, visual teaching systems, and development order |
 | [No assumed knowledge standard](NO_ASSUMED_KNOWLEDGE_STANDARD.md) | Platform-wide beginner clarity, predictable units, literal language, examples, recovery, focus controls, accessibility, templates, and release gates |
 | [Linux curriculum](LINUX_CURRICULUM.md) | Beginner-to-advanced Linux, directory tree, desktop, gaming, Windows migration, servers, administration, recovery, and operations |
 | [Networking curriculum](NETWORKING_CURRICULUM.md) | First packet through Ethernet, Wi-Fi, IPv4, IPv6, services, switching, routing, automation, cloud networking, BGP, and architecture |
 | [Cybersecurity curriculum](CYBERSECURITY_CURRICULUM.md) | Personal safety through defensive engineering, security operations, incident response, forensics, governance, and recovery |
 | [Local Models and LLMs curriculum](LOCAL_MODELS_LLM_CURRICULUM.md) | Model foundations, local inference, data, evaluation, retrieval, fine-tuning, small-model training, serving, privacy, and reproducibility |
+| [Local versus hosted comparison path](LOCAL_VS_HOSTED_COMPARISON_PATH.md) | Proposed comparison path giving milestones M383 through M407 an owned curriculum home: data-flow mapping, provider-claim verification, cost, reliability, the fair comparison lab and its consent flow, migration, and the design capstone |
 | [Reality versus Fiction curriculum](REALITY_VS_FICTION_CURRICULUM.md) | Optional cross-school comparisons of familiar claims with evidence, missing steps, real mechanisms, safe observations, and professional takeaways |
 | [Lab, assessment, and credential standard](LAB_ASSESSMENT_CREDENTIAL_STANDARD.md) | Learner-controlled lab boundary, platform lanes, risk classes, evidence, assessment, transcript, and credential rules |
 | [Reality Checks first-release packet](course-packets/REALITY_CHECKS_FIRST_RELEASE.md) | Authoring starting packet for claim, evidence, and real-system comparisons; not live or publication-ready |
 | [Models From Zero first-release packet](course-packets/MODELS_FROM_ZERO_FIRST_RELEASE.md) | Authoring blueprint for the canonical six-course beginner path, with deferred notes for later model work; not live or publication-ready |
-| [Milestone roadmap](../../MILESTONES.md) | Dependency-ordered implementation plan from M000 through M410 |
+| [Milestone roadmap](../../MILESTONES.md) | Dependency-ordered implementation plan from M000 through M430 |
 
 ## Planned curriculum scale
 
 | Area | Planned scope |
 | --- | --- |
-| Linux and Open Systems | 15 learning paths, 87 courses, about 420 to 500 modules, at least 191 labs and capstones |
+| Linux and Open Systems | 15 learning paths, 89 courses, about 620 to 700 modules, at least 191 labs and capstones |
 | Networking | 1 optional preparation bench, 15 large courses, 132 modules, 8 integrated capstones, and 8 reusable lab topologies |
 | Cybersecurity | 23 learning paths, 219 courses, 1,100 to 1,400 modules, 350 or more guided labs, and 23 path capstones |
-| Local Models and LLMs | 13 core paths, 65 courses, 340 to 420 modules, 110 maintained labs, 13 path capstones, and 5 integrated capstones |
+| Local Models and LLMs | 13 core paths, 65 courses, 340 to 420 modules, 110 maintained labs when the extension target is met, 13 path portfolio projects, and 5 integrated capstones |
 | Optional Preparation and Refreshers | Short introductions and focused review paths shared across all schools |
 | Reality versus Fiction | 1 optional cross-school path, 5 courses, 39 core comparison units, and 1 optional source-based project |
 
@@ -59,7 +61,7 @@ The no-assumed-knowledge standard is not included in the curriculum totals becau
 
 ## Where practical work happens
 
-The site teaches, provides ordinary knowledge exercises, packages lab materials, records progress, and issues evidence-based credentials. It does not run a learner's operating-system commands, network emulation, cybersecurity tooling, model inference, datasets, or model training in the browser.
+The site teaches, provides ordinary knowledge exercises, packages lab materials, records progress, and issues evidence-based credentials. It does not run a learner's operating-system commands, network emulation, cybersecurity tooling, model inference, datasets, or model training in the browser. The one reviewed exception is the existing programming academy's isolated grading runner, which executes authored programming exercises in ephemeral server-side sandboxes under the separate [runner security contract](../RUNNER_SECURITY_CONTRACT.md); the academy schools described here do not use it.
 
 Practical work runs only in a learner-controlled environment:
 
@@ -100,7 +102,7 @@ After the four foundation slices, deeper school work can proceed in parallel whe
 | Linux `LNX-M001` through `LNX-M078` | M161 through M210 |
 | Networking Slices 1 through 6 | M211 through M250 |
 | Cybersecurity `CYB-M001` through `CYB-M070` | M251 through M295 |
-| Local Models Releases A through G | M296 through M330 |
+| Local Models release waves 1 through 8 | M296 through M330 |
 | Core cross-school paths, capstones, and academy-scale release | M331 through M350 |
 | Universal no-assumed-knowledge implementation | M351 through M366 |
 | Reality versus Fiction path | M367 through M382 |

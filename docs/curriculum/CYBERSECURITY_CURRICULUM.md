@@ -1,5 +1,7 @@
 # Cybersecurity School Curriculum Blueprint
 
+Last reviewed: 2026-09-01
+
 ## Status
 
 This document defines the intended cybersecurity school for SeePoundCoffeePie. It is a curriculum and product blueprint, not a claim that the courses, labs, assessments, or credentials already exist.

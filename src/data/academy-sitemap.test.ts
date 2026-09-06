@@ -53,7 +53,7 @@ const academyLocations = locations.filter((location) => location.startsWith(`${p
 
 describe('academy sitemap', () => {
   it('publishes every current academy path, course, module, unit, and preparation page exactly once', () => {
-    expect(expectedAcademyPaths).toHaveLength(19)
+    expect(expectedAcademyPaths).toHaveLength(54)
     expect(new Set(expectedAcademyPaths).size).toBe(expectedAcademyPaths.length)
     expect([...academyLocations].sort()).toEqual([...expectedAcademyUrls].sort())
   })

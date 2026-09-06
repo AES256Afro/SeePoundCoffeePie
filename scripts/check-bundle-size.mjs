@@ -55,20 +55,29 @@ const budgets = {
   total: {
     // The open-academy slice adds eight complete, source-backed units behind
     // one lazy route. The first-load limits above do not move. Its JavaScript
-    // and CSS also receive exact lazy-asset caps below.
-    javascript: { raw: 855_000, gzip: 247_000 },
-    css: { raw: 96_000, gzip: 19_000 },
+    // and CSS also receive exact lazy-asset caps below. The 2026-09-01 sweep
+    // repairs added a runtime-error artifact, an ordering exercise, a second
+    // official model source, and visible boundary, limits, and resume copy.
+    // 2026-09-01 audit fixes added honest operator, ordering, and framing
+    // sentences to foundation lessons, which raises the JavaScript total.
+    // 2026-09-06: 21 local LLM lessons replace six generic model lessons.
+    // Measured total: 892.38 kB raw / 259.09 kB gzip. These are lazy teaching
+    // bytes, not a larger first load; the initial limits above remain unchanged.
+    javascript: { raw: 910_000, gzip: 270_000 },
+    css: { raw: 97_000, gzip: 19_500 },
     html: { raw: 5_000, gzip: 1_100 },
     // Reviewed, inert teaching payloads may leave executable JavaScript only
     // when they remain separately visible in transfer accounting.
-    teachingData: { raw: 54_000, gzip: 14_400 },
+    // 2026-09-01: the packed practical C++ teaching data in the current build
+    // measures 14.58 kB gzip, so the reviewed gzip cap moves up to match.
+    teachingData: { raw: 54_000, gzip: 14_800 },
   },
 }
 
 // This is the explicit sum of the reviewed total JavaScript, CSS, HTML, and
 // teaching-data limits above. Keep the category caps and aggregate cap aligned
 // so moving bytes between file types cannot make transferred bytes disappear.
-const aggregateTransferBudget = { raw: 1_010_000, gzip: 281_500 }
+const aggregateTransferBudget = { raw: 1_066_000, gzip: 305_400 }
 const summedCategoryBudget = Object.values(budgets.total).reduce(
   (sum, budget) => ({
     raw: sum.raw + budget.raw,
@@ -112,8 +121,13 @@ const reviewedAssetBudgets = [
   {
     label: 'open academy route and teaching content',
     pattern: /^AcademyRoute-.*\.js$/u,
-    raw: 73_000,
-    gzip: 20_000,
+    // The 2026-09-01 sweep repairs completed the promised syntax, runtime,
+    // and logic error evidence, replaced a mismatched activity with the
+    // documented ordering exercise, and added a second official source.
+    // 21 source-backed local LLM lessons plus the two retained reality units.
+    // Measured 107.60 kB raw / 31.18 kB gzip; no model weights are shipped.
+    raw: 115_000,
+    gzip: 34_000,
   },
   {
     label: 'practical c++ teaching data',
@@ -127,8 +141,10 @@ const reviewedAssetBudgets = [
     // The four first editable lessons now include explicit context, terms,
     // steps, expected output, and recovery without assuming prior knowledge.
     // Keep that reviewed teaching cost isolated behind this exact asset gate.
-    raw: 122_000,
-    gzip: 30_000,
+    // 2026-09-01 audit fixes added honest operator, ordering, and framing
+    // sentences to foundation lessons.
+    raw: 127_000,
+    gzip: 31_500,
   },
   {
     label: 'combined initial application css',
@@ -163,8 +179,10 @@ const reviewedAssetBudgets = [
       '.academy-preparation__choices',
     ],
     placement: 'lazy',
-    raw: 9_200,
-    gzip: 2_250,
+    // Visible boundary, before-we-compare, and recap blocks replaced two
+    // collapsed disclosures in the 2026-09-01 sweep repairs.
+    raw: 10_000,
+    gzip: 2_450,
   },
 ]
 

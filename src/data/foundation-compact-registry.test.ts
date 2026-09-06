@@ -87,7 +87,8 @@ describe('compact foundation registries', () => {
         `${mission.language}/${mission.id}:${exercise.id}:${exercise.conceptId}:${exercise.title}`
       ))
     )).join('\n')
-    expect(fingerprint(semanticLessonMapping)).toBe('50f062bf')
+    // C# lesson titles now name local functions accurately; durable IDs are unchanged.
+    expect(fingerprint(semanticLessonMapping)).toBe('0b2f05c3')
   })
 
   it('keeps the eager registry data below five kilobytes before minification', () => {

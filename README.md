@@ -11,7 +11,7 @@ The name is the curriculum:
 
 ## Academy expansion
 
-The source still contains the six-course programming academy described below. It now also contains the first complete open-academy reading slice: `What a model is` and `Programming on screen and at work`. The longer plan adds large Linux, networking, cybersecurity, and local-model schools, along with optional preparation and refresher paths. A source commit, hosted build, staging deployment, and production deployment remain separate facts.
+The source contains the six-course programming academy described below, six local LLM courses with 21 authored lessons, and the opening module of `Programming on screen and at work`. The local LLM sequence replaces the old generic model-classification course. It covers practical use, model selection, quantization, evaluation, documents, open-weight tuning, and from-scratch training concepts. See the [active curriculum and lab plan](docs/curriculum/LOCAL_LLM_REBUILD.md). A source change, hosted build, staging deployment, and production deployment remain separate facts.
 
 The new schools use one access rule: a learner may start anywhere. Recommended preparation offers `Start now`, `Review a refresher`, and `Read the short context`. It never locks or hides published teaching material.
 
@@ -61,8 +61,8 @@ The site uses clean application URLs instead of separate `.html` files. Cloudfla
 - `/start` is beginner intake;
 - `/home` is the learner home and continuation page;
 - `/courses` is the complete course catalog;
-- `/paths/models-from-zero` is the open Models from zero path, and `/paths/models-from-zero/what-a-model-is` is its first complete course;
-- `/paths/reality-versus-fiction` is the open Reality versus fiction path, and `/paths/reality-versus-fiction/programming-on-screen-and-at-work` is its first complete course;
+- `/paths/models-from-zero` is the six-course Local LLMs path. `/paths/models-from-zero/what-a-model-is` remains the bookmarked address of its rewritten first course, `Local LLMs: what they do`;
+- `/paths/reality-versus-fiction` is the open Reality versus fiction path, and `/paths/reality-versus-fiction/programming-on-screen-and-at-work` is its first course, published with its opening module of two comparisons out of the six that its curriculum specifies;
 - adding a published module slug, unit slug, or `/preparation/:preparation-slug` to one of those course routes opens that exact reading page without sign-in or an earlier completion;
 - `/courses/python-foundations`, `/courses/cpp-foundations`, `/courses/csharp-foundations`, and `/courses/java-foundations` are the four foundation-course outlines;
 - `/courses/python-data-tools` is the Practical Python outline. It can be previewed while locked and opens only after both Python Foundations and `/projects/python/first-interactive-program` are complete;
@@ -92,7 +92,7 @@ Practical Python begins only after the learner completes both Python Foundations
 
 Practical C++ begins only after the learner completes both C++ Foundations and `Your First Compiled Program`. Its modules retrieve functions and collections before introducing returned helper values, vectors, records, references, record updates, accumulators, and filters. The final Workshop Stock Report uses fixed in-memory records and no files, packages, or network access.
 
-The current source totals 36 playable programming modules and 180 authored programming lessons across six programming courses, plus four 12-step projects. The open-academy reading slice adds two paths, two courses, three modules, eight units, and four optional context pages. The selected runner registry contains exactly 112 editable assignments: 48 foundation lessons, 12 Practical Python lessons, 12 Practical C++ lessons, and 40 project steps. The open-academy units and the other 18 Practical C++ lessons use prepared reading, choices, predictions, or ordering in the browser and never request an execution grant.
+The current source totals 36 playable programming modules and 180 authored programming lessons across six programming courses, plus four 12-step projects. The open academy adds two paths, seven courses, eight modules, 23 units, and 14 optional context pages. Of these, six courses and 21 units are the local LLM sequence. The selected runner registry contains exactly 112 editable assignments: 48 foundation lessons, 12 Practical Python lessons, 12 Practical C++ lessons, and 40 project steps. The open-academy units and the other 18 Practical C++ lessons use prepared reading, choices, predictions, or ordering in the browser and never request an execution grant.
 
 These counts describe the source-controlled Practical C++ publication candidate. The last recorded live compatibility release still has five courses, 30 modules, 150 lessons, and 100 runner assignments. Staging and production publication remain separate release steps and are not claimed by this README.
 
@@ -142,7 +142,7 @@ npm run check:runner:image
 The production bundle is written to `dist/`.
 `npm run check:bundle` enforces raw and gzip budgets for emitted JavaScript, CSS, HTML, and inert JSON teaching data, plus an aggregate transfer cap so moving bytes between file types cannot hide growth. It separately caps the lazy Portfolio and shared continuing-course route JavaScript, Practical Python and packed foundation teaching content, Code Reference JavaScript, the combined initial application stylesheet, and the lazy learning-workspace stylesheet. It also requires at least 15 percent raw and gzip headroom for initial JavaScript and CSS, so course growth cannot silently create an oversized first load.
 `npm run check:foundation-content` verifies that the lazy packed foundation curriculum is deterministic and still matches the readable curriculum source. `npm run check:cpp-content-candidate` keeps its historical command name, but now verifies the source-selected publication: deterministic generated JSON, one lazy owning loader, the six-course application, the exact 112-assignment runner registry, the complete sitemap projection, fixed JavaScript, CSS, route, teaching-data, and aggregate limits, and absence of protected server markers.
-`npm run check:academy-curriculum` verifies the new academy planning artifacts, relative documentation links, Markdown fences, stable inventory identifiers, declared course and lab totals, and the Reality versus Fiction comparison inventory.
+`npm run check:academy-curriculum` verifies the 14 academy planning artifacts, including the Linux, networking, cybersecurity, lab-standard, and comparison-path documents: relative documentation links, Markdown fences, stable inventory identifiers, the declared Linux, Local Models, and Reality versus Fiction inventories, and the two first-release packets.
 `npm run check:learner-language` scans learner-facing source for wording that hides required knowledge behind phrases such as `obviously`, `trivial`, `you already know`, or action-oriented `just` and `simply`. The check complements author review; it does not replace beginner walkthroughs or accessibility testing.
 `npm run check:project-bundle` recursively rejects emitted source maps, requires the Practical C++ teaching data behind its one lazy loader, and scans the production browser output for server-owned assessment material before a deployment wrapper can invoke Wrangler.
 `npm run check:social-preview` verifies the Open Graph and large-card metadata plus the exact 1200 by 630 share image used by Discord and other social platforms.

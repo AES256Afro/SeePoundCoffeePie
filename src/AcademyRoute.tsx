@@ -90,13 +90,13 @@ function AcademyBreadcrumbs({ course, module, onNavigate, path }: AcademyRouteRe
 function PathPage({ onNavigate, path, progress }: { onNavigate?: (path: string) => void; path: AcademyPath; progress: LearnerProgress }) {
   const courses = path.courseIds.map((courseId) => academyCourseForId(courseId)).filter((course): course is AcademyCourse => Boolean(course))
   return (
-    <main className="academy-page" id="main-content" tabIndex={-1}>
+    <main className="academy-page academy-path-page" id="main-content" tabIndex={-1}>
       <AcademyBreadcrumbs onNavigate={onNavigate} path={path} />
       <header className="academy-heading">
         <p className="eyebrow">Open learning path</p>
         <h1>{path.title}</h1>
         <p>{path.summary}</p>
-        <AcademyFacts activity={path.activity} platform={path.platform} time={path.time} />
+        <p>{path.time}</p>
       </header>
       <section aria-labelledby="path-courses-title">
         <div className="section-heading-open">
@@ -123,6 +123,7 @@ function PathPage({ onNavigate, path, progress }: { onNavigate?: (path: string) 
             )
           })}
         </div>
+        {path.id === 'LM-100' && <p className="academy-lab-downloads">Optional local practice: <a href="/learning-labs/local-llms.md" download>Download the six-lab workbook</a> · <a href="/learning-labs/tiny-language-baseline.py" download>Download the tiny Python baseline</a>. No model runs on this website.</p>}
       </section>
     </main>
   )
@@ -290,6 +291,8 @@ function UnitPage({ course, module, onNavigate, path, progress, unit, onProgress
   const unitIndex = allCourseUnits.indexOf(unit.id)
   const previousUnit = unitIndex > 0 ? academyUnitForId(allCourseUnits[unitIndex - 1]) : undefined
   const nextUnit = unitIndex >= 0 && unitIndex < allCourseUnits.length - 1 ? academyUnitForId(allCourseUnits[unitIndex + 1]) : undefined
+  const courseIndex = path.courseIds.indexOf(course.id)
+  const nextCourse = courseIndex >= 0 ? academyCourseForId(path.courseIds[courseIndex + 1]) : undefined
 
   const checkAnswer = () => {
     if (!selectedChoice) return
@@ -314,7 +317,7 @@ function UnitPage({ course, module, onNavigate, path, progress, unit, onProgress
       <header className="academy-heading">
         <p className="eyebrow">Unit {unitIndex + 1} of {allCourseUnits.length} · Unit reference {unit.id}</p>
         <h1>{unit.title}</h1>
-        <p>{unit.summary}</p>
+        {unit.summary !== content.goal && <p>{unit.summary}</p>}
       </header>
       <div className="academy-unit-layout">
         <nav className="academy-unit-nav" aria-label="Sections on this page">
@@ -333,17 +336,14 @@ function UnitPage({ course, module, onNavigate, path, progress, unit, onProgress
             <h2>Start here</h2>
             <dl className="academy-terms">
               <div><dt>Learn</dt><dd>{content.goal}</dd></div>
-              <div><dt>Why</dt><dd>{content.purpose}</dd></div>
+              {!content.explanationSteps.includes(content.purpose) && <div><dt>Why</dt><dd>{content.purpose}</dd></div>}
               <div><dt>Time</dt><dd>{unit.time}</dd></div>
               <div><dt>Do</dt><dd>Read the example, try the prepared activity, and answer one check.</dd></div>
             </dl>
-            <details className="academy-stop">
-              <summary>Need a refresher or more context?</summary>
-              <p>{content.preparation.startNow}</p>
-              <p>{content.preparation.refresher}</p>
-              <p>{content.preparation.shortContext}</p>
-              <p><b>Page boundary:</b> {content.boundary.statement}</p>
-              {content.beforeWeCompare && (
+            <p className="academy-boundary"><b>Page boundary:</b> {content.boundary.statement}</p>
+            {content.beforeWeCompare && (
+              <div className="academy-before-compare">
+                <h3>Before we compare</h3>
                 <dl className="academy-terms">
                   <div><dt>Outcome</dt><dd>{content.beforeWeCompare.outcome}</dd></div>
                   <div><dt>System boundary</dt><dd>{content.beforeWeCompare.systemBoundary}</dd></div>
@@ -352,7 +352,13 @@ function UnitPage({ course, module, onNavigate, path, progress, unit, onProgress
                   <div><dt>What you need</dt><dd>{content.beforeWeCompare.requirements}</dd></div>
                   <div><dt>Ways to begin</dt><dd>{content.beforeWeCompare.choices.join(', ')}. These are choices, not access requirements.</dd></div>
                 </dl>
-              )}
+              </div>
+            )}
+            <details className="academy-stop">
+              <summary>Need a refresher or more context?</summary>
+              <p>{content.preparation.startNow}</p>
+              <p>{content.preparation.refresher}</p>
+              <p>{content.preparation.shortContext}</p>
             </details>
           </section>
 
@@ -384,7 +390,7 @@ function UnitPage({ course, module, onNavigate, path, progress, unit, onProgress
 
           <section className="academy-section" id="unit-practice">
             <h2>{content.practice.title}</h2>
-            <p>{content.practice.prompt}</p>
+            {content.practice.prompt !== content.goal && <p>{content.practice.prompt}</p>}
             <h3>Prepared evidence</h3>
             <ul>{content.practice.preparedEvidence.map((evidence) => <li key={evidence}>{evidence}</li>)}</ul>
             <h3>What to do</h3>
@@ -425,7 +431,9 @@ function UnitPage({ course, module, onNavigate, path, progress, unit, onProgress
                   {!selectedChoice.correct && <p>{content.knowledgeCheck.retry}</p>}
                   {selectedChoice.correct && (nextUnit
                     ? <RouteLink className="primary-action" onNavigate={onNavigate} to={academyUnitPath(path.id, course.id, nextUnit.moduleId, nextUnit.id)}>Continue: {nextUnit.title} <ArrowRight aria-hidden="true" size={17} /></RouteLink>
-                    : <RouteLink className="primary-action" onNavigate={onNavigate} to={academyCoursePath(path.id, course.id)}>Return to course outline <ArrowRight aria-hidden="true" size={17} /></RouteLink>)}
+                    : nextCourse
+                      ? <RouteLink className="primary-action" onNavigate={onNavigate} to={academyCoursePath(path.id, nextCourse.id)}>Next course: {nextCourse.title} <ArrowRight aria-hidden="true" size={17} /></RouteLink>
+                      : <RouteLink className="primary-action" onNavigate={onNavigate} to={learningPathPath(path.id)}>Return to learning path <ArrowRight aria-hidden="true" size={17} /></RouteLink>)}
                 </div>
               )}
             </div>
@@ -435,21 +443,18 @@ function UnitPage({ course, module, onNavigate, path, progress, unit, onProgress
             <h2>Review and continue</h2>
             <div className="academy-next-actions">
               {previousUnit ? <RouteLink className="secondary-action" onNavigate={onNavigate} to={academyUnitPath(path.id, course.id, previousUnit.moduleId, previousUnit.id)}><ArrowLeft aria-hidden="true" size={17} /> Previous unit: {previousUnit.title}</RouteLink> : <RouteLink className="secondary-action" onNavigate={onNavigate} to={academyModulePath(path.id, course.id, module.id)}><ArrowLeft aria-hidden="true" size={17} /> Module outline</RouteLink>}
-              {nextUnit ? <RouteLink className="primary-action" onNavigate={onNavigate} to={academyUnitPath(path.id, course.id, nextUnit.moduleId, nextUnit.id)}>Next unit: {nextUnit.title} <ArrowRight aria-hidden="true" size={17} /></RouteLink> : <RouteLink className="primary-action" onNavigate={onNavigate} to={academyCoursePath(path.id, course.id)}>Course outline <ArrowRight aria-hidden="true" size={17} /></RouteLink>}
+              {nextUnit ? <RouteLink className="primary-action" onNavigate={onNavigate} to={academyUnitPath(path.id, course.id, nextUnit.moduleId, nextUnit.id)}>Next unit: {nextUnit.title} <ArrowRight aria-hidden="true" size={17} /></RouteLink> : nextCourse ? <RouteLink className="primary-action" onNavigate={onNavigate} to={academyCoursePath(path.id, nextCourse.id)}>Next course: {nextCourse.title} <ArrowRight aria-hidden="true" size={17} /></RouteLink> : <RouteLink className="primary-action" onNavigate={onNavigate} to={learningPathPath(path.id)}>Return to learning path <ArrowRight aria-hidden="true" size={17} /></RouteLink>}
             </div>
-            <details className="academy-stop">
-              <summary>Review key points and lesson limits</summary>
+            <div className="academy-recap">
               <h3>Keep these points</h3>
-              <ul>{content.recap.map((item) => <li key={item}>{item}</li>)}</ul>
+              <details><summary>Review the example and practice answers</summary><ul>{content.recap.map((item) => <li key={item}>{item}</li>)}</ul></details>
               <h3>Limits of this lesson</h3>
               <ul>{content.notClaimed.map((item) => <li key={item}>{item}</li>)}</ul>
-            </details>
-            <details className="academy-stop">
-              <summary>Pause and return later</summary>
+              <h3>Pause and return later</h3>
               <p><b>If you stop here:</b> {content.stopResume.savedFact}</p>
               <p><b>When you return, ask:</b> {content.stopResume.returnQuestion}</p>
               <p>{content.stopResume.nextChoice}</p>
-            </details>
+            </div>
             <details className="academy-stop" id="unit-sources">
               <summary>Sources and evidence limits ({sources.length})</summary>
               <p>These records show what each source supports and what it does not prove.</p>
@@ -463,7 +468,7 @@ function UnitPage({ course, module, onNavigate, path, progress, unit, onProgress
               <div className="academy-evidence-grid">
                 {sources.map((source) => (
                   <article className="academy-evidence-card" key={source.id}>
-                    <small>{source.publisher} · {source.version} · Observed {source.observedAt} · Review by {source.reviewDueAt}</small>
+                    <small>{source.publisher} · {source.version} · Evidence label: {source.evidenceLabel} · Observed {source.observedAt} · Review by {source.reviewDueAt}</small>
                     <h3><a href={source.url} rel="noreferrer" target="_blank">{source.title}</a></h3>
                     <p><b>Supports:</b> {source.supports}</p>
                     <p><b>Scope:</b> {source.scope}</p>

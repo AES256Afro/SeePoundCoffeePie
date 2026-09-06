@@ -1,25 +1,11 @@
+import { localLlmCourses, localLlmLessons, localLlmPreparation } from './local-llm-manifest'
+
 export type AcademyPathId = 'LM-100' | 'RVF-PATH'
-export type AcademyCourseId = 'LM-101' | 'RVF-100'
-export type AcademyModuleId = 'LM-101-M1' | 'LM-101-M2' | 'RVF-100-M1'
-export type AcademyUnitId =
-  | 'LM-101-U1'
-  | 'LM-101-U2'
-  | 'LM-101-U3'
-  | 'LM-101-U4'
-  | 'LM-101-U5'
-  | 'LML-101'
-  | 'RVF-101'
-  | 'RVF-102'
-export type AcademyConceptId =
-  | 'model-versus-rule'
-  | 'model-inputs-and-outputs'
-  | 'model-parameters'
-  | 'model-and-application-boundaries'
-  | 'model-capability-and-failure'
-  | 'model-recognition'
-  | 'software-is-built-in-steps'
-  | 'execution-does-not-prove-correctness'
-export type AcademyPreparationPageId =
+export type AcademyCourseId = (typeof localLlmCourses)[number][0] | 'RVF-100'
+export type AcademyModuleId = `LLM-${number}-M${number}` | 'RVF-100-M1'
+export type AcademyUnitId = (typeof localLlmLessons)[number][0] | 'RVF-101' | 'RVF-102'
+export type AcademyConceptId = `llm-${string}` | 'software-is-built-in-steps' | 'execution-does-not-prove-correctness'
+export type AcademyPreparationPageId = `LLM-${number}-P${number}`
   | 'LM-101-P1'
   | 'LM-101-P2'
   | 'RVF-100-P1'
@@ -94,14 +80,14 @@ export const academyPaths: readonly AcademyPath[] = Object.freeze([
   {
     id: 'LM-100',
     slug: 'models-from-zero',
-    title: 'Models from zero',
-    summary: 'Learn what models are before choosing, running, or comparing one.',
-    outcome: 'Explain where a model fits inside a computer system and what its output can and cannot prove.',
-    time: '2 hours for the published course',
+    title: 'Local LLMs: from first use to training',
+    summary: 'Run language models on your own computer, use your documents, and learn how training changes them.',
+    outcome: 'Choose, use, test, and adapt local LLMs with clear evidence of their limits.',
+    time: '21 lessons · about 4 to 6 hours, plus optional local practice',
     activity: 'Read short explanations, inspect prepared examples, and check your understanding.',
     platform: browserReadingPlatform,
     access: 'open',
-    courseIds: ['LM-101'],
+    courseIds: localLlmCourses.map(([id]) => id),
   },
   {
     id: 'RVF-PATH',
@@ -109,7 +95,7 @@ export const academyPaths: readonly AcademyPath[] = Object.freeze([
     title: 'Reality versus fiction',
     summary: 'Compare familiar technology claims with the work and evidence behind real systems.',
     outcome: 'Separate a dramatic claim from what the available evidence actually supports.',
-    time: '30 minutes for the published course',
+    time: 'About 30 minutes for the published course',
     activity: 'Read a claim, inspect missing steps, and choose the evidence that supports a conclusion.',
     platform: browserReadingPlatform,
     access: 'open',
@@ -118,42 +104,18 @@ export const academyPaths: readonly AcademyPath[] = Object.freeze([
 ])
 
 export const academyCourses: readonly AcademyCourse[] = Object.freeze([
-  {
-    id: 'LM-101',
-    slug: 'what-a-model-is',
-    pathId: 'LM-100',
-    title: 'What a model is',
-    summary: 'Begin with ordinary rules, then identify the learned numerical part of a larger application.',
-    outcome: 'Distinguish a model from ordinary code, stored records, and the application around it.',
-    time: '90 to 120 minutes',
-    activity: 'Read prepared examples, answer short checks, and complete one classification activity.',
-    platform: browserReadingPlatform,
-    access: 'open',
-    moduleIds: ['LM-101-M1', 'LM-101-M2'],
+  ...localLlmCourses.map(([id, slug, title, outcome]): AcademyCourse => ({
+    id, slug, title, outcome, summary: outcome, pathId: 'LM-100',
+    time: id === 'LM-101' ? '60 to 90 minutes' : '30 to 45 minutes',
+    activity: 'Worked examples, a distinct practice task, and a knowledge check in each lesson.',
+    platform: browserReadingPlatform, access: 'open',
+    moduleIds: id === 'LM-101' ? ['LLM-101-M1', 'LLM-101-M2'] : [`${id}-M1`],
     optionalPreparation: [
-      {
-        id: 'LM-101-START',
-        kind: 'start',
-        label: 'Start now',
-        summary: 'Open the first unit. Every needed word is explained on the page.',
-        destination: { kind: 'unit', id: 'LM-101-U1' },
-      },
-      {
-        id: 'LM-101-REFRESHER',
-        kind: 'refresher',
-        label: 'Review a refresher',
-        summary: 'Review a few computer words, then return to the first unit.',
-        destination: { kind: 'preparation-page', id: 'LM-101-P1' },
-      },
-      {
-        id: 'LM-101-CONTEXT',
-        kind: 'short-context',
-        label: 'Read the short context',
-        summary: 'Read one page about why models are only one part of an application.',
-        destination: { kind: 'preparation-page', id: 'LM-101-P2' },
-      },
+      { id: `${id}-START`, kind: 'start', label: 'Start now', summary: 'Open the first lesson; nothing must be completed first.', destination: { kind: 'unit', id: localLlmLessons.find((lesson) => lesson[1] === id)![0] } },
+      { id: `${id}-REFRESHER`, kind: 'refresher', label: 'Review a refresher', summary: 'Review the words used in this course.', destination: { kind: 'preparation-page', id: id === 'LM-101' ? 'LM-101-P1' : `${id}-P1` } },
+      { id: `${id}-CONTEXT`, kind: 'short-context', label: 'Read the short context', summary: 'See how this course connects to the practical work.', destination: { kind: 'preparation-page', id: id === 'LM-101' ? 'LM-101-P2' : `${id}-P2` } },
     ],
-  },
+  })),
   {
     id: 'RVF-100',
     slug: 'programming-on-screen-and-at-work',
@@ -161,7 +123,7 @@ export const academyCourses: readonly AcademyCourse[] = Object.freeze([
     title: 'Programming on screen and at work',
     summary: 'Compare fast on-screen programming with the smaller steps used to build dependable software.',
     outcome: 'Explain why typing, colorful text, and one successful run are not enough evidence of quality.',
-    time: '20 to 30 minutes',
+    time: 'About 20 to 30 minutes',
     activity: 'Read two comparisons and inspect prepared evidence. No code runner is used.',
     platform: browserReadingPlatform,
     access: 'open',
@@ -193,34 +155,16 @@ export const academyCourses: readonly AcademyCourse[] = Object.freeze([
 ])
 
 export const academyModules: readonly AcademyModule[] = Object.freeze([
-  {
-    id: 'LM-101-M1',
-    slug: 'learned-behavior',
-    pathId: 'LM-100',
-    courseId: 'LM-101',
-    title: 'Learned behavior',
-    summary: 'Start with ordinary rules, inputs, outputs, and the numbers adjusted from examples.',
-    outcome: 'Identify which part of a simple system is a model.',
-    time: '40 to 55 minutes',
-    activity: 'Read and classify prepared examples.',
-    platform: browserReadingPlatform,
-    access: 'open',
-    unitIds: ['LM-101-U1', 'LM-101-U2', 'LM-101-U3'],
-  },
-  {
-    id: 'LM-101-M2',
-    slug: 'capability-and-limits',
-    pathId: 'LM-100',
-    courseId: 'LM-101',
-    title: 'Capability and limits',
-    summary: 'Separate a model from the application around it and examine why outputs can be wrong.',
-    outcome: 'Describe a model without treating it as a database, a complete product, or a person.',
-    time: '50 to 65 minutes',
-    activity: 'Inspect prepared system maps and complete a classification activity.',
-    platform: browserReadingPlatform,
-    access: 'open',
-    unitIds: ['LM-101-U4', 'LM-101-U5', 'LML-101'],
-  },
+  ...localLlmCourses.flatMap(([courseId, , title, outcome]): AcademyModule[] => {
+    const ids: AcademyModuleId[] = courseId === 'LM-101' ? ['LLM-101-M1', 'LLM-101-M2'] : [`${courseId}-M1`]
+    return ids.map((id, index) => ({
+      id, courseId, pathId: 'LM-100', title: courseId === 'LM-101' ? (index === 0 ? 'How a language model works' : 'Uses and limits') : title,
+      slug: courseId === 'LM-101' ? (index === 0 ? 'learned-behavior' : 'capability-and-limits') : `${courseId.toLowerCase()}-practice`,
+      summary: outcome, outcome, time: '30 to 45 minutes', activity: 'Three worked lessons with practice and feedback.',
+      platform: browserReadingPlatform, access: 'open',
+      unitIds: localLlmLessons.filter((lesson) => lesson[2] === id).map(([unitId]) => unitId),
+    }))
+  }),
   {
     id: 'RVF-100-M1',
     slug: 'build-and-execution',
@@ -229,7 +173,7 @@ export const academyModules: readonly AcademyModule[] = Object.freeze([
     title: 'Build and execution',
     summary: 'Compare rapid typing and a first run with the evidence needed for dependable software.',
     outcome: 'Name the steps and checks hidden by a short programming scene.',
-    time: '20 to 30 minutes',
+    time: 'About 20 to 30 minutes',
     activity: 'Order prepared work steps and compare different kinds of evidence.',
     platform: browserReadingPlatform,
     access: 'open',
@@ -238,102 +182,11 @@ export const academyModules: readonly AcademyModule[] = Object.freeze([
 ])
 
 export const academyUnits: readonly AcademyUnit[] = Object.freeze([
-  {
-    id: 'LM-101-U1',
-    slug: 'model-and-rule',
-    pathId: 'LM-100',
-    courseId: 'LM-101',
-    moduleId: 'LM-101-M1',
-    title: 'A model and an ordinary rule',
-    summary: 'Compare a rule written by a person with numerical behavior adjusted from examples.',
-    outcome: 'Choose whether a described behavior is an ordinary rule, a learned model, or not explained well enough.',
-    time: '12 minutes',
-    activity: 'Read and classify four prepared examples.',
-    platform: browserReadingPlatform,
-    access: 'open',
-    conceptId: 'model-versus-rule',
-    xp: 12,
-  },
-  {
-    id: 'LM-101-U2',
-    slug: 'inputs-and-outputs',
-    pathId: 'LM-100',
-    courseId: 'LM-101',
-    moduleId: 'LM-101-M1',
-    title: 'Inputs and outputs',
-    summary: 'Follow information into a model and identify what comes back out.',
-    outcome: 'Label the input and output in a prepared model example.',
-    time: '12 minutes',
-    activity: 'Inspect two prepared system maps and answer a short check.',
-    platform: browserReadingPlatform,
-    access: 'open',
-    conceptId: 'model-inputs-and-outputs',
-    xp: 12,
-  },
-  {
-    id: 'LM-101-U3',
-    slug: 'parameters-are-adjusted-numbers',
-    pathId: 'LM-100',
-    courseId: 'LM-101',
-    moduleId: 'LM-101-M1',
-    title: 'Parameters are adjusted numbers',
-    summary: 'Learn what a parameter means without using the parameter count as a quality score.',
-    outcome: 'Explain that parameters are adjusted numerical values inside a model.',
-    time: '14 minutes',
-    activity: 'Read a plain comparison and check which claims a parameter count supports.',
-    platform: browserReadingPlatform,
-    access: 'open',
-    conceptId: 'model-parameters',
-    xp: 14,
-  },
-  {
-    id: 'LM-101-U4',
-    slug: 'model-application-and-database',
-    pathId: 'LM-100',
-    courseId: 'LM-101',
-    moduleId: 'LM-101-M2',
-    title: 'Model, application, and database',
-    summary: 'Separate learned behavior from stored records and the software around both.',
-    outcome: 'Point to the model, application code, and stored records in a prepared system map.',
-    time: '16 minutes',
-    activity: 'Label the parts of a prepared application diagram.',
-    platform: browserReadingPlatform,
-    access: 'open',
-    conceptId: 'model-and-application-boundaries',
-    xp: 16,
-  },
-  {
-    id: 'LM-101-U5',
-    slug: 'capability-and-failure',
-    pathId: 'LM-100',
-    courseId: 'LM-101',
-    moduleId: 'LM-101-M2',
-    title: 'Capability and failure',
-    summary: 'Examine why a fluent or confident output can still be incomplete or wrong.',
-    outcome: 'Name one supported capability, one limit, and one check for a prepared example.',
-    time: '16 minutes',
-    activity: 'Classify prepared failures before choosing a useful next check.',
-    platform: browserReadingPlatform,
-    access: 'open',
-    conceptId: 'model-capability-and-failure',
-    xp: 16,
-  },
-  {
-    id: 'LML-101',
-    slug: 'model-or-not',
-    pathId: 'LM-100',
-    courseId: 'LM-101',
-    moduleId: 'LM-101-M2',
-    title: 'Model or Not',
-    summary: 'Use prepared evidence to distinguish ordinary rules, learned models, and systems that need more information.',
-    outcome: 'Classify each prepared system and explain which evidence supports the choice.',
-    time: '25 minutes',
-    activity: 'Complete a prepared classification and concept map. Nothing runs on this page.',
-    platform: browserReadingPlatform,
-    access: 'open',
-    conceptId: 'model-recognition',
-    xp: 24,
-  },
+  ...localLlmLessons.map(([id, courseId, moduleId, slug, title, outcome]): AcademyUnit => ({
+    id, courseId, moduleId, slug, title, outcome, summary: outcome, pathId: 'LM-100',
+    time: '10 to 15 minutes', activity: 'Read a worked example, try a different case, and check your answer.',
+    platform: browserReadingPlatform, access: 'open', conceptId: `llm-${slug}`, xp: 14,
+  })),
   {
     id: 'RVF-101',
     slug: 'complete-program-in-one-burst',
@@ -343,7 +196,7 @@ export const academyUnits: readonly AcademyUnit[] = Object.freeze([
     title: 'A complete program appears in one burst of typing',
     summary: 'Compare a rapid programming scene with the work already present and the checks still needed.',
     outcome: 'Put prepared software work steps in a sensible order and name what each step proves.',
-    time: '12 minutes',
+    time: 'About 10 to 15 minutes',
     activity: 'Order prepared cards. No code execution is required.',
     platform: browserReadingPlatform,
     access: 'open',
@@ -359,8 +212,8 @@ export const academyUnits: readonly AcademyUnit[] = Object.freeze([
     title: 'Code works correctly the first time',
     summary: 'Separate successful execution from evidence that a program behaves correctly.',
     outcome: 'Distinguish a syntax error, a runtime error, and a logic error in prepared examples.',
-    time: '12 minutes',
-    activity: 'Read three prepared results and choose what each result shows.',
+    time: 'About 10 to 15 minutes',
+    activity: 'Match five prepared artifacts and choose what each result shows.',
     platform: browserReadingPlatform,
     access: 'open',
     conceptId: 'execution-does-not-prove-correctness',
@@ -374,7 +227,7 @@ export const academyPreparationPages: readonly AcademyPreparationPage[] = Object
     slug: 'computer-words-refresher',
     pathId: 'LM-100',
     courseId: 'LM-101',
-    returnUnitId: 'LM-101-U1',
+    returnUnitId: 'LLM-101-U1',
     title: 'Computer words refresher',
     summary: 'Review six words used to describe the parts of a computer system.',
     outcome: 'Recognize input, output, program, application, data, and file when they appear in the course.',
@@ -394,7 +247,7 @@ export const academyPreparationPages: readonly AcademyPreparationPage[] = Object
     slug: 'model-context',
     pathId: 'LM-100',
     courseId: 'LM-101',
-    returnUnitId: 'LM-101-U1',
+    returnUnitId: 'LLM-101-U1',
     title: 'Where a model fits',
     summary: 'Read the shortest useful context for the first unit.',
     outcome: 'Know that a model is one part of a larger application.',
@@ -406,7 +259,7 @@ export const academyPreparationPages: readonly AcademyPreparationPage[] = Object
       'A person gives information to an application. The application prepares that information for a model.',
       'The model transforms the prepared input into an output. The application decides how to show or use that output.',
       'Accounts, buttons, stored records, logs, and network connections are separate parts of the application.',
-      'The course begins by comparing an ordinary written rule with behavior adjusted from examples.',
+      'This course begins with language generation on your computer. It separates using an LLM from changing its weights.',
     ],
   },
   {
@@ -449,6 +302,15 @@ export const academyPreparationPages: readonly AcademyPreparationPage[] = Object
       'Security, accessibility, deployment, monitoring, and recovery need their own evidence.',
     ],
   },
+
+  ...localLlmCourses.slice(1).flatMap(([courseId, , title, outcome]): AcademyPreparationPage[] => ([1, 2] as const).map((number) => ({
+    id: `${courseId}-P${number}`, slug: `${courseId.toLowerCase()}-${number === 1 ? 'refresher' : 'context'}`,
+    courseId, pathId: 'LM-100', returnUnitId: localLlmLessons.find((lesson) => lesson[1] === courseId)![0],
+    title: `${title}: ${number === 1 ? 'refresher' : 'context'}`, summary: outcome, outcome,
+    time: '2 minutes', activity: 'Read optional context, then return to the lesson.',
+    platform: browserReadingPlatform, access: 'open',
+    content: localLlmPreparation[courseId][number - 1],
+  }))),
 ])
 
 export const academyPathIds: readonly AcademyPathId[] = Object.freeze(academyPaths.map((path) => path.id))

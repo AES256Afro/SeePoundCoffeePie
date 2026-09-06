@@ -473,6 +473,17 @@ export const cppCompiledProject: CppCompiledProject = {
       title: 'Build the Observation Desk',
       objective: 'Build a complete compiled C++ program and prove that changing input changes its calculated report.',
       scaffolding: 'independent',
+      planningHelp: {
+        steps: [
+          'Keep the headers and main frame. Inside main, separate the fixed points per detail from the changing name and count.',
+          'Read the full name before the number, multiply the count by 5, then report the stored values. Each calculation needs its input first.',
+        ],
+        inputScope: 'Supply a name on line 1 and a small non-negative whole-number count on line 2. This version assumes valid input. Numeric extraction can fail on words, and very large calculations can exceed int limits; those need additional checks.',
+        experiments: [
+          'Use Taylor Reed and 0 on separate input lines. Keep both parts of the name and predict 0 focus points.',
+          'Change only the count to 4. Predict 20 focus points. If the name becomes Taylor, check that you used getline rather than word-by-word extraction.',
+        ],
+      },
       newTerms: [
         { term: 'test case', meaning: 'One set of program input and expected behavior used to check whether a solution works.' },
         { term: 'hidden check', meaning: 'An official test whose exact values are withheld so the program must solve the general task.' },

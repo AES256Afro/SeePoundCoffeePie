@@ -25,13 +25,19 @@ import {
 import type { ConceptProgress, LanguageId, LearnerProgress } from '../types'
 
 const languages = new Set<LanguageId>(foundationTrackMetadata.map((track) => track.id))
+// Retain historical credit without mapping the retired generic course onto
+// the substantially rewritten local LLM lessons or closing their new modules.
+const retiredModelUnits = ['LM-101-U1', 'LM-101-U2', 'LM-101-U3', 'LM-101-U4', 'LM-101-U5', 'LML-101']
+const retiredModelConcepts = ['model-versus-rule', 'model-inputs-and-outputs', 'model-parameters', 'model-and-application-boundaries', 'model-capability-and-failure', 'model-recognition']
 const missionIds = new Set([
+  'LM-101-M1', 'LM-101-M2',
   ...foundationMissionIds,
   ...pythonDataToolsMissionIds,
   ...cppCollectionsRecordsMissionIds,
   ...academyModuleIds,
 ])
 const lessonIds = new Set([
+  ...retiredModelUnits,
   ...foundationLessonIds,
   ...pythonDataToolsLessons.map((lesson) => lesson.id),
   ...cppCollectionsRecordsLessons.map((lesson) => lesson.id),
@@ -42,6 +48,7 @@ const projectCheckpointIds = new Set(projectManifests.flatMap((project) => (
   project.checkpoints.map((checkpoint) => checkpoint.id)
 )))
 const conceptIds = new Set([
+  ...retiredModelConcepts,
   ...foundationConceptIds,
   ...projectManifests.flatMap((project) => project.checkpoints.map((checkpoint) => checkpoint.conceptId)),
   ...pythonDataToolsLessons.map((lesson) => lesson.conceptId),
