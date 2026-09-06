@@ -1,6 +1,8 @@
 import {
   ArrowLeft,
   ArrowRight,
+  ArrowUp,
+  ArrowDown,
   BookOpen,
   Check,
   CheckCircle2,
@@ -295,8 +297,9 @@ function CheckpointWorkspace({ checkpoint, onNavigate, onProgress, progress, pro
   const choices = useMemo(() => orderedChoices(exercise), [exercise])
   const initialAnswer = editable
     ? loadProjectDraft(project.id, checkpoint.id) ?? exercise.starterCode ?? ''
-    : ''
+    : exercise.type === 'ordering' ? exercise.orderItems?.map((item) => item.id).reverse().join('|') ?? '' : ''
   const [answer, setAnswer] = useState(initialAnswer)
+  const orderedIds = exercise.type === 'ordering' ? answer.split('|').filter(Boolean) : []
   const [practiceInput, setPracticeInput] = useState(checkpoint.practiceStdin ?? '')
   const [feedback, setFeedback] = useState<EvaluationResult | null>(null)
   const [runnerResult, setRunnerResult] = useState<RunnerResult | null>(null)
@@ -339,10 +342,20 @@ function CheckpointWorkspace({ checkpoint, onNavigate, onProgress, progress, pro
   const updateAnswer = (value: string) => {
     setAnswer(value)
     if (editable) saveProjectDraft(project.id, checkpoint.id, value)
-    if (feedback && !feedback.correct) setFeedback(null)
+    setFeedback(null)
     setRunnerResult(null)
     setRunnerPurpose(null)
     setRunnerAnnouncement('')
+  }
+
+  const moveOrderItem = (index: number, direction: -1 | 1) => {
+    const destination = index + direction
+    if (destination < 0 || destination >= orderedIds.length) return
+    const reordered = [...orderedIds]
+    ;[reordered[index], reordered[destination]] = [reordered[destination], reordered[index]]
+    updateAnswer(reordered.join('|'))
+    const item = exercise.orderItems?.find((candidate) => candidate.id === reordered[destination])
+    setRunnerAnnouncement(`${item?.code ?? 'Step'} moved to position ${destination + 1} of ${reordered.length}.`)
   }
 
   const recordFailure = () => {
@@ -585,7 +598,6 @@ function CheckpointWorkspace({ checkpoint, onNavigate, onProgress, progress, pro
         <section className="project-briefing">
           <p className="kicker">Step {checkpoint.order} · {scaffoldingLabel(checkpoint.scaffolding)}</p>
           <h1>{checkpoint.title}</h1>
-          <p className="project-objective">{checkpoint.objective}</p>
 
           {checkpoint.newTerms.length > 0 && (
             <section className="project-terms" aria-labelledby="project-terms-title">
@@ -601,7 +613,10 @@ function CheckpointWorkspace({ checkpoint, onNavigate, onProgress, progress, pro
           <section className="project-explanation" aria-labelledby="project-explanation-title">
             <h2 id="project-explanation-title">Explanation</h2>
             <p>{exercise.explanation}</p>
-            <div><CircleHelp size={19} /><p><b>Example</b>{exercise.analogy}</p></div>
+            <details className="project-hint" key={`${checkpoint.id}-comparison`}>
+              <summary>A familiar comparison</summary>
+              <p>{exercise.analogy}</p>
+            </details>
           </section>
 
           {checkpoint.requirements && (
@@ -667,16 +682,36 @@ function CheckpointWorkspace({ checkpoint, onNavigate, onProgress, progress, pro
                 ))}
               </fieldset>
             </div>
+          ) : exercise.type === 'ordering' ? (
+            <div>
+              <p>Use the arrow buttons to arrange these jobs from first to last.</p>
+              <ol className="ordering-list" aria-label="Project jobs to order" role="list">
+                {orderedIds.map((id, index) => {
+                  const item = exercise.orderItems?.find((candidate) => candidate.id === id)
+                  if (!item) return null
+                  return (
+                    <li key={id}>
+                      <span>{index + 1}</span>
+                      <code>{item.code}</code>
+                      <div>
+                        <button type="button" disabled={index === 0 || feedback?.correct} onClick={() => moveOrderItem(index, -1)} aria-label={`Move ${item.code} up`}><ArrowUp size={16} /></button>
+                        <button type="button" disabled={index === orderedIds.length - 1 || feedback?.correct} onClick={() => moveOrderItem(index, 1)} aria-label={`Move ${item.code} down`}><ArrowDown size={16} /></button>
+                      </div>
+                    </li>
+                  )
+                })}
+              </ol>
+            </div>
           ) : (
             <>
-              <div className="project-code-guide">
-                <div><BookOpen size={16} /><b>Read each symbol before editing</b></div>
+              <details className="project-code-guide" key={`${checkpoint.id}-code-guide`}>
+                <summary>What the code means</summary>
                 <dl>
                   {exercise.codeGuide?.map((item) => (
                     <div key={`${checkpoint.id}-${item.code}`}><dt><code>{item.code}</code></dt><dd>{item.plain}</dd></div>
                   ))}
                 </dl>
-              </div>
+              </details>
 
               <div aria-busy={runnerBusy} className="project-code-workspace">
                 <div className="project-editor-bar"><span><Code2 size={15} /> {project.downloadFileName}</span><small>Saved in this browser</small></div>
@@ -792,7 +827,7 @@ function CheckpointWorkspace({ checkpoint, onNavigate, onProgress, progress, pro
               </button>
             ) : (
               <button aria-disabled={runnerBusy} className="primary-action" onClick={() => { void checkCheckpoint() }} type="button">
-                {runnerBusy ? 'Checking...' : editable ? 'Check work' : 'Check answer'} <ArrowRight size={17} />
+                {runnerBusy ? 'Checking...' : editable ? 'Check work' : exercise.type === 'ordering' ? 'Check order' : 'Check answer'} <ArrowRight size={17} />
               </button>
             )}
           </div>

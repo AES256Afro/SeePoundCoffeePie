@@ -84,7 +84,7 @@ type ProgressOverrides = Partial<BrowserProgress>
 type ThemeId = 'workshop' | 'hex' | 'terminal' | 'schematic'
 type SeedProgress = (
   overrides?: ProgressOverrides,
-  options?: { theme?: ThemeId },
+  options?: { theme?: ThemeId; preserveOnReload?: boolean },
 ) => Promise<void>
 
 interface BrowserFixtures {
@@ -215,9 +215,12 @@ export const test = base.extend<BrowserFixtures>({
         },
       }
 
-      await page.addInitScript(({ completionJournalKey, progressKey, progressRecord, resetBarrierKey, theme }) => {
+      await page.addInitScript(({ completionJournalKey, progressKey, progressRecord, resetBarrierKey, theme, preserveOnReload, seedId }) => {
+        // Persistence tests must reload the learner's actual storage, not seed over it.
+        if (preserveOnReload && window.sessionStorage.getItem('spcp-e2e-seed') === seedId) return
         window.localStorage.clear()
         window.sessionStorage.clear()
+        window.sessionStorage.setItem('spcp-e2e-seed', seedId)
         window.localStorage.setItem('spcp-theme', theme)
         window.localStorage.setItem(resetBarrierKey, JSON.stringify({ version: 1, active: true }))
         window.localStorage.setItem(progressKey, JSON.stringify(progressRecord))
@@ -231,6 +234,8 @@ export const test = base.extend<BrowserFixtures>({
         progressRecord: progress,
         resetBarrierKey: RESET_BARRIER_KEY,
         theme: options.theme ?? 'workshop',
+        preserveOnReload: options.preserveOnReload ?? false,
+        seedId: crypto.randomUUID(),
       })
     })
   },

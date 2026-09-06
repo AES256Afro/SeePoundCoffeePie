@@ -896,7 +896,7 @@ button:disabled,
   position: sticky;
   z-index: 40;
   top: 0;
-  background: rgb(255 253 248 / 96%);
+  background: var(--surface);
   border-bottom: 1px solid var(--rule);
 }
 
