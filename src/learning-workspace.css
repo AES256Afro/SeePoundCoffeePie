@@ -1174,7 +1174,7 @@ kbd {
   align-items: center;
   gap: 0.9rem;
   padding: 0.35rem clamp(0.75rem, 2vw, 1.25rem);
-  background: rgb(255 253 248 / 97%);
+  background: var(--surface);
   border-bottom: 1px solid var(--rule-strong);
 }
 
@@ -1276,12 +1276,6 @@ kbd {
   font-size: clamp(1.9rem, 2.6vw, 2.4rem);
 }
 
-.project-objective {
-  max-width: 58ch;
-  color: #45463f;
-  font-size: var(--text-lead);
-}
-
 .project-terms,
 .project-explanation,
 .project-requirements {
@@ -1317,29 +1311,6 @@ kbd {
   font-weight: 760;
 }
 
-.project-explanation > div {
-  display: grid;
-  grid-template-columns: auto 1fr;
-  gap: 0.65rem;
-  margin-top: 1rem;
-  padding: 0.85rem 0;
-  border-top: 1px solid var(--rule);
-  border-bottom: 1px solid var(--rule);
-}
-
-.project-explanation > div svg {
-  color: var(--teal);
-}
-
-.project-explanation > div p {
-  display: flex;
-  flex-direction: column;
-  gap: 0.2rem;
-  margin: 0;
-  color: var(--muted);
-  font-size: var(--text-small);
-}
-
 .project-requirements ol {
   margin: 0;
   padding-left: 1.25rem;
@@ -1361,7 +1332,7 @@ kbd {
 .project-task > header h2 {
   max-width: 34ch;
   margin: 0.3rem 0 0;
-  font: 750 clamp(1.35rem, 2vw, 1.85rem)/1.35 Inter, sans-serif;
+  font: 750 1.125rem/1.5 Inter, sans-serif;
   letter-spacing: -0.015em;
 }
 
@@ -1417,16 +1388,14 @@ kbd {
   overflow: hidden;
 }
 
-.project-code-guide > div:first-child {
+.project-code-guide > summary {
   min-height: 44px;
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
   padding: 0.65rem 0.9rem;
   color: var(--teal-dark);
   background: var(--paper-deep);
-  border-bottom: 1px solid var(--rule-strong);
   font-size: var(--text-small);
+  font-weight: 750;
+  cursor: pointer;
 }
 
 .project-code-guide > dl {

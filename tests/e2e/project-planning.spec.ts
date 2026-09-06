@@ -15,6 +15,20 @@ for (const project of [pythonInteractiveProject, cppCompiledProject, csharpWorks
     const final = project.checkpoints[11]
     await page.goto(`${project.route}/${final.id}`)
     await expect(page.getByRole('heading', { level: 1, name: final.title })).toBeVisible()
+    for (const label of ['What the code means', 'A familiar comparison']) {
+      const guide = page.locator('details').filter({ has: page.locator('summary', { hasText: label }) })
+      await expect(guide).not.toHaveAttribute('open', '')
+      await guide.locator('summary').focus()
+      await page.keyboard.press('Enter')
+      await expect(guide).toHaveAttribute('open', '')
+      await guide.locator('summary').focus()
+      await page.keyboard.press('Enter')
+      await expect(guide).not.toHaveAttribute('open', '')
+    }
+    for (const selector of ['.workshop-topbar', '.project-workspace__header']) {
+      const background = await page.locator(selector).evaluate((element) => getComputedStyle(element).backgroundColor)
+      expect(background).toMatch(/^rgb\(/)
+    }
     const plan = page.locator('details').filter({ has: page.locator('summary', { hasText: 'Plan and test your program' }) })
     await expect(plan).not.toHaveAttribute('open', '')
     await plan.locator('summary').focus()
